@@ -23,9 +23,9 @@ local Collections = {}
 
 	Iterate with range-for. `Vector3` is a datatype, not `vector<T>`.
 
+	@function array<T>
 	@within Collections
 ]=]
-function Collections.array() end
 
 --[=[
 	Alias of `array<T>`. Not `Vector3`.
@@ -34,9 +34,9 @@ function Collections.array() end
 
 	**Emit:** `{T}`
 
+	@function vector<T>
 	@within Collections
 ]=]
-function Collections.vector() end
 
 --[=[
 	String-keyed (or typed-key) map. Access keys with `:`, not `.`.
@@ -52,8 +52,8 @@ function Collections.vector() end
 
 	**Emit:** `{ [K]: V }` with `Key = value` fields
 
+	@function dictionary<K,V>
 	@within Collections
 ]=]
-function Collections.dictionary() end
 
 return Collections

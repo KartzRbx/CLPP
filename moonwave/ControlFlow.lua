@@ -8,46 +8,40 @@ local ControlFlow = {}
 ]=]
 
 --[=[
-	C-style branch. `else if` emits Luau `elseif`.
+	C-style branch. `else if` emits Luau `elseif`. Parentheses required. No ternary.
 
 	**Syntax:** `if (cond) { } else if (other) { } else { }`
 
 	**Emit:** `if` / `elseif` / `else` / `end`
 
-	Parentheses required. No ternary.
-
+	@function if
 	@within ControlFlow
 	@tag control
 ]=]
-function ControlFlow.iff() end
 
 --[=[
-	Loop while the condition is true.
+	Loop while the condition is true. No `do/while`. No `continue`.
 
 	**Syntax:** `while (cond) { }`
 
 	**Emit:** `while … do … end`
 
-	No `do/while`. No `continue`.
-
+	@function while
 	@within ControlFlow
 	@tag control
 ]=]
-function ControlFlow.while_() end
 
 --[=[
-	C `for`. Emits `while` plus a trailing increment.
+	C `for`. Emits `while` plus a trailing increment. Semicolons separate clauses.
 
 	**Syntax:** `for (int i = 0; i < n; i++) { }`
 
 	**Emit:** `local i = 0` / `while i < n do` / `i += 1`
 
-	Semicolons separate clauses. Range-for is a different form.
-
+	@function for
 	@within ControlFlow
 	@tag control
 ]=]
-function ControlFlow.c_for() end
 
 --[=[
 	Range-for. Prefer `in`. The C++-style `:` is the same loop, not a table key.
@@ -62,19 +56,17 @@ function ControlFlow.c_for() end
 	}
 	```
 
+	@function for-in
 	@within ControlFlow
 	@tag control
 ]=]
-function ControlFlow.range_for() end
 
 --[=[
-	If the condition is false, the `else` block runs (usually `return`).
+	If the condition is false, the `else` block runs (usually `return`). The `else` is required.
 
 	**Syntax:** `guard (condition) else { return; }`
 
 	**Emit:** `if not (condition) then … end`
-
-	The `else` is required.
 
 	```clpp
 	guard (player != null) else {
@@ -83,10 +75,10 @@ function ControlFlow.range_for() end
 	}
 	```
 
+	@function guard
 	@within ControlFlow
 	@tag control
 ]=]
-function ControlFlow.guard() end
 
 --[=[
 	Type switch. Instance types use `IsA`; primitives use `typeof`. `_` is the fallback.
@@ -102,10 +94,10 @@ function ControlFlow.guard() end
 	};
 	```
 
+	@function match
 	@within ControlFlow
 	@tag control
 ]=]
-function ControlFlow.match() end
 
 --[=[
 	Evaluates the discriminant once. `break` leaves the switch. No C fall-through; stacked `case`s share a body.
@@ -114,10 +106,10 @@ function ControlFlow.match() end
 
 	**Emit:** `if` / `elseif` inside `repeat … until true`
 
+	@function switch
 	@within ControlFlow
 	@tag control
 ]=]
-function ControlFlow.switch() end
 
 --[=[
 	Leaves the innermost loop or `switch`. There is no `continue`.
@@ -126,10 +118,10 @@ function ControlFlow.switch() end
 
 	**Emit:** `break`
 
+	@function break
 	@within ControlFlow
 	@tag control
 ]=]
-function ControlFlow.break_() end
 
 --[=[
 	Leave the current function.
@@ -138,9 +130,9 @@ function ControlFlow.break_() end
 
 	**Emit:** `return` / `return expr`
 
+	@function return
 	@within ControlFlow
 	@tag control
 ]=]
-function ControlFlow.return_() end
 
 return ControlFlow

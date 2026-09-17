@@ -12,9 +12,9 @@ local Preprocessor = {}
 
 	**Syntax:** `#include <clpp/roblox.clh>` · `#include "LeaderstatsServer.clh"`
 
+	@function include
 	@within Preprocessor
 ]=]
-function Preprocessor.include() end
 
 --[=[
 	Include guard. Headers listed more than once are skipped. Valid at the top of every `.clh`.
@@ -23,9 +23,9 @@ function Preprocessor.include() end
 
 	**Emit:** (none)
 
+	@function pragma-once
 	@within Preprocessor
 ]=]
-function Preprocessor.once() end
 
 --[=[
 	Emit `--!strict` at the top of the Luau file.
@@ -34,9 +34,9 @@ function Preprocessor.once() end
 
 	**Emit:** `--!strict`
 
+	@function pragma-strict
 	@within Preprocessor
 ]=]
-function Preprocessor.strict() end
 
 --[=[
 	Emit `--!nonstrict`. Aliases: `nstrict`, `nonstrict`.
@@ -45,9 +45,9 @@ function Preprocessor.strict() end
 
 	**Emit:** `--!nonstrict`
 
+	@function pragma-nostrict
 	@within Preprocessor
 ]=]
-function Preprocessor.nostrict() end
 
 --[=[
 	Emit `--!native` (Luau native codegen).
@@ -56,9 +56,9 @@ function Preprocessor.nostrict() end
 
 	**Emit:** `--!native`
 
+	@function pragma-native
 	@within Preprocessor
 ]=]
-function Preprocessor.native() end
 
 --[=[
 	Emit `--!optimize N`. Bare `optimize` means `2`.
@@ -67,8 +67,8 @@ function Preprocessor.native() end
 
 	**Emit:** `--!optimize 2`
 
+	@function pragma-optimize
 	@within Preprocessor
 ]=]
-function Preprocessor.optimize() end
 
 return Preprocessor

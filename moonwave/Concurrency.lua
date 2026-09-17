@@ -12,9 +12,9 @@ local Concurrency = {}
 
 	**Emit:** `const function` whose body uses `__await`
 
+	@function async
 	@within Concurrency
 ]=]
-function Concurrency.async() end
 
 --[=[
 	Wait for a Promise-like value inside an `async` function.
@@ -32,9 +32,9 @@ function Concurrency.async() end
 	}
 	```
 
+	@function await
 	@within Concurrency
 ]=]
-function Concurrency.await() end
 
 --[=[
 	Run a block on a new thread.
@@ -43,9 +43,9 @@ function Concurrency.await() end
 
 	**Emit:** `task.spawn(function() … end)`
 
+	@function spawn
 	@within Concurrency
 ]=]
-function Concurrency.spawn() end
 
 --[=[
 	Parallel Luau block.
@@ -54,9 +54,9 @@ function Concurrency.spawn() end
 
 	**Emit:** `task.desynchronize()` / `task.synchronize()`
 
+	@function parallel
 	@within Concurrency
 ]=]
-function Concurrency.parallel() end
 
 --[=[
 	Unpack multiple return values. Usual pairing with `pcall`.
@@ -65,8 +65,8 @@ function Concurrency.parallel() end
 
 	**Emit:** `local a, b = expr`
 
+	@function auto[]
 	@within Concurrency
 ]=]
-function Concurrency.destructure() end
 
 return Concurrency

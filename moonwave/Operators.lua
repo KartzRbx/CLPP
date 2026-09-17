@@ -25,16 +25,15 @@ local Operators = {}
 	**Emit:** `obj:Method(args)` / `obj.Child`
 
 	```clpp
-	players::PlayerAdded::Connect(fn);
 	player::FindFirstChild("x");
 	```
 
 	Datatype / `task::wait` emit `.` (not Instance methods).
 
+	@function ::
 	@within Operators
 	@tag operator
 ]=]
-function Operators.method_scope() end
 
 --[=[
 	Dictionary / module table key. Not a method call.
@@ -50,10 +49,10 @@ function Operators.method_scope() end
 
 	Range-for uses `in` (or `:`) in a different position: `for (T x in list)`.
 
+	@function :
 	@within Operators
 	@tag operator
 ]=]
-function Operators.table_key() end
 
 --[=[
 	Instance or value property.
@@ -66,10 +65,10 @@ function Operators.table_key() end
 	player.Name = "Kartz";
 	```
 
+	@function .
 	@within Operators
 	@tag operator
 ]=]
-function Operators.property() end
 
 --[=[
 	String concatenation. Never `+` or Lua `..`.
@@ -82,10 +81,10 @@ function Operators.property() end
 	return player.Name .: "_LeaderstatsJanitor";
 	```
 
+	@function .:
 	@within Operators
 	@tag operator
 ]=]
-function Operators.concat() end
 
 --[=[
 	Subscribe and give the connection to Janitor. `~>Connect` and `~>Once` only.
@@ -97,10 +96,10 @@ function Operators.concat() end
 	Looks up `janitor` local, `self.janitor`, or synthetic `__janitor`.
 
 	@param fn func -- Listener
+	@function ~>
 	@within Operators
 	@tag operator
 ]=]
-function Operators.janitor_connect(fn) end
 
 --[=[
 	Numeric arithmetic. `+` does not concatenate. `*` is never pointer deref.
@@ -109,10 +108,10 @@ function Operators.janitor_connect(fn) end
 
 	**Emit:** same operators
 
+	@function +
 	@within Operators
 	@tag operator
 ]=]
-function Operators.arithmetic() end
 
 --[=[
 	`!=` emits `~=`. The others stay the same.
@@ -121,48 +120,44 @@ function Operators.arithmetic() end
 
 	**Emit:** `~=` / `==` / `<` / `>` / `<=` / `>=`
 
+	@function !=
 	@within Operators
 	@tag operator
 ]=]
-function Operators.comparison() end
 
 --[=[
-	Boolean logic.
+	Boolean logic. No ternary `? :`.
 
 	**Syntax:** `a && b || !c`
 
 	**Emit:** `and` / `or` / `not`
 
-	No ternary `? :`.
-
+	@function &&
 	@within Operators
 	@tag operator
 ]=]
-function Operators.logic() end
 
 --[=[
-	Assignment and compound assignment.
+	Assignment and compound assignment. Observable assignment writes `.Value`.
 
 	**Syntax:** `name = value;` · `name += 1;`
 
 	**Emit:** `=` `+=` `-=` `*=` `/=`
 
-	Observable assignment writes `.Value`.
-
+	@function =
 	@within Operators
 	@tag operator
 ]=]
-function Operators.assignment() end
 
 --[=[
 	Always emits `+= 1` / `-= 1`. Prefix/postfix value is not preserved.
 
 	**Syntax:** `i++;` · `i--;`
 
+	@function ++
 	@within Operators
 	@tag operator
 ]=]
-function Operators.increment() end
 
 --[=[
 	C++ designated initializer → Luau table field.
@@ -171,9 +166,9 @@ function Operators.increment() end
 
 	**Emit:** `{ Field = value }`
 
+	@function .Field
 	@within Operators
 	@tag operator
 ]=]
-function Operators.designated() end
 
 return Operators

@@ -18,9 +18,9 @@ local Functions = {}
 	}
 	```
 
+	@function function
 	@within Functions
 ]=]
-function Functions.declare() end
 
 --[=[
 	Closure. Empty `[]` only — no `[x]` / `[&]`. Luau still closes over outer locals.
@@ -36,9 +36,9 @@ function Functions.declare() end
 	```
 
 	@param arg any -- Lambda parameters
+	@function lambda
 	@within Functions
 ]=]
-function Functions.lambda(arg) end
 
 --[=[
 	The current object inside `Class::Method`. Emits `self`.
@@ -47,8 +47,8 @@ function Functions.lambda(arg) end
 
 	There is no `this->`.
 
+	@function this
 	@within Functions
 ]=]
-function Functions.this() end
 
 return Functions

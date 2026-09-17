@@ -114,10 +114,10 @@ function Types.auto() end
 
 	**Emit:** `T?`
 
+	@function optional<T>
 	@within Types
 	@tag type
 ]=]
-function Types.optional() end
 
 --[=[
 	`Player*` means an Instance of class Player — not a heap pointer.
@@ -128,10 +128,10 @@ function Types.optional() end
 
 	Properties use `.`. Methods use `::`. No `delete`, `*p`, `&p`, `int&`, or `->`.
 
+	@function T*
 	@within Types
 	@tag type
 ]=]
-function Types.instance_pointer() end
 
 --[=[
 	`const` / `static constexpr` become Luau `const`.
@@ -153,9 +153,9 @@ function Types.const() end
 	**Emit:** `x`
 
 	@param x any
+	@function static_cast
 	@within Types
 	@tag type
 ]=]
-function Types.static_cast(x) end
 
 return Types

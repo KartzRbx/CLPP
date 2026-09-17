@@ -20,15 +20,15 @@ local Stdlib = {}
 
 	**Emit:** `require(…)` for libs and non-stem quotes; stem quote is inlined; `roblox.clh` is IntelliSense only.
 
+	@function include
 	@within Stdlib
 ]=]
-function Stdlib.include() end
 
 --[=[
 	`#pragma once` is valid in headers (include guard). `#pragma strict` emits `--!strict`. `#pragma nostrict` emits `--!nonstrict`. `#pragma native` emits `--!native`. `#pragma optimize` / `#pragma optimize 2` emit `--!optimize 2`.
 
+	@function pragma
 	@within Stdlib
 ]=]
-function Stdlib.pragma() end
 
 return Stdlib

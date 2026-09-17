@@ -19,10 +19,10 @@ local Observables = {}
 
 	`int` → IntValue, `float`/`double` → NumberValue, `string` → StringValue, `bool` → BoolValue, else ObjectValue.
 
+	@function observable
 	@within Observables
 	@tag signal
 ]=]
-function Observables.declare() end
 
 --[=[
 	Listen to value changes. Argument is the new `.Value`.

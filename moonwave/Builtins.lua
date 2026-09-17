@@ -76,9 +76,9 @@ function Builtins.report(...) end
 
 	There is no `game:GetService` in CL++ source.
 
+	@function GetService<T>
 	@within Builtins
 ]=]
-function Builtins.GetService() end
 
 --[=[
 	Protected call. CL++ has no `try/catch`.

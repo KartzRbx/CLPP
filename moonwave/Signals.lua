@@ -20,10 +20,10 @@ local Signals = {}
 
 	**Emit:** `local OnCoinsUpdated = __signal()`
 
+	@function signal<T>
 	@within Signals
 	@tag signal
 ]=]
-function Signals.signal() end
 
 --[=[
 	Emits to every current listener.

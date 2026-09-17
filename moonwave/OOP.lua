@@ -18,9 +18,9 @@ local OOP = {}
 
 	Instances are not RAII. Leaving a block does not `Destroy` — use Janitor.
 
+	@function struct
 	@within OOP
 ]=]
-function OOP.struct() end
 
 --[=[
 	Method implementation.
@@ -32,18 +32,18 @@ function OOP.struct() end
 	Untagged files with only `Class::` `return` the table (ModuleScript).
 
 	@param arg any
+	@function Class::Method
 	@within OOP
 ]=]
-function OOP.method(arg) end
 
 --[=[
 	Construct **one** service in `init()` and use it from lambdas. That is the game singleton.
 
 	**Syntax:** `void init() { LeaderstatsServer leaderstatsServer; }`
 
+	@function init
 	@within OOP
 ]=]
-function OOP.singleton() end
 
 --[=[
 	Parsed and ignored. Luau has no access specifiers.
@@ -52,8 +52,8 @@ function OOP.singleton() end
 
 	**Emit:** omitted
 
+	@function public
 	@within OOP
 ]=]
-function OOP.access() end
 
 return OOP

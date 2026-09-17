@@ -16,9 +16,9 @@ local Attributes = {}
 
 	**Emit:** omitted on client files; `IsServer()` wrapper in modules
 
+	@function [[server]]
 	@within Attributes
 ]=]
-function Attributes.server() end
 
 --[=[
 	Runs on the client only.
@@ -27,8 +27,8 @@ function Attributes.server() end
 
 	**Emit:** omitted on server files; `IsClient()` wrapper in modules
 
+	@function [[client]]
 	@within Attributes
 ]=]
-function Attributes.client() end
 
 return Attributes

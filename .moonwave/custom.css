@@ -112,3 +112,8 @@
   background: #5b21b6;
   color: #fff !important;
 }
+
+/* Moonwave prints Lua stubs as Class.name() → (). CL++ syntax is in the body. */
+[class*="memberString"] {
+  display: none !important;
+}
