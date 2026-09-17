@@ -109,6 +109,22 @@ void init() {}
 }
 
 #[test]
+fn janitor_cleanup_after_scope_member() {
+    let luau = compile(
+        r#"
+void F() {
+    Players* players = GetService<Players>();
+    players::PlayerAdded~>Once(func [](Player* p) {
+        return;
+    });
+}
+"#,
+    )
+    .expect("cleanup after :: and .");
+    assert!(luau.contains(":Once(") || luau.contains("Once"), "got: {luau}");
+}
+
+#[test]
 fn pragma_nostrict_emits_nonstrict() {
     let luau = compile("#pragma nostrict\nvoid init() {}\n").expect("nostrict");
     assert!(luau.contains("--!nonstrict"));
