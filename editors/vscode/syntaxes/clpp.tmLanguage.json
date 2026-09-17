@@ -37,11 +37,43 @@
       "match": "\\[\\[(server|client)\\]\\]"
     },
     "strings": {
-      "name": "string.quoted.double.clpp",
-      "begin": "\"",
-      "end": "\"",
       "patterns": [
-        { "name": "constant.character.escape.clpp", "match": "\\\\." }
+        {
+          "name": "string.quoted.double.clpp",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            { "name": "constant.character.escape.clpp", "match": "\\\\." }
+          ]
+        },
+        {
+          "name": "string.quoted.single.clpp",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            { "name": "constant.character.escape.clpp", "match": "\\\\." }
+          ]
+        },
+        {
+          "name": "string.quoted.other.clpp",
+          "begin": "`",
+          "end": "`",
+          "patterns": [
+            { "name": "constant.character.escape.clpp", "match": "\\\\[\\\\`{}]" },
+            {
+              "name": "meta.interpolation.clpp",
+              "begin": "\\{",
+              "end": "\\}",
+              "patterns": [
+                { "include": "#keywords" },
+                { "include": "#types" },
+                { "include": "#constants" },
+                { "include": "#numbers" },
+                { "include": "#operators" }
+              ]
+            }
+          ]
+        }
       ]
     },
     "keywords": {

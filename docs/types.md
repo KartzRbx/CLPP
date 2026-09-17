@@ -12,6 +12,8 @@ CL++ is statically typed in the source **and** in the Luau it emits.
 int coins = 100;
 float speed = 16.5;
 string name = "Kartz";
+string title = 'Player';
+string line = `hello {name}`;
 bool isActive = true;
 func callback = []() {};
 Player* playerRef = null;

@@ -32,6 +32,8 @@ fn compile_syntax_features() {
     assert!(luau.contains("local n: number = 100"));
     assert!(luau.contains("local speed: number = 16.5"));
     assert!(luau.contains("local name: string = \"Kartz\""));
+    assert!(luau.contains("local title: string = \"Player\""));
+    assert!(luau.contains("PlayerName is "));
     assert!(luau.contains("local isActive: boolean = true"));
     assert!(luau.contains("local callback"));
     assert!(luau.contains("function()"));
@@ -60,7 +62,7 @@ fn compile_syntax_features() {
     assert!(luau.contains("task.wait(2)"));
     assert!(luau.contains("task.desynchronize()"));
     assert!(luau.contains("task.synchronize()"));
-    assert!(luau.contains("typeof(__match1) == \"string\""));
+    assert!(luau.contains("typeof(__match") && luau.contains("== \"string\""));
     assert!(luau.contains("__await(DataService.Server:WaitFor(player))"));
     assert!(luau.contains("RunService\"):IsServer()"));
 }

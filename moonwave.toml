@@ -64,6 +64,11 @@ label = "Cluaupp"
 href = "https://github.com/KartzRbx/Cluaupp"
 
 [[navbar.items]]
+to = "/docs/install"
+label = "Install"
+position = "left"
+
+[[navbar.items]]
 to = "/docs/reference"
 label = "Reference"
 position = "left"

@@ -7,44 +7,33 @@ sidebar_label: "string"
 
 <div class="clpp-ref-meta">Type</div>
 
-UTF-8 text. Not `std::string`. Concatenate with [`.:`](operator-concat).
+UTF-8 text. Write it with `"double quotes"`, `'single quotes'`, or a `` `template` ``. Join pieces with [`.:`](operator-concat) or with commas after a template.
 
 ## Syntax
 
 ```clpp
-string name = value;
+string name = "Kartz";
+string title = 'Player';
+string line = `PlayerName is {player.Name}`;
+string also = `PlayerName is `, player.Name, `.`;
 ```
-
-## Parameters
-
-None.
-
-## Return value
-
-A value of type `string`, emitted as `string`.
-
-## Luau emit
-
-`string`
 
 ## Description
 
-[`observable string`](observable) becomes `StringValue`. Double quotes only in the current grammar. There is no string_view.
+- `"..."` and `'...'` are plain text.
+- `` `PlayerName is {player.Name}` `` inserts expressions inside `{ }`.
+- `` `PlayerName is `, player.Name, `.` `` joins a template with extra values in one expression.
+
+A `const int` cannot be initialized with a string. Every statement ends with `;`.
 
 ## Example
 
 ```clpp
 string name = "Kartz";
-string key = name .: "_LeaderstatsJanitor";
-```
-
-Emits:
-
-```luau
-local name: string = "Kartz"
-local key: string = name .. "_LeaderstatsJanitor"
+string key = name .: "_bag";
+post(`online: {name}`);
 ```
 
 ## See also
 
-[operator-concat](operator-concat) · [string_concat](string_concat)
+[operator-concat](operator-concat) · [const](const)

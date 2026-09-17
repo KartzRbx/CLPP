@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+# GitHub Pages must use branch `gh-pages` and folder `/` (repo root on that
+# branch), not `/docs`. The Moonwave site lives at the branch root: index.html,
+# docs/, and api/Builtins. Folder `/docs` would 404 the API tab.
+
 jobs:
   build:
     runs-on: ubuntu-latest

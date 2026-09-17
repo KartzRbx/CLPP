@@ -39,6 +39,7 @@ pub fn compile_artifact_source(
         ctx.strict = strict;
     }
     let program: Program = parse(&expanded, &path.display().to_string())?;
+    crate::semantic::check::check_program(&program, &expanded)?;
     let luau = emit(&program, &ctx);
     let kind = script_kind(path);
     Ok(CompileArtifact {
@@ -59,6 +60,7 @@ pub fn compile_artifact_source(
         rojo_class: rojo_class(ctx.is_header, kind.as_deref()),
         libraries: ctx.libraries,
         error: None,
+        diagnostics: Vec::new(),
     })
 }
 

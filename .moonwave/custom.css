@@ -91,3 +91,24 @@
   color: var(--ifm-color-emphasis-700);
   font-size: 0.9rem;
 }
+
+.clpp-download {
+  margin: 1.4rem 0 1.8rem;
+}
+
+.clpp-download-btn,
+.clpp-download a {
+  display: inline-block;
+  background: #6d28d9;
+  color: #fff !important;
+  font-weight: 700;
+  padding: 0.85rem 1.35rem;
+  border-radius: 12px;
+  text-decoration: none !important;
+}
+
+.clpp-download-btn:hover,
+.clpp-download a:hover {
+  background: #5b21b6;
+  color: #fff !important;
+}

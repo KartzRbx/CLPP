@@ -1,64 +1,52 @@
 ---
-title: Install the compiler
+title: Install CL++
 ---
 
-# Install the compiler
+# Install CL++
 
-CL++ ships as a Rust binary named `clpp` plus an editor language pack (icon, highlighting, IntelliSense).
+Download the installer, run it, and CL++ is on your machine: the `clpp` compiler, editor highlighting, and IntelliSense.
 
-## 1. Compiler
+<div className="clpp-download">
 
-From the repository:
+[Download CL++ installer for Windows](https://github.com/KartzRbx/CLPP/releases/latest/download/clpp-setup.exe)
+
+</div>
+
+1. Save `clpp-setup.exe`.
+2. Double-click it. The installer copies the compiler to `%LOCALAPPDATA%\Programs\CLPP`, adds it to your PATH, and installs the language pack in Cursor and VS Code.
+3. Open a **new** terminal and run `clpp --help`.
+4. Reload the editor window.
+
+That is the full path: the site gives you the installer; the installer installs the language.
+
+## From the command line
+
+If you already have `clpp`:
 
 ```bash
-cargo install --path .
+clpp setup
 ```
 
-Check:
-
-```bash
-clpp --help
-```
-
-You should see `compile`, `build`, `api`, `install`, and `manifest`.
-
-## 2. Editor pack
+Editor pack only (compiler already installed):
 
 ```bash
 clpp install
-```
-
-This copies the pack into **VS Code** and **Cursor** (and Insiders, VSCodium, Windsurf when those products exist). Reload the window. Files `.clpp`, `.clp`, and `.clh` get the CL++ icon.
-
-Target one editor:
-
-```bash
 clpp install --editor cursor
 clpp install --editor code
 ```
 
-## 3. Compile a file
+## From source
+
+```bash
+cargo install --path .
+clpp setup
+```
+
+## Compile a file
 
 ```bash
 clpp compile examples/hello/hello.server.clpp
-clpp compile examples/hello/hello.server.clpp -o out/hello.server.luau
 clpp build examples -o out
 ```
-
-JSON (Cluaupp contract):
-
-```bash
-clpp compile examples/hello/hello.server.clpp --json
-clpp api compile --file examples/hello/hello.server.clpp
-clpp api manifest
-```
-
-## This documentation site
-
-```bash
-npm run docs
-```
-
-That runs Moonwave (`moonwave dev --code moonwave`) and opens the course plus the generated API.
 
 Next: [Your first script](hello-world).

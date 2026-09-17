@@ -44,6 +44,10 @@ void Features(int coins) {
         post("Name changed");
     });
 
+    string title = 'Player';
+    post(`PlayerName is {playerRef.Name}`);
+    post(`PlayerName is `, playerRef.Name, `.`);
+
     guard (coins != null) else {
         warn("Invalid player");
         return;
@@ -52,6 +56,14 @@ void Features(int coins) {
     auto [success, result] = pcall(func []() {
         return 1;
     });
+
+    const int moeda = 4;
+
+    match (moeda) {
+        int a => post(a),
+        _ => post("Not found")
+    }; 
+
     if (success) {
         post("Data loaded successfully!");
     }

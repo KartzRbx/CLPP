@@ -8,53 +8,514 @@
     "dictionary", "optional"
   ],
   "builtins": [
-    { "label": "post", "detail": "print(...)", "kind": "Function" },
-    { "label": "warn", "detail": "warn(...)", "kind": "Function" },
-    { "label": "report", "detail": "error(...)", "kind": "Function" },
-    { "label": "GetService", "detail": "GetService<T>()", "kind": "Function" },
-    { "label": "pcall", "detail": "pcall(func []() { })", "kind": "Function" }
+    { "label": "post", "detail": "Write a line to output", "kind": "Function" },
+    { "label": "warn", "detail": "Write a warning", "kind": "Function" },
+    { "label": "report", "detail": "Stop with an error", "kind": "Function" },
+    { "label": "GetService", "detail": "GetService<T>()", "kind": "Function", "returns": "Instance" },
+    { "label": "pcall", "detail": "pcall(func []() { })", "kind": "Function" },
+    { "label": "typeof", "detail": "typeof(value)", "kind": "Function" },
+    { "label": "tick", "detail": "tick()", "kind": "Function" }
   ],
   "types": [
     "Player", "Players", "Folder", "Instance", "IntValue", "NumberValue",
-    "StringValue", "BoolValue", "ObjectValue", "Part", "Model", "Humanoid",
-    "RemoteEvent", "BindableEvent", "Vector3", "CFrame", "Color3", "UDim2",
-    "Janitor", "DataService", "Promise", "Workspace", "RunService"
+    "StringValue", "BoolValue", "ObjectValue", "Part", "BasePart", "Model",
+    "Humanoid", "RemoteEvent", "RemoteFunction", "BindableEvent", "Vector3",
+    "CFrame", "Color3", "UDim2", "Janitor", "DataService", "Promise",
+    "Workspace", "RunService", "ReplicatedStorage", "DataModel", "Data"
+  ],
+  "services": [
+    "Players", "RunService", "ReplicatedStorage", "ServerStorage",
+    "ServerScriptService", "StarterGui", "StarterPlayer", "Lighting",
+    "TweenService", "UserInputService", "HttpService", "CollectionService",
+    "Debris", "SoundService", "Teams", "TeleportService", "MarketplaceService"
   ],
   "operators": [
-    { "label": "::", "detail": "method / scope → Luau :" },
-    { "label": ":", "detail": "table / dictionary → Luau ." },
-    { "label": ".", "detail": "Instance property" },
-    { "label": ".:", "detail": "concatenation → Luau .." },
-    { "label": "~>", "detail": "Connect/Once with automatic Janitor cleanup" }
+    { "label": "::", "detail": "Call a method or open an event on the receiver" },
+    { "label": ":", "detail": "Read a table / dictionary key" },
+    { "label": ".", "detail": "Read a property of the receiver" },
+    { "label": ".:", "detail": "Join two values into a string" },
+    { "label": "~>", "detail": "Connect or Once with automatic cleanup" }
   ],
-  "properties": [
-    { "label": "Name", "detail": "Instance.Name" },
-    { "label": "Parent", "detail": "Instance.Parent" },
-    { "label": "Value", "detail": "ValueBase / observable value" },
-    { "label": "OnChange", "detail": "observable.Changed:Connect" },
-    { "label": "ClassName", "detail": "Instance.ClassName" },
-    { "label": "UserId", "detail": "Player.UserId" },
-    { "label": "Character", "detail": "Player.Character" },
-    { "label": "DisplayName", "detail": "Player.DisplayName" },
-    { "label": "PlayerAdded", "detail": "Players.PlayerAdded" },
-    { "label": "PlayerRemoving", "detail": "Players.PlayerRemoving" }
-  ],
-  "methods": [
-    { "label": "Fire", "detail": "signal<T>::Fire(...) — emit the signal" },
-    { "label": "Connect", "detail": "RBXScriptSignal:Connect — listen until disconnected" },
-    { "label": "Once", "detail": "RBXScriptSignal:Once — listen for one emission" },
-    { "label": "Wait", "detail": "RBXScriptSignal:Wait — yield until next emission" },
-    { "label": "Destroy", "detail": "Destroy the signal / Instance" },
-    { "label": "GetPropertyChangedSignal", "detail": "Instance::GetPropertyChangedSignal(\"Name\")" },
-    { "label": "GetAttributeChangedSignal", "detail": "Instance::GetAttributeChangedSignal(\"Attr\")" },
-    { "label": "GetChangedSignal", "detail": "DataService path changed signal" },
-    { "label": "FindFirstChild", "detail": "Instance::FindFirstChild" },
-    { "label": "WaitForChild", "detail": "Instance::WaitForChild" },
-    { "label": "GetService", "detail": "GetService<T>()" },
-    { "label": "IsA", "detail": "Instance::IsA" }
-  ],
-  "cleanup": [
-    { "label": "Connect", "detail": "~>Connect — janitor-managed subscription" },
-    { "label": "Once", "detail": "~>Once — janitor-managed one-shot subscription" }
-  ]
+  "globals": {
+    "game": { "type": "DataModel", "detail": "DataModel" },
+    "workspace": { "type": "Workspace", "detail": "Workspace" },
+    "script": { "type": "Instance", "detail": "this script" },
+    "task": { "type": "task", "detail": "task library" },
+    "table": { "type": "tablelib", "detail": "table library" },
+    "math": { "type": "math", "detail": "math library" },
+    "DataService": { "type": "DataService", "detail": "DataService module" },
+    "Janitor": { "type": "Janitor", "detail": "Janitor library" }
+  },
+  "catalog": {
+    "Instance": {
+      "properties": [
+        { "label": "Name", "type": "string", "detail": "Instance.Name" },
+        { "label": "Parent", "type": "Instance", "detail": "Instance.Parent" },
+        { "label": "ClassName", "type": "string", "detail": "Instance.ClassName" },
+        { "label": "Archivable", "type": "bool", "detail": "Instance.Archivable" }
+      ],
+      "methods": [
+        { "label": "FindFirstChild", "returns": "Instance", "detail": "Instance::FindFirstChild(name)" },
+        { "label": "FindFirstChildOfClass", "returns": "Instance", "detail": "Instance::FindFirstChildOfClass(className)" },
+        { "label": "FindFirstChildWhichIsA", "returns": "Instance", "detail": "Instance::FindFirstChildWhichIsA(className)" },
+        { "label": "WaitForChild", "returns": "Instance", "detail": "Instance::WaitForChild(name)" },
+        { "label": "GetChildren", "returns": "array", "detail": "Instance::GetChildren()" },
+        { "label": "GetDescendants", "returns": "array", "detail": "Instance::GetDescendants()" },
+        { "label": "Clone", "returns": "Instance", "detail": "Instance::Clone()" },
+        { "label": "Destroy", "returns": "void", "detail": "Instance::Destroy()" },
+        { "label": "ClearAllChildren", "returns": "void", "detail": "Instance::ClearAllChildren()" },
+        { "label": "IsA", "returns": "bool", "detail": "Instance::IsA(className)" },
+        { "label": "IsDescendantOf", "returns": "bool", "detail": "Instance::IsDescendantOf(ancestor)" },
+        { "label": "GetFullName", "returns": "string", "detail": "Instance::GetFullName()" },
+        { "label": "GetAttribute", "returns": "auto", "detail": "Instance::GetAttribute(name)" },
+        { "label": "SetAttribute", "returns": "void", "detail": "Instance::SetAttribute(name, value)" },
+        { "label": "GetAttributes", "returns": "dictionary", "detail": "Instance::GetAttributes()" },
+        { "label": "GetPropertyChangedSignal", "returns": "RBXScriptSignal", "detail": "Instance::GetPropertyChangedSignal(\"Name\")" },
+        { "label": "GetAttributeChangedSignal", "returns": "RBXScriptSignal", "detail": "Instance::GetAttributeChangedSignal(\"Attr\")" }
+      ],
+      "events": [
+        { "label": "ChildAdded", "type": "RBXScriptSignal", "detail": "Instance::ChildAdded" },
+        { "label": "ChildRemoved", "type": "RBXScriptSignal", "detail": "Instance::ChildRemoved" },
+        { "label": "AncestryChanged", "type": "RBXScriptSignal", "detail": "Instance::AncestryChanged" },
+        { "label": "Changed", "type": "RBXScriptSignal", "detail": "Instance::Changed" },
+        { "label": "Destroying", "type": "RBXScriptSignal", "detail": "Instance::Destroying" },
+        { "label": "AttributeChanged", "type": "RBXScriptSignal", "detail": "Instance::AttributeChanged" }
+      ]
+    },
+    "Player": {
+      "extends": "Instance",
+      "properties": [
+        { "label": "UserId", "type": "int", "detail": "Player.UserId" },
+        { "label": "DisplayName", "type": "string", "detail": "Player.DisplayName" },
+        { "label": "Character", "type": "Model", "detail": "Player.Character" },
+        { "label": "CharacterAppearanceId", "type": "int", "detail": "Player.CharacterAppearanceId" },
+        { "label": "AccountAge", "type": "int", "detail": "Player.AccountAge" },
+        { "label": "MembershipType", "type": "EnumItem", "detail": "Player.MembershipType" },
+        { "label": "Team", "type": "Instance", "detail": "Player.Team" },
+        { "label": "TeamColor", "type": "BrickColor", "detail": "Player.TeamColor" },
+        { "label": "Neutral", "type": "bool", "detail": "Player.Neutral" },
+        { "label": "LocaleId", "type": "string", "detail": "Player.LocaleId" },
+        { "label": "ReplicationFocus", "type": "Instance", "detail": "Player.ReplicationFocus" },
+        { "label": "CameraMode", "type": "EnumItem", "detail": "Player.CameraMode" },
+        { "label": "FollowUserId", "type": "int", "detail": "Player.FollowUserId" },
+        { "label": "GameplayPaused", "type": "bool", "detail": "Player.GameplayPaused" },
+        { "label": "HasAppearanceLoaded", "type": "bool", "detail": "Player.HasAppearanceLoaded" }
+      ],
+      "methods": [
+        { "label": "Kick", "returns": "void", "detail": "Player::Kick(message)" },
+        { "label": "LoadCharacter", "returns": "void", "detail": "Player::LoadCharacter()" },
+        { "label": "LoadCharacterBlocking", "returns": "void", "detail": "Player::LoadCharacterBlocking()" },
+        { "label": "GetMouse", "returns": "Instance", "detail": "Player::GetMouse()" },
+        { "label": "IsFriendsWith", "returns": "bool", "detail": "Player::IsFriendsWith(userId)" },
+        { "label": "GetJoinData", "returns": "dictionary", "detail": "Player::GetJoinData()" },
+        { "label": "DistanceFromCharacter", "returns": "float", "detail": "Player::DistanceFromCharacter(point)" },
+        { "label": "RequestStreamAroundAsync", "returns": "void", "detail": "Player::RequestStreamAroundAsync(position)" }
+      ],
+      "events": [
+        { "label": "CharacterAdded", "type": "RBXScriptSignal", "detail": "Player::CharacterAdded" },
+        { "label": "CharacterRemoving", "type": "RBXScriptSignal", "detail": "Player::CharacterRemoving" },
+        { "label": "CharacterAppearanceLoaded", "type": "RBXScriptSignal", "detail": "Player::CharacterAppearanceLoaded" },
+        { "label": "Chatted", "type": "RBXScriptSignal", "detail": "Player::Chatted" },
+        { "label": "Idled", "type": "RBXScriptSignal", "detail": "Player::Idled" }
+      ]
+    },
+    "Players": {
+      "extends": "Instance",
+      "properties": [
+        { "label": "LocalPlayer", "type": "Player", "detail": "Players.LocalPlayer" },
+        { "label": "MaxPlayers", "type": "int", "detail": "Players.MaxPlayers" },
+        { "label": "PreferredPlayers", "type": "int", "detail": "Players.PreferredPlayers" },
+        { "label": "RespawnTime", "type": "float", "detail": "Players.RespawnTime" },
+        { "label": "CharacterAutoLoads", "type": "bool", "detail": "Players.CharacterAutoLoads" }
+      ],
+      "methods": [
+        { "label": "GetPlayers", "returns": "array", "detail": "Players::GetPlayers()" },
+        { "label": "GetPlayerFromCharacter", "returns": "Player", "detail": "Players::GetPlayerFromCharacter(character)" },
+        { "label": "GetPlayerByUserId", "returns": "Player", "detail": "Players::GetPlayerByUserId(userId)" },
+        { "label": "GetUserIdFromNameAsync", "returns": "int", "detail": "Players::GetUserIdFromNameAsync(name)" },
+        { "label": "GetNameFromUserIdAsync", "returns": "string", "detail": "Players::GetNameFromUserIdAsync(userId)" }
+      ],
+      "events": [
+        { "label": "PlayerAdded", "type": "RBXScriptSignal", "detail": "Players::PlayerAdded" },
+        { "label": "PlayerRemoving", "type": "RBXScriptSignal", "detail": "Players::PlayerRemoving" }
+      ]
+    },
+    "Model": {
+      "extends": "Instance",
+      "properties": [
+        { "label": "PrimaryPart", "type": "BasePart", "detail": "Model.PrimaryPart" },
+        { "label": "WorldPivot", "type": "CFrame", "detail": "Model.WorldPivot" }
+      ],
+      "methods": [
+        { "label": "GetExtentsSize", "returns": "Vector3", "detail": "Model::GetExtentsSize()" },
+        { "label": "GetBoundingBox", "returns": "auto", "detail": "Model::GetBoundingBox()" },
+        { "label": "MoveTo", "returns": "void", "detail": "Model::MoveTo(position)" },
+        { "label": "TranslateBy", "returns": "void", "detail": "Model::TranslateBy(delta)" },
+        { "label": "ScaleTo", "returns": "void", "detail": "Model::ScaleTo(scale)" },
+        { "label": "GetScale", "returns": "float", "detail": "Model::GetScale()" },
+        { "label": "PivotTo", "returns": "void", "detail": "Model::PivotTo(cframe)" },
+        { "label": "GetPivot", "returns": "CFrame", "detail": "Model::GetPivot()" }
+      ],
+      "events": []
+    },
+    "Humanoid": {
+      "extends": "Instance",
+      "properties": [
+        { "label": "Health", "type": "float", "detail": "Humanoid.Health" },
+        { "label": "MaxHealth", "type": "float", "detail": "Humanoid.MaxHealth" },
+        { "label": "WalkSpeed", "type": "float", "detail": "Humanoid.WalkSpeed" },
+        { "label": "JumpPower", "type": "float", "detail": "Humanoid.JumpPower" },
+        { "label": "JumpHeight", "type": "float", "detail": "Humanoid.JumpHeight" },
+        { "label": "HipHeight", "type": "float", "detail": "Humanoid.HipHeight" },
+        { "label": "AutoRotate", "type": "bool", "detail": "Humanoid.AutoRotate" },
+        { "label": "Sit", "type": "bool", "detail": "Humanoid.Sit" },
+        { "label": "PlatformStand", "type": "bool", "detail": "Humanoid.PlatformStand" },
+        { "label": "RootPart", "type": "BasePart", "detail": "Humanoid.RootPart" },
+        { "label": "MoveDirection", "type": "Vector3", "detail": "Humanoid.MoveDirection" }
+      ],
+      "methods": [
+        { "label": "TakeDamage", "returns": "void", "detail": "Humanoid::TakeDamage(amount)" },
+        { "label": "Move", "returns": "void", "detail": "Humanoid::Move(direction)" },
+        { "label": "ChangeState", "returns": "void", "detail": "Humanoid::ChangeState(state)" },
+        { "label": "GetState", "returns": "EnumItem", "detail": "Humanoid::GetState()" },
+        { "label": "EquipTool", "returns": "void", "detail": "Humanoid::EquipTool(tool)" },
+        { "label": "UnequipTools", "returns": "void", "detail": "Humanoid::UnequipTools()" },
+        { "label": "LoadAnimation", "returns": "Instance", "detail": "Humanoid::LoadAnimation(animation)" },
+        { "label": "ApplyDescription", "returns": "void", "detail": "Humanoid::ApplyDescription(description)" }
+      ],
+      "events": [
+        { "label": "Died", "type": "RBXScriptSignal", "detail": "Humanoid::Died" },
+        { "label": "HealthChanged", "type": "RBXScriptSignal", "detail": "Humanoid::HealthChanged" },
+        { "label": "Running", "type": "RBXScriptSignal", "detail": "Humanoid::Running" },
+        { "label": "Jumping", "type": "RBXScriptSignal", "detail": "Humanoid::Jumping" },
+        { "label": "Seated", "type": "RBXScriptSignal", "detail": "Humanoid::Seated" },
+        { "label": "StateChanged", "type": "RBXScriptSignal", "detail": "Humanoid::StateChanged" }
+      ]
+    },
+    "BasePart": {
+      "extends": "Instance",
+      "properties": [
+        { "label": "Anchored", "type": "bool", "detail": "BasePart.Anchored" },
+        { "label": "CanCollide", "type": "bool", "detail": "BasePart.CanCollide" },
+        { "label": "CanQuery", "type": "bool", "detail": "BasePart.CanQuery" },
+        { "label": "CanTouch", "type": "bool", "detail": "BasePart.CanTouch" },
+        { "label": "Transparency", "type": "float", "detail": "BasePart.Transparency" },
+        { "label": "Color", "type": "Color3", "detail": "BasePart.Color" },
+        { "label": "BrickColor", "type": "BrickColor", "detail": "BasePart.BrickColor" },
+        { "label": "Material", "type": "EnumItem", "detail": "BasePart.Material" },
+        { "label": "Position", "type": "Vector3", "detail": "BasePart.Position" },
+        { "label": "Orientation", "type": "Vector3", "detail": "BasePart.Orientation" },
+        { "label": "CFrame", "type": "CFrame", "detail": "BasePart.CFrame" },
+        { "label": "Size", "type": "Vector3", "detail": "BasePart.Size" },
+        { "label": "AssemblyLinearVelocity", "type": "Vector3", "detail": "BasePart.AssemblyLinearVelocity" },
+        { "label": "CastShadow", "type": "bool", "detail": "BasePart.CastShadow" }
+      ],
+      "methods": [
+        { "label": "GetMass", "returns": "float", "detail": "BasePart::GetMass()" },
+        { "label": "GetPivot", "returns": "CFrame", "detail": "BasePart::GetPivot()" },
+        { "label": "PivotTo", "returns": "void", "detail": "BasePart::PivotTo(cframe)" },
+        { "label": "GetTouchingParts", "returns": "array", "detail": "BasePart::GetTouchingParts()" }
+      ],
+      "events": [
+        { "label": "Touched", "type": "RBXScriptSignal", "detail": "BasePart::Touched" },
+        { "label": "TouchEnded", "type": "RBXScriptSignal", "detail": "BasePart::TouchEnded" }
+      ]
+    },
+    "Part": { "extends": "BasePart" },
+    "MeshPart": { "extends": "BasePart" },
+    "Folder": { "extends": "Instance" },
+    "Workspace": {
+      "extends": "Model",
+      "properties": [
+        { "label": "CurrentCamera", "type": "Instance", "detail": "Workspace.CurrentCamera" },
+        { "label": "Gravity", "type": "float", "detail": "Workspace.Gravity" },
+        { "label": "DistributedGameTime", "type": "float", "detail": "Workspace.DistributedGameTime" }
+      ],
+      "methods": [
+        { "label": "Raycast", "returns": "auto", "detail": "Workspace::Raycast(origin, direction, params)" },
+        { "label": "GetServerTimeNow", "returns": "float", "detail": "Workspace::GetServerTimeNow()" }
+      ]
+    },
+    "DataModel": {
+      "extends": "Instance",
+      "properties": [
+        { "label": "PlaceId", "type": "int", "detail": "game.PlaceId" },
+        { "label": "JobId", "type": "string", "detail": "game.JobId" },
+        { "label": "GameId", "type": "int", "detail": "game.GameId" },
+        { "label": "PlaceVersion", "type": "int", "detail": "game.PlaceVersion" }
+      ],
+      "methods": [
+        { "label": "GetService", "returns": "Instance", "detail": "game::GetService<T>()" },
+        { "label": "BindToClose", "returns": "void", "detail": "game::BindToClose(fn)" },
+        { "label": "IsLoaded", "returns": "bool", "detail": "game::IsLoaded()" }
+      ],
+      "events": [
+        { "label": "Close", "type": "RBXScriptSignal", "detail": "game::Close" },
+        { "label": "Loaded", "type": "RBXScriptSignal", "detail": "game::Loaded" }
+      ]
+    },
+    "RunService": {
+      "extends": "Instance",
+      "methods": [
+        { "label": "IsStudio", "returns": "bool", "detail": "RunService::IsStudio()" },
+        { "label": "IsClient", "returns": "bool", "detail": "RunService::IsClient()" },
+        { "label": "IsServer", "returns": "bool", "detail": "RunService::IsServer()" },
+        { "label": "IsRunning", "returns": "bool", "detail": "RunService::IsRunning()" }
+      ],
+      "events": [
+        { "label": "Heartbeat", "type": "RBXScriptSignal", "detail": "RunService::Heartbeat" },
+        { "label": "Stepped", "type": "RBXScriptSignal", "detail": "RunService::Stepped" },
+        { "label": "RenderStepped", "type": "RBXScriptSignal", "detail": "RunService::RenderStepped" },
+        { "label": "PreAnimation", "type": "RBXScriptSignal", "detail": "RunService::PreAnimation" },
+        { "label": "PreRender", "type": "RBXScriptSignal", "detail": "RunService::PreRender" },
+        { "label": "PreSimulation", "type": "RBXScriptSignal", "detail": "RunService::PreSimulation" },
+        { "label": "PostSimulation", "type": "RBXScriptSignal", "detail": "RunService::PostSimulation" }
+      ]
+    },
+    "ReplicatedStorage": { "extends": "Instance" },
+    "ServerStorage": { "extends": "Instance" },
+    "Lighting": { "extends": "Instance" },
+    "signal": {
+      "methods": [
+        { "label": "Fire", "returns": "void", "detail": "signal<T>::Fire(...) — emit" },
+        { "label": "Connect", "returns": "RBXScriptConnection", "detail": "signal<T>::Connect(fn) — listen" },
+        { "label": "Once", "returns": "RBXScriptConnection", "detail": "signal<T>::Once(fn) — listen once" },
+        { "label": "Wait", "returns": "auto", "detail": "signal<T>::Wait() — yield until next fire" },
+        { "label": "Destroy", "returns": "void", "detail": "signal<T>::Destroy()" }
+      ]
+    },
+    "RBXScriptSignal": {
+      "methods": [
+        { "label": "Connect", "returns": "RBXScriptConnection", "detail": "RBXScriptSignal::Connect(fn)" },
+        { "label": "Once", "returns": "RBXScriptConnection", "detail": "RBXScriptSignal::Once(fn)" },
+        { "label": "Wait", "returns": "auto", "detail": "RBXScriptSignal::Wait()" }
+      ]
+    },
+    "RBXScriptConnection": {
+      "properties": [
+        { "label": "Connected", "type": "bool", "detail": "RBXScriptConnection.Connected" }
+      ],
+      "methods": [
+        { "label": "Disconnect", "returns": "void", "detail": "RBXScriptConnection::Disconnect()" }
+      ]
+    },
+    "observable": {
+      "properties": [
+        { "label": "Value", "type": "auto", "detail": "observable ValueBase.Value" },
+        { "label": "Name", "type": "string", "detail": "ValueBase.Name" },
+        { "label": "Parent", "type": "Instance", "detail": "ValueBase.Parent" },
+        { "label": "OnChange", "type": "func", "access": "property", "detail": "observable.OnChange(fn) → Changed:Connect" }
+      ],
+      "methods": [
+        { "label": "Destroy", "returns": "void", "detail": "observable::Destroy()" },
+        { "label": "GetPropertyChangedSignal", "returns": "RBXScriptSignal", "detail": "ValueBase::GetPropertyChangedSignal(\"Value\")" }
+      ],
+      "events": [
+        { "label": "Changed", "type": "RBXScriptSignal", "detail": "observable::Changed" }
+      ]
+    },
+    "DataService": {
+      "tableKeys": [
+        { "label": "Server", "type": "DataServiceServer", "detail": "DataService:Server" },
+        { "label": "Client", "type": "DataServiceClient", "detail": "DataService:Client" },
+        { "label": "Paths", "type": "dictionary", "detail": "DataService:Paths" }
+      ]
+    },
+    "DataServiceServer": {
+      "methods": [
+        { "label": "Init", "returns": "void", "detail": "DataService:Server::Init(opts)" },
+        { "label": "WaitFor", "returns": "Data", "detail": "DataService:Server::WaitFor(player)" },
+        { "label": "Get", "returns": "auto", "detail": "DataService:Server::Get(player, path)" },
+        { "label": "Set", "returns": "void", "detail": "DataService:Server::Set(player, path, value)" },
+        { "label": "Update", "returns": "void", "detail": "DataService:Server::Update(player, path, fn)" },
+        { "label": "Remove", "returns": "void", "detail": "DataService:Server::Remove(player, path)" }
+      ]
+    },
+    "DataServiceClient": {
+      "methods": [
+        { "label": "WaitFor", "returns": "Data", "detail": "DataService:Client::WaitFor(player)" },
+        { "label": "Get", "returns": "auto", "detail": "DataService:Client::Get(path)" }
+      ]
+    },
+    "Data": {
+      "methods": [
+        { "label": "Get", "returns": "auto", "detail": "Data::Get(path)" },
+        { "label": "Set", "returns": "void", "detail": "Data::Set(path, value)" }
+      ]
+    },
+    "Janitor": {
+      "methods": [
+        { "label": "Add", "returns": "auto", "detail": "Janitor::Add(object, methodName)" },
+        { "label": "AddPromise", "returns": "auto", "detail": "Janitor::AddPromise(promise)" },
+        { "label": "Cleanup", "returns": "void", "detail": "Janitor::Cleanup()" },
+        { "label": "Destroy", "returns": "void", "detail": "Janitor::Destroy()" },
+        { "label": "Remove", "returns": "void", "detail": "Janitor::Remove(index)" },
+        { "label": "LinkToInstance", "returns": "RBXScriptConnection", "detail": "Janitor::LinkToInstance(instance)" }
+      ]
+    },
+    "Promise": {
+      "methods": [
+        { "label": "andThen", "returns": "Promise", "detail": "Promise::andThen(fn)" },
+        { "label": "catch", "returns": "Promise", "detail": "Promise::catch(fn)" },
+        { "label": "finally", "returns": "Promise", "detail": "Promise::finally(fn)" },
+        { "label": "expect", "returns": "auto", "detail": "Promise::expect() — await" },
+        { "label": "await", "returns": "auto", "detail": "Promise::await()" }
+      ]
+    },
+    "RemoteEvent": {
+      "extends": "Instance",
+      "methods": [
+        { "label": "FireServer", "returns": "void", "detail": "RemoteEvent::FireServer(...)" },
+        { "label": "FireClient", "returns": "void", "detail": "RemoteEvent::FireClient(player, ...)" },
+        { "label": "FireAllClients", "returns": "void", "detail": "RemoteEvent::FireAllClients(...)" }
+      ],
+      "events": [
+        { "label": "OnServerEvent", "type": "RBXScriptSignal", "detail": "RemoteEvent::OnServerEvent" },
+        { "label": "OnClientEvent", "type": "RBXScriptSignal", "detail": "RemoteEvent::OnClientEvent" }
+      ]
+    },
+    "RemoteFunction": {
+      "extends": "Instance",
+      "methods": [
+        { "label": "InvokeServer", "returns": "auto", "detail": "RemoteFunction::InvokeServer(...)" },
+        { "label": "InvokeClient", "returns": "auto", "detail": "RemoteFunction::InvokeClient(player, ...)" }
+      ]
+    },
+    "BindableEvent": {
+      "extends": "Instance",
+      "methods": [
+        { "label": "Fire", "returns": "void", "detail": "BindableEvent::Fire(...)" }
+      ],
+      "events": [
+        { "label": "Event", "type": "RBXScriptSignal", "detail": "BindableEvent::Event" }
+      ]
+    },
+    "IntValue": { "extends": "observable" },
+    "NumberValue": { "extends": "observable" },
+    "StringValue": { "extends": "observable" },
+    "BoolValue": { "extends": "observable" },
+    "ObjectValue": { "extends": "observable" },
+    "Vector3": {
+      "properties": [
+        { "label": "X", "type": "float", "detail": "Vector3.X" },
+        { "label": "Y", "type": "float", "detail": "Vector3.Y" },
+        { "label": "Z", "type": "float", "detail": "Vector3.Z" },
+        { "label": "Magnitude", "type": "float", "detail": "Vector3.Magnitude" },
+        { "label": "Unit", "type": "Vector3", "detail": "Vector3.Unit" }
+      ],
+      "methods": [
+        { "label": "Dot", "returns": "float", "detail": "Vector3::Dot(other)" },
+        { "label": "Cross", "returns": "Vector3", "detail": "Vector3::Cross(other)" },
+        { "label": "Lerp", "returns": "Vector3", "detail": "Vector3::Lerp(goal, alpha)" },
+        { "label": "Abs", "returns": "Vector3", "detail": "Vector3::Abs()" }
+      ]
+    },
+    "CFrame": {
+      "properties": [
+        { "label": "Position", "type": "Vector3", "detail": "CFrame.Position" },
+        { "label": "LookVector", "type": "Vector3", "detail": "CFrame.LookVector" },
+        { "label": "RightVector", "type": "Vector3", "detail": "CFrame.RightVector" },
+        { "label": "UpVector", "type": "Vector3", "detail": "CFrame.UpVector" },
+        { "label": "X", "type": "float", "detail": "CFrame.X" },
+        { "label": "Y", "type": "float", "detail": "CFrame.Y" },
+        { "label": "Z", "type": "float", "detail": "CFrame.Z" }
+      ],
+      "methods": [
+        { "label": "ToEulerAnglesYXZ", "returns": "auto", "detail": "CFrame::ToEulerAnglesYXZ()" },
+        { "label": "Inverse", "returns": "CFrame", "detail": "CFrame::Inverse()" },
+        { "label": "Lerp", "returns": "CFrame", "detail": "CFrame::Lerp(goal, alpha)" }
+      ]
+    },
+    "Color3": {
+      "properties": [
+        { "label": "R", "type": "float", "detail": "Color3.R" },
+        { "label": "G", "type": "float", "detail": "Color3.G" },
+        { "label": "B", "type": "float", "detail": "Color3.B" }
+      ],
+      "methods": [
+        { "label": "Lerp", "returns": "Color3", "detail": "Color3::Lerp(goal, alpha)" },
+        { "label": "ToHex", "returns": "string", "detail": "Color3::ToHex()" }
+      ]
+    },
+    "UDim2": {
+      "properties": [
+        { "label": "X", "type": "UDim", "detail": "UDim2.X" },
+        { "label": "Y", "type": "UDim", "detail": "UDim2.Y" },
+        { "label": "Width", "type": "UDim", "detail": "UDim2.Width" },
+        { "label": "Height", "type": "UDim", "detail": "UDim2.Height" }
+      ],
+      "methods": [
+        { "label": "Lerp", "returns": "UDim2", "detail": "UDim2::Lerp(goal, alpha)" }
+      ]
+    },
+    "task": {
+      "methods": [
+        { "label": "wait", "returns": "float", "detail": "task::wait(seconds)" },
+        { "label": "spawn", "returns": "auto", "detail": "task::spawn(fn)" },
+        { "label": "defer", "returns": "auto", "detail": "task::defer(fn)" },
+        { "label": "delay", "returns": "auto", "detail": "task::delay(seconds, fn)" },
+        { "label": "cancel", "returns": "void", "detail": "task::cancel(thread)" },
+        { "label": "synchronize", "returns": "void", "detail": "task::synchronize()" },
+        { "label": "desynchronize", "returns": "void", "detail": "task::desynchronize()" }
+      ]
+    },
+    "tablelib": {
+      "methods": [
+        { "label": "insert", "returns": "void", "detail": "table::insert(list, value)" },
+        { "label": "remove", "returns": "auto", "detail": "table::remove(list, index)" },
+        { "label": "find", "returns": "int", "detail": "table::find(list, value)" },
+        { "label": "concat", "returns": "string", "detail": "table::concat(list, sep)" },
+        { "label": "clone", "returns": "auto", "detail": "table::clone(t)" },
+        { "label": "clear", "returns": "void", "detail": "table::clear(t)" },
+        { "label": "create", "returns": "array", "detail": "table::create(count, value)" },
+        { "label": "freeze", "returns": "auto", "detail": "table::freeze(t)" }
+      ]
+    },
+    "math": {
+      "methods": [
+        { "label": "floor", "returns": "int", "detail": "math::floor(n)" },
+        { "label": "ceil", "returns": "int", "detail": "math::ceil(n)" },
+        { "label": "abs", "returns": "float", "detail": "math::abs(n)" },
+        { "label": "clamp", "returns": "float", "detail": "math::clamp(n, min, max)" },
+        { "label": "min", "returns": "float", "detail": "math::min(...)" },
+        { "label": "max", "returns": "float", "detail": "math::max(...)" },
+        { "label": "sqrt", "returns": "float", "detail": "math::sqrt(n)" },
+        { "label": "sin", "returns": "float", "detail": "math::sin(n)" },
+        { "label": "cos", "returns": "float", "detail": "math::cos(n)" },
+        { "label": "rad", "returns": "float", "detail": "math::rad(deg)" },
+        { "label": "deg", "returns": "float", "detail": "math::deg(rad)" },
+        { "label": "random", "returns": "float", "detail": "math::random()" },
+        { "label": "noise", "returns": "float", "detail": "math::noise(x, y, z)" }
+      ]
+    },
+    "dictionary": {},
+    "array": {},
+    "Fusion": {
+      "tableKeys": [
+        { "label": "New", "type": "func", "detail": "Fusion:New \"Class\"" },
+        { "label": "Value", "type": "func", "detail": "Fusion:Value(initial)" },
+        { "label": "Computed", "type": "func", "detail": "Fusion:Computed(fn)" },
+        { "label": "Spring", "type": "func", "detail": "Fusion:Spring(value)" },
+        { "label": "Tween", "type": "func", "detail": "Fusion:Tween(value)" },
+        { "label": "Hydrate", "type": "func", "detail": "Fusion:Hydrate(instance)" },
+        { "label": "Children", "type": "func", "detail": "Fusion:Children" },
+        { "label": "OnEvent", "type": "func", "detail": "Fusion:OnEvent \"Activated\"" },
+        { "label": "OnChange", "type": "func", "detail": "Fusion:OnChange \"Text\"" },
+        { "label": "cleanup", "type": "func", "detail": "Fusion:cleanup" },
+        { "label": "DoCleanup", "type": "func", "detail": "Fusion:DoCleanup" }
+      ]
+    },
+    "Vide": {
+      "tableKeys": [
+        { "label": "root", "type": "func", "detail": "Vide:root(fn)" },
+        { "label": "source", "type": "func", "detail": "Vide:source(initial)" },
+        { "label": "derive", "type": "func", "detail": "Vide:derive(fn)" },
+        { "label": "effect", "type": "func", "detail": "Vide:effect(fn)" },
+        { "label": "create", "type": "func", "detail": "Vide:create \"Class\"" },
+        { "label": "apply", "type": "func", "detail": "Vide:apply(instance)" },
+        { "label": "cleanup", "type": "func", "detail": "Vide:cleanup(fn)" },
+        { "label": "untrack", "type": "func", "detail": "Vide:untrack(fn)" }
+      ]
+    }
+  }
 }

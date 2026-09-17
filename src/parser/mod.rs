@@ -1,6 +1,7 @@
 use crate::ast::*;
 use crate::error::ClppError;
 use miette::Result;
+use pest::error::ErrorVariant;
 use pest::iterators::Pair;
 use pest::Parser as PestParser;
 use pest_derive::Parser;
@@ -15,7 +16,7 @@ pub fn parse(source: &str, file_name: &str) -> Result<Program> {
             pest::error::LineColLocation::Pos((l, c)) => (l, c),
             pest::error::LineColLocation::Span((l, c), _) => (l, c),
         };
-        ClppError::at_line(source, line, col, format!("{err}"))
+        ClppError::at_line(source, line, col, format_parse_error(&err))
     })?;
     let file = pairs.next().expect("file pair");
     let mut items = Vec::new();
@@ -28,6 +29,35 @@ pub fn parse(source: &str, file_name: &str) -> Result<Program> {
         items,
         file_name: file_name.to_string(),
     })
+}
+
+fn format_parse_error(err: &pest::error::Error<Rule>) -> String {
+    let raw = err.to_string();
+    let expected_semi = match &err.variant {
+        ErrorVariant::ParsingError { positives, .. } => positives.iter().any(|rule| {
+            let name = format!("{rule:?}");
+            name.contains("EOI") || raw.contains("\";\"")
+        }),
+        _ => false,
+    };
+    if expected_semi || raw.contains("expected \";\"") || raw.contains("expected \";\"") {
+        return "missing ';' at the end of this statement".into();
+    }
+    if raw.contains("expected ident") {
+        return "expected a name after the type, e.g. const int coins = 0;".into();
+    }
+    if let ErrorVariant::ParsingError { positives, .. } = &err.variant {
+        let names: Vec<String> = positives.iter().map(|r| format!("{r:?}")).collect();
+        if names.iter().any(|n| n.contains("ident")) {
+            return "expected a name after the type, e.g. const int coins = 0;".into();
+        }
+    }
+    raw.lines()
+        .last()
+        .map(|l| l.trim().trim_start_matches('=').trim())
+        .filter(|l| !l.is_empty())
+        .map(|l| l.to_string())
+        .unwrap_or(raw)
 }
 
 fn parse_item(pair: Pair<Rule>) -> Vec<Item> {
@@ -80,6 +110,7 @@ fn parse_struct_member(pair: Pair<Rule>, owner: &str) -> Vec<Item> {
                     is_const: false,
                     is_observable: false,
                     owner: Some(owner.to_string()),
+                    line: instance.line_col().0,
                 }));
             }
             items
@@ -147,6 +178,7 @@ fn parse_function(pair: Pair<Rule>) -> Item {
 }
 
 fn parse_var_decl(pair: Pair<Rule>, owner: Option<&str>) -> Decl {
+    let line = pair.line_col().0;
     let mut is_const = false;
     let mut is_observable = false;
     let mut value_type = None;
@@ -172,6 +204,7 @@ fn parse_var_decl(pair: Pair<Rule>, owner: Option<&str>) -> Decl {
         is_const,
         is_observable,
         owner: owner.map(str::to_string),
+        line,
     }
 }
 
@@ -661,13 +694,17 @@ fn parse_atom(pair: Pair<Rule>) -> Expr {
             name => Expr::Ident(name.to_string()),
         },
         Rule::number => Expr::Number(pair.as_str().to_string()),
-        Rule::string => Expr::String(unquote(pair.as_str())),
+        Rule::string | Rule::char_string => Expr::String(unquote(pair.as_str())),
+        Rule::template_string => parse_template(pair),
+        Rule::string_join => parse_string_join(pair),
         Rule::expr => parse_expr(pair),
         _ => match pair.as_str() {
             "true" => Expr::Bool(true),
             "false" => Expr::Bool(false),
             "null" | "nullptr" => Expr::Null,
-            other if other.starts_with('"') => Expr::String(unquote(other)),
+            other if other.starts_with('"') || other.starts_with('\'') || other.starts_with('`') => {
+                Expr::String(unquote(other))
+            }
             _ => parse_atom_or_inner(pair),
         },
     }
@@ -841,7 +878,91 @@ fn parse_lambda(pair: Pair<Rule>) -> Expr {
     Expr::Lambda { params, body }
 }
 
+fn parse_template(pair: Pair<Rule>) -> Expr {
+    let mut parts = Vec::new();
+    collect_template(pair, &mut parts);
+    if parts.len() == 1 {
+        if let InterpPart::Text(text) = &parts[0] {
+            return Expr::String(text.clone());
+        }
+    }
+    if parts.is_empty() {
+        return Expr::String(String::new());
+    }
+    Expr::Interp { parts }
+}
+
+fn collect_template(pair: Pair<Rule>, parts: &mut Vec<InterpPart>) {
+    match pair.as_rule() {
+        Rule::template_string | Rule::template_chunk => {
+            for inner in pair.into_inner() {
+                collect_template(inner, parts);
+            }
+        }
+        Rule::template_text => parts.push(InterpPart::Text(unescape(pair.as_str()))),
+        Rule::template_escaped => parts.push(InterpPart::Text(unescape(pair.as_str()))),
+        Rule::template_interp => {
+            if let Some(expr) = pair.into_inner().find(|p| p.as_rule() == Rule::expr) {
+                parts.push(InterpPart::Value(parse_expr(expr)));
+            }
+        }
+        _ => {
+            for inner in pair.into_inner() {
+                collect_template(inner, parts);
+            }
+        }
+    }
+}
+
+fn parse_string_join(pair: Pair<Rule>) -> Expr {
+    let mut parts = Vec::new();
+    for inner in pair.into_inner() {
+        match inner.as_rule() {
+            Rule::template_string => collect_template(inner, &mut parts),
+            Rule::expr => match parse_expr(inner) {
+                Expr::Interp { parts: more } => parts.extend(more),
+                Expr::String(text) => parts.push(InterpPart::Text(text)),
+                other => parts.push(InterpPart::Value(other)),
+            },
+            _ => {}
+        }
+    }
+    Expr::Interp { parts }
+}
+
 fn unquote(raw: &str) -> String {
-    let trimmed = raw.trim_matches('"');
-    trimmed.to_string()
+    let bytes = raw.as_bytes();
+    if bytes.len() >= 2 {
+        let first = bytes[0];
+        let last = bytes[bytes.len() - 1];
+        if (first == b'"' && last == b'"')
+            || (first == b'\'' && last == b'\'')
+            || (first == b'`' && last == b'`')
+        {
+            return unescape(&raw[1..raw.len() - 1]);
+        }
+    }
+    unescape(raw)
+}
+
+fn unescape(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut chars = text.chars();
+    while let Some(ch) = chars.next() {
+        if ch == '\\' {
+            match chars.next() {
+                Some('n') => out.push('\n'),
+                Some('t') => out.push('\t'),
+                Some('r') => out.push('\r'),
+                Some('`') => out.push('`'),
+                Some('{') => out.push('{'),
+                Some('}') => out.push('}'),
+                Some(other) => out.push(other),
+                None => out.push('\\'),
+            }
+        } else {
+            out.push(ch);
+        }
+    }
+    out
 }

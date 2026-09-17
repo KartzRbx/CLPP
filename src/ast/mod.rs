@@ -41,6 +41,7 @@ pub struct Decl {
     pub is_const: bool,
     pub is_observable: bool,
     pub owner: Option<String>,
+    pub line: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -63,6 +64,9 @@ pub enum Expr {
     Bool(bool),
     Number(String),
     String(String),
+    Interp {
+        parts: Vec<InterpPart>,
+    },
     Ident(String),
     Unary {
         op: String,
@@ -120,6 +124,12 @@ pub enum Expr {
         op: String,
         target: Box<Expr>,
     },
+}
+
+#[derive(Debug, Clone)]
+pub enum InterpPart {
+    Text(String),
+    Value(Expr),
 }
 
 #[derive(Debug, Clone)]

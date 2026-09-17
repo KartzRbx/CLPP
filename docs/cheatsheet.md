@@ -10,11 +10,15 @@ title: Language cheat sheet
 
 ## Access
 
-`.` property · `::` method · `:` table · `.:` concat · `~>` janitor Connect/Once
+`.` property · `::` method · `:` table · `.:` concat · `~>` cleanup Connect/Once
+
+## Text
+
+`"double"` · `'single'` · `` `template {expr}` `` · `` `a`, expr, `b` ``
 
 ## I/O
 
-`post` print · `warn` warn · `report` error · `null` nil
+`post` output · `warn` warning · `report` error · `null` empty value
 
 ## Types
 

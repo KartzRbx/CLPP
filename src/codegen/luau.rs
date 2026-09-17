@@ -314,6 +314,10 @@ impl<'a> Emitter<'a> {
                         .any(|(k, v)| walk_expr(k, name) || walk_expr(v, name))
                 }
                 Expr::Update { target, .. } => walk_expr(target, name),
+                Expr::Interp { parts } => parts.iter().any(|part| match part {
+                    crate::ast::InterpPart::Value(expr) => walk_expr(expr, name),
+                    crate::ast::InterpPart::Text(_) => false,
+                }),
                 _ => false,
             }
         }
@@ -946,7 +950,8 @@ impl<'a> Emitter<'a> {
             Expr::Null => "nil".into(),
             Expr::Bool(v) => if *v { "true" } else { "false" }.into(),
             Expr::Number(n) => n.clone(),
-            Expr::String(s) => format!("\"{s}\""),
+            Expr::String(s) => format!("\"{}\"", escape_lua_string(s)),
+            Expr::Interp { parts } => emit_interp(self, parts),
             Expr::Ident(name) => {
                 let base = self.emit_self_ident(name);
                 if self.observables.contains(name) {
@@ -1377,6 +1382,10 @@ fn expr_has_cleanup(expr: &Expr) -> bool {
         Expr::DictLit { pairs } => pairs
             .iter()
             .any(|(k, v)| expr_has_cleanup(k) || expr_has_cleanup(v)),
+        Expr::Interp { parts } => parts.iter().any(|part| match part {
+            crate::ast::InterpPart::Value(expr) => expr_has_cleanup(expr),
+            crate::ast::InterpPart::Text(_) => false,
+        }),
         _ => false,
     }
 }
@@ -1446,8 +1455,49 @@ fn expr_has_await(expr: &Expr) -> bool {
         Expr::DictLit { pairs } => pairs
             .iter()
             .any(|(k, v)| expr_has_await(k) || expr_has_await(v)),
+        Expr::Interp { parts } => parts.iter().any(|part| match part {
+            crate::ast::InterpPart::Value(expr) => expr_has_await(expr),
+            crate::ast::InterpPart::Text(_) => false,
+        }),
         _ => false,
     }
+}
+
+fn emit_interp(emitter: &Emitter, parts: &[crate::ast::InterpPart]) -> String {
+    if parts.is_empty() {
+        return "\"\"".into();
+    }
+    let bits: Vec<String> = parts
+        .iter()
+        .map(|part| match part {
+            crate::ast::InterpPart::Text(text) => {
+                format!("\"{}\"", escape_lua_string(text))
+            }
+            crate::ast::InterpPart::Value(expr) => {
+                format!("tostring({})", emitter.emit_expr(expr))
+            }
+        })
+        .collect();
+    if bits.len() == 1 {
+        bits[0].clone()
+    } else {
+        bits.join(" .. ")
+    }
+}
+
+fn escape_lua_string(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    for ch in text.chars() {
+        match ch {
+            '\\' => out.push_str("\\\\"),
+            '"' => out.push_str("\\\""),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            other => out.push(other),
+        }
+    }
+    out
 }
 
 fn map_builtin(name: &str) -> &str {

@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 use clpp::compile::{build_dir, compile_artifact, compile_file, compile_request};
-use clpp::install::install_language;
+use clpp::install::{install_language, setup_machine};
 use clpp::support::{language_manifest, CompileArtifact, CompileRequest};
 use miette::{IntoDiagnostic, Result};
 use std::fs;
@@ -49,6 +49,8 @@ enum Commands {
         #[arg(long)]
         editor: Option<String>,
     },
+    /// Install the CL++ compiler and language pack on this machine
+    Setup,
     /// Language manifest (extensions, tags, operators)
     Manifest,
 }
@@ -65,6 +67,17 @@ enum ApiCommand {
 }
 
 fn main() -> Result<()> {
+    let args: Vec<String> = std::env::args().collect();
+    let stem = std::env::current_exe()
+        .ok()
+        .and_then(|p| {
+            p.file_stem()
+                .map(|s| s.to_string_lossy().to_ascii_lowercase())
+        })
+        .unwrap_or_default();
+    if stem == "clpp-setup" && args.len() <= 1 {
+        return run_setup(true);
+    }
     let cli = Cli::parse();
     match cli.command {
         Commands::Compile {
@@ -138,13 +151,35 @@ fn main() -> Result<()> {
         },
         Commands::Install { editor } => {
             let dests = install_language(editor.as_deref())?;
-            eprintln!("CL++ installed (highlighting, icon, IntelliSense):");
+            eprintln!("CL++ editor pack installed:");
             for dest in dests {
                 eprintln!("  {}", dest.display());
             }
-            eprintln!("Restart the editor (Cursor, VS Code, …) to enable the language.");
+            eprintln!("Reload the editor window to enable the language.");
         }
+        Commands::Setup => run_setup(false)?,
         Commands::Manifest => print_json(&language_manifest())?,
+    }
+    Ok(())
+}
+
+fn run_setup(pause: bool) -> Result<()> {
+    let report = setup_machine()?;
+    eprintln!("CL++ is installed on this machine.");
+    eprintln!("  compiler: {}", report.compiler.display());
+    eprintln!("  PATH:     {}", report.path_dir.display());
+    eprintln!("  pack:     {}", report.pack.display());
+    for dest in &report.editors {
+        eprintln!("  editor:   {}", dest.display());
+    }
+    eprintln!("Open a new terminal, then run: clpp --help");
+    eprintln!("Reload Cursor / VS Code to enable highlighting and IntelliSense.");
+    if pause {
+        eprintln!();
+        eprint!("Press Enter to close...");
+        let _ = io::stdout().flush();
+        let mut buf = String::new();
+        let _ = io::stdin().read_line(&mut buf);
     }
     Ok(())
 }

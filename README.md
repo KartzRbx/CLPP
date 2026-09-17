@@ -70,12 +70,14 @@ CL++ does **not** use `->`.
 
 ## Install
 
+**[Download the Windows installer](https://github.com/KartzRbx/CLPP/releases/latest/download/clpp-setup.exe)** — double-click `clpp-setup.exe`. It puts `clpp` on your machine and installs the editor pack.
+
+From source:
+
 ```bash
 cargo install --path .
-clpp install
+clpp setup
 ```
-
-`clpp install` copies the language pack into **VS Code** and **Cursor** (and Insiders, VSCodium, Windsurf when present). Restart the editor so `.clpp` / `.clp` / `.clh` get the icon, highlighting, and IntelliSense.
 
 ```bash
 clpp compile hello.server.clpp

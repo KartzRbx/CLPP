@@ -5,6 +5,14 @@ pub const LANGUAGE_NAME: &str = "CL++";
 pub const EXTENSIONS: &[&str] = &[".clpp", ".clp", ".clh"];
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompileDiagnostic {
+    pub message: String,
+    pub line: usize,
+    pub column: usize,
+    pub severity: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompileRequest {
     pub source: String,
     #[serde(default = "default_file_name", alias = "fileName")]
@@ -36,6 +44,8 @@ pub struct CompileArtifact {
     pub libraries: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub diagnostics: Vec<CompileDiagnostic>,
 }
 
 impl CompileArtifact {
@@ -51,6 +61,27 @@ impl CompileArtifact {
             rojo_class: "ModuleScript".into(),
             libraries: Vec::new(),
             error: Some(error.into()),
+            diagnostics: Vec::new(),
+        }
+    }
+
+    pub fn fail_with(
+        file_name: impl Into<String>,
+        error: impl Into<String>,
+        diagnostics: Vec<CompileDiagnostic>,
+    ) -> Self {
+        Self {
+            ok: false,
+            luau: String::new(),
+            file_name: file_name.into(),
+            output_hint: String::new(),
+            script_kind: None,
+            is_script: false,
+            is_header: false,
+            rojo_class: "ModuleScript".into(),
+            libraries: Vec::new(),
+            error: Some(error.into()),
+            diagnostics,
         }
     }
 }

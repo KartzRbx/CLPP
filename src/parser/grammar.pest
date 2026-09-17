@@ -62,7 +62,14 @@ kw = _{
 
 ident = @{ !kw ~ (ASCII_ALPHA | "_") ~ ident_char* }
 number = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
-string = @{ "\"" ~ (!"\"" ~ ("\\" ~ ANY | ANY))* ~ "\"" }
+string = @{ "\"" ~ ("\\" ~ ANY | !"\"" ~ ANY)* ~ "\"" }
+char_string = @{ "'" ~ ("\\" ~ ANY | !"'" ~ ANY)* ~ "'" }
+template_string = { "`" ~ template_chunk* ~ "`" }
+template_chunk = { template_interp | template_escaped | template_text }
+template_interp = { "{" ~ expr ~ "}" }
+template_escaped = @{ "\\`" | "\\{" | "\\}" | "\\\\" }
+template_text = @{ (!("`" | "{" | "\\") ~ ANY)+ }
+string_join = { template_string ~ ("," ~ expr)+ }
 
 file = { SOI ~ item* ~ EOI }
 
@@ -192,6 +199,9 @@ atom = {
     | boolean
     | null_lit
     | number
+    | string_join
+    | template_string
+    | char_string
     | string
     | init_list
     | ident

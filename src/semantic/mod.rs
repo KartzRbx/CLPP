@@ -1,3 +1,5 @@
+pub mod check;
+
 const INSTANCE_TYPES: &[&str] = &[
     "Instance", "Folder", "Part", "MeshPart", "BasePart", "UnionOperation", "CornerWedgePart",
     "WedgePart", "TrussPart", "Model", "WorldModel", "Actor", "Player", "Players", "Terrain",
