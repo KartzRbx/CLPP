@@ -139,8 +139,166 @@ function extraIncludeTexts(document) {
   return texts;
 }
 
+function rangeAt(document, start, end) {
+  return new vscode.Range(document.positionAt(start), document.positionAt(end));
+}
+
+function eachInclude(document) {
+  const text = document.getText();
+  const fromPath = document.uri.scheme === "file" ? document.uri.fsPath : null;
+  const re = /#include\s+(?:"([^"]+)"|<([^>]+)>)/g;
+  const out = [];
+  let match;
+  while ((match = re.exec(text))) {
+    const spec = match[1] || match[2];
+    const specIndex = match.index + match[0].lastIndexOf(spec);
+    out.push({
+      spec,
+      angled: Boolean(match[2]),
+      resolved: resolveInclude(spec, Boolean(match[2]), fromPath),
+      lineRange: rangeAt(document, match.index, match.index + match[0].length),
+      specRange: rangeAt(document, specIndex, specIndex + spec.length),
+    });
+  }
+  return out;
+}
+
+function structOutline(name, node, range) {
+  const symbol = new vscode.DocumentSymbol(name, "struct", vscode.SymbolKind.Struct, range, range);
+  for (const field of node.properties || []) {
+    symbol.children.push(
+      new vscode.DocumentSymbol(field.label, field.type || "", vscode.SymbolKind.Property, range, range)
+    );
+  }
+  for (const method of node.methods || []) {
+    symbol.children.push(
+      new vscode.DocumentSymbol(method.label, method.returns || "", vscode.SymbolKind.Method, range, range)
+    );
+  }
+  return symbol;
+}
+
+function includeOutline(engine, document) {
+  const symbols = [];
+  for (const inc of eachInclude(document)) {
+    const detail = inc.resolved ? path.basename(inc.resolved) : "missing";
+    const fileSym = new vscode.DocumentSymbol(
+      inc.spec,
+      inc.angled ? "include <>" : "include",
+      vscode.SymbolKind.File,
+      inc.lineRange,
+      inc.specRange
+    );
+    if (inc.resolved) {
+      try {
+        const body = fs.readFileSync(inc.resolved, "utf8");
+        const types = engine.parseStructs(body);
+        for (const [name, node] of Object.entries(types)) {
+          fileSym.children.push(structOutline(name, node, inc.lineRange));
+        }
+      } catch {
+        // skip unreadable include
+      }
+    }
+    symbols.push(fileSym);
+  }
+  return symbols;
+}
+
+function localOutline(engine, document) {
+  const text = document.getText();
+  const symbols = [];
+  const types = engine.parseStructs(text);
+  const structRe = /\bstruct\s+([A-Za-z_]\w*)/g;
+  let match;
+  const structRanges = new Map();
+  while ((match = structRe.exec(text))) {
+    structRanges.set(match[1], rangeAt(document, match.index, match.index + match[0].length));
+  }
+  for (const [name, node] of Object.entries(types)) {
+    const range = structRanges.get(name) || document.lineAt(0).range;
+    symbols.push(structOutline(name, node, range));
+  }
+  const methodRe =
+    /\b(?:[\w:<\*>\s]+?)\s+([A-Z][A-Za-z0-9_]*)::([A-Za-z_]\w*)\s*\(|\b(void)\s+(init)\s*\(/g;
+  while ((match = methodRe.exec(text))) {
+    const typeName = match[1] || match[3];
+    const methodName = match[2] || match[4];
+    const start = match.index + match[0].lastIndexOf(methodName);
+    const range = rangeAt(document, start, start + methodName.length);
+    const kind = methodName === "init" ? vscode.SymbolKind.Function : vscode.SymbolKind.Method;
+    const detail = typeName === "void" ? "script" : typeName;
+    symbols.push(new vscode.DocumentSymbol(methodName, detail, kind, range, range));
+  }
+  return symbols;
+}
+
 function symbolsFor(engine, document) {
   return engine.indexDocument(document.getText(), extraIncludeTexts(document));
+}
+
+function typeNamesFor(data, symbols) {
+  const names = new Set([...(data.types || []), ...Object.keys(data.catalog || {}), ...Object.keys(symbols.types || {})]);
+  const skip = new Set(["array", "dictionary", "signal", "observable", "task", "tablelib", "math"]);
+  return [...names].filter((name) => /^[A-Z]/.test(name) && !skip.has(name));
+}
+
+function codeMask(text) {
+  const ok = Buffer.alloc(text.length, 1);
+  let i = 0;
+  while (i < text.length) {
+    const ch = text[i];
+    const next = text[i + 1];
+    if (ch === "/" && next === "/") {
+      while (i < text.length && text[i] !== "\n") {
+        ok[i++] = 0;
+      }
+      continue;
+    }
+    if (ch === "/" && next === "*") {
+      ok[i++] = 0;
+      ok[i++] = 0;
+      while (i < text.length) {
+        ok[i] = 0;
+        if (text[i - 1] === "*" && text[i] === "/") {
+          i += 1;
+          break;
+        }
+        i += 1;
+      }
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") {
+      const quote = ch;
+      ok[i++] = 0;
+      while (i < text.length && text[i] !== quote) {
+        if (text[i] === "\\") {
+          ok[i++] = 0;
+          if (i < text.length) {
+            ok[i++] = 0;
+          }
+          continue;
+        }
+        if (quote === "`" && text[i] === "{") {
+          i += 1;
+          while (i < text.length && text[i] !== "}") {
+            i += 1;
+          }
+          if (i < text.length) {
+            i += 1;
+          }
+          continue;
+        }
+        ok[i++] = 0;
+      }
+      if (i < text.length) {
+        ok[i++] = 0;
+      }
+      continue;
+    }
+    i += 1;
+  }
+  return ok;
 }
 
 function activate(context) {
@@ -216,6 +374,73 @@ function activate(context) {
     },
   });
 
+  const legend = new vscode.SemanticTokensLegend(["type", "property"], []);
+  const semantic = vscode.languages.registerDocumentSemanticTokensProvider(
+    selector,
+    {
+      provideDocumentSemanticTokens(document) {
+        const builder = new vscode.SemanticTokensBuilder(legend);
+        const symbols = symbolsFor(engine, document);
+        const text = document.getText();
+        const mask = codeMask(text);
+        for (const name of typeNamesFor(data, symbols)) {
+          const re = new RegExp(`\\b${name}\\b`, "g");
+          let match;
+          while ((match = re.exec(text))) {
+            if (!mask[match.index]) {
+              continue;
+            }
+            const pos = document.positionAt(match.index);
+            builder.push(pos.line, pos.character, name.length, 0);
+          }
+        }
+        const propRe = /\.(?![:.])([A-Za-z_][A-Za-z0-9_]*)|(?<![.:]):(?!:)([A-Za-z_][A-Za-z0-9_]*)/g;
+        let prop;
+        while ((prop = propRe.exec(text))) {
+          const label = prop[1] || prop[2];
+          const start = prop.index + (prop[0].length - label.length);
+          if (!mask[start]) {
+            continue;
+          }
+          const pos = document.positionAt(start);
+          builder.push(pos.line, pos.character, label.length, 1);
+        }
+        return builder.build();
+      },
+    },
+    legend
+  );
+
+  const links = vscode.languages.registerDocumentLinkProvider(selector, {
+    provideDocumentLinks(document) {
+      const items = [];
+      for (const inc of eachInclude(document)) {
+        if (!inc.resolved) {
+          continue;
+        }
+        items.push(new vscode.DocumentLink(inc.specRange, vscode.Uri.file(inc.resolved)));
+      }
+      return items;
+    },
+  });
+
+  const definitions = vscode.languages.registerDefinitionProvider(selector, {
+    provideDefinition(document, position) {
+      for (const inc of eachInclude(document)) {
+        if (inc.specRange.contains(position) && inc.resolved) {
+          return new vscode.Location(vscode.Uri.file(inc.resolved), new vscode.Position(0, 0));
+        }
+      }
+      return [];
+    },
+  });
+
+  const outline = vscode.languages.registerDocumentSymbolProvider(selector, {
+    provideDocumentSymbols(document) {
+      return [...includeOutline(engine, document), ...localOutline(engine, document)];
+    },
+  });
+
   const collection = vscode.languages.createDiagnosticCollection("clpp");
   let timer;
   function refresh(document) {
@@ -253,7 +478,7 @@ function activate(context) {
     vscode.workspace.onDidCloseTextDocument((doc) => collection.delete(doc.uri))
   );
 
-  context.subscriptions.push(completion, hover, diagnostics);
+  context.subscriptions.push(completion, hover, semantic, links, definitions, outline, diagnostics);
   refreshAll();
 }
 

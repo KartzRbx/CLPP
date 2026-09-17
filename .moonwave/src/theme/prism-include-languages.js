@@ -35,6 +35,28 @@ export default function prismIncludeLanguages(PrismObject) {
         /\b(?:alignas|alignof|asm|auto|bool|break|case|catch|char|class|const|consteval|constexpr|continue|default|delete|do|double|else|enum|explicit|export|extern|false|float|for|friend|goto|if|inline|in|int|long|mutable|namespace|new|noexcept|nullptr|operator|private|protected|public|register|return|short|signed|sizeof|static|struct|switch|template|this|throw|true|try|typedef|typeid|typename|union|unsigned|using|virtual|void|volatile|wchar_t|while|observable|signal|guard|match|async|await|spawn|parallel|func|null|array|dictionary|optional|vector|span|map)\b/,
       function:
         /\b(?:post|warn|report|GetService|static_cast|pcall|xpcall|string_concat|Fire|Connect|Once|Wait|GetPropertyChangedSignal)\b/,
+      "class-name": [
+        {
+          pattern: /(\b(?:struct|class|enum|new)\s+)[A-Z][A-Za-z0-9_]*/,
+          lookbehind: true,
+        },
+        {
+          pattern: /\b[A-Z][A-Za-z0-9_]*(?=\s*\*?\s+[A-Za-z_])/,
+        },
+        {
+          pattern: /\b[A-Z][A-Za-z0-9_]*(?=\s*::)/,
+        },
+      ],
+      property: [
+        {
+          pattern: /(\.)[A-Za-z_]\w*/,
+          lookbehind: true,
+        },
+        {
+          pattern: /((?<![.:]):)[A-Za-z_]\w*/,
+          lookbehind: true,
+        },
+      ],
     });
   } else {
     PrismObject.languages.clpp =

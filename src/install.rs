@@ -4,7 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-const EXTENSION_ID: &str = "clpp.clpp-language-0.2.2";
+const EXTENSION_ID: &str = "clpp.clpp-language-0.2.3";
 static LANG_PACK: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/editors/vscode");
 
 struct Editor {
