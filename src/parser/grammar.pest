@@ -39,6 +39,7 @@ KW_TRUE = @{ "true" ~ !ident_char }
 KW_VOID = @{ "void" ~ !ident_char }
 KW_FOR = @{ "for" ~ !ident_char }
 KW_INT = @{ "int" ~ !ident_char }
+KW_IN = @{ "in" ~ !ident_char }
 KW_NEW = @{ "new" ~ !ident_char }
 KW_USING = @{ "using" ~ !ident_char }
 KW_EXTERN = @{ "extern" ~ !ident_char }
@@ -57,7 +58,7 @@ kw = _{
     KW_FALSE | KW_FLOAT | KW_WHILE | KW_ASYNC | KW_AWAIT | KW_GUARD | KW_MATCH | KW_SPAWN |
     KW_AUTO | KW_BOOL | KW_CASE | KW_ELSE |
     KW_ENUM | KW_TRUE | KW_VOID | KW_FOR | KW_INT | KW_NEW | KW_USING |
-    KW_EXTERN | KW_INLINE | KW_DOUBLE | KW_STRING | KW_FUNC | KW_NULL | KW_IF
+    KW_EXTERN | KW_INLINE | KW_DOUBLE | KW_STRING | KW_FUNC | KW_NULL | KW_IF | KW_IN
 }
 
 ident = @{ !kw ~ (ASCII_ALPHA | "_") ~ ident_char* }
@@ -155,7 +156,7 @@ while_stmt = { KW_WHILE ~ "(" ~ expr ~ ")" ~ stmt }
 for_stmt = { c_for_stmt | range_for_stmt }
 c_for_stmt = { KW_FOR ~ "(" ~ c_for_init? ~ ";" ~ expr? ~ ";" ~ expr? ~ ")" ~ stmt }
 c_for_init = { specifiers? ~ type_spec ~ ident ~ ("=" ~ expr)? }
-range_for_stmt = { KW_FOR ~ "(" ~ type_spec ~ ident ~ ":" ~ expr ~ ")" ~ stmt }
+range_for_stmt = { KW_FOR ~ "(" ~ type_spec ~ ident ~ (KW_IN | ":") ~ expr ~ ")" ~ stmt }
 return_stmt = { KW_RETURN ~ expr? ~ ";" }
 break_stmt = { KW_BREAK ~ ";" }
 expr_stmt = { expr ~ ";" }

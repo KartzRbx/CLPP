@@ -29,12 +29,12 @@ for (int i = 0; i < 10; i++) {
     post("Count: " .: i);
 }
 
-for (Player* player : players::GetPlayers()) {
+for (Player* player in players::GetPlayers()) {
     post("Player connected: " .: player.Name);
 }
 ```
 
-C-for becomes `while` + `i += 1`. Range-for becomes `for _, player in …`.
+C-for counts. Range-for uses `in` (or `:`) to name the collection.
 
 ## switch
 

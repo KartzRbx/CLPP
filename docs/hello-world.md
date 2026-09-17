@@ -16,7 +16,7 @@ void Greet(Player* player) {
 void init() {
     Players* players = GetService<Players>();
 
-    for (Player* player : players::GetPlayers()) {
+    for (Player* player in players::GetPlayers()) {
         Greet(player);
     }
 
@@ -34,7 +34,7 @@ void init() {
 4. `"Player name: " .: player.Name` — **concatenation** (`.:` → Luau `..`).
 5. `void init()` — runs at the end of Scripts and LocalScripts.
 6. `GetService<Players>()` — typed service lookup.
-7. `for (Player* player : players::GetPlayers())` — range-for. The `:` here means “in”, not a table key.
+7. `for (Player* player in players::GetPlayers())` — range-for. `in` is the collection; not a table key.
 8. `players::PlayerAdded::Connect` — `::` is method/scope. Emitted `players.PlayerAdded:Connect`.
 9. `func [](Player* playerEntered) { ... }` — lambda. Captures are empty `[]`; Luau closures still see outer locals.
 

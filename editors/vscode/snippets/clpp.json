@@ -76,6 +76,15 @@
     ],
     "description": "Pattern match"
   },
+  "foreach": {
+    "prefix": "forin",
+    "body": [
+      "for (${1:Player*} ${2:player} in ${3:players::GetPlayers()}) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Range-for: each value from a collection"
+  },
   "include": {
     "prefix": "inc",
     "body": ["#include <clpp/roblox.clh>"],

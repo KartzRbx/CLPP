@@ -75,6 +75,7 @@ const HOVER_WORDS = {
   GetPropertyChangedSignal:
     '`instance::GetPropertyChangedSignal("Name")` — signal for one property.',
   guard: "Continue only when the condition is true; otherwise run the else block.",
+  in: "Range-for: each value comes from the collection after `in`.",
   await: "Wait until an async value is ready.",
 };
 

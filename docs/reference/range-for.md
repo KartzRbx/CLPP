@@ -1,17 +1,20 @@
 ---
-title: "for (T x : list)"
+title: "for (T x in list)"
 sidebar_label: "for-each"
 ---
 
-# for (T x : list)
+# for (T x in list)
 
 <div class="clpp-ref-meta">Control flow</div>
 
-Range-for. Emits `for _, x in list`. The `:` here is not a table key.
+Range-for. `in` names the collection each value comes from. `:` is the same form.
 
 ## Syntax
 
 ```clpp
+for (T x in list) {
+}
+
 for (T x : list) {
 }
 ```
@@ -24,34 +27,18 @@ for (T x : list) {
 | `x` | `ident` | Loop variable. |
 | `list` | `iterable` | Array or iterator-producing call. |
 
-## Return value
-
-None.
-
-## Luau emit
-
-`for _, x in list do`
-
 ## Description
 
-The index is discarded (`_`). To get keys, iterate a dictionary in Luau style via a helper, or use C-for on numeric arrays.
+Prefer `in` — it reads as “each `x` from `list`”. The C++-style `:` still works. Parentheses and braces are required.
 
-Parentheses and braces are required.
+This is not a table key. Table `:` stays in expressions (`DataService:Server`).
 
 ## Example
 
 ```clpp
-for (Player* player : players::GetPlayers()) {
+for (Player* player in players::GetPlayers()) {
     post("Player connected: " .: player.Name);
 }
-```
-
-Emits:
-
-```luau
-for _, player in players:GetPlayers() do
-	print("Player connected: " .. player.Name)
-end
 ```
 
 ## See also

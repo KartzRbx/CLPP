@@ -34,7 +34,7 @@ None.
 
 ## Description
 
-The `:` of [range-for](range-for) is a different form: `for (T name : collection)`. Do not mix them.
+Range-for is a different form: [`for (T name in collection)`](range-for). Do not mix it with the C-style semicolons.
 
 ## Example
 

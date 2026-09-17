@@ -2,7 +2,7 @@
   "keywords": [
     "void", "int", "float", "double", "bool", "string", "auto", "func",
     "struct", "class", "namespace", "using", "static", "const", "constexpr",
-    "if", "else", "guard", "for", "while", "switch", "case", "default",
+    "if", "else", "guard", "for", "in", "while", "switch", "case", "default",
     "break", "return", "match", "spawn", "parallel", "async", "await",
     "new", "null", "true", "false", "observable", "signal", "array",
     "dictionary", "optional"

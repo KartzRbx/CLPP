@@ -13,6 +13,7 @@ const KEYWORDS = new Set([
   "else",
   "guard",
   "for",
+  "in",
   "while",
   "return",
   "match",

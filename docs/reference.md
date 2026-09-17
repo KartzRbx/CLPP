@@ -74,7 +74,7 @@ Every utility has its own page: syntax, parameters, return value, Luau emit, exa
 - [if / else if / else](reference/if)
 - [while](reference/while)
 - [for (C-style)](reference/for)
-- [for (T x : list)](reference/range-for)
+- [for (T x in list)](reference/range-for)
 - [switch](reference/switch)
 - [guard](reference/guard)
 - [match](reference/match)

@@ -26,7 +26,7 @@ title: Language cheat sheet
 
 ## Control
 
-`if` `else if` `else` · `while` · C-for · range-for `for (T x : xs)` · `switch` · `guard` · `match` · `break` · `return`
+`if` `else if` `else` · `while` · C-for · range-for `for (T x in xs)` · `switch` · `guard` · `match` · `break` · `return`
 
 ## Concurrency
 

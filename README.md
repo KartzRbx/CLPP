@@ -66,7 +66,7 @@ CL++ does **not** use `->`.
 | `"hi " .: name` | concat | `..` |
 | `signal~>Connect(fn)` | janitor Connect | `janitor:Add(..., "Disconnect")` |
 
-`post` / `warn` / `report` emit `print` / `warn` / `error`. `null` is `nil`. Range-for is `for (T x : list)`.
+`null` is empty. Range-for is `for (T x in list)`.
 
 ## Install
 

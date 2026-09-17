@@ -80,7 +80,7 @@
       "patterns": [
         {
           "name": "keyword.control.clpp",
-          "match": "\\b(if|else|guard|for|while|switch|case|default|break|return|match|spawn|parallel|async|await)\\b"
+          "match": "\\b(if|else|guard|for|in|while|switch|case|default|break|return|match|spawn|parallel|async|await)\\b"
         },
         {
           "name": "keyword.other.clpp",

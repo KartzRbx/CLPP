@@ -59,3 +59,23 @@ fn json_diagnostics_on_type_error() {
     );
     assert!(art.is_err());
 }
+
+#[test]
+fn range_for_in_names_the_collection() {
+    let luau = compile(
+        r#"
+void F() {
+    array<int> xs = {1, 2};
+    for (int x in xs) {
+        post(x);
+    }
+    for (int y : xs) {
+        post(y);
+    }
+}
+"#,
+    )
+    .expect("range-for in");
+    assert!(luau.contains("for _, x in xs do"));
+    assert!(luau.contains("for _, y in xs do"));
+}
