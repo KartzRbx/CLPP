@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en" dir="ltr" class="plugin-moonwave plugin-id-moonwave" data-has-hydrated="false">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v3.10.1">
+<title data-rh="true">Types | CL++</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://kartzrbx.github.io/CLPP/api/Types"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docusaurus_tag" content="default"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docsearch:docusaurus_tag" content="default"><meta data-rh="true" property="og:title" content="Types | CL++"><meta data-rh="true" name="description" content="Every value you write in CL++ has a type, and the compiler emits a Luau annotation.
+
+Full pages: [int](/CLPP/docs/reference/int), [array](/CLPP/docs/reference/array), [signal](/CLPP/docs/reference/signal-type), [observable](/CLPP/docs/reference/observable)."><meta data-rh="true" property="og:description" content="Every value you write in CL++ has a type, and the compiler emits a Luau annotation.
+
+Full pages: [int](/CLPP/docs/reference/int), [array](/CLPP/docs/reference/array), [signal](/CLPP/docs/reference/signal-type), [observable](/CLPP/docs/reference/observable)."><link data-rh="true" rel="icon" href="/CLPP/img/favicon.png"><link data-rh="true" rel="canonical" href="https://kartzrbx.github.io/CLPP/api/Types"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Types" hreflang="en"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Types" hreflang="x-default"><link rel="stylesheet" href="/CLPP/assets/css/styles.0789c6dd.css">
+<script src="/CLPP/assets/js/runtime~main.bc582b91.js" defer="defer"></script>
+<script src="/CLPP/assets/js/main.85e7b311.js" defer="defer"></script>
+</head>
+<body>
+<svg style="display: none;"><defs>
+<symbol id="theme-svg-external-link" viewBox="0 0 24 24"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{const c=new URLSearchParams(window.location.search).entries();for(var[t,e]of c)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><div role="region" aria-label="Skip to main content"><a class="skipToContent_fXgn" href="#__docusaurus_skipToContent_fallback">Skip to main content</a></div><nav aria-label="Main" class="theme-layout-navbar navbar navbar--fixed-top"><div class="navbar__inner"><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" href="/CLPP/"><b class="navbar__title text--truncate">CL++</b></a><a class="navbar__item navbar__link" href="/CLPP/docs/intro">Docs</a><a aria-current="page" class="navbar__item navbar__link navbar__link--active" href="/CLPP/api/">API</a><a class="navbar__item navbar__link" href="/CLPP/docs/reference">Reference</a><a class="navbar__item navbar__link" href="/CLPP/docs/cheatsheet">Cheatsheet</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><a href="https://github.com/KartzRbx/CLPP" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://github.com/KartzRbx/Cluaupp" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Cluaupp<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://github.com/KartzRbx/CLPP" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><div class="toggle_vylO colorModeToggle_DEke"><button class="clean-btn toggleButton_gllP toggleButtonDisabled_aARS" type="button" disabled="" title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_g3eP lightToggleIcon_pyhR"><path fill="currentColor" d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_g3eP darkToggleIcon_wfgR"><path fill="currentColor" d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_g3eP systemToggleIcon_QzmC"><path fill="currentColor" d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"></path></svg></button></div><div class="navbarSearchContainer_Bca1"><div class="navbar__search"><span aria-label="expand searchbar" role="button" class="search-icon" tabindex="0"></span><input id="search_input_react" type="search" placeholder="Loading..." aria-label="Search" class="navbar__search-input search-bar" disabled=""></div></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="theme-layout-main main-wrapper mainWrapper_z2l0 docPageContainer_wNNk"><div class="docPage_Dpn1"><div class="docSidebarContainer_o_re"><div class="sidebar_njMd"><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_SIkG"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role="button" aria-expanded="true" href="/CLPP/api/Builtins"><span title="Language API" class="categoryLinkLabel_W154">Language API</span></a></div><ul class="menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/CLPP/api/Builtins"><span title="​Builtins" class="linkLabel_WmDU">​Builtins</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current="page" tabindex="0" href="/CLPP/api/Types"><span title="​Types" class="linkLabel_WmDU">​Types</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/CLPP/api/Operators"><span title="​Operators" class="linkLabel_WmDU">​Operators</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/CLPP/api/ControlFlow"><span title="​Control​Flow" class="linkLabel_WmDU">​Control​Flow</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/CLPP/api/Collections"><span title="​Collections" class="linkLabel_WmDU">​Collections</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/CLPP/api/Functions"><span title="​Functions" class="linkLabel_WmDU">​Functions</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/CLPP/api/OOP"><span title="​O​O​P" class="linkLabel_WmDU">​O​O​P</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/CLPP/api/Preprocessor"><span title="​Preprocessor" class="linkLabel_WmDU">​Preprocessor</span></a></li></ul></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="true" href="/CLPP/api/Signals"><span title="Runtime" class="categoryLinkLabel_W154">Runtime</span></a></div><ul class="menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/CLPP/api/Signals"><span title="​Signals" class="linkLabel_WmDU">​Signals</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/CLPP/api/Observables"><span title="​Observables" class="linkLabel_WmDU">​Observables</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/CLPP/api/Concurrency"><span title="​Concurrency" class="linkLabel_WmDU">​Concurrency</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/CLPP/api/Attributes"><span title="​Attributes" class="linkLabel_WmDU">​Attributes</span></a></li></ul></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="true" href="/CLPP/api/Stdlib"><span title="Libraries" class="categoryLinkLabel_W154">Libraries</span></a></div><ul class="menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/CLPP/api/Stdlib"><span title="​Stdlib" class="linkLabel_WmDU">​Stdlib</span></a></li></ul></li></ul></nav></div></div><main class="docMainContainer_HJE1"><div class="container padding-vert--lg"><div class="row"><div class="col docItemCol_MU3C"><div class="docItemContainer_Wv98"><article><div class="member_J0w1 markdown"><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_oUs_"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><header><h1 class="docTitle_mZRt" style="text-decoration:none"><span style="display:inline-block">Types</span></h1><div class="luaClassTags_EipM"></div><div>
+<p>Every value you write in CL++ has a type, and the compiler emits a Luau annotation.</p>
+<p>Full pages: <a href="/CLPP/CLPP/docs/reference/int">int</a>, <a href="/CLPP/CLPP/docs/reference/array">array</a>, <a href="/CLPP/CLPP/docs/reference/signal-type">signal</a>, <a href="/CLPP/CLPP/docs/reference/observable">observable</a>.</p>
+</div></header><h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="functions">Functions<a href="#functions" class="hash-link" aria-label="Direct link to Functions" title="Direct link to Functions" translate="no">​</a></h2><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="int"><code style="text-decoration:none">int</code><a href="#int" class="hash-link" aria-label="Direct link to int" title="Direct link to int" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#dc0073;color:#dc0073">type</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Types.lua#L22"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Types<!-- -->.</code><code class="green_DgR4">int</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+<p>IEEE-looking integer in source. Luau numbers are doubles.</p>
+<p><strong>Syntax:</strong> <code>int name = 0;</code></p>
+<p><strong>Emit:</strong> <code>number</code></p>
+<p><code>observable int</code> → <code>IntValue</code>. Always initialize: <code>int coins;</code> emits <code>nil</code>.</p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="float"><code style="text-decoration:none">float</code><a href="#float" class="hash-link" aria-label="Direct link to float" title="Direct link to float" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#dc0073;color:#dc0073">type</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Types.lua#L36"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Types<!-- -->.</code><code class="green_DgR4">float</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+<p>Floating-point number. Same emit as <code>int</code> and <code>double</code>.</p>
+<p><strong>Syntax:</strong> <code>float speed = 16.5;</code></p>
+<p><strong>Emit:</strong> <code>number</code></p>
+<p><code>observable float</code> → <code>NumberValue</code>.</p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="double"><code style="text-decoration:none">double</code><a href="#double" class="hash-link" aria-label="Direct link to double" title="Direct link to double" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#dc0073;color:#dc0073">type</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Types.lua#L48"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Types<!-- -->.</code><code class="green_DgR4">double</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+<p>Same emit as <code>float</code>.</p>
+<p><strong>Syntax:</strong> <code>double alpha = 0.25;</code></p>
+<p><strong>Emit:</strong> <code>number</code></p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="bool"><code style="text-decoration:none">bool</code><a href="#bool" class="hash-link" aria-label="Direct link to bool" title="Direct link to bool" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#dc0073;color:#dc0073">type</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Types.lua#L60"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Types<!-- -->.</code><code class="green_DgR4">bool</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+<p>Boolean. Literals <code>true</code> / <code>false</code>. <code>!</code> emits <code>not</code>.</p>
+<p><strong>Syntax:</strong> <code>bool isActive = true;</code></p>
+<p><strong>Emit:</strong> <code>boolean</code></p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="string"><code style="text-decoration:none">string</code><a href="#string" class="hash-link" aria-label="Direct link to string" title="Direct link to string" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#dc0073;color:#dc0073">type</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Types.lua#L72"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Types<!-- -->.</code><code class="green_DgR4">string</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+<p>UTF-8 text. Not <code>std::string</code>. Concatenate with <code>.:</code>.</p>
+<p><strong>Syntax:</strong> <code>string name = "Kartz";</code></p>
+<p><strong>Emit:</strong> <code>string</code></p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="void"><code style="text-decoration:none">void</code><a href="#void" class="hash-link" aria-label="Direct link to void" title="Direct link to void" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#dc0073;color:#dc0073">type</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Types.lua#L84"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Types<!-- -->.</code><code class="green_DgR4">void</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+<p>No value. Return type of procedures. <code>void init()</code> is the script entry.</p>
+<p><strong>Syntax:</strong> <code>void Name(T arg) { return; }</code></p>
+<p><strong>Emit:</strong> no return annotation</p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="func"><code style="text-decoration:none">func</code><a href="#func" class="hash-link" aria-label="Direct link to func" title="Direct link to func" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#dc0073;color:#dc0073">type</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Types.lua#L96"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Types<!-- -->.</code><code class="green_DgR4">func</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+<p>Function type and optional lambda prefix.</p>
+<p><strong>Syntax:</strong> <code>func cb = [](int n) { };</code></p>
+<p><strong>Emit:</strong> <code>(...any) -> any</code></p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="auto"><code style="text-decoration:none">auto</code><a href="#auto" class="hash-link" aria-label="Direct link to auto" title="Direct link to auto" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#dc0073;color:#dc0073">type</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Types.lua#L108"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Types<!-- -->.</code><code class="green_DgR4">auto</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+<p>Infer the type from the initializer.</p>
+<p><strong>Syntax:</strong> <code>auto* players = GetService&#x3C;Players>();</code></p>
+<p>Inferred for <code>new</code>, <code>GetService&#x3C;T>()</code>, datatype constructors, and destructuring.</p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="optional"><code style="text-decoration:none">optional</code><a href="#optional" class="hash-link" aria-label="Direct link to optional" title="Direct link to optional" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#dc0073;color:#dc0073">type</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Types.lua#L120"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Types<!-- -->.</code><code class="green_DgR4">optional</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+<p>A value that may be missing.</p>
+<p><strong>Syntax:</strong> <code>optional&#x3C;T> name = null;</code></p>
+<p><strong>Emit:</strong> <code>T?</code></p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="instance_pointer"><code style="text-decoration:none">instance_pointer</code><a href="#instance_pointer" class="hash-link" aria-label="Direct link to instance_pointer" title="Direct link to instance_pointer" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#dc0073;color:#dc0073">type</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Types.lua#L134"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Types<!-- -->.</code><code class="green_DgR4">instance_pointer</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+<p><code>Player*</code> means an Instance of class Player — not a heap pointer.</p>
+<p><strong>Syntax:</strong> <code>Player* player = null;</code></p>
+<p><strong>Emit:</strong> star stripped (<code>Player</code>)</p>
+<p>Properties use <code>.</code>. Methods use <code>::</code>. No <code>delete</code>, <code>*p</code>, <code>&#x26;p</code>, <code>int&#x26;</code>, or <code>-></code>.</p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="const"><code style="text-decoration:none">const</code><a href="#const" class="hash-link" aria-label="Direct link to const" title="Direct link to const" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#dc0073;color:#dc0073">type</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Types.lua#L146"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Types<!-- -->.</code><code class="green_DgR4">const</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+<p><code>const</code> / <code>static constexpr</code> become Luau <code>const</code>.</p>
+<p><strong>Syntax:</strong> <code>const int DoubleCoins(int coins) { return coins; }</code></p>
+<p><strong>Emit:</strong> <code>const function</code></p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="static_cast"><code style="text-decoration:none">static_cast</code><a href="#static_cast" class="hash-link" aria-label="Direct link to static_cast" title="Direct link to static_cast" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#dc0073;color:#dc0073">type</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Types.lua#L159"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Types<!-- -->.</code><code class="green_DgR4">static_cast</code><code>(</code><code>x<!-- -->: </code><code class="blue_P4bS">any</code><code>) → </code><code>(</code><code>)</code></div><div>
+<p>Source-level cast. Does not check <code>ClassName</code>.</p>
+<p><strong>Syntax:</strong> <code>T static_cast&#x3C;T>(x);</code></p>
+<p><strong>Emit:</strong> <code>x</code></p>
+</div></div></article></div><details><summary>Show raw api</summary><pre style="max-width:100%;white-space:pre-wrap">{
+    &quot;functions&quot;: [
+        {
+            &quot;name&quot;: &quot;int&quot;,
+            &quot;desc&quot;: &quot;IEEE-looking integer in source. Luau numbers are doubles.\n\n**Syntax:** `int name = 0;`\n\n**Emit:** `number`\n\n`observable int` → `IntValue`. Always initialize: `int coins;` emits `nil`.&quot;,
+            &quot;params&quot;: [],
+            &quot;returns&quot;: [],
+            &quot;function_type&quot;: &quot;static&quot;,
+            &quot;tags&quot;: [
+                &quot;type&quot;
+            ],
+            &quot;source&quot;: {
+                &quot;line&quot;: 22,
+                &quot;path&quot;: &quot;moonwave/Types.lua&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;float&quot;,
+            &quot;desc&quot;: &quot;Floating-point number. Same emit as `int` and `double`.\n\n**Syntax:** `float speed = 16.5;`\n\n**Emit:** `number`\n\n`observable float` → `NumberValue`.&quot;,
+            &quot;params&quot;: [],
+            &quot;returns&quot;: [],
+            &quot;function_type&quot;: &quot;static&quot;,
+            &quot;tags&quot;: [
+                &quot;type&quot;
+            ],
+            &quot;source&quot;: {
+                &quot;line&quot;: 36,
+                &quot;path&quot;: &quot;moonwave/Types.lua&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;double&quot;,
+            &quot;desc&quot;: &quot;Same emit as `float`.\n\n**Syntax:** `double alpha = 0.25;`\n\n**Emit:** `number`&quot;,
+            &quot;params&quot;: [],
+            &quot;returns&quot;: [],
+            &quot;function_type&quot;: &quot;static&quot;,
+            &quot;tags&quot;: [
+                &quot;type&quot;
+            ],
+            &quot;source&quot;: {
+                &quot;line&quot;: 48,
+                &quot;path&quot;: &quot;moonwave/Types.lua&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;bool&quot;,
+            &quot;desc&quot;: &quot;Boolean. Literals `true` / `false`. `!` emits `not`.\n\n**Syntax:** `bool isActive = true;`\n\n**Emit:** `boolean`&quot;,
+            &quot;params&quot;: [],
+            &quot;returns&quot;: [],
+            &quot;function_type&quot;: &quot;static&quot;,
+            &quot;tags&quot;: [
+                &quot;type&quot;
+            ],
+            &quot;source&quot;: {
+                &quot;line&quot;: 60,
+                &quot;path&quot;: &quot;moonwave/Types.lua&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;string&quot;,
+            &quot;desc&quot;: &quot;UTF-8 text. Not `std::string`. Concatenate with `.:`.\n\n**Syntax:** `string name = \&quot;Kartz\&quot;;`\n\n**Emit:** `string`&quot;,
+            &quot;params&quot;: [],
+            &quot;returns&quot;: [],
+            &quot;function_type&quot;: &quot;static&quot;,
+            &quot;tags&quot;: [
+                &quot;type&quot;
+            ],
+            &quot;source&quot;: {
+                &quot;line&quot;: 72,
+                &quot;path&quot;: &quot;moonwave/Types.lua&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;void&quot;,
+            &quot;desc&quot;: &quot;No value. Return type of procedures. `void init()` is the script entry.\n\n**Syntax:** `void Name(T arg) { return; }`\n\n**Emit:** no return annotation&quot;,
+            &quot;params&quot;: [],
+            &quot;returns&quot;: [],
+            &quot;function_type&quot;: &quot;static&quot;,
+            &quot;tags&quot;: [
+                &quot;type&quot;
+            ],
+            &quot;source&quot;: {
+                &quot;line&quot;: 84,
+                &quot;path&quot;: &quot;moonwave/Types.lua&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;func&quot;,
+            &quot;desc&quot;: &quot;Function type and optional lambda prefix.\n\n**Syntax:** `func cb = [](int n) { };`\n\n**Emit:** `(...any) -&gt; any`&quot;,
+            &quot;params&quot;: [],
+            &quot;returns&quot;: [],
+            &quot;function_type&quot;: &quot;static&quot;,
+            &quot;tags&quot;: [
+                &quot;type&quot;
+            ],
+            &quot;source&quot;: {
+                &quot;line&quot;: 96,
+                &quot;path&quot;: &quot;moonwave/Types.lua&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;auto&quot;,
+            &quot;desc&quot;: &quot;Infer the type from the initializer.\n\n**Syntax:** `auto* players = GetService&lt;Players&gt;();`\n\nInferred for `new`, `GetService&lt;T&gt;()`, datatype constructors, and destructuring.&quot;,
+            &quot;params&quot;: [],
+            &quot;returns&quot;: [],
+            &quot;function_type&quot;: &quot;static&quot;,
+            &quot;tags&quot;: [
+                &quot;type&quot;
+            ],
+            &quot;source&quot;: {
+                &quot;line&quot;: 108,
+                &quot;path&quot;: &quot;moonwave/Types.lua&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;optional&quot;,
+            &quot;desc&quot;: &quot;A value that may be missing.\n\n**Syntax:** `optional&lt;T&gt; name = null;`\n\n**Emit:** `T?`&quot;,
+            &quot;params&quot;: [],
+            &quot;returns&quot;: [],
+            &quot;function_type&quot;: &quot;static&quot;,
+            &quot;tags&quot;: [
+                &quot;type&quot;
+            ],
+            &quot;source&quot;: {
+                &quot;line&quot;: 120,
+                &quot;path&quot;: &quot;moonwave/Types.lua&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;instance_pointer&quot;,
+            &quot;desc&quot;: &quot;`Player*` means an Instance of class Player — not a heap pointer.\n\n**Syntax:** `Player* player = null;`\n\n**Emit:** star stripped (`Player`)\n\nProperties use `.`. Methods use `::`. No `delete`, `*p`, `&amp;p`, `int&amp;`, or `-&gt;`.&quot;,
+            &quot;params&quot;: [],
+            &quot;returns&quot;: [],
+            &quot;function_type&quot;: &quot;static&quot;,
+            &quot;tags&quot;: [
+                &quot;type&quot;
+            ],
+            &quot;source&quot;: {
+                &quot;line&quot;: 134,
+                &quot;path&quot;: &quot;moonwave/Types.lua&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;const&quot;,
+            &quot;desc&quot;: &quot;`const` / `static constexpr` become Luau `const`.\n\n**Syntax:** `const int DoubleCoins(int coins) { return coins; }`\n\n**Emit:** `const function`&quot;,
+            &quot;params&quot;: [],
+            &quot;returns&quot;: [],
+            &quot;function_type&quot;: &quot;static&quot;,
+            &quot;tags&quot;: [
+                &quot;type&quot;
+            ],
+            &quot;source&quot;: {
+                &quot;line&quot;: 146,
+                &quot;path&quot;: &quot;moonwave/Types.lua&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;static_cast&quot;,
+            &quot;desc&quot;: &quot;Source-level cast. Does not check `ClassName`.\n\n**Syntax:** `T static_cast&lt;T&gt;(x);`\n\n**Emit:** `x`&quot;,
+            &quot;params&quot;: [
+                {
+                    &quot;name&quot;: &quot;x&quot;,
+                    &quot;desc&quot;: &quot;&quot;,
+                    &quot;lua_type&quot;: &quot;any&quot;
+                }
+            ],
+            &quot;returns&quot;: [],
+            &quot;function_type&quot;: &quot;static&quot;,
+            &quot;tags&quot;: [
+                &quot;type&quot;
+            ],
+            &quot;source&quot;: {
+                &quot;line&quot;: 159,
+                &quot;path&quot;: &quot;moonwave/Types.lua&quot;
+            }
+        }
+    ],
+    &quot;properties&quot;: [],
+    &quot;types&quot;: [],
+    &quot;name&quot;: &quot;Types&quot;,
+    &quot;desc&quot;: &quot;Every value you write in CL++ has a type, and the compiler emits a Luau annotation.\n\nFull pages: [int](/CLPP/docs/reference/int), [array](/CLPP/docs/reference/array), [signal](/CLPP/docs/reference/signal-type), [observable](/CLPP/docs/reference/observable).&quot;,
+    &quot;source&quot;: {
+        &quot;line&quot;: 9,
+        &quot;path&quot;: &quot;moonwave/Types.lua&quot;
+    }
+}</pre></details></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#functions" class="table-of-contents__link toc-highlight">Functions</a><ul><li><a href="#auto" class="table-of-contents__link toc-highlight">.auto</a></li><li><a href="#bool" class="table-of-contents__link toc-highlight">.bool</a></li><li><a href="#const" class="table-of-contents__link toc-highlight">.const</a></li><li><a href="#double" class="table-of-contents__link toc-highlight">.double</a></li><li><a href="#float" class="table-of-contents__link toc-highlight">.float</a></li><li><a href="#func" class="table-of-contents__link toc-highlight">.func</a></li><li><a href="#instance_pointer" class="table-of-contents__link toc-highlight">.instance_pointer</a></li><li><a href="#int" class="table-of-contents__link toc-highlight">.int</a></li><li><a href="#optional" class="table-of-contents__link toc-highlight">.optional</a></li><li><a href="#static_cast" class="table-of-contents__link toc-highlight">.static_cast</a></li><li><a href="#string" class="table-of-contents__link toc-highlight">.string</a></li><li><a href="#void" class="table-of-contents__link toc-highlight">.void</a></li></ul></li></ul></div></div></div></div></main></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Learn</div><ul class="footer__items clean-list"><li class="footer__item"><a class="footer__link-item" href="/CLPP/docs/intro">Course</a></li><li class="footer__item"><a class="footer__link-item" href="/CLPP/docs/reference">Reference</a></li><li class="footer__item"><a class="footer__link-item" href="/CLPP/api/Builtins">API</a></li></ul></div><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Project</div><ul class="footer__items clean-list"><li class="footer__item"><a href="https://github.com/KartzRbx/CLPP" target="_blank" rel="noopener noreferrer" class="footer__link-item">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a></li><li class="footer__item"><a href="https://github.com/KartzRbx/Cluaupp" target="_blank" rel="noopener noreferrer" class="footer__link-item">Cluaupp<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a></li></ul></div></div><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © 2026 CL++ contributors. Built with Moonwave and Docusaurus.</div></div></div></footer></div>
+</body>
+</html>
