@@ -10,8 +10,8 @@ The header-style index is [Language reference](/CLPP/docs/reference)."><meta dat
 
 Each entry below is a full reference: syntax, parameters, return value, Luau emit, and example.
 The header-style index is [Language reference](/CLPP/docs/reference)."><link data-rh="true" rel="icon" href="/CLPP/img/favicon.png"><link data-rh="true" rel="canonical" href="https://kartzrbx.github.io/CLPP/api/Builtins"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Builtins" hreflang="en"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Builtins" hreflang="x-default"><link rel="stylesheet" href="/CLPP/assets/css/styles.796e4892.css">
-<script src="/CLPP/assets/js/runtime~main.071fa0ec.js" defer="defer"></script>
-<script src="/CLPP/assets/js/main.9124db91.js" defer="defer"></script>
+<script src="/CLPP/assets/js/runtime~main.39e3a999.js" defer="defer"></script>
+<script src="/CLPP/assets/js/main.87b22523.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -84,12 +84,32 @@ The header-style index is [Language reference](/CLPP/docs/reference)."><link dat
 <p><strong>Return:</strong> <code>string</code>. Zero args → <code>""</code>. One arg → that value.</p>
 <p><strong>Emit:</strong> <code>(a .. b .. c)</code></p>
 <p>Do not write Lua <code>..</code> and do not use <code>+</code> on strings.</p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="null"><code style="text-decoration:none">null</code><a href="#null" class="hash-link" aria-label="Direct link to null" title="Direct link to null" translate="no">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Builtins.lua#L152"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Builtins<!-- -->.</code><code class="green_DgR4">null</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="to_string"><code style="text-decoration:none">to_string</code><a href="#to_string" class="hash-link" aria-label="Direct link to to_string" title="Direct link to to_string" translate="no">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Builtins.lua#L153"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Builtins<!-- -->.</code><code class="green_DgR4">to_string</code><code>(</code><div class="inset_uKQm"><div><code>value<!-- -->: </code><code class="blue_P4bS">any</code><span class="inlineDescription_G7Er">-- <span>
+<p>Value to convert</p>
+</span></span></div></div><code>) → </code><code>(</code><code>)</code></div><div>
+<p>Convert any value to text. Analog of C++ <code>std::to_string</code> / Luau <code>tostring</code>.</p>
+<p><strong>Syntax:</strong> <code>string to_string(value);</code></p>
+<p><strong>Emit:</strong> <code>tostring(value)</code></p>
+<p>Do not write Luau <code>tostring</code> in CL++ source.</p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="to_number"><code style="text-decoration:none">to_number</code><a href="#to_number" class="hash-link" aria-label="Direct link to to_number" title="Direct link to to_number" translate="no">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Builtins.lua#L167"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Builtins<!-- -->.</code><code class="green_DgR4">to_number</code><code>(</code><div class="inset_uKQm"><div><code>value<!-- -->: </code><code class="blue_P4bS">any</code><span class="inlineDescription_G7Er">-- <span>
+<p>Text or number</p>
+</span></span></div></div><code>) → </code><code>(</code><code>)</code></div><div>
+<p>Parse a number from text (or pass a number through). Analog of <code>std::stod</code> / Luau <code>tonumber</code>.</p>
+<p><strong>Syntax:</strong> <code>float to_number(value);</code> · <code>float to_number(value, base);</code></p>
+<p><strong>Emit:</strong> <code>tonumber(value)</code></p>
+<p>Fails → <code>null</code>. Do not write Luau <code>tonumber</code> in CL++ source.</p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="to_bool"><code style="text-decoration:none">to_bool</code><a href="#to_bool" class="hash-link" aria-label="Direct link to to_bool" title="Direct link to to_bool" translate="no">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Builtins.lua#L179"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Builtins<!-- -->.</code><code class="green_DgR4">to_bool</code><code>(</code><div class="inset_uKQm"><div><code>value<!-- -->: </code><code class="blue_P4bS">any</code><span class="inlineDescription_G7Er">-- <span>
+<p>Value to coerce</p>
+</span></span></div></div><code>) → </code><code>(</code><code>)</code></div><div>
+<p>Coerce to boolean. Anything truthy becomes <code>true</code>.</p>
+<p><strong>Syntax:</strong> <code>bool to_bool(value);</code></p>
+<p><strong>Emit:</strong> <code>not not (value)</code></p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="null"><code style="text-decoration:none">null</code><a href="#null" class="hash-link" aria-label="Direct link to null" title="Direct link to null" translate="no">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Builtins.lua#L192"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Builtins<!-- -->.</code><code class="green_DgR4">null</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p>Absence of a value. <code>nullptr</code> is a synonym.</p>
 <p><strong>Syntax:</strong> <code>T* ref = null;</code></p>
 <p><strong>Emit:</strong> <code>nil</code></p>
 <p>Uninitialized locals (<code>int coins;</code>) also emit <code>nil</code> — always initialize.</p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="init"><code style="text-decoration:none">init</code><a href="#init" class="hash-link" aria-label="Direct link to init" title="Direct link to init" translate="no">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Builtins.lua#L165"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Builtins<!-- -->.</code><code class="green_DgR4">init</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="init"><code style="text-decoration:none">init</code><a href="#init" class="hash-link" aria-label="Direct link to init" title="Direct link to init" translate="no">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Builtins.lua#L205"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Builtins<!-- -->.</code><code class="green_DgR4">init</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p>Script / LocalScript entry. There is no <code>int main()</code>.</p>
 <p><strong>Syntax:</strong> <code>void init() { }</code></p>
 <p><strong>Emit:</strong> <code>init()</code> called at the end of the file</p>
@@ -233,13 +253,64 @@ The header-style index is [Language reference](/CLPP/docs/reference)."><link dat
             }
         },
         {
+            &quot;name&quot;: &quot;to_string&quot;,
+            &quot;desc&quot;: &quot;Convert any value to text. Analog of C++ `std::to_string` / Luau `tostring`.\n\n**Syntax:** `string to_string(value);`\n\n**Emit:** `tostring(value)`\n\nDo not write Luau `tostring` in CL++ source.&quot;,
+            &quot;params&quot;: [
+                {
+                    &quot;name&quot;: &quot;value&quot;,
+                    &quot;desc&quot;: &quot;Value to convert&quot;,
+                    &quot;lua_type&quot;: &quot;any&quot;
+                }
+            ],
+            &quot;returns&quot;: [],
+            &quot;function_type&quot;: &quot;static&quot;,
+            &quot;source&quot;: {
+                &quot;line&quot;: 153,
+                &quot;path&quot;: &quot;moonwave/Builtins.lua&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;to_number&quot;,
+            &quot;desc&quot;: &quot;Parse a number from text (or pass a number through). Analog of `std::stod` / Luau `tonumber`.\n\n**Syntax:** `float to_number(value);` · `float to_number(value, base);`\n\n**Emit:** `tonumber(value)`\n\nFails → `null`. Do not write Luau `tonumber` in CL++ source.&quot;,
+            &quot;params&quot;: [
+                {
+                    &quot;name&quot;: &quot;value&quot;,
+                    &quot;desc&quot;: &quot;Text or number&quot;,
+                    &quot;lua_type&quot;: &quot;any&quot;
+                }
+            ],
+            &quot;returns&quot;: [],
+            &quot;function_type&quot;: &quot;static&quot;,
+            &quot;source&quot;: {
+                &quot;line&quot;: 167,
+                &quot;path&quot;: &quot;moonwave/Builtins.lua&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;to_bool&quot;,
+            &quot;desc&quot;: &quot;Coerce to boolean. Anything truthy becomes `true`.\n\n**Syntax:** `bool to_bool(value);`\n\n**Emit:** `not not (value)`&quot;,
+            &quot;params&quot;: [
+                {
+                    &quot;name&quot;: &quot;value&quot;,
+                    &quot;desc&quot;: &quot;Value to coerce&quot;,
+                    &quot;lua_type&quot;: &quot;any&quot;
+                }
+            ],
+            &quot;returns&quot;: [],
+            &quot;function_type&quot;: &quot;static&quot;,
+            &quot;source&quot;: {
+                &quot;line&quot;: 179,
+                &quot;path&quot;: &quot;moonwave/Builtins.lua&quot;
+            }
+        },
+        {
             &quot;name&quot;: &quot;null&quot;,
             &quot;desc&quot;: &quot;Absence of a value. `nullptr` is a synonym.\n\n**Syntax:** `T* ref = null;`\n\n**Emit:** `nil`\n\nUninitialized locals (`int coins;`) also emit `nil` — always initialize.&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;static&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 152,
+                &quot;line&quot;: 192,
                 &quot;path&quot;: &quot;moonwave/Builtins.lua&quot;
             }
         },
@@ -250,7 +321,7 @@ The header-style index is [Language reference](/CLPP/docs/reference)."><link dat
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;static&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 165,
+                &quot;line&quot;: 205,
                 &quot;path&quot;: &quot;moonwave/Builtins.lua&quot;
             }
         }
@@ -263,6 +334,6 @@ The header-style index is [Language reference](/CLPP/docs/reference)."><link dat
         &quot;line&quot;: 10,
         &quot;path&quot;: &quot;moonwave/Builtins.lua&quot;
     }
-}</pre></details></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#functions" class="table-of-contents__link toc-highlight">Functions</a><ul><li><a href="#GetService&lt;T&gt;" class="table-of-contents__link toc-highlight">.GetService<t></t></a></li><li><a href="#init" class="table-of-contents__link toc-highlight">.init</a></li><li><a href="#new" class="table-of-contents__link toc-highlight">.new</a></li><li><a href="#null" class="table-of-contents__link toc-highlight">.null</a></li><li><a href="#pcall" class="table-of-contents__link toc-highlight">.pcall</a></li><li><a href="#post" class="table-of-contents__link toc-highlight">.post</a></li><li><a href="#report" class="table-of-contents__link toc-highlight">.report</a></li><li><a href="#static_cast" class="table-of-contents__link toc-highlight">.static_cast</a></li><li><a href="#string_concat" class="table-of-contents__link toc-highlight">.string_concat</a></li><li><a href="#warn" class="table-of-contents__link toc-highlight">.warn</a></li></ul></li></ul></div></div></div></div></main></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Learn</div><ul class="footer__items clean-list"><li class="footer__item"><a class="footer__link-item" href="/CLPP/docs/intro">Course</a></li><li class="footer__item"><a class="footer__link-item" href="/CLPP/docs/reference">Reference</a></li><li class="footer__item"><a class="footer__link-item" href="/CLPP/api/Builtins">API</a></li></ul></div><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Project</div><ul class="footer__items clean-list"><li class="footer__item"><a href="https://github.com/KartzRbx/CLPP" target="_blank" rel="noopener noreferrer" class="footer__link-item">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a></li><li class="footer__item"><a href="https://github.com/KartzRbx/Cluaupp" target="_blank" rel="noopener noreferrer" class="footer__link-item">Cluaupp<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a></li></ul></div></div><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © 2026 CL++ contributors. Built with Moonwave and Docusaurus.</div></div></div></footer></div>
+}</pre></details></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#functions" class="table-of-contents__link toc-highlight">Functions</a><ul><li><a href="#GetService&lt;T&gt;" class="table-of-contents__link toc-highlight">.GetService<t></t></a></li><li><a href="#init" class="table-of-contents__link toc-highlight">.init</a></li><li><a href="#new" class="table-of-contents__link toc-highlight">.new</a></li><li><a href="#null" class="table-of-contents__link toc-highlight">.null</a></li><li><a href="#pcall" class="table-of-contents__link toc-highlight">.pcall</a></li><li><a href="#post" class="table-of-contents__link toc-highlight">.post</a></li><li><a href="#report" class="table-of-contents__link toc-highlight">.report</a></li><li><a href="#static_cast" class="table-of-contents__link toc-highlight">.static_cast</a></li><li><a href="#string_concat" class="table-of-contents__link toc-highlight">.string_concat</a></li><li><a href="#to_bool" class="table-of-contents__link toc-highlight">.to_bool</a></li><li><a href="#to_number" class="table-of-contents__link toc-highlight">.to_number</a></li><li><a href="#to_string" class="table-of-contents__link toc-highlight">.to_string</a></li><li><a href="#warn" class="table-of-contents__link toc-highlight">.warn</a></li></ul></li></ul></div></div></div></div></main></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Learn</div><ul class="footer__items clean-list"><li class="footer__item"><a class="footer__link-item" href="/CLPP/docs/intro">Course</a></li><li class="footer__item"><a class="footer__link-item" href="/CLPP/docs/reference">Reference</a></li><li class="footer__item"><a class="footer__link-item" href="/CLPP/api/Builtins">API</a></li></ul></div><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Project</div><ul class="footer__items clean-list"><li class="footer__item"><a href="https://github.com/KartzRbx/CLPP" target="_blank" rel="noopener noreferrer" class="footer__link-item">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a></li><li class="footer__item"><a href="https://github.com/KartzRbx/Cluaupp" target="_blank" rel="noopener noreferrer" class="footer__link-item">Cluaupp<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a></li></ul></div></div><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © 2026 CL++ contributors. Built with Moonwave and Docusaurus.</div></div></div></footer></div>
 </body>
 </html>
