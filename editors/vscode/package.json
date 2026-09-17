@@ -1,0 +1,56 @@
+{
+  "name": "clpp-language",
+  "displayName": "CL++",
+  "description": "CL++ language support for VS Code, Cursor, and compatible editors: highlighting, icon, and IntelliSense (.clpp / .clp / .clh)",
+  "version": "0.1.0",
+  "publisher": "clpp",
+  "icon": "icons/clpp.png",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": ["Programming Languages"],
+  "keywords": ["clpp", "cl++", "luau", "roblox", "cluaupp", "cursor"],
+  "activationEvents": ["onLanguage:clpp"],
+  "main": "./extension.js",
+  "extensionKind": ["workspace", "ui"],
+  "contributes": {
+    "languages": [
+      {
+        "id": "clpp",
+        "aliases": ["CL++", "clpp", "CLPP"],
+        "extensions": [".clpp", ".clp", ".clh"],
+        "filenamePatterns": ["*.server.clpp", "*.client.clpp", "*.plugin.clpp"],
+        "icon": {
+          "light": "./icons/clpp.png",
+          "dark": "./icons/clpp.png"
+        },
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "clpp",
+        "scopeName": "source.clpp",
+        "path": "./syntaxes/clpp.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "clpp",
+        "path": "./snippets/clpp.json"
+      }
+    ],
+    "configurationDefaults": {
+      "files.associations": {
+        "*.clpp": "clpp",
+        "*.clp": "clpp",
+        "*.clh": "clpp"
+      },
+      "[clpp]": {
+        "editor.tabSize": 4,
+        "editor.insertSpaces": false,
+        "editor.semanticHighlighting.enabled": false
+      }
+    }
+  }
+}

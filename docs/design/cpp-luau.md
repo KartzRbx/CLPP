@@ -1,0 +1,32 @@
+# Design: C++ → Luau
+
+CL++ is the **language** (syntax, semantics, OOP): a C++-inspired subset aimed at Roblox scripts. The compiler emits Luau. Engine API wiring (generated headers, runtime, services) belongs to **Cluaupp**, not CL++.
+
+The study reference is real leaderstats code (`LeaderstatsServer`, `PlayerData`) and the C++ → Luau handbook.
+
+## Goals
+
+1. Write like C++ (types, `struct`, `new`, `GetService<T>`), with our own operators: `::` method/scope, `:` table, `.` property, `.:` concatenation.
+2. Emit modern Luau (`local`, `const`, `const function`, `Instance.new`, `game:GetService`).
+3. One input file becomes one output file (Rojo infers Script / LocalScript / ModuleScript from the name).
+4. Own extensions: `.clh`, `.clp`, `.clpp` — not `.h` / `.cpp`.
+
+## What we are not
+
+CL++ is **not** a full C++ compiler and **not** the Roblox API connector. There is no `std::`, pointer arithmetic, `delete`, overloading, generic templates (beyond the mapped ones), `continue`, ternary, `do/while`, `try/catch`, or `goto`.
+
+`Player*` is not a heap address: it is a Roblox Instance of class `Player`. Access is `player.Name` / `player::FindFirstChild(...)`, not `->`.
+
+Range-for uses `:` between the name and the collection: `for (Player* player : players::GetPlayers())`. Table `:` (`DataService:Server`) lives in expressions, not in a C-style `for` header (`for (int i = 0; ...)`).
+
+## Study files
+
+| Role | CL++ equivalent |
+| --- | --- |
+| `struct` + prototypes | `LeaderstatsServer.clh` |
+| `Class::` + `void init()` | `LeaderstatsServer.server.clpp` |
+| Template structs | `PlayerData.clh` |
+
+## Matching stem
+
+`LeaderstatsServer.clh` next to `LeaderstatsServer.server.clpp`. An include with the same stem is **inlined**. An include with another name becomes `require`.

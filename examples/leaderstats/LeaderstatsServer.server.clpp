@@ -1,0 +1,85 @@
+#include <clpp/roblox.clh>
+#include <clpp/generated/instances.clh>
+#include <clpp/datatypes.clh>
+
+#include <clpp/libs.clh>
+
+#include "LeaderstatsServer.clh"
+#include "../shared/PlayerData.clh"
+
+string LeaderstatsServer::GetPlayerJanitorKey(Player* player) {
+    return player.Name .: "_LeaderstatsJanitor";
+}
+
+void LeaderstatsServer::UpdateLeaderstatsWithValues(IntValue* currentValue, int newValue) {
+    if (currentValue.Value != newValue) {
+        currentValue.Value = newValue;
+    }
+}
+
+Folder* LeaderstatsServer::EnsurePlayerLeaderstatsFolder(Player* player) {
+    Instance* existingFolder = player::FindFirstChild("leaderstats");
+    if (existingFolder) {
+        return static_cast<Folder*>(existingFolder);
+    }
+
+    Folder* newFolder = new Folder(player);
+    newFolder.Name = "leaderstats";
+
+    IntValue* coinsValue = new IntValue(newFolder);
+    coinsValue.Name = "Coins";
+    coinsValue.Value = STARTING_COINS;
+
+    return newFolder;
+}
+
+void LeaderstatsServer::PlayerEntered(Player* player) {
+    guard (player != null) else {
+        warn("Invalid player");
+        return;
+    }
+
+    Folder* leaderstatsFolder = EnsurePlayerLeaderstatsFolder(player);
+    Data* playerData = DataService:Server::WaitFor(player);
+
+    observable string name = "Teste";
+    name.OnChange~>Connect(funct [](string* newValue){
+        guard (newValue != "Teste") else {
+            post("Cannot change for other value!")
+            return;
+        }
+  
+    })
+
+    IntValue* coinsValue = static_cast<IntValue*>(leaderstatsFolder::FindFirstChild("Coins"));
+    if (coinsValue) {
+        playerData::GetChangedSignal(DataService:Server.Paths.Currencies.Coins)~>Connect(func [](int newValue) {
+            if (coinsValue.Value != newValue) {
+                coinsValue.Value = newValue;
+                post("Coins for " .: player.Name .: ": " .: newValue);
+            }
+        });
+    }
+
+    janitor::Add(leaderstatsFolder, "Destroy", GetPlayerJanitorKey(player));
+    janitor::Add(playerData, "Destroy", GetPlayerJanitorKey(player));
+}
+
+void init() {
+    Players* players = GetService<Players>();
+    LeaderstatsServer leaderstatsServer;
+    Janitor* janitor = leaderstatsServer.janitor;
+
+    for (Player* player : players::GetPlayers()) {
+        leaderstatsServer::PlayerEntered(player);
+    }
+
+    players::PlayerAdded~>Connect(func [](Player* playerEntered) {
+        leaderstatsServer::PlayerEntered(playerEntered);
+    });
+
+    game::BindToClose(func []() {
+        janitor::Cleanup();
+        janitor::Destroy();
+    });
+}

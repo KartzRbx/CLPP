@@ -1,0 +1,61 @@
+{
+  "fn": {
+    "prefix": "fn",
+    "body": ["${1:void} ${2:Name}($3) {", "\t$0", "}"],
+    "description": "CL++ function"
+  },
+  "init": {
+    "prefix": "init",
+    "body": [
+      "void init() {",
+      "\tPlayers* players = GetService<Players>();",
+      "\t$0",
+      "}"
+    ],
+    "description": "Script init()"
+  },
+  "lambda": {
+    "prefix": "lambda",
+    "body": ["func []($1) {", "\t$0", "}"],
+    "description": "CL++ lambda"
+  },
+  "guard": {
+    "prefix": "guard",
+    "body": ["guard ($1) else {", "\t$2", "\treturn;", "}"],
+    "description": "Guard clause"
+  },
+  "observable": {
+    "prefix": "obs",
+    "body": [
+      "observable ${1:int} ${2:coins} = ${3:0};",
+      "${2}.OnChange(func [](${1} newValue) {",
+      "\tpost(\"$2: \" .: newValue);",
+      "});"
+    ],
+    "description": "observable ValueBase"
+  },
+  "connect": {
+    "prefix": "~>",
+    "body": [
+      "${1:players}::${2:PlayerAdded}~>Connect(func []($3) {",
+      "\t$0",
+      "});"
+    ],
+    "description": "Connect with auto-cleanup"
+  },
+  "match": {
+    "prefix": "match",
+    "body": [
+      "match ($1) {",
+      "\t${2:Part*} p => $3,",
+      "\t_ => warn(\"unsupported\")",
+      "};"
+    ],
+    "description": "Pattern match"
+  },
+  "include": {
+    "prefix": "inc",
+    "body": ["#include <clpp/roblox.clh>"],
+    "description": "Include CL++ stdlib"
+  }
+}

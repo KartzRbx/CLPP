@@ -1,0 +1,17 @@
+#include <clpp/roblox.clh>
+
+void Greet(Player* player) {
+    post("Player name: " .: player.Name);
+}
+
+void init() {
+    Players* players = GetService<Players>();
+
+    for (Player* player : players::GetPlayers()) {
+        Greet(player);
+    }
+
+    players::PlayerAdded::Connect(func [](Player* playerEntered) {
+        post("New player connected: " .: playerEntered.Name);
+    });
+}

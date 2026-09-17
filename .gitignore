@@ -1,0 +1,32 @@
+# Build
+build/
+dist/
+out/
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.pdb
+
+# IDE / editor
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Language / tooling
+__pycache__/
+*.pyc
+node_modules/
+target/

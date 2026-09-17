@@ -1,0 +1,30 @@
+{
+  "keywords": [
+    "void", "int", "float", "double", "bool", "string", "auto", "func",
+    "struct", "class", "namespace", "using", "static", "const", "constexpr",
+    "if", "else", "guard", "for", "while", "switch", "case", "default",
+    "break", "return", "match", "spawn", "parallel", "async", "await",
+    "new", "null", "true", "false", "observable", "signal", "array",
+    "dictionary", "optional"
+  ],
+  "builtins": [
+    { "label": "post", "detail": "print(...)", "kind": "Function" },
+    { "label": "warn", "detail": "warn(...)", "kind": "Function" },
+    { "label": "report", "detail": "error(...)", "kind": "Function" },
+    { "label": "GetService", "detail": "GetService<T>()", "kind": "Function" },
+    { "label": "pcall", "detail": "pcall(func []() { })", "kind": "Function" }
+  ],
+  "types": [
+    "Player", "Players", "Folder", "Instance", "IntValue", "NumberValue",
+    "StringValue", "BoolValue", "ObjectValue", "Part", "Model", "Humanoid",
+    "RemoteEvent", "BindableEvent", "Vector3", "CFrame", "Color3", "UDim2",
+    "Janitor", "DataService", "Promise", "Workspace", "RunService"
+  ],
+  "operators": [
+    { "label": "::", "detail": "method / scope → Luau :" },
+    { "label": ":", "detail": "table / dictionary → Luau ." },
+    { "label": ".", "detail": "Instance property" },
+    { "label": ".:", "detail": "concatenation → Luau .." },
+    { "label": "~>", "detail": "Connect with automatic Janitor cleanup" }
+  ]
+}

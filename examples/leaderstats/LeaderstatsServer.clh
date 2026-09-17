@@ -1,0 +1,21 @@
+#pragma once
+
+#include <clpp/roblox.clh>
+#include <clpp/generated/instances.clh>
+#include <clpp/datatypes.clh>
+
+#include <clpp/libs/janitor.clh>
+#include <clpp/libs/dataservice.clh>
+
+struct LeaderstatsServer {
+    static constexpr int STARTING_COINS = 0;
+
+    DataServiceServer* dataService;
+    Players* players;
+    Janitor* janitor;
+
+    string GetPlayerJanitorKey(Player* player);
+    Folder* EnsurePlayerLeaderstatsFolder(Player* player);
+    void PlayerEntered(Player* player);
+    void UpdateLeaderstatsWithValues(IntValue* currentValue, int newValue);
+};

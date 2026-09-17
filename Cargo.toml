@@ -1,0 +1,24 @@
+[package]
+name = "clpp"
+version = "0.1.0"
+edition = "2021"
+description = "CL++ compiler — a C++-inspired language that compiles to Luau"
+license = "MIT"
+keywords = ["luau", "roblox", "compiler", "language"]
+categories = ["compilers", "command-line-utilities"]
+
+[[bin]]
+name = "clpp"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+miette = { version = "7", features = ["fancy"] }
+pest = "2"
+pest_derive = "2"
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+pretty_assertions = "1"

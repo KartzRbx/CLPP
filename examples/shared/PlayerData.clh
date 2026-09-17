@@ -1,0 +1,19 @@
+#pragma once
+
+#include <clpp/datatypes.clh>
+
+struct PlayerDataCurrencies {
+    int Coins = 0;
+    int Rebirths = 0;
+};
+
+struct PlayerDataInventory {
+    LuaArray<int> HotBar;
+    LuaArray<string> Storage;
+    int MaxStorage = 90;
+};
+
+struct PlayerData {
+    PlayerDataCurrencies Currencies;
+    PlayerDataInventory Inventory;
+};

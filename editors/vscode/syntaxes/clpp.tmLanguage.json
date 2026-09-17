@@ -1,0 +1,95 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "CL++",
+  "scopeName": "source.clpp",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#preprocessor" },
+    { "include": "#attributes" },
+    { "include": "#strings" },
+    { "include": "#keywords" },
+    { "include": "#types" },
+    { "include": "#constants" },
+    { "include": "#numbers" },
+    { "include": "#operators" },
+    { "include": "#functions" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.clpp",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.block.clpp",
+          "begin": "/\\*",
+          "end": "\\*/"
+        }
+      ]
+    },
+    "preprocessor": {
+      "name": "meta.preprocessor.clpp",
+      "match": "^\\s*#(include|pragma|define|ifdef|ifndef|endif)\\b.*$"
+    },
+    "attributes": {
+      "name": "support.type.annotation.clpp",
+      "match": "\\[\\[(server|client)\\]\\]"
+    },
+    "strings": {
+      "name": "string.quoted.double.clpp",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        { "name": "constant.character.escape.clpp", "match": "\\\\." }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.clpp",
+          "match": "\\b(if|else|guard|for|while|switch|case|default|break|return|match|spawn|parallel|async|await)\\b"
+        },
+        {
+          "name": "keyword.other.clpp",
+          "match": "\\b(struct|class|namespace|using|template|typedef|enum|public|private|protected|static|const|constexpr|inline|extern|new|auto)\\b"
+        },
+        {
+          "name": "storage.modifier.clpp",
+          "match": "\\b(observable|signal|func)\\b"
+        },
+        {
+          "name": "support.function.builtin.clpp",
+          "match": "\\b(post|warn|report|GetService|static_cast|pcall|xpcall)\\b"
+        }
+      ]
+    },
+    "types": {
+      "name": "storage.type.clpp",
+      "match": "\\b(void|int|float|double|bool|string|auto|func|array|dictionary|map|optional|Player|Players|Folder|Instance|IntValue|NumberValue|StringValue|BoolValue|Vector3|CFrame|Color3|UDim2|Janitor|DataService)\\b"
+    },
+    "constants": {
+      "name": "constant.language.clpp",
+      "match": "\\b(true|false|null|nullptr)\\b"
+    },
+    "numbers": {
+      "name": "constant.numeric.clpp",
+      "match": "\\b\\d+(\\.\\d+)?\\b"
+    },
+    "operators": {
+      "patterns": [
+        { "name": "keyword.operator.concat.clpp", "match": "\\.:" },
+        { "name": "keyword.operator.cleanup.clpp", "match": "~>" },
+        { "name": "keyword.operator.scope.clpp", "match": "::" },
+        { "name": "keyword.operator.arrow.clpp", "match": "=>" },
+        { "name": "keyword.operator.comparison.clpp", "match": "==|!=|<=|>=|<|>" },
+        { "name": "keyword.operator.logical.clpp", "match": "&&|\\|\\||!" },
+        { "name": "keyword.operator.assignment.clpp", "match": "\\+=|-=|\\*=|/=|=" }
+      ]
+    },
+    "functions": {
+      "name": "entity.name.function.clpp",
+      "match": "\\b([A-Za-z_][A-Za-z0-9_]*)\\s*(?=\\()"
+    }
+  }
+}
