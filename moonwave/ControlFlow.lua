@@ -50,14 +50,14 @@ function ControlFlow.while_() end
 function ControlFlow.c_for() end
 
 --[=[
-	Range-for. The `:` here is not a table key.
+	Range-for. Prefer `in`. The C++-style `:` is the same loop, not a table key.
 
-	**Syntax:** `for (T x : list) { }`
+	**Syntax:** `for (T x in list) { }` · `for (T x : list) { }`
 
 	**Emit:** `for _, x in list do`
 
 	```clpp
-	for (Player* player : players::GetPlayers()) {
+	for (Player* player in players::GetPlayers()) {
 	    post(player.Name);
 	}
 	```

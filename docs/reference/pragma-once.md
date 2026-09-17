@@ -7,7 +7,7 @@ sidebar_label: "pragma once"
 
 <div class="clpp-ref-meta">Preprocessor</div>
 
-Parsed and ignored. Headers are not multiply included the C++ way.
+Include guard. Safe at the top of every `.clh`. The compiler strips the line before parse, so it does not error.
 
 ## Syntax
 
@@ -15,33 +15,22 @@ Parsed and ignored. Headers are not multiply included the C++ way.
 #pragma once
 ```
 
-## Parameters
-
-None.
-
-## Return value
-
-None.
-
 ## Luau emit
 
-`(ignored)`
+`(none)`
 
 ## Description
 
-Safe to write at the top of `.clh` files for clangd / habit. The compiler does not implement include guards.
+A header included more than once is skipped. Write this on every header.
 
 ## Example
 
 ```clpp
 #pragma once
-struct Data {};
-```
 
-Emits:
-
-```luau
--- struct emit only
+struct PlayerData {
+    int Coins = 0;
+};
 ```
 
 ## See also

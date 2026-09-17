@@ -46,7 +46,7 @@ title: Language cheat sheet
 
 ## Pragma
 
-`#pragma strict` `#pragma nstrict` `#pragma once`
+`#pragma strict` `#pragma nostrict` `#pragma native` `#pragma optimize` `#pragma optimize 2` `#pragma once`
 
 ## Forbidden (by design)
 

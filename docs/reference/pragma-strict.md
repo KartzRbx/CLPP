@@ -29,7 +29,7 @@ None.
 
 ## Description
 
-Default is **not** strict unless config `"strict": true`. [`#pragma nstrict`](pragma-nstrict) never emits the comment.
+Default is **not** strict unless config `"strict": true`. [`#pragma nostrict`](pragma-nstrict) emits `--!nonstrict`.
 
 ## Example
 
@@ -46,4 +46,4 @@ Emits:
 
 ## See also
 
-[pragma-nstrict](pragma-nstrict) · [pragma-once](pragma-once) · [include](include)
+[pragma-nstrict](pragma-nstrict) · [pragma-native](pragma-native) · [pragma-optimize](pragma-optimize) · [pragma-once](pragma-once)

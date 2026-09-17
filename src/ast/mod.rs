@@ -191,6 +191,9 @@ pub struct ModuleRequire {
 #[derive(Debug, Clone, Default)]
 pub struct CompileContext {
     pub strict: bool,
+    pub nonstrict: bool,
+    pub native: bool,
+    pub optimize: Option<u8>,
     pub is_script: bool,
     pub is_header: bool,
     pub script_kind: Option<String>,

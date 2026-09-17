@@ -116,7 +116,9 @@ Every utility has its own page: syntax, parameters, return value, Luau emit, exa
 - [`[[client]]`](reference/attr-client)
 - [#include](reference/include)
 - [#pragma strict](reference/pragma-strict)
-- [#pragma nstrict](reference/pragma-nstrict)
+- [#pragma nostrict](reference/pragma-nstrict)
+- [#pragma native](reference/pragma-native)
+- [#pragma optimize](reference/pragma-optimize)
 - [#pragma once](reference/pragma-once)
 
 ## Headers

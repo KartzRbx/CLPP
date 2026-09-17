@@ -37,6 +37,7 @@ pub fn compile_artifact_source(
     }
     if let Some(strict) = strict {
         ctx.strict = strict;
+        ctx.nonstrict = !strict;
     }
     let program: Program = parse(&expanded, &path.display().to_string())?;
     crate::semantic::check::check_program(&program, &expanded)?;

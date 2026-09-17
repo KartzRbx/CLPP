@@ -6,7 +6,7 @@ EBNF of the slice the lexer/parser must accept. This is not ISO C++.
 translation-unit = { include | pragma | using-skip | declaration } ;
 
 include = "#include" ( "<" path ">" | '"' path '"' ) ;
-pragma  = "#pragma" ( "once" | "strict" | "nstrict" ) ;
+pragma  = "#pragma" ( "once" | "strict" | "nostrict" | "nstrict" | "nonstrict" | "native" | "optimize" [ 0 | 1 | 2 ] ) ;
 
 declaration =
     struct-decl

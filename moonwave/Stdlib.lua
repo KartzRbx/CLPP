@@ -25,7 +25,7 @@ local Stdlib = {}
 function Stdlib.include() end
 
 --[=[
-	`#pragma strict` emits `--!strict`. `#pragma nstrict` never does. `#pragma once` is ignored.
+	`#pragma once` is valid in headers (include guard). `#pragma strict` emits `--!strict`. `#pragma nostrict` emits `--!nonstrict`. `#pragma native` emits `--!native`. `#pragma optimize` / `#pragma optimize 2` emit `--!optimize 2`.
 
 	@within Stdlib
 ]=]

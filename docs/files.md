@@ -41,7 +41,7 @@ Prefer `.clh` + `.clpp`: declare in the header, define in the script.
 | `"Stem.clh"` with the same stem | **Inlined** into the `.clpp` |
 | `"Other.clh"` | `require` |
 
-`#pragma strict` → `--!strict`. `#pragma nstrict` forbids it. `#pragma once` is ignored.
+`#pragma once` is valid in `.clh` (include guard). `#pragma strict` → `--!strict`. `#pragma nostrict` → `--!nonstrict`. `#pragma native` → `--!native`. `#pragma optimize` / `#pragma optimize 2` → `--!optimize 2`.
 
 `using …;` is skipped. `namespace { }` is flattened. `//` and `/* */` comments are stripped.
 

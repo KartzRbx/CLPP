@@ -51,9 +51,11 @@ src/shared/PlayerData.clh                             →  out/shared/PlayerData
 | `#include <clpp/libs/janitor.clh>` | IntelliSense **and** a `require` of the lib |
 | `#include "Stem.clh"` with the same stem as the `.clpp` | **Inlined** (class body) |
 | `#include "Other.clh"` / `"Other.clp"` | `require` (Rojo path) |
-| `#pragma once` | Ignored |
+| `#pragma once` | Include guard; stripped before parse |
 | `#pragma strict` | Emits `--!strict` |
-| `#pragma nstrict` | Never emits `--!strict` |
+| `#pragma nostrict` | Emits `--!nonstrict` (`nstrict` / `nonstrict` aliases) |
+| `#pragma native` | Emits `--!native` |
+| `#pragma optimize` / `#pragma optimize 2` | Emits `--!optimize 2` |
 
 `using …;` is skipped. `namespace { }` is flattened. `enum` / `template` / `typedef` / `extern` declarations are skipped. `//` and `/* */` comments are stripped.
 

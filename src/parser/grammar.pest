@@ -82,7 +82,10 @@ item = {
     | using_stmt
     | namespace_item
     | skip_decl
+    | hash_line
 }
+
+hash_line = { "#" ~ (!NEWLINE ~ ANY)* }
 
 using_stmt = { KW_USING ~ (!";" ~ ANY)* ~ ";" }
 namespace_item = { KW_NAMESPACE ~ ident? ~ "{" ~ item* ~ "}" }

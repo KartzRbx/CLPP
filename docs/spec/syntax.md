@@ -6,7 +6,7 @@ title: Syntax specification
 
 CL++ is the **language**: syntax, semantics, and OOP. Connecting to the Roblox API (generated headers, runtime) is **Cluaupp**'s job. The `clpp` compiler emits [Luau](https://luau.org/getting-started).
 
-Generated Luau uses `local`, `const`, and `const function`. Injected `require` / `GetService` are `const`. `--!strict` only with `#pragma strict` (or `"strict": true` in config).
+Generated Luau uses `local`, `const`, and `const function`. Injected `require` / `GetService` are `const`. `--!strict` / `--!nonstrict` / `--!native` / `--!optimize N` come from `#pragma`.
 
 Extensions and tags: [Files](files.md). Types: [Types](types.md). Emit: [Mapping](emit.md).
 
@@ -282,7 +282,7 @@ CL++ **does not use `->`**. Methods and scope use `::`. Tables/dictionaries use 
 | `DataService:Server::WaitFor(p)` | `DataService.Server:WaitFor(p)` | table + method |
 | `player.Name` | `player.Name` | property |
 | `a .: b` | `a .. b` | concatenation |
-| `for (T x : list)` | `for _, x in list do` | range-for |
+| `for (T x in list)` | `for _, x in list do` | range-for (`:` still works) |
 | `for (int i = 0; i < n; i++)` | `while` + `i += 1` | C loop |
 | `signal~>Connect(fn)` | `janitor:Add(signal:Connect(fn), "Disconnect")` | auto-cleanup |
 | `signal~>Once(fn)` | `janitor:Add(signal:Once(fn), "Disconnect")` | one-shot auto-cleanup |
@@ -451,4 +451,4 @@ void UpdateUI() {}
 
 ## Unsupported
 
-Custom C++ classes as metatables; templates beyond `GetService<T>` / `static_cast<T>` / `array<T>` / `dictionary<K,V>` / `LuaArray<T>` / `string_concat`; pointer arithmetic; `->`; `std::` (except mapped aliases); overloading; macros (except `#pragma strict` / `#pragma nstrict` / `#pragma once`); JSX; `continue`; ternary; `do/while`; `try/catch`; `goto`; `int&` references; C++ lambda captures (`[x]`, `[&]`).
+Custom C++ classes as metatables; templates beyond `GetService<T>` / `static_cast<T>` / `array<T>` / `dictionary<K,V>` / `LuaArray<T>` / `string_concat`; pointer arithmetic; `->`; `std::` (except mapped aliases); overloading; macros (except `#pragma once` / `strict` / `nostrict` / `native` / `optimize`); JSX; `continue`; ternary; `do/while`; `try/catch`; `goto`; `int&` references; C++ lambda captures (`[x]`, `[&]`).

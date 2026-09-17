@@ -16,7 +16,7 @@ local Collections = {}
 
 	```clpp
 	array<string> names = {"Kartz", "Player1"};
-	for (string n : names) {
+	for (string n in names) {
 	    post(n);
 	}
 	```

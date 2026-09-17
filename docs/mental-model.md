@@ -38,7 +38,7 @@ If a Roblox class is missing from IntelliSense, that is a Cluaupp generated-head
 
 - `local` / `const` / `const function`
 - `Instance.new` / `game:GetService` / `require`
-- `--!strict` only with `#pragma strict`
+- `--!strict` / `--!nonstrict` / `--!native` / `--!optimize N` from `#pragma`
 
 Formatting is StyLua's job. Typechecking emitted Luau is `luau-analyze`'s job.
 

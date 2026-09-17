@@ -1,48 +1,32 @@
 ---
-title: "#pragma nstrict"
-sidebar_label: "pragma nstrict"
+title: "#pragma nostrict"
+sidebar_label: "pragma nostrict"
 ---
 
-# #pragma nstrict
+# #pragma nostrict
 
 <div class="clpp-ref-meta">Preprocessor</div>
 
-Never emit `--!strict`, even if the project config asks for it.
+Emit `--!nonstrict`. Aliases: `nstrict`, `nonstrict`.
 
 ## Syntax
 
 ```clpp
+#pragma nostrict
 #pragma nstrict
+#pragma nonstrict
 ```
-
-## Parameters
-
-None.
-
-## Return value
-
-None.
 
 ## Luau emit
 
-`(no --!strict)`
+```luau
+--!nonstrict
+```
 
 ## Description
 
-Use on files that still need Looser Luau.
-
-## Example
-
-```clpp
-#pragma nstrict
-```
-
-Emits:
-
-```luau
--- (no directive)
-```
+Turns off Luau strict mode for this file. Last of `strict` / `nostrict` wins.
 
 ## See also
 
-[pragma-strict](pragma-strict)
+[pragma-strict](pragma-strict) · [pragma-native](pragma-native)

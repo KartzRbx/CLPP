@@ -82,6 +82,14 @@ impl<'a> Emitter<'a> {
     fn emit_program(&mut self) {
         if self.ctx.strict {
             self.lines.push("--!strict".into());
+        } else if self.ctx.nonstrict {
+            self.lines.push("--!nonstrict".into());
+        }
+        if self.ctx.native {
+            self.lines.push("--!native".into());
+        }
+        if let Some(level) = self.ctx.optimize {
+            self.lines.push(format!("--!optimize {level}"));
         }
         self.lines.push("-- Compiled by CL++ — C++ × Luau".into());
         self.lines.push(String::new());

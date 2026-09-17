@@ -32,7 +32,7 @@ The field.
 
 `DataService:Server` → `DataService.Server`. Combine with [`::`](operator-method): `DataService:Server::WaitFor(p)`.
 
-Range-for uses `:` in a different position: [`for (T x : list)`](range-for). The compiler distinguishes them.
+Range-for uses `in` (or `:`) in a different position: [`for (T x in list)`](range-for). The compiler distinguishes them.
 
 ## Example
 

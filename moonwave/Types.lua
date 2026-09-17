@@ -60,7 +60,7 @@ function Types.double() end
 function Types.bool() end
 
 --[=[
-	UTF-8 text. Not `std::string`. Concatenate with `.:`.
+	UTF-8 text. Not `std::string`. Concatenate with `.:`. Double quotes, single quotes, and template strings with `{expr}`.
 
 	**Syntax:** `string name = "Kartz";`
 

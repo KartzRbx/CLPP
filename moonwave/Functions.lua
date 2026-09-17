@@ -30,7 +30,7 @@ function Functions.declare() end
 	**Emit:** `function(arg: T) … end`
 
 	```clpp
-	players::PlayerAdded::Connect(func [](Player* playerEntered) {
+	players::PlayerAdded~>Connect(func [](Player* playerEntered) {
 	    post("New player: " .: playerEntered.Name);
 	});
 	```

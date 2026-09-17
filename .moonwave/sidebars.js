@@ -181,6 +181,8 @@ module.exports = {
             "reference/include",
             "reference/pragma-strict",
             "reference/pragma-nstrict",
+            "reference/pragma-native",
+            "reference/pragma-optimize",
             "reference/pragma-once",
           ],
         },

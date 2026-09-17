@@ -79,3 +79,38 @@ void F() {
     assert!(luau.contains("for _, x in xs do"));
     assert!(luau.contains("for _, y in xs do"));
 }
+
+#[test]
+fn pragma_once_is_valid_in_headers() {
+    let luau = compile_source(
+        "#pragma once\nstruct Foo { int Coins = 0; };\n",
+        Path::new("Foo.clh"),
+    )
+    .expect("pragma once header");
+    assert!(luau.contains("Coins = 0"));
+    assert!(!luau.contains("#pragma"));
+}
+
+#[test]
+fn pragma_directives_emit_luau_comments() {
+    let luau = compile(
+        r#"
+#pragma strict
+#pragma native
+#pragma optimize 2
+void init() {}
+"#,
+    )
+    .expect("pragma emit");
+    let head = luau.lines().take(6).collect::<Vec<_>>().join("\n");
+    assert!(head.contains("--!strict"), "got: {head}");
+    assert!(head.contains("--!native"), "got: {head}");
+    assert!(head.contains("--!optimize 2"), "got: {head}");
+}
+
+#[test]
+fn pragma_nostrict_emits_nonstrict() {
+    let luau = compile("#pragma nostrict\nvoid init() {}\n").expect("nostrict");
+    assert!(luau.contains("--!nonstrict"));
+    assert!(!luau.contains("--!strict\n"));
+}

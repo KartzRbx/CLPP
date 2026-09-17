@@ -6,13 +6,15 @@ title: Emit mapping
 
 Fixed order of generated Luau:
 
-1. `--!strict` if `#pragma strict`
-2. `game:GetService(...)`
-3. `require(...)` (libs and quoted includes that are not the stem)
-4. types (`export type`)
-5. constants
-6. functions / script body
-7. `init()` if present (Script / LocalScript)
+1. `--!strict` if `#pragma strict`, or `--!nonstrict` if `#pragma nostrict`
+2. `--!native` if `#pragma native`
+3. `--!optimize N` if `#pragma optimize` / `#pragma optimize N`
+4. `game:GetService(...)`
+5. `require(...)` (libs and quoted includes that are not the stem)
+6. types (`export type`)
+7. constants
+8. functions / script body
+9. `init()` if present (Script / LocalScript)
 
 Formatting is StyLua's job; Luau type checking is `luau-analyze`'s job.
 

@@ -48,7 +48,7 @@ function Operators.method_scope() end
 	post(stats:Coins);
 	```
 
-	Range-for uses `:` in a different position: `for (T x : list)`.
+	Range-for uses `in` (or `:`) in a different position: `for (T x in list)`.
 
 	@within Operators
 	@tag operator
