@@ -8,8 +8,8 @@
 There is no `continue`, ternary `? :`, or `do/while`. Full pages: [if](/CLPP/docs/reference/if), [guard](/CLPP/docs/reference/guard), [match](/CLPP/docs/reference/match)."><meta data-rh="true" property="og:description" content="Branching, loops, `guard`, `match`, and `switch`.
 
 There is no `continue`, ternary `? :`, or `do/while`. Full pages: [if](/CLPP/docs/reference/if), [guard](/CLPP/docs/reference/guard), [match](/CLPP/docs/reference/match)."><link data-rh="true" rel="icon" href="/CLPP/img/favicon.png"><link data-rh="true" rel="canonical" href="https://kartzrbx.github.io/CLPP/api/ControlFlow"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/ControlFlow" hreflang="en"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/ControlFlow" hreflang="x-default"><link rel="stylesheet" href="/CLPP/assets/css/styles.1ed3ab39.css">
-<script src="/CLPP/assets/js/runtime~main.c6032125.js" defer="defer"></script>
-<script src="/CLPP/assets/js/main.29013910.js" defer="defer"></script>
+<script src="/CLPP/assets/js/runtime~main.aa9adf31.js" defer="defer"></script>
+<script src="/CLPP/assets/js/main.854867c8.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -34,10 +34,10 @@ There is no `continue`, ternary `? :`, or `do/while`. Full pages: [if](/CLPP/doc
 <p><strong>Emit:</strong> <code>local i = 0</code> / <code>while i &#x3C; n do</code> / <code>i += 1</code></p>
 <p>Semicolons separate clauses. Range-for is a different form.</p>
 </div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="range_for"><code style="text-decoration:none">range_for</code><a href="#range_for" class="hash-link" aria-label="Direct link to range_for" title="Direct link to range_for" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#00a1e4;color:#00a1e4">control</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/ControlFlow.lua#L68"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>ControlFlow<!-- -->.</code><code class="green_DgR4">range_for</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
-<p>Range-for. The <code>:</code> here is not a table key.</p>
-<p><strong>Syntax:</strong> <code>for (T x : list) { }</code></p>
+<p>Range-for. Prefer <code>in</code>. The C++-style <code>:</code> is the same loop, not a table key.</p>
+<p><strong>Syntax:</strong> <code>for (T x in list) { }</code> · <code>for (T x : list) { }</code></p>
 <p><strong>Emit:</strong> <code>for _, x in list do</code></p>
-<pre class="language-clpp"><code class="language-clpp"><span class="token keyword">for</span> <span class="token punctuation">(</span>Player<span class="token operator">*</span> player <span class="token operator">:</span> players<span class="token double-colon punctuation">::</span><span class="token function">GetPlayers</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+<pre class="language-clpp"><code class="language-clpp"><span class="token keyword">for</span> <span class="token punctuation">(</span>Player<span class="token operator">*</span> player in players<span class="token double-colon punctuation">::</span><span class="token function">GetPlayers</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
     <span class="token function">post</span><span class="token punctuation">(</span>player<span class="token punctuation">.</span>Name<span class="token punctuation">)</span><span class="token punctuation">;</span>
 <span class="token punctuation">}</span>
 </code></pre>
@@ -118,7 +118,7 @@ There is no `continue`, ternary `? :`, or `do/while`. Full pages: [if](/CLPP/doc
         },
         {
             &quot;name&quot;: &quot;range_for&quot;,
-            &quot;desc&quot;: &quot;Range-for. The `:` here is not a table key.\n\n**Syntax:** `for (T x : list) { }`\n\n**Emit:** `for _, x in list do`\n\n```clpp\nfor (Player* player : players::GetPlayers()) {\n    post(player.Name);\n}\n```&quot;,
+            &quot;desc&quot;: &quot;Range-for. Prefer `in`. The C++-style `:` is the same loop, not a table key.\n\n**Syntax:** `for (T x in list) { }` · `for (T x : list) { }`\n\n**Emit:** `for _, x in list do`\n\n```clpp\nfor (Player* player in players::GetPlayers()) {\n    post(player.Name);\n}\n```&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;static&quot;,

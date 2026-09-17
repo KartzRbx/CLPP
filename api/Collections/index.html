@@ -8,8 +8,8 @@
 Aliases: `vector&lt;T&gt;`, `LuaArray&lt;T&gt;`, `span&lt;T&gt;` → `{T}`. `map&lt;K,V&gt;` → `{ [K]: V }`."><meta data-rh="true" property="og:description" content="Arrays are ordered lists. Dictionaries are maps. Both become Luau tables.
 
 Aliases: `vector&lt;T&gt;`, `LuaArray&lt;T&gt;`, `span&lt;T&gt;` → `{T}`. `map&lt;K,V&gt;` → `{ [K]: V }`."><link data-rh="true" rel="icon" href="/CLPP/img/favicon.png"><link data-rh="true" rel="canonical" href="https://kartzrbx.github.io/CLPP/api/Collections"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Collections" hreflang="en"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Collections" hreflang="x-default"><link rel="stylesheet" href="/CLPP/assets/css/styles.1ed3ab39.css">
-<script src="/CLPP/assets/js/runtime~main.c6032125.js" defer="defer"></script>
-<script src="/CLPP/assets/js/main.29013910.js" defer="defer"></script>
+<script src="/CLPP/assets/js/runtime~main.aa9adf31.js" defer="defer"></script>
+<script src="/CLPP/assets/js/main.854867c8.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -23,7 +23,7 @@ Aliases: `vector&lt;T&gt;`, `LuaArray&lt;T&gt;`, `span&lt;T&gt;` → `{T}`. `map
 <p><strong>Syntax:</strong> <code>array&#x3C;T> name = { a, b, c };</code></p>
 <p><strong>Emit:</strong> <code>{T}</code></p>
 <pre class="language-clpp"><code class="language-clpp">array<span class="token operator">&#x3C;</span>string<span class="token operator">></span> names <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token string">"Kartz"</span><span class="token punctuation">,</span> <span class="token string">"Player1"</span><span class="token punctuation">}</span><span class="token punctuation">;</span>
-<span class="token keyword">for</span> <span class="token punctuation">(</span>string n <span class="token operator">:</span> names<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+<span class="token keyword">for</span> <span class="token punctuation">(</span>string n in names<span class="token punctuation">)</span> <span class="token punctuation">{</span>
     <span class="token function">post</span><span class="token punctuation">(</span>n<span class="token punctuation">)</span><span class="token punctuation">;</span>
 <span class="token punctuation">}</span>
 </code></pre>
@@ -46,7 +46,7 @@ Aliases: `vector&lt;T&gt;`, `LuaArray&lt;T&gt;`, `span&lt;T&gt;` → `{T}`. `map
     &quot;functions&quot;: [
         {
             &quot;name&quot;: &quot;array&quot;,
-            &quot;desc&quot;: &quot;Ordered list.\n\n**Syntax:** `array&lt;T&gt; name = { a, b, c };`\n\n**Emit:** `{T}`\n\n```clpp\narray&lt;string&gt; names = {\&quot;Kartz\&quot;, \&quot;Player1\&quot;};\nfor (string n : names) {\n    post(n);\n}\n```\n\nIterate with range-for. `Vector3` is a datatype, not `vector&lt;T&gt;`.&quot;,
+            &quot;desc&quot;: &quot;Ordered list.\n\n**Syntax:** `array&lt;T&gt; name = { a, b, c };`\n\n**Emit:** `{T}`\n\n```clpp\narray&lt;string&gt; names = {\&quot;Kartz\&quot;, \&quot;Player1\&quot;};\nfor (string n in names) {\n    post(n);\n}\n```\n\nIterate with range-for. `Vector3` is a datatype, not `vector&lt;T&gt;`.&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;static&quot;,

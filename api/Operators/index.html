@@ -28,8 +28,8 @@ Full pages: [Language reference — Operators](/CLPP/docs/reference)."><meta dat
 `+` only adds numbers. `!=` `&amp;&amp;` `||` `!` emit `~=` `and` `or` `not`. `++` / `--` emit `+= 1` / `-= 1`.
 
 Full pages: [Language reference — Operators](/CLPP/docs/reference)."><link data-rh="true" rel="icon" href="/CLPP/img/favicon.png"><link data-rh="true" rel="canonical" href="https://kartzrbx.github.io/CLPP/api/Operators"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Operators" hreflang="en"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Operators" hreflang="x-default"><link rel="stylesheet" href="/CLPP/assets/css/styles.1ed3ab39.css">
-<script src="/CLPP/assets/js/runtime~main.c6032125.js" defer="defer"></script>
-<script src="/CLPP/assets/js/main.29013910.js" defer="defer"></script>
+<script src="/CLPP/assets/js/runtime~main.aa9adf31.js" defer="defer"></script>
+<script src="/CLPP/assets/js/main.854867c8.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -90,7 +90,7 @@ player<span class="token double-colon punctuation">::</span><span class="token f
 <pre class="language-clpp"><code class="language-clpp">DataService<span class="token operator">:</span><span class="token class-name">Server</span><span class="token double-colon punctuation">::</span><span class="token function">WaitFor</span><span class="token punctuation">(</span>p<span class="token punctuation">)</span><span class="token punctuation">;</span>
 <span class="token function">post</span><span class="token punctuation">(</span>stats<span class="token operator">:</span>Coins<span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
-<p>Range-for uses <code>:</code> in a different position: <code>for (T x : list)</code>.</p>
+<p>Range-for uses <code>in</code> (or <code>:</code>) in a different position: <code>for (T x in list)</code>.</p>
 </div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="property"><code style="text-decoration:none">property</code><a href="#property" class="hash-link" aria-label="Direct link to property" title="Direct link to property" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#2b8ab6;color:#2b8ab6">operator</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Operators.lua#L72"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Operators<!-- -->.</code><code class="green_DgR4">property</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p>Instance or value property.</p>
 <p><strong>Syntax:</strong> <code>instance.Property</code></p>
@@ -153,7 +153,7 @@ player<span class="token double-colon punctuation">::</span><span class="token f
         },
         {
             &quot;name&quot;: &quot;table_key&quot;,
-            &quot;desc&quot;: &quot;Dictionary / module table key. Not a method call.\n\n**Syntax:** `Table:Key`\n\n**Emit:** `Table.Key`\n\n```clpp\nDataService:Server::WaitFor(p);\npost(stats:Coins);\n```\n\nRange-for uses `:` in a different position: `for (T x : list)`.&quot;,
+            &quot;desc&quot;: &quot;Dictionary / module table key. Not a method call.\n\n**Syntax:** `Table:Key`\n\n**Emit:** `Table.Key`\n\n```clpp\nDataService:Server::WaitFor(p);\npost(stats:Coins);\n```\n\nRange-for uses `in` (or `:`) in a different position: `for (T x in list)`.&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;static&quot;,

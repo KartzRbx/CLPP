@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.10.1">
 <title data-rh="true">Functions | CL++</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://kartzrbx.github.io/CLPP/api/Functions"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docusaurus_tag" content="default"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docsearch:docusaurus_tag" content="default"><meta data-rh="true" property="og:title" content="Functions | CL++"><meta data-rh="true" name="description" content="Named functions, lambdas, and `this`. No overloading. No default arguments. No C++ captures."><meta data-rh="true" property="og:description" content="Named functions, lambdas, and `this`. No overloading. No default arguments. No C++ captures."><link data-rh="true" rel="icon" href="/CLPP/img/favicon.png"><link data-rh="true" rel="canonical" href="https://kartzrbx.github.io/CLPP/api/Functions"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Functions" hreflang="en"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Functions" hreflang="x-default"><link rel="stylesheet" href="/CLPP/assets/css/styles.1ed3ab39.css">
-<script src="/CLPP/assets/js/runtime~main.c6032125.js" defer="defer"></script>
-<script src="/CLPP/assets/js/main.29013910.js" defer="defer"></script>
+<script src="/CLPP/assets/js/runtime~main.aa9adf31.js" defer="defer"></script>
+<script src="/CLPP/assets/js/main.854867c8.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -27,7 +27,7 @@
 <p>Closure. Empty <code>[]</code> only — no <code>[x]</code> / <code>[&#x26;]</code>. Luau still closes over outer locals.</p>
 <p><strong>Syntax:</strong> <code>func [](T arg) { }</code> · <code>func cb = []() {};</code></p>
 <p><strong>Emit:</strong> <code>function(arg: T) … end</code></p>
-<pre class="language-clpp"><code class="language-clpp">players<span class="token double-colon punctuation">::</span><span class="token class-name">PlayerAdded</span><span class="token double-colon punctuation">::</span><span class="token function">Connect</span><span class="token punctuation">(</span>func <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">(</span>Player<span class="token operator">*</span> playerEntered<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+<pre class="language-clpp"><code class="language-clpp">players<span class="token double-colon punctuation">::</span>PlayerAdded<span class="token operator">~</span><span class="token operator">></span><span class="token function">Connect</span><span class="token punctuation">(</span>func <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">(</span>Player<span class="token operator">*</span> playerEntered<span class="token punctuation">)</span> <span class="token punctuation">{</span>
     <span class="token function">post</span><span class="token punctuation">(</span><span class="token string">"New player: "</span> <span class="token punctuation">.</span><span class="token operator">:</span> playerEntered<span class="token punctuation">.</span>Name<span class="token punctuation">)</span><span class="token punctuation">;</span>
 <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
@@ -50,7 +50,7 @@
         },
         {
             &quot;name&quot;: &quot;lambda&quot;,
-            &quot;desc&quot;: &quot;Closure. Empty `[]` only — no `[x]` / `[&amp;]`. Luau still closes over outer locals.\n\n**Syntax:** `func [](T arg) { }` · `func cb = []() {};`\n\n**Emit:** `function(arg: T) … end`\n\n```clpp\nplayers::PlayerAdded::Connect(func [](Player* playerEntered) {\n    post(\&quot;New player: \&quot; .: playerEntered.Name);\n});\n```&quot;,
+            &quot;desc&quot;: &quot;Closure. Empty `[]` only — no `[x]` / `[&amp;]`. Luau still closes over outer locals.\n\n**Syntax:** `func [](T arg) { }` · `func cb = []() {};`\n\n**Emit:** `function(arg: T) … end`\n\n```clpp\nplayers::PlayerAdded~&gt;Connect(func [](Player* playerEntered) {\n    post(\&quot;New player: \&quot; .: playerEntered.Name);\n});\n```&quot;,
             &quot;params&quot;: [
                 {
                     &quot;name&quot;: &quot;arg&quot;,

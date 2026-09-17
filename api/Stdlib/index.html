@@ -24,8 +24,8 @@ Quoted includes: same stem as the `.clpp` is **inlined**; any other name becomes
 | `&lt;clpp/libs/dataservice.clh&gt;` | DataService | [dataservice.clh](/CLPP/docs/reference/header-dataservice) |
 
 Quoted includes: same stem as the `.clpp` is **inlined**; any other name becomes `require`."><link data-rh="true" rel="icon" href="/CLPP/img/favicon.png"><link data-rh="true" rel="canonical" href="https://kartzrbx.github.io/CLPP/api/Stdlib"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Stdlib" hreflang="en"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Stdlib" hreflang="x-default"><link rel="stylesheet" href="/CLPP/assets/css/styles.1ed3ab39.css">
-<script src="/CLPP/assets/js/runtime~main.c6032125.js" defer="defer"></script>
-<script src="/CLPP/assets/js/main.29013910.js" defer="defer"></script>
+<script src="/CLPP/assets/js/runtime~main.aa9adf31.js" defer="defer"></script>
+<script src="/CLPP/assets/js/main.854867c8.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -74,7 +74,7 @@ Quoted includes: same stem as the `.clpp` is **inlined**; any other name becomes
 <p><code>#include &#x3C;path></code> / <code>#include "path"</code>.</p>
 <p><strong>Emit:</strong> <code>require(…)</code> for libs and non-stem quotes; stem quote is inlined; <code>roblox.clh</code> is IntelliSense only.</p>
 </div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="pragma"><code style="text-decoration:none">pragma</code><a href="#pragma" class="hash-link" aria-label="Direct link to pragma" title="Direct link to pragma" translate="no">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Stdlib.lua#L32"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Stdlib<!-- -->.</code><code class="green_DgR4">pragma</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
-<p><code>#pragma strict</code> emits <code>--!strict</code>. <code>#pragma nstrict</code> never does. <code>#pragma once</code> is ignored.</p>
+<p><code>#pragma once</code> is valid in headers (include guard). <code>#pragma strict</code> emits <code>--!strict</code>. <code>#pragma nostrict</code> emits <code>--!nonstrict</code>. <code>#pragma native</code> emits <code>--!native</code>. <code>#pragma optimize</code> / <code>#pragma optimize 2</code> emit <code>--!optimize 2</code>.</p>
 </div></div></article></div><details><summary>Show raw api</summary><pre style="max-width:100%;white-space:pre-wrap">{
     &quot;functions&quot;: [
         {
@@ -90,7 +90,7 @@ Quoted includes: same stem as the `.clpp` is **inlined**; any other name becomes
         },
         {
             &quot;name&quot;: &quot;pragma&quot;,
-            &quot;desc&quot;: &quot;`#pragma strict` emits `--!strict`. `#pragma nstrict` never does. `#pragma once` is ignored.&quot;,
+            &quot;desc&quot;: &quot;`#pragma once` is valid in headers (include guard). `#pragma strict` emits `--!strict`. `#pragma nostrict` emits `--!nonstrict`. `#pragma native` emits `--!native`. `#pragma optimize` / `#pragma optimize 2` emit `--!optimize 2`.&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;static&quot;,

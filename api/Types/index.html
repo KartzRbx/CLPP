@@ -8,8 +8,8 @@
 Full pages: [int](/CLPP/docs/reference/int), [array](/CLPP/docs/reference/array), [signal](/CLPP/docs/reference/signal-type), [observable](/CLPP/docs/reference/observable)."><meta data-rh="true" property="og:description" content="Every value you write in CL++ has a type, and the compiler emits a Luau annotation.
 
 Full pages: [int](/CLPP/docs/reference/int), [array](/CLPP/docs/reference/array), [signal](/CLPP/docs/reference/signal-type), [observable](/CLPP/docs/reference/observable)."><link data-rh="true" rel="icon" href="/CLPP/img/favicon.png"><link data-rh="true" rel="canonical" href="https://kartzrbx.github.io/CLPP/api/Types"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Types" hreflang="en"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Types" hreflang="x-default"><link rel="stylesheet" href="/CLPP/assets/css/styles.1ed3ab39.css">
-<script src="/CLPP/assets/js/runtime~main.c6032125.js" defer="defer"></script>
-<script src="/CLPP/assets/js/main.29013910.js" defer="defer"></script>
+<script src="/CLPP/assets/js/runtime~main.aa9adf31.js" defer="defer"></script>
+<script src="/CLPP/assets/js/main.854867c8.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -37,7 +37,7 @@ Full pages: [int](/CLPP/docs/reference/int), [array](/CLPP/docs/reference/array)
 <p><strong>Syntax:</strong> <code>bool isActive = true;</code></p>
 <p><strong>Emit:</strong> <code>boolean</code></p>
 </div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="string"><code style="text-decoration:none">string</code><a href="#string" class="hash-link" aria-label="Direct link to string" title="Direct link to string" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#dc0073;color:#dc0073">type</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Types.lua#L72"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Types<!-- -->.</code><code class="green_DgR4">string</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
-<p>UTF-8 text. Not <code>std::string</code>. Concatenate with <code>.:</code>.</p>
+<p>UTF-8 text. Not <code>std::string</code>. Concatenate with <code>.:</code>. Double quotes, single quotes, and template strings with <code>{expr}</code>.</p>
 <p><strong>Syntax:</strong> <code>string name = "Kartz";</code></p>
 <p><strong>Emit:</strong> <code>string</code></p>
 </div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="void"><code style="text-decoration:none">void</code><a href="#void" class="hash-link" aria-label="Direct link to void" title="Direct link to void" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#dc0073;color:#dc0073">type</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Types.lua#L84"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Types<!-- -->.</code><code class="green_DgR4">void</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
@@ -65,7 +65,7 @@ Full pages: [int](/CLPP/docs/reference/int), [array](/CLPP/docs/reference/array)
 <p><code>const</code> / <code>static constexpr</code> become Luau <code>const</code>.</p>
 <p><strong>Syntax:</strong> <code>const int DoubleCoins(int coins) { return coins; }</code></p>
 <p><strong>Emit:</strong> <code>const function</code></p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="static_cast"><code style="text-decoration:none">static_cast</code><a href="#static_cast" class="hash-link" aria-label="Direct link to static_cast" title="Direct link to static_cast" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#dc0073;color:#dc0073">type</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Types.lua#L159"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Types<!-- -->.</code><code class="green_DgR4">static_cast</code><code>(</code><code>x<!-- -->: </code><code class="blue_P4bS">any</code><code>) → </code><code>(</code><code>)</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="static_cast"><code style="text-decoration:none">static_cast</code><a href="#static_cast" class="hash-link" aria-label="Direct link to static_cast" title="Direct link to static_cast" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#dc0073;color:#dc0073">type</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Types.lua#L159"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Types<!-- -->.</code><code class="green_DgR4">static_cast</code><code>(</code><code>x<!-- -->:  </code><code class="blue_P4bS">any</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p>Source-level cast. Does not check <code>ClassName</code>.</p>
 <p><strong>Syntax:</strong> <code>T static_cast&#x3C;T>(x);</code></p>
 <p><strong>Emit:</strong> <code>x</code></p>
@@ -129,7 +129,7 @@ Full pages: [int](/CLPP/docs/reference/int), [array](/CLPP/docs/reference/array)
         },
         {
             &quot;name&quot;: &quot;string&quot;,
-            &quot;desc&quot;: &quot;UTF-8 text. Not `std::string`. Concatenate with `.:`.\n\n**Syntax:** `string name = \&quot;Kartz\&quot;;`\n\n**Emit:** `string`&quot;,
+            &quot;desc&quot;: &quot;UTF-8 text. Not `std::string`. Concatenate with `.:`. Double quotes, single quotes, and template strings with `{expr}`.\n\n**Syntax:** `string name = \&quot;Kartz\&quot;;`\n\n**Emit:** `string`&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;static&quot;,
