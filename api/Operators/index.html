@@ -27,9 +27,9 @@ Full pages: [Language reference — Operators](/CLPP/docs/reference)."><meta dat
 
 `+` only adds numbers. `!=` `&amp;&amp;` `||` `!` emit `~=` `and` `or` `not`. `++` / `--` emit `+= 1` / `-= 1`.
 
-Full pages: [Language reference — Operators](/CLPP/docs/reference)."><link data-rh="true" rel="icon" href="/CLPP/img/favicon.png"><link data-rh="true" rel="canonical" href="https://kartzrbx.github.io/CLPP/api/Operators"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Operators" hreflang="en"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Operators" hreflang="x-default"><link rel="stylesheet" href="/CLPP/assets/css/styles.1ed3ab39.css">
-<script src="/CLPP/assets/js/runtime~main.aa9adf31.js" defer="defer"></script>
-<script src="/CLPP/assets/js/main.854867c8.js" defer="defer"></script>
+Full pages: [Language reference — Operators](/CLPP/docs/reference)."><link data-rh="true" rel="icon" href="/CLPP/img/favicon.png"><link data-rh="true" rel="canonical" href="https://kartzrbx.github.io/CLPP/api/Operators"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Operators" hreflang="en"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Operators" hreflang="x-default"><link rel="stylesheet" href="/CLPP/assets/css/styles.796e4892.css">
+<script src="/CLPP/assets/js/runtime~main.071fa0ec.js" defer="defer"></script>
+<script src="/CLPP/assets/js/main.c7d56e5e.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -75,15 +75,14 @@ Full pages: [Language reference — Operators](/CLPP/docs/reference)."><link dat
 </table>
 <p><code>+</code> only adds numbers. <code>!=</code> <code>&#x26;&#x26;</code> <code>||</code> <code>!</code> emit <code>~=</code> <code>and</code> <code>or</code> <code>not</code>. <code>++</code> / <code>--</code> emit <code>+= 1</code> / <code>-= 1</code>.</p>
 <p>Full pages: <a href="/CLPP/CLPP/docs/reference">Language reference — Operators</a>.</p>
-</div></header><h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="functions">Functions<a href="#functions" class="hash-link" aria-label="Direct link to Functions" title="Direct link to Functions" translate="no">​</a></h2><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="method_scope"><code style="text-decoration:none">method_scope</code><a href="#method_scope" class="hash-link" aria-label="Direct link to method_scope" title="Direct link to method_scope" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#2b8ab6;color:#2b8ab6">operator</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Operators.lua#L37"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Operators<!-- -->.</code><code class="green_DgR4">method_scope</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+</div></header><h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="functions">Functions<a href="#functions" class="hash-link" aria-label="Direct link to Functions" title="Direct link to Functions" translate="no">​</a></h2><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="::"><code style="text-decoration:none">::</code><a href="#::" class="hash-link" aria-label="Direct link to ::" title="Direct link to ::" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#2b8ab6;color:#2b8ab6">operator</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Operators.lua#L37"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Operators<!-- -->.</code><code class="green_DgR4">::</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p>Method call and nested name.</p>
 <p><strong>Syntax:</strong> <code>obj::Method(args);</code> · <code>obj::Child</code> (no call) · <code>Class::Method</code> (definition)</p>
 <p><strong>Emit:</strong> <code>obj:Method(args)</code> / <code>obj.Child</code></p>
-<pre class="language-clpp"><code class="language-clpp">players<span class="token double-colon punctuation">::</span><span class="token class-name">PlayerAdded</span><span class="token double-colon punctuation">::</span><span class="token function">Connect</span><span class="token punctuation">(</span>fn<span class="token punctuation">)</span><span class="token punctuation">;</span>
-player<span class="token double-colon punctuation">::</span><span class="token function">FindFirstChild</span><span class="token punctuation">(</span><span class="token string">"x"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<pre class="language-clpp"><code class="language-clpp">player<span class="token double-colon punctuation">::</span><span class="token function">FindFirstChild</span><span class="token punctuation">(</span><span class="token string">"x"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
 <p>Datatype / <code>task::wait</code> emit <code>.</code> (not Instance methods).</p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="table_key"><code style="text-decoration:none">table_key</code><a href="#table_key" class="hash-link" aria-label="Direct link to table_key" title="Direct link to table_key" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#2b8ab6;color:#2b8ab6">operator</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Operators.lua#L56"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Operators<!-- -->.</code><code class="green_DgR4">table_key</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=":"><code style="text-decoration:none">:</code><a href="#:" class="hash-link" aria-label="Direct link to :" title="Direct link to :" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#2b8ab6;color:#2b8ab6">operator</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Operators.lua#L56"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Operators<!-- -->.</code><code class="green_DgR4">:</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p>Dictionary / module table key. Not a method call.</p>
 <p><strong>Syntax:</strong> <code>Table:Key</code></p>
 <p><strong>Emit:</strong> <code>Table.Key</code></p>
@@ -91,55 +90,53 @@ player<span class="token double-colon punctuation">::</span><span class="token f
 <span class="token function">post</span><span class="token punctuation">(</span>stats<span class="token operator">:</span>Coins<span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
 <p>Range-for uses <code>in</code> (or <code>:</code>) in a different position: <code>for (T x in list)</code>.</p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="property"><code style="text-decoration:none">property</code><a href="#property" class="hash-link" aria-label="Direct link to property" title="Direct link to property" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#2b8ab6;color:#2b8ab6">operator</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Operators.lua#L72"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Operators<!-- -->.</code><code class="green_DgR4">property</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="."><code style="text-decoration:none">.</code><a href="#." class="hash-link" aria-label="Direct link to ." title="Direct link to ." translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#2b8ab6;color:#2b8ab6">operator</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Operators.lua#L72"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Operators<!-- -->.</code><code class="green_DgR4">.</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p>Instance or value property.</p>
 <p><strong>Syntax:</strong> <code>instance.Property</code></p>
 <p><strong>Emit:</strong> <code>instance.Property</code></p>
 <pre class="language-clpp"><code class="language-clpp">player<span class="token punctuation">.</span>Name <span class="token operator">=</span> <span class="token string">"Kartz"</span><span class="token punctuation">;</span>
 </code></pre>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="concat"><code style="text-decoration:none">concat</code><a href="#concat" class="hash-link" aria-label="Direct link to concat" title="Direct link to concat" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#2b8ab6;color:#2b8ab6">operator</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Operators.lua#L88"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Operators<!-- -->.</code><code class="green_DgR4">concat</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=".:"><code style="text-decoration:none">.:</code><a href="#.:" class="hash-link" aria-label="Direct link to .:" title="Direct link to .:" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#2b8ab6;color:#2b8ab6">operator</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Operators.lua#L88"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Operators<!-- -->.</code><code class="green_DgR4">.:</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p>String concatenation. Never <code>+</code> or Lua <code>..</code>.</p>
 <p><strong>Syntax:</strong> <code>a .: b .: c</code></p>
 <p><strong>Emit:</strong> <code>a .. b</code> (left-associative)</p>
 <pre class="language-clpp"><code class="language-clpp"><span class="token keyword">return</span> player<span class="token punctuation">.</span>Name <span class="token punctuation">.</span><span class="token operator">:</span> <span class="token string">"_LeaderstatsJanitor"</span><span class="token punctuation">;</span>
 </code></pre>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="janitor_connect"><code style="text-decoration:none">janitor_connect</code><a href="#janitor_connect" class="hash-link" aria-label="Direct link to janitor_connect" title="Direct link to janitor_connect" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#2b8ab6;color:#2b8ab6">operator</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Operators.lua#L103"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Operators<!-- -->.</code><code class="green_DgR4">janitor_connect</code><code>(</code><div class="inset_uKQm"><div><code>fn<!-- -->: </code><code class="blue_P4bS">func</code><span class="inlineDescription_G7Er">-- <span>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="~&gt;"><code style="text-decoration:none">~&gt;</code><a href="#~&gt;" class="hash-link" aria-label="Direct link to ~&gt;" title="Direct link to ~&gt;" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#2b8ab6;color:#2b8ab6">operator</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Operators.lua#L103"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Operators<!-- -->.</code><code class="green_DgR4">~&gt;</code><code>(</code><div class="inset_uKQm"><div><code>fn<!-- -->: </code><code class="blue_P4bS">func</code><span class="inlineDescription_G7Er">-- <span>
 <p>Listener</p>
 </span></span></div></div><code>) → </code><code>(</code><code>)</code></div><div>
 <p>Subscribe and give the connection to Janitor. <code>~>Connect</code> and <code>~>Once</code> only.</p>
 <p><strong>Syntax:</strong> <code>signal~>Connect(fn);</code> · <code>signal~>Once(fn);</code></p>
 <p><strong>Emit:</strong> <code>janitor:Add(signal:Connect(fn), "Disconnect")</code></p>
 <p>Looks up <code>janitor</code> local, <code>self.janitor</code>, or synthetic <code>__janitor</code>.</p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="arithmetic"><code style="text-decoration:none">arithmetic</code><a href="#arithmetic" class="hash-link" aria-label="Direct link to arithmetic" title="Direct link to arithmetic" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#2b8ab6;color:#2b8ab6">operator</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Operators.lua#L115"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Operators<!-- -->.</code><code class="green_DgR4">arithmetic</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="+"><code style="text-decoration:none">+</code><a href="#+" class="hash-link" aria-label="Direct link to +" title="Direct link to +" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#2b8ab6;color:#2b8ab6">operator</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Operators.lua#L115"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Operators<!-- -->.</code><code class="green_DgR4">+</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p>Numeric arithmetic. <code>+</code> does not concatenate. <code>*</code> is never pointer deref.</p>
 <p><strong>Syntax:</strong> <code>a + b - c * d / e</code></p>
 <p><strong>Emit:</strong> same operators</p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="comparison"><code style="text-decoration:none">comparison</code><a href="#comparison" class="hash-link" aria-label="Direct link to comparison" title="Direct link to comparison" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#2b8ab6;color:#2b8ab6">operator</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Operators.lua#L127"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Operators<!-- -->.</code><code class="green_DgR4">comparison</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="!="><code style="text-decoration:none">!=</code><a href="#!=" class="hash-link" aria-label="Direct link to !=" title="Direct link to !=" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#2b8ab6;color:#2b8ab6">operator</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Operators.lua#L127"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Operators<!-- -->.</code><code class="green_DgR4">!=</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p><code>!=</code> emits <code>~=</code>. The others stay the same.</p>
 <p><strong>Syntax:</strong> <code>a != b</code> · <code>a == b</code></p>
 <p><strong>Emit:</strong> <code>~=</code> / <code>==</code> / <code>&#x3C;</code> / <code>></code> / <code>&#x3C;=</code> / <code>>=</code></p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="logic"><code style="text-decoration:none">logic</code><a href="#logic" class="hash-link" aria-label="Direct link to logic" title="Direct link to logic" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#2b8ab6;color:#2b8ab6">operator</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Operators.lua#L141"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Operators<!-- -->.</code><code class="green_DgR4">logic</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
-<p>Boolean logic.</p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="&amp;&amp;"><code style="text-decoration:none">&amp;&amp;</code><a href="#&amp;&amp;" class="hash-link" aria-label="Direct link to &amp;&amp;" title="Direct link to &amp;&amp;" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#2b8ab6;color:#2b8ab6">operator</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Operators.lua#L139"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Operators<!-- -->.</code><code class="green_DgR4">&amp;&amp;</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+<p>Boolean logic. No ternary <code>? :</code>.</p>
 <p><strong>Syntax:</strong> <code>a &#x26;&#x26; b || !c</code></p>
 <p><strong>Emit:</strong> <code>and</code> / <code>or</code> / <code>not</code></p>
-<p>No ternary <code>? :</code>.</p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="assignment"><code style="text-decoration:none">assignment</code><a href="#assignment" class="hash-link" aria-label="Direct link to assignment" title="Direct link to assignment" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#2b8ab6;color:#2b8ab6">operator</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Operators.lua#L155"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Operators<!-- -->.</code><code class="green_DgR4">assignment</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
-<p>Assignment and compound assignment.</p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="="><code style="text-decoration:none">=</code><a href="#=" class="hash-link" aria-label="Direct link to =" title="Direct link to =" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#2b8ab6;color:#2b8ab6">operator</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Operators.lua#L151"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Operators<!-- -->.</code><code class="green_DgR4">=</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+<p>Assignment and compound assignment. Observable assignment writes <code>.Value</code>.</p>
 <p><strong>Syntax:</strong> <code>name = value;</code> · <code>name += 1;</code></p>
 <p><strong>Emit:</strong> <code>=</code> <code>+=</code> <code>-=</code> <code>*=</code> <code>/=</code></p>
-<p>Observable assignment writes <code>.Value</code>.</p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="increment"><code style="text-decoration:none">increment</code><a href="#increment" class="hash-link" aria-label="Direct link to increment" title="Direct link to increment" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#2b8ab6;color:#2b8ab6">operator</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Operators.lua#L165"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Operators<!-- -->.</code><code class="green_DgR4">increment</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="++"><code style="text-decoration:none">++</code><a href="#++" class="hash-link" aria-label="Direct link to ++" title="Direct link to ++" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#2b8ab6;color:#2b8ab6">operator</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Operators.lua#L161"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Operators<!-- -->.</code><code class="green_DgR4">++</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p>Always emits <code>+= 1</code> / <code>-= 1</code>. Prefix/postfix value is not preserved.</p>
 <p><strong>Syntax:</strong> <code>i++;</code> · <code>i--;</code></p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="designated"><code style="text-decoration:none">designated</code><a href="#designated" class="hash-link" aria-label="Direct link to designated" title="Direct link to designated" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#2b8ab6;color:#2b8ab6">operator</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Operators.lua#L177"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Operators<!-- -->.</code><code class="green_DgR4">designated</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=".Field"><code style="text-decoration:none">.Field</code><a href="#.Field" class="hash-link" aria-label="Direct link to .Field" title="Direct link to .Field" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#2b8ab6;color:#2b8ab6">operator</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Operators.lua#L173"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Operators<!-- -->.</code><code class="green_DgR4">.Field</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p>C++ designated initializer → Luau table field.</p>
 <p><strong>Syntax:</strong> <code>Type { .Field = value }</code></p>
 <p><strong>Emit:</strong> <code>{ Field = value }</code></p>
 </div></div></article></div><details><summary>Show raw api</summary><pre style="max-width:100%;white-space:pre-wrap">{
     &quot;functions&quot;: [
         {
-            &quot;name&quot;: &quot;method_scope&quot;,
-            &quot;desc&quot;: &quot;Method call and nested name.\n\n**Syntax:** `obj::Method(args);` · `obj::Child` (no call) · `Class::Method` (definition)\n\n**Emit:** `obj:Method(args)` / `obj.Child`\n\n```clpp\nplayers::PlayerAdded::Connect(fn);\nplayer::FindFirstChild(\&quot;x\&quot;);\n```\n\nDatatype / `task::wait` emit `.` (not Instance methods).&quot;,
+            &quot;name&quot;: &quot;::&quot;,
+            &quot;desc&quot;: &quot;Method call and nested name.\n\n**Syntax:** `obj::Method(args);` · `obj::Child` (no call) · `Class::Method` (definition)\n\n**Emit:** `obj:Method(args)` / `obj.Child`\n\n```clpp\nplayer::FindFirstChild(\&quot;x\&quot;);\n```\n\nDatatype / `task::wait` emit `.` (not Instance methods).&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;static&quot;,
@@ -152,7 +149,7 @@ player<span class="token double-colon punctuation">::</span><span class="token f
             }
         },
         {
-            &quot;name&quot;: &quot;table_key&quot;,
+            &quot;name&quot;: &quot;:&quot;,
             &quot;desc&quot;: &quot;Dictionary / module table key. Not a method call.\n\n**Syntax:** `Table:Key`\n\n**Emit:** `Table.Key`\n\n```clpp\nDataService:Server::WaitFor(p);\npost(stats:Coins);\n```\n\nRange-for uses `in` (or `:`) in a different position: `for (T x in list)`.&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
@@ -166,7 +163,7 @@ player<span class="token double-colon punctuation">::</span><span class="token f
             }
         },
         {
-            &quot;name&quot;: &quot;property&quot;,
+            &quot;name&quot;: &quot;.&quot;,
             &quot;desc&quot;: &quot;Instance or value property.\n\n**Syntax:** `instance.Property`\n\n**Emit:** `instance.Property`\n\n```clpp\nplayer.Name = \&quot;Kartz\&quot;;\n```&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
@@ -180,7 +177,7 @@ player<span class="token double-colon punctuation">::</span><span class="token f
             }
         },
         {
-            &quot;name&quot;: &quot;concat&quot;,
+            &quot;name&quot;: &quot;.:&quot;,
             &quot;desc&quot;: &quot;String concatenation. Never `+` or Lua `..`.\n\n**Syntax:** `a .: b .: c`\n\n**Emit:** `a .. b` (left-associative)\n\n```clpp\nreturn player.Name .: \&quot;_LeaderstatsJanitor\&quot;;\n```&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
@@ -194,7 +191,7 @@ player<span class="token double-colon punctuation">::</span><span class="token f
             }
         },
         {
-            &quot;name&quot;: &quot;janitor_connect&quot;,
+            &quot;name&quot;: &quot;~&gt;&quot;,
             &quot;desc&quot;: &quot;Subscribe and give the connection to Janitor. `~&gt;Connect` and `~&gt;Once` only.\n\n**Syntax:** `signal~&gt;Connect(fn);` · `signal~&gt;Once(fn);`\n\n**Emit:** `janitor:Add(signal:Connect(fn), \&quot;Disconnect\&quot;)`\n\nLooks up `janitor` local, `self.janitor`, or synthetic `__janitor`.&quot;,
             &quot;params&quot;: [
                 {
@@ -214,7 +211,7 @@ player<span class="token double-colon punctuation">::</span><span class="token f
             }
         },
         {
-            &quot;name&quot;: &quot;arithmetic&quot;,
+            &quot;name&quot;: &quot;+&quot;,
             &quot;desc&quot;: &quot;Numeric arithmetic. `+` does not concatenate. `*` is never pointer deref.\n\n**Syntax:** `a + b - c * d / e`\n\n**Emit:** same operators&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
@@ -228,7 +225,7 @@ player<span class="token double-colon punctuation">::</span><span class="token f
             }
         },
         {
-            &quot;name&quot;: &quot;comparison&quot;,
+            &quot;name&quot;: &quot;!=&quot;,
             &quot;desc&quot;: &quot;`!=` emits `~=`. The others stay the same.\n\n**Syntax:** `a != b` · `a == b`\n\n**Emit:** `~=` / `==` / `&lt;` / `&gt;` / `&lt;=` / `&gt;=`&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
@@ -242,8 +239,8 @@ player<span class="token double-colon punctuation">::</span><span class="token f
             }
         },
         {
-            &quot;name&quot;: &quot;logic&quot;,
-            &quot;desc&quot;: &quot;Boolean logic.\n\n**Syntax:** `a &amp;&amp; b || !c`\n\n**Emit:** `and` / `or` / `not`\n\nNo ternary `? :`.&quot;,
+            &quot;name&quot;: &quot;&amp;&amp;&quot;,
+            &quot;desc&quot;: &quot;Boolean logic. No ternary `? :`.\n\n**Syntax:** `a &amp;&amp; b || !c`\n\n**Emit:** `and` / `or` / `not`&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;static&quot;,
@@ -251,13 +248,13 @@ player<span class="token double-colon punctuation">::</span><span class="token f
                 &quot;operator&quot;
             ],
             &quot;source&quot;: {
-                &quot;line&quot;: 141,
+                &quot;line&quot;: 139,
                 &quot;path&quot;: &quot;moonwave/Operators.lua&quot;
             }
         },
         {
-            &quot;name&quot;: &quot;assignment&quot;,
-            &quot;desc&quot;: &quot;Assignment and compound assignment.\n\n**Syntax:** `name = value;` · `name += 1;`\n\n**Emit:** `=` `+=` `-=` `*=` `/=`\n\nObservable assignment writes `.Value`.&quot;,
+            &quot;name&quot;: &quot;=&quot;,
+            &quot;desc&quot;: &quot;Assignment and compound assignment. Observable assignment writes `.Value`.\n\n**Syntax:** `name = value;` · `name += 1;`\n\n**Emit:** `=` `+=` `-=` `*=` `/=`&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;static&quot;,
@@ -265,12 +262,12 @@ player<span class="token double-colon punctuation">::</span><span class="token f
                 &quot;operator&quot;
             ],
             &quot;source&quot;: {
-                &quot;line&quot;: 155,
+                &quot;line&quot;: 151,
                 &quot;path&quot;: &quot;moonwave/Operators.lua&quot;
             }
         },
         {
-            &quot;name&quot;: &quot;increment&quot;,
+            &quot;name&quot;: &quot;++&quot;,
             &quot;desc&quot;: &quot;Always emits `+= 1` / `-= 1`. Prefix/postfix value is not preserved.\n\n**Syntax:** `i++;` · `i--;`&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
@@ -279,12 +276,12 @@ player<span class="token double-colon punctuation">::</span><span class="token f
                 &quot;operator&quot;
             ],
             &quot;source&quot;: {
-                &quot;line&quot;: 165,
+                &quot;line&quot;: 161,
                 &quot;path&quot;: &quot;moonwave/Operators.lua&quot;
             }
         },
         {
-            &quot;name&quot;: &quot;designated&quot;,
+            &quot;name&quot;: &quot;.Field&quot;,
             &quot;desc&quot;: &quot;C++ designated initializer → Luau table field.\n\n**Syntax:** `Type { .Field = value }`\n\n**Emit:** `{ Field = value }`&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
@@ -293,7 +290,7 @@ player<span class="token double-colon punctuation">::</span><span class="token f
                 &quot;operator&quot;
             ],
             &quot;source&quot;: {
-                &quot;line&quot;: 177,
+                &quot;line&quot;: 173,
                 &quot;path&quot;: &quot;moonwave/Operators.lua&quot;
             }
         }
@@ -306,6 +303,6 @@ player<span class="token double-colon punctuation">::</span><span class="token f
         &quot;line&quot;: 19,
         &quot;path&quot;: &quot;moonwave/Operators.lua&quot;
     }
-}</pre></details></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#functions" class="table-of-contents__link toc-highlight">Functions</a><ul><li><a href="#arithmetic" class="table-of-contents__link toc-highlight">.arithmetic</a></li><li><a href="#assignment" class="table-of-contents__link toc-highlight">.assignment</a></li><li><a href="#comparison" class="table-of-contents__link toc-highlight">.comparison</a></li><li><a href="#concat" class="table-of-contents__link toc-highlight">.concat</a></li><li><a href="#designated" class="table-of-contents__link toc-highlight">.designated</a></li><li><a href="#increment" class="table-of-contents__link toc-highlight">.increment</a></li><li><a href="#janitor_connect" class="table-of-contents__link toc-highlight">.janitor_connect</a></li><li><a href="#logic" class="table-of-contents__link toc-highlight">.logic</a></li><li><a href="#method_scope" class="table-of-contents__link toc-highlight">.method_scope</a></li><li><a href="#property" class="table-of-contents__link toc-highlight">.property</a></li><li><a href="#table_key" class="table-of-contents__link toc-highlight">.table_key</a></li></ul></li></ul></div></div></div></div></main></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Learn</div><ul class="footer__items clean-list"><li class="footer__item"><a class="footer__link-item" href="/CLPP/docs/intro">Course</a></li><li class="footer__item"><a class="footer__link-item" href="/CLPP/docs/reference">Reference</a></li><li class="footer__item"><a class="footer__link-item" href="/CLPP/api/Builtins">API</a></li></ul></div><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Project</div><ul class="footer__items clean-list"><li class="footer__item"><a href="https://github.com/KartzRbx/CLPP" target="_blank" rel="noopener noreferrer" class="footer__link-item">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a></li><li class="footer__item"><a href="https://github.com/KartzRbx/Cluaupp" target="_blank" rel="noopener noreferrer" class="footer__link-item">Cluaupp<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a></li></ul></div></div><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © 2026 CL++ contributors. Built with Moonwave and Docusaurus.</div></div></div></footer></div>
+}</pre></details></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#functions" class="table-of-contents__link toc-highlight">Functions</a><ul><li><a href="#:" class="table-of-contents__link toc-highlight">.:</a></li><li><a href="#::" class="table-of-contents__link toc-highlight">.::</a></li><li><a href="#!=" class="table-of-contents__link toc-highlight">.!=</a></li><li><a href="#." class="table-of-contents__link toc-highlight">..</a></li><li><a href="#.:" class="table-of-contents__link toc-highlight">..:</a></li><li><a href="#.Field" class="table-of-contents__link toc-highlight">..Field</a></li><li><a href="#&amp;&amp;" class="table-of-contents__link toc-highlight">.&&</a></li><li><a href="#+" class="table-of-contents__link toc-highlight">.+</a></li><li><a href="#++" class="table-of-contents__link toc-highlight">.++</a></li><li><a href="#=" class="table-of-contents__link toc-highlight">.=</a></li><li><a href="#~&gt;" class="table-of-contents__link toc-highlight">.~></a></li></ul></li></ul></div></div></div></div></main></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Learn</div><ul class="footer__items clean-list"><li class="footer__item"><a class="footer__link-item" href="/CLPP/docs/intro">Course</a></li><li class="footer__item"><a class="footer__link-item" href="/CLPP/docs/reference">Reference</a></li><li class="footer__item"><a class="footer__link-item" href="/CLPP/api/Builtins">API</a></li></ul></div><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Project</div><ul class="footer__items clean-list"><li class="footer__item"><a href="https://github.com/KartzRbx/CLPP" target="_blank" rel="noopener noreferrer" class="footer__link-item">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a></li><li class="footer__item"><a href="https://github.com/KartzRbx/Cluaupp" target="_blank" rel="noopener noreferrer" class="footer__link-item">Cluaupp<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a></li></ul></div></div><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © 2026 CL++ contributors. Built with Moonwave and Docusaurus.</div></div></div></footer></div>
 </body>
 </html>

@@ -23,9 +23,9 @@ Quoted includes: same stem as the `.clpp` is **inlined**; any other name becomes
 | `&lt;clpp/libs/janitor.clh&gt;` | IntelliSense **and** `require` Janitor | [janitor.clh](/CLPP/docs/reference/header-janitor) |
 | `&lt;clpp/libs/dataservice.clh&gt;` | DataService | [dataservice.clh](/CLPP/docs/reference/header-dataservice) |
 
-Quoted includes: same stem as the `.clpp` is **inlined**; any other name becomes `require`."><link data-rh="true" rel="icon" href="/CLPP/img/favicon.png"><link data-rh="true" rel="canonical" href="https://kartzrbx.github.io/CLPP/api/Stdlib"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Stdlib" hreflang="en"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Stdlib" hreflang="x-default"><link rel="stylesheet" href="/CLPP/assets/css/styles.1ed3ab39.css">
-<script src="/CLPP/assets/js/runtime~main.aa9adf31.js" defer="defer"></script>
-<script src="/CLPP/assets/js/main.854867c8.js" defer="defer"></script>
+Quoted includes: same stem as the `.clpp` is **inlined**; any other name becomes `require`."><link data-rh="true" rel="icon" href="/CLPP/img/favicon.png"><link data-rh="true" rel="canonical" href="https://kartzrbx.github.io/CLPP/api/Stdlib"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Stdlib" hreflang="en"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Stdlib" hreflang="x-default"><link rel="stylesheet" href="/CLPP/assets/css/styles.796e4892.css">
+<script src="/CLPP/assets/js/runtime~main.071fa0ec.js" defer="defer"></script>
+<script src="/CLPP/assets/js/main.c7d56e5e.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -70,10 +70,10 @@ Quoted includes: same stem as the `.clpp` is **inlined**; any other name becomes
   </tbody>
 </table>
 <p>Quoted includes: same stem as the <code>.clpp</code> is <strong>inlined</strong>; any other name becomes <code>require</code>.</p>
-</div></header><h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="functions">Functions<a href="#functions" class="hash-link" aria-label="Direct link to Functions" title="Direct link to Functions" translate="no">​</a></h2><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="include"><code style="text-decoration:none">include</code><a href="#include" class="hash-link" aria-label="Direct link to include" title="Direct link to include" translate="no">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Stdlib.lua#L25"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Stdlib<!-- -->.</code><code class="green_DgR4">include</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+</div></header><h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="functions">Functions<a href="#functions" class="hash-link" aria-label="Direct link to Functions" title="Direct link to Functions" translate="no">​</a></h2><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="include"><code style="text-decoration:none">include</code><a href="#include" class="hash-link" aria-label="Direct link to include" title="Direct link to include" translate="no">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Stdlib.lua#L26"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Stdlib<!-- -->.</code><code class="green_DgR4">include</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p><code>#include &#x3C;path></code> / <code>#include "path"</code>.</p>
 <p><strong>Emit:</strong> <code>require(…)</code> for libs and non-stem quotes; stem quote is inlined; <code>roblox.clh</code> is IntelliSense only.</p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="pragma"><code style="text-decoration:none">pragma</code><a href="#pragma" class="hash-link" aria-label="Direct link to pragma" title="Direct link to pragma" translate="no">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Stdlib.lua#L32"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Stdlib<!-- -->.</code><code class="green_DgR4">pragma</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="pragma"><code style="text-decoration:none">pragma</code><a href="#pragma" class="hash-link" aria-label="Direct link to pragma" title="Direct link to pragma" translate="no">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Stdlib.lua#L33"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Stdlib<!-- -->.</code><code class="green_DgR4">pragma</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p><code>#pragma once</code> is valid in headers (include guard). <code>#pragma strict</code> emits <code>--!strict</code>. <code>#pragma nostrict</code> emits <code>--!nonstrict</code>. <code>#pragma native</code> emits <code>--!native</code>. <code>#pragma optimize</code> / <code>#pragma optimize 2</code> emit <code>--!optimize 2</code>.</p>
 </div></div></article></div><details><summary>Show raw api</summary><pre style="max-width:100%;white-space:pre-wrap">{
     &quot;functions&quot;: [
@@ -84,7 +84,7 @@ Quoted includes: same stem as the `.clpp` is **inlined**; any other name becomes
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;static&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 25,
+                &quot;line&quot;: 26,
                 &quot;path&quot;: &quot;moonwave/Stdlib.lua&quot;
             }
         },
@@ -95,7 +95,7 @@ Quoted includes: same stem as the `.clpp` is **inlined**; any other name becomes
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;static&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 32,
+                &quot;line&quot;: 33,
                 &quot;path&quot;: &quot;moonwave/Stdlib.lua&quot;
             }
         }

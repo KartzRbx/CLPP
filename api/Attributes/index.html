@@ -11,9 +11,9 @@ In a module, emit wraps them in `RunService:IsServer()` / `IsClient()`."><meta d
 
 On a `.server.clpp` file, `[[client]]` functions are omitted.
 On a `.client.clpp` file, `[[server]]` functions are omitted.
-In a module, emit wraps them in `RunService:IsServer()` / `IsClient()`."><link data-rh="true" rel="icon" href="/CLPP/img/favicon.png"><link data-rh="true" rel="canonical" href="https://kartzrbx.github.io/CLPP/api/Attributes"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Attributes" hreflang="en"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Attributes" hreflang="x-default"><link rel="stylesheet" href="/CLPP/assets/css/styles.1ed3ab39.css">
-<script src="/CLPP/assets/js/runtime~main.aa9adf31.js" defer="defer"></script>
-<script src="/CLPP/assets/js/main.854867c8.js" defer="defer"></script>
+In a module, emit wraps them in `RunService:IsServer()` / `IsClient()`."><link data-rh="true" rel="icon" href="/CLPP/img/favicon.png"><link data-rh="true" rel="canonical" href="https://kartzrbx.github.io/CLPP/api/Attributes"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Attributes" hreflang="en"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Attributes" hreflang="x-default"><link rel="stylesheet" href="/CLPP/assets/css/styles.796e4892.css">
+<script src="/CLPP/assets/js/runtime~main.071fa0ec.js" defer="defer"></script>
+<script src="/CLPP/assets/js/main.c7d56e5e.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -26,35 +26,35 @@ In a module, emit wraps them in `RunService:IsServer()` / `IsClient()`."><link d
   On a <code>.client.clpp</code> file, <code>[[server]]</code> functions are omitted.
   In a module, emit wraps them in <code>RunService:IsServer()</code> / <code>IsClient()</code>.
 </p>
-</div></header><h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="functions">Functions<a href="#functions" class="hash-link" aria-label="Direct link to Functions" title="Direct link to Functions" translate="no">​</a></h2><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="server"><code style="text-decoration:none">server</code><a href="#server" class="hash-link" aria-label="Direct link to server" title="Direct link to server" translate="no">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Attributes.lua#L21"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Attributes<!-- -->.</code><code class="green_DgR4">server</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+</div></header><h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="functions">Functions<a href="#functions" class="hash-link" aria-label="Direct link to Functions" title="Direct link to Functions" translate="no">​</a></h2><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="[[server]]"><code style="text-decoration:none">[[server]]</code><a href="#[[server]]" class="hash-link" aria-label="Direct link to [[server]]" title="Direct link to [[server]]" translate="no">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Attributes.lua#L22"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Attributes<!-- -->.</code><code class="green_DgR4">[[server]]</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p>Runs on the server only.</p>
 <p><strong>Syntax:</strong> <code>[[server]] void SaveData(Player* player) { }</code></p>
 <p><strong>Emit:</strong> omitted on client files; <code>IsServer()</code> wrapper in modules</p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="client"><code style="text-decoration:none">client</code><a href="#client" class="hash-link" aria-label="Direct link to client" title="Direct link to client" translate="no">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Attributes.lua#L32"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Attributes<!-- -->.</code><code class="green_DgR4">client</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="[[client]]"><code style="text-decoration:none">[[client]]</code><a href="#[[client]]" class="hash-link" aria-label="Direct link to [[client]]" title="Direct link to [[client]]" translate="no">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Attributes.lua#L33"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Attributes<!-- -->.</code><code class="green_DgR4">[[client]]</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p>Runs on the client only.</p>
 <p><strong>Syntax:</strong> <code>[[client]] void UpdateUI() { }</code></p>
 <p><strong>Emit:</strong> omitted on server files; <code>IsClient()</code> wrapper in modules</p>
 </div></div></article></div><details><summary>Show raw api</summary><pre style="max-width:100%;white-space:pre-wrap">{
     &quot;functions&quot;: [
         {
-            &quot;name&quot;: &quot;server&quot;,
+            &quot;name&quot;: &quot;[[server]]&quot;,
             &quot;desc&quot;: &quot;Runs on the server only.\n\n**Syntax:** `[[server]] void SaveData(Player* player) { }`\n\n**Emit:** omitted on client files; `IsServer()` wrapper in modules&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;static&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 21,
+                &quot;line&quot;: 22,
                 &quot;path&quot;: &quot;moonwave/Attributes.lua&quot;
             }
         },
         {
-            &quot;name&quot;: &quot;client&quot;,
+            &quot;name&quot;: &quot;[[client]]&quot;,
             &quot;desc&quot;: &quot;Runs on the client only.\n\n**Syntax:** `[[client]] void UpdateUI() { }`\n\n**Emit:** omitted on server files; `IsClient()` wrapper in modules&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;static&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 32,
+                &quot;line&quot;: 33,
                 &quot;path&quot;: &quot;moonwave/Attributes.lua&quot;
             }
         }
@@ -67,6 +67,6 @@ In a module, emit wraps them in `RunService:IsServer()` / `IsClient()`."><link d
         &quot;line&quot;: 11,
         &quot;path&quot;: &quot;moonwave/Attributes.lua&quot;
     }
-}</pre></details></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#functions" class="table-of-contents__link toc-highlight">Functions</a><ul><li><a href="#client" class="table-of-contents__link toc-highlight">.client</a></li><li><a href="#server" class="table-of-contents__link toc-highlight">.server</a></li></ul></li></ul></div></div></div></div></main></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Learn</div><ul class="footer__items clean-list"><li class="footer__item"><a class="footer__link-item" href="/CLPP/docs/intro">Course</a></li><li class="footer__item"><a class="footer__link-item" href="/CLPP/docs/reference">Reference</a></li><li class="footer__item"><a class="footer__link-item" href="/CLPP/api/Builtins">API</a></li></ul></div><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Project</div><ul class="footer__items clean-list"><li class="footer__item"><a href="https://github.com/KartzRbx/CLPP" target="_blank" rel="noopener noreferrer" class="footer__link-item">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a></li><li class="footer__item"><a href="https://github.com/KartzRbx/Cluaupp" target="_blank" rel="noopener noreferrer" class="footer__link-item">Cluaupp<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a></li></ul></div></div><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © 2026 CL++ contributors. Built with Moonwave and Docusaurus.</div></div></div></footer></div>
+}</pre></details></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#functions" class="table-of-contents__link toc-highlight">Functions</a><ul><li><a href="#[[client]]" class="table-of-contents__link toc-highlight">.[[client]]</a></li><li><a href="#[[server]]" class="table-of-contents__link toc-highlight">.[[server]]</a></li></ul></li></ul></div></div></div></div></main></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Learn</div><ul class="footer__items clean-list"><li class="footer__item"><a class="footer__link-item" href="/CLPP/docs/intro">Course</a></li><li class="footer__item"><a class="footer__link-item" href="/CLPP/docs/reference">Reference</a></li><li class="footer__item"><a class="footer__link-item" href="/CLPP/api/Builtins">API</a></li></ul></div><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Project</div><ul class="footer__items clean-list"><li class="footer__item"><a href="https://github.com/KartzRbx/CLPP" target="_blank" rel="noopener noreferrer" class="footer__link-item">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a></li><li class="footer__item"><a href="https://github.com/KartzRbx/Cluaupp" target="_blank" rel="noopener noreferrer" class="footer__link-item">Cluaupp<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a></li></ul></div></div><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © 2026 CL++ contributors. Built with Moonwave and Docusaurus.</div></div></div></footer></div>
 </body>
 </html>

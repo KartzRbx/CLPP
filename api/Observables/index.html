@@ -13,9 +13,9 @@ Full page: [observable](/CLPP/docs/reference/observable)."><meta data-rh="true" 
 Reading or writing the identifier uses `.Value`. Assigning **fires** `Changed`.
 `.OnChange(fn)` is `Changed:Connect(fn)`.
 
-Full page: [observable](/CLPP/docs/reference/observable)."><link data-rh="true" rel="icon" href="/CLPP/img/favicon.png"><link data-rh="true" rel="canonical" href="https://kartzrbx.github.io/CLPP/api/Observables"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Observables" hreflang="en"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Observables" hreflang="x-default"><link rel="stylesheet" href="/CLPP/assets/css/styles.1ed3ab39.css">
-<script src="/CLPP/assets/js/runtime~main.aa9adf31.js" defer="defer"></script>
-<script src="/CLPP/assets/js/main.854867c8.js" defer="defer"></script>
+Full page: [observable](/CLPP/docs/reference/observable)."><link data-rh="true" rel="icon" href="/CLPP/img/favicon.png"><link data-rh="true" rel="canonical" href="https://kartzrbx.github.io/CLPP/api/Observables"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Observables" hreflang="en"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Observables" hreflang="x-default"><link rel="stylesheet" href="/CLPP/assets/css/styles.796e4892.css">
+<script src="/CLPP/assets/js/runtime~main.071fa0ec.js" defer="defer"></script>
+<script src="/CLPP/assets/js/main.c7d56e5e.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -28,7 +28,7 @@ Full page: [observable](/CLPP/docs/reference/observable)."><link data-rh="true" 
   <code>.OnChange(fn)</code> is <code>Changed:Connect(fn)</code>.
 </p>
 <p>Full page: <a href="/CLPP/CLPP/docs/reference/observable">observable</a>.</p>
-</div></header><h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="functions">Functions<a href="#functions" class="hash-link" aria-label="Direct link to Functions" title="Direct link to Functions" translate="no">​</a></h2><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="declare"><code style="text-decoration:none">declare</code><a href="#declare" class="hash-link" aria-label="Direct link to declare" title="Direct link to declare" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#925FB9;color:#925FB9">signal</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Observables.lua#L25"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Observables<!-- -->.</code><code class="green_DgR4">declare</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+</div></header><h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="functions">Functions<a href="#functions" class="hash-link" aria-label="Direct link to Functions" title="Direct link to Functions" translate="no">​</a></h2><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="observable"><code style="text-decoration:none">observable</code><a href="#observable" class="hash-link" aria-label="Direct link to observable" title="Direct link to observable" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#925FB9;color:#925FB9">signal</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Observables.lua#L26"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Observables<!-- -->.</code><code class="green_DgR4">observable</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p>Declare a ValueBase-backed variable.</p>
 <p><strong>Syntax:</strong> <code>observable T name = value;</code></p>
 <p><strong>Emit:</strong> <code>Instance.new("IntValue"); name.Value = value</code></p>
@@ -48,7 +48,7 @@ coins <span class="token operator">=</span> <span class="token number">50</span>
 </div></div></article></div><details><summary>Show raw api</summary><pre style="max-width:100%;white-space:pre-wrap">{
     &quot;functions&quot;: [
         {
-            &quot;name&quot;: &quot;declare&quot;,
+            &quot;name&quot;: &quot;observable&quot;,
             &quot;desc&quot;: &quot;Declare a ValueBase-backed variable.\n\n**Syntax:** `observable T name = value;`\n\n**Emit:** `Instance.new(\&quot;IntValue\&quot;); name.Value = value`\n\n`int` → IntValue, `float`/`double` → NumberValue, `string` → StringValue, `bool` → BoolValue, else ObjectValue.&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
@@ -57,7 +57,7 @@ coins <span class="token operator">=</span> <span class="token number">50</span>
                 &quot;signal&quot;
             ],
             &quot;source&quot;: {
-                &quot;line&quot;: 25,
+                &quot;line&quot;: 26,
                 &quot;path&quot;: &quot;moonwave/Observables.lua&quot;
             }
         },
@@ -90,6 +90,6 @@ coins <span class="token operator">=</span> <span class="token number">50</span>
         &quot;line&quot;: 12,
         &quot;path&quot;: &quot;moonwave/Observables.lua&quot;
     }
-}</pre></details></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#functions" class="table-of-contents__link toc-highlight">Functions</a><ul><li><a href="#declare" class="table-of-contents__link toc-highlight">.declare</a></li><li><a href="#OnChange" class="table-of-contents__link toc-highlight">.OnChange</a></li></ul></li></ul></div></div></div></div></main></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Learn</div><ul class="footer__items clean-list"><li class="footer__item"><a class="footer__link-item" href="/CLPP/docs/intro">Course</a></li><li class="footer__item"><a class="footer__link-item" href="/CLPP/docs/reference">Reference</a></li><li class="footer__item"><a class="footer__link-item" href="/CLPP/api/Builtins">API</a></li></ul></div><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Project</div><ul class="footer__items clean-list"><li class="footer__item"><a href="https://github.com/KartzRbx/CLPP" target="_blank" rel="noopener noreferrer" class="footer__link-item">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a></li><li class="footer__item"><a href="https://github.com/KartzRbx/Cluaupp" target="_blank" rel="noopener noreferrer" class="footer__link-item">Cluaupp<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a></li></ul></div></div><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © 2026 CL++ contributors. Built with Moonwave and Docusaurus.</div></div></div></footer></div>
+}</pre></details></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#functions" class="table-of-contents__link toc-highlight">Functions</a><ul><li><a href="#observable" class="table-of-contents__link toc-highlight">.observable</a></li><li><a href="#OnChange" class="table-of-contents__link toc-highlight">.OnChange</a></li></ul></li></ul></div></div></div></div></main></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Learn</div><ul class="footer__items clean-list"><li class="footer__item"><a class="footer__link-item" href="/CLPP/docs/intro">Course</a></li><li class="footer__item"><a class="footer__link-item" href="/CLPP/docs/reference">Reference</a></li><li class="footer__item"><a class="footer__link-item" href="/CLPP/api/Builtins">API</a></li></ul></div><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Project</div><ul class="footer__items clean-list"><li class="footer__item"><a href="https://github.com/KartzRbx/CLPP" target="_blank" rel="noopener noreferrer" class="footer__link-item">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a></li><li class="footer__item"><a href="https://github.com/KartzRbx/Cluaupp" target="_blank" rel="noopener noreferrer" class="footer__link-item">Cluaupp<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a></li></ul></div></div><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © 2026 CL++ contributors. Built with Moonwave and Docusaurus.</div></div></div></footer></div>
 </body>
 </html>
