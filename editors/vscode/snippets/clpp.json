@@ -43,6 +43,29 @@
     ],
     "description": "Connect with auto-cleanup"
   },
+  "once": {
+    "prefix": "once",
+    "body": [
+      "${1:signal}~>Once(func []($2) {",
+      "\t$0",
+      "});"
+    ],
+    "description": "Once connection with auto-cleanup"
+  },
+  "fire": {
+    "prefix": "fire",
+    "body": ["${1:OnCoinsUpdated}::Fire($2);"],
+    "description": "Fire a CL++ signal"
+  },
+  "changed": {
+    "prefix": "changed",
+    "body": [
+      "${1:instance}::GetPropertyChangedSignal(\"${2:Name}\")~>Connect(func []() {",
+      "\t$0",
+      "});"
+    ],
+    "description": "Property changed signal"
+  },
   "match": {
     "prefix": "match",
     "body": [

@@ -1,0 +1,99 @@
+title = "CL++"
+gitRepoUrl = "https://github.com/KartzRbx/CLPP"
+gitSourceBranch = "main"
+changelog = false
+
+[docusaurus]
+onBrokenLinks = "throw"
+onBrokenMarkdownLinks = "warn"
+favicon = "img/favicon.png"
+organizationName = "KartzRbx"
+projectName = "CLPP"
+url = "https://kartzrbx.github.io"
+baseUrl = "/CLPP/"
+tagline = "A C++-inspired language that compiles to Luau — course, syntax, and API"
+
+[home]
+enabled = true
+includeReadme = false
+bannerImage = "img/home/banner.png"
+
+[[home.features]]
+title = "Write like C++"
+description = "Types, structs, methods, and a familiar brace syntax — with operators designed for Roblox."
+image = "img/home/write-cpp.png"
+
+[[home.features]]
+title = "Emits modern Luau"
+description = "One source file becomes one Luau file. Rojo infers Script, LocalScript, or ModuleScript from the name."
+image = "img/home/emits-luau.png"
+
+[[home.features]]
+title = "Language only"
+description = "CL++ is syntax, semantics, and OOP. Cluaupp owns Roblox API wiring, generated headers, and project init."
+image = "img/home/language-only.png"
+
+[footer]
+style = "dark"
+copyright = "Copyright © 2026 CL++ contributors. Built with Moonwave and Docusaurus."
+
+[[footer.links]]
+title = "Learn"
+
+[[footer.links.items]]
+label = "Course"
+href = "/CLPP/docs/intro"
+
+[[footer.links.items]]
+label = "Reference"
+href = "/CLPP/docs/reference"
+
+[[footer.links.items]]
+label = "API"
+href = "/CLPP/api/Builtins"
+
+[[footer.links]]
+title = "Project"
+
+[[footer.links.items]]
+label = "GitHub"
+href = "https://github.com/KartzRbx/CLPP"
+
+[[footer.links.items]]
+label = "Cluaupp"
+href = "https://github.com/KartzRbx/Cluaupp"
+
+[[navbar.items]]
+to = "/docs/reference"
+label = "Reference"
+position = "left"
+
+[[navbar.items]]
+to = "/docs/cheatsheet"
+label = "Cheatsheet"
+position = "left"
+
+[[navbar.items]]
+href = "https://github.com/KartzRbx/CLPP"
+label = "GitHub"
+position = "right"
+
+[[navbar.items]]
+href = "https://github.com/KartzRbx/Cluaupp"
+label = "Cluaupp"
+position = "right"
+
+[[classOrder]]
+section = "Language API"
+collapsed = false
+classes = ["Builtins", "Types", "Operators", "ControlFlow", "Collections", "Functions", "OOP", "Preprocessor"]
+
+[[classOrder]]
+section = "Runtime"
+collapsed = false
+classes = ["Signals", "Observables", "Concurrency", "Attributes"]
+
+[[classOrder]]
+section = "Libraries"
+collapsed = false
+classes = ["Stdlib"]

@@ -28,7 +28,7 @@ Compile output (JSON):
 }
 ```
 
-TypeScript types: [`support/cluaupp.d.ts`](../support/cluaupp.d.ts).
+TypeScript types live in the repository at `support/cluaupp.d.ts` ([GitHub](https://github.com/KartzRbx/CLPP/blob/main/support/cluaupp.d.ts)).
 
 ## Node (Cluaupp)
 

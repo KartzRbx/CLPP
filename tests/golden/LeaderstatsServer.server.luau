@@ -66,7 +66,7 @@ const function init()
 	for _, player in players:GetPlayers() do
 		leaderstatsServer:PlayerEntered(player)
 	end
-	janitor:Add(players.PlayerAdded:Connect(function(playerEntered: Player)
+	janitor:Add(players.PlayerAdded:Once(function(playerEntered: Player)
 	leaderstatsServer:PlayerEntered(playerEntered)
 end), "Disconnect")
 	game:BindToClose(function()

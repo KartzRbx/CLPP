@@ -1,3 +1,7 @@
+---
+title: Emit mapping
+---
+
 # Emit mapping
 
 Fixed order of generated Luau:
@@ -48,6 +52,9 @@ Formatting is StyLua's job; Luau type checking is `luau-analyze`'s job.
 | `observable int coins = 100` | `Instance.new("IntValue"); coins.Value = 100` |
 | `coins.OnChange(fn)` | `coins.Changed:Connect(fn)` |
 | `signal~>Connect(fn)` | `janitor:Add(signal:Connect(fn), "Disconnect")` |
+| `signal~>Once(fn)` | `janitor:Add(signal:Once(fn), "Disconnect")` |
+| `signal::Fire(...)` | `signal:Fire(...)` |
+| `obj::GetPropertyChangedSignal("Name")` | `obj:GetPropertyChangedSignal("Name")` |
 | `guard (x) else { return; }` | `if not (x) then return end` |
 | `await expr` | `__await(expr)` |
 | `auto [a, b] = fn();` | `local a, b = fn()` |

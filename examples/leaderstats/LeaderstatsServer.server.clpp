@@ -65,7 +65,7 @@ void init() {
         leaderstatsServer::PlayerEntered(player);
     }
 
-    players::PlayerAdded~>Connect(func [](Player* playerEntered) {
+    players::PlayerAdded~>Once(func [](Player* playerEntered) {
         leaderstatsServer::PlayerEntered(playerEntered);
     });
 

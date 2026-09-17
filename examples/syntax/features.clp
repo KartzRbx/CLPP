@@ -35,6 +35,14 @@ void Features(int coins) {
     OnCoinsUpdated~>Connect(func [](Player* player, int newAmount) {
         post("New coins for " .: player.Name .: ": " .: newAmount);
     });
+    OnCoinsUpdated~>Once(func [](Player* player, int newAmount) {
+        post("First coins for " .: player.Name);
+    });
+    OnCoinsUpdated::Fire(playerRef, wallet);
+
+    playerRef::GetPropertyChangedSignal("Name")~>Connect(func []() {
+        post("Name changed");
+    });
 
     guard (coins != null) else {
         warn("Invalid player");

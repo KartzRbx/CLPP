@@ -1,0 +1,4 @@
+*.clpp linguist-language=C++
+*.clp linguist-language=C++
+*.clh linguist-language=C++
+*.pest linguist-language=Pest

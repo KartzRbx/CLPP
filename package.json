@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "scripts": {
+    "docs": "node scripts/moonwave-docs.cjs dev --code moonwave",
+    "docs:build": "node scripts/moonwave-docs.cjs build --code moonwave"
+  }
+}

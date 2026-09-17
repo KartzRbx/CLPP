@@ -64,7 +64,7 @@ const METHODS: &[&str] = &[
 
 const LIBRARY_TYPES: &[&str] = &[
     "Janitor", "Maid", "Promise", "Signal", "Net", "DataService", "DataServiceServer",
-    "DataServiceClient", "Data", "Fusion", "Roact", "React", "Cmdr", "Spring", "FormatNumber",
+    "DataServiceClient", "Data", "Fusion", "Vide", "Roact", "React", "Cmdr", "Spring", "FormatNumber",
     "MathUtils", "Module3D", "Zap", "Flamework",
 ];
 

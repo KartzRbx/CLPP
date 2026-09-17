@@ -51,6 +51,9 @@ fn compile_syntax_features() {
     assert!(luau.contains("local function __signal()"));
     assert!(luau.contains("local function __await(value)"));
     assert!(luau.contains("__janitor:Add(OnCoinsUpdated:Connect"));
+    assert!(luau.contains("__janitor:Add(OnCoinsUpdated:Once"));
+    assert!(luau.contains("OnCoinsUpdated:Fire"));
+    assert!(luau.contains("GetPropertyChangedSignal(\"Name\")"));
     assert!(luau.contains("if not (coins ~= nil) then"));
     assert!(luau.contains("local success, result = pcall"));
     assert!(luau.contains("task.spawn(function()"));

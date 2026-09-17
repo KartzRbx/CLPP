@@ -1,20 +1,72 @@
-# CL++
+<p align="center">
+  <img src=".moonwave/static/img/logo.png" alt="CL++" width="168">
+</p>
 
-**CL++** is a C++-inspired programming language that compiles to [Luau](https://luau.org). The compiler is `clpp`, written in Rust.
+<h1 align="center">CL++</h1>
 
-CL++ is the **language** — syntax, semantics, and OOP. [Cluaupp](https://github.com/KartzRbx/Cluaupp) owns Roblox API wiring (generated headers, Rojo, project `init`).
+<p align="center">
+  <strong>A C++-inspired language that compiles to <a href="https://luau.org">Luau</a>.</strong><br>
+  Syntax, semantics, and OOP — not a Roblox SDK.
+</p>
 
-## File extensions
+<p align="center">
+  <a href="https://kartzrbx.github.io/CLPP/"><img src="https://img.shields.io/badge/docs-live-7c3aed?style=flat-square" alt="Docs"></a>
+  <a href="https://github.com/KartzRbx/CLPP/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/KartzRbx/CLPP/ci.yml?branch=main&style=flat-square&label=CI" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-0ea5e9?style=flat-square" alt="MIT"></a>
+  <a href="https://luau.org"><img src="https://img.shields.io/badge/emits-Luau-00a2ff?style=flat-square" alt="Luau"></a>
+</p>
 
-| Extension | Role |
+<p align="center">
+  <a href="https://kartzrbx.github.io/CLPP/">Course</a>
+  ·
+  <a href="https://kartzrbx.github.io/CLPP/docs/reference">Reference</a>
+  ·
+  <a href="https://kartzrbx.github.io/CLPP/api/Builtins">API</a>
+  ·
+  <a href="https://github.com/KartzRbx/Cluaupp">Cluaupp</a>
+</p>
+
+---
+
+CL++ is the **language**. You write C++-looking source; `clpp` emits one Luau file. [Cluaupp](https://github.com/KartzRbx/Cluaupp) owns engine headers, Rojo, and project `init`.
+
+```clpp
+#include <clpp/roblox.clh>
+
+void init() {
+    Players* players = GetService<Players>();
+    players::PlayerAdded~>Connect(func [](Player* player) {
+        post("hello, " .: player.Name);
+    });
+}
+```
+
+## Files
+
+| File | Becomes |
 | --- | --- |
-| `.clh` | Header — `struct`, constants, prototypes |
-| `.clp` | Implementation / module |
-| `.clpp` | CL++ implementation (Scripts, LocalScripts, methods) |
+| `*.clh` | Header — `struct`, constants, prototypes |
+| `*.clp` | Module implementation |
+| `*.clpp` | Script implementation |
+| `*.server.clpp` | Roblox **Script** |
+| `*.client.clpp` | Roblox **LocalScript** |
+| untagged `.clpp` | **ModuleScript** |
 
-Filename tags: `*.server.clpp` → Script, `*.client.clpp` → LocalScript, untagged → ModuleScript.
+There is no `int main()`. Scripts start at `void init()`.
 
-Access: `player.Name` (property), `player::FindFirstChild` (method), `DataService:Server` (table). Range-for: `for (T x : list)`. Concatenation: `a .: b`. Output: `post` / `warn` / `report`.
+## Accessors
+
+CL++ does **not** use `->`.
+
+| Write | Meaning | Luau |
+| --- | --- | --- |
+| `player.Name` | property | `.` |
+| `player::FindFirstChild("x")` | method | `:` |
+| `DataService:Server` | table key | `.` |
+| `"hi " .: name` | concat | `..` |
+| `signal~>Connect(fn)` | janitor Connect | `janitor:Add(..., "Disconnect")` |
+
+`post` / `warn` / `report` emit `print` / `warn` / `error`. `null` is `nil`. Range-for is `for (T x : list)`.
 
 ## Install
 
@@ -23,42 +75,39 @@ cargo install --path .
 clpp install
 ```
 
-`clpp install` copies the language pack into **VS Code** and **Cursor** (and Insiders, VSCodium, and Windsurf when those products are present). Restart the editor so `.clpp` / `.clp` / `.clh` files get the CL++ icon, syntax highlighting, and IntelliSense.
-
-## CLI
-
-The binary is `clpp`:
+`clpp install` copies the language pack into **VS Code** and **Cursor** (and Insiders, VSCodium, Windsurf when present). Restart the editor so `.clpp` / `.clp` / `.clh` get the icon, highlighting, and IntelliSense.
 
 ```bash
-clpp compile <file.clpp> [-o out.luau] [--json]
-clpp build [dir] [-o out]
-clpp api compile [--file file.clpp]   # JSON stdin/stdout — Cluaupp contract
-clpp api manifest
-clpp install [--editor cursor|code]
-clpp manifest
+clpp compile hello.server.clpp
+clpp build
+clpp api compile          # JSON stdin/stdout — Cluaupp contract
 ```
+
+## Docs
+
+The site is a full course plus a [cplusplus.com-style reference](https://kartzrbx.github.io/CLPP/docs/reference) (one page per utility) and a generated API.
+
+```bash
+npm run docs          # local
+npm run docs:build    # static → build/  (gitignored)
+```
+
+Live: **[kartzrbx.github.io/CLPP](https://kartzrbx.github.io/CLPP/)**.
+
+Code fences on the docs site use the language id **clpp** (not `cpp`).
 
 ## Layout
 
 ```
-CL++/
-├── src/            Rust compiler (pest + AST + Luau codegen)
-├── docs/           language specification
-├── examples/       sample programs
-├── stdlib/         IntelliSense headers
-├── tests/golden/   reference Luau
-├── editors/vscode  language pack (highlight, icon, IntelliSense)
-└── support/        Cluaupp TypeScript contract
+src/              compiler (pest + AST + Luau codegen)
+docs/             course, spec, per-utility reference
+moonwave/         API stubs for the docs site
+examples/         leaderstats, Fusion, Vide, combat
+stdlib/           IntelliSense headers
+editors/vscode    language pack
+support/          Cluaupp TypeScript contract
 ```
-
-## Spec
-
-- [Syntax](docs/spec/syntax.md)
-- [Files](docs/spec/files.md)
-- [Types](docs/spec/types.md)
-- [Emit](docs/spec/emit.md)
-- [Cluaupp support](docs/cluaupp-support.md)
 
 ## License
 
-MIT
+[MIT](LICENSE)

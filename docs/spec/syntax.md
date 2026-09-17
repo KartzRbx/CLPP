@@ -1,3 +1,7 @@
+---
+title: Syntax specification
+---
+
 # CL++ syntax → Luau
 
 CL++ is the **language**: syntax, semantics, and OOP. Connecting to the Roblox API (generated headers, runtime) is **Cluaupp**'s job. The `clpp` compiler emits [Luau](https://luau.org/getting-started).
@@ -281,6 +285,9 @@ CL++ **does not use `->`**. Methods and scope use `::`. Tables/dictionaries use 
 | `for (T x : list)` | `for _, x in list do` | range-for |
 | `for (int i = 0; i < n; i++)` | `while` + `i += 1` | C loop |
 | `signal~>Connect(fn)` | `janitor:Add(signal:Connect(fn), "Disconnect")` | auto-cleanup |
+| `signal~>Once(fn)` | `janitor:Add(signal:Once(fn), "Disconnect")` | one-shot auto-cleanup |
+| `signal::Fire(...)` | `signal:Fire(...)` | emit / send |
+| `obj::GetPropertyChangedSignal("Name")` | `obj:GetPropertyChangedSignal("Name")` | property change signal |
 
 ## observable
 
@@ -329,17 +336,24 @@ print(player.Name)
 
 ## Auto-cleanup `~>`
 
-`signal~>Connect(fn)` registers the connection on the scope Janitor (`janitor` local, `self.janitor`, or a synthetic `__janitor`). In `void init()`, the synthetic `__janitor` also gets `game:BindToClose`.
+`signal~>Connect(fn)` and `signal~>Once(fn)` register the connection on the scope Janitor (`janitor` local, `self.janitor`, or a synthetic `__janitor`). `Once` disconnects after the first emission. In `void init()`, the synthetic `__janitor` also gets `game:BindToClose`.
 
 ```clpp
 players::PlayerAdded~>Connect(func [](Player* player) {
     post("Connected and managed automatically!");
+});
+
+players::PlayerAdded~>Once(func [](Player* player) {
+    post("First player only");
 });
 ```
 
 ```luau
 janitor:Add(players.PlayerAdded:Connect(function(player: Player)
 	print("Connected and managed automatically!")
+end), "Disconnect")
+janitor:Add(players.PlayerAdded:Once(function(player: Player)
+	print("First player only")
 end), "Disconnect")
 ```
 
@@ -352,7 +366,15 @@ OnCoinsUpdated~>Connect(func [](Player* player, int newAmount) {
     post(player.Name .: ": " .: newAmount);
 });
 
+OnCoinsUpdated~>Once(func [](Player* player, int newAmount) {
+    post("first: " .: newAmount);
+});
+
 OnCoinsUpdated::Fire(player, 500);
+
+part::GetPropertyChangedSignal("Transparency")~>Connect(func []() {
+    post(part.Transparency);
+});
 ```
 
 ```luau
@@ -360,8 +382,24 @@ local OnCoinsUpdated = __signal()
 janitor:Add(OnCoinsUpdated:Connect(function(player: Player, newAmount: number)
 	print(player.Name .. ": " .. newAmount)
 end), "Disconnect")
+janitor:Add(OnCoinsUpdated:Once(function(player: Player, newAmount: number)
+	print("first: " .. newAmount)
+end), "Disconnect")
 OnCoinsUpdated:Fire(player, 500)
+part:GetPropertyChangedSignal("Transparency"):Connect(function()
+	print(part.Transparency)
+end)
 ```
+
+| CL++ | Meaning |
+| --- | --- |
+| `signal<T...> name;` | typed signal (`BindableEvent` under `__signal()`) |
+| `name::Fire(...)` | **send** the signal |
+| `name~>Connect(fn)` | listen until disconnected (Janitor) |
+| `name~>Once(fn)` | listen **once**, then disconnect |
+| `name::Wait()` | yield until the next fire |
+| assign an `observable` | writes `.Value` and fires `Changed` |
+| `obj::GetPropertyChangedSignal("X")` | Instance property change signal |
 
 ## async / await
 

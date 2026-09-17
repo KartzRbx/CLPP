@@ -1,0 +1,93 @@
+/* Home hero: dark code photo + readable overlay */
+.hero {
+  min-height: 28rem;
+  background-color: #07090f !important;
+  background-size: cover !important;
+  background-position: center !important;
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    165deg,
+    rgba(5, 7, 12, 0.42) 0%,
+    rgba(5, 7, 12, 0.78) 58%,
+    rgba(5, 7, 12, 0.94) 100%
+  );
+  pointer-events: none;
+}
+
+.hero .container {
+  position: relative;
+  z-index: 1;
+}
+
+/* Feature images sit on a dark chip so logos with mixed backgrounds match */
+.row .col .text--center img {
+  height: 148px !important;
+  width: 148px !important;
+  object-fit: contain !important;
+  padding: 16px;
+  border-radius: 20px;
+  background: #111827;
+}
+
+.clpp-ref-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  padding: 0.85rem 1rem;
+  margin: 0 0 1.75rem;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  background: var(--ifm-background-surface-color);
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.88rem;
+}
+
+.clpp-ref-quick a {
+  white-space: nowrap;
+}
+
+.clpp-ref-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 3.5rem;
+  margin: 0 0 2rem;
+}
+
+.clpp-ref-col h2 {
+  margin-top: 0.35rem;
+  font-size: 1.08rem;
+  border-bottom: 1px solid var(--ifm-color-emphasis-300);
+  padding-bottom: 0.3rem;
+}
+
+.clpp-ref-col ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0 0 1.6rem;
+}
+
+.clpp-ref-col li {
+  margin: 0.16rem 0;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+  .clpp-ref-split {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
+
+.clpp-ref-syntax {
+  margin: 1rem 0;
+}
+
+.clpp-ref-meta {
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.9rem;
+}

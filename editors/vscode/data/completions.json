@@ -25,6 +25,36 @@
     { "label": ":", "detail": "table / dictionary → Luau ." },
     { "label": ".", "detail": "Instance property" },
     { "label": ".:", "detail": "concatenation → Luau .." },
-    { "label": "~>", "detail": "Connect with automatic Janitor cleanup" }
+    { "label": "~>", "detail": "Connect/Once with automatic Janitor cleanup" }
+  ],
+  "properties": [
+    { "label": "Name", "detail": "Instance.Name" },
+    { "label": "Parent", "detail": "Instance.Parent" },
+    { "label": "Value", "detail": "ValueBase / observable value" },
+    { "label": "OnChange", "detail": "observable.Changed:Connect" },
+    { "label": "ClassName", "detail": "Instance.ClassName" },
+    { "label": "UserId", "detail": "Player.UserId" },
+    { "label": "Character", "detail": "Player.Character" },
+    { "label": "DisplayName", "detail": "Player.DisplayName" },
+    { "label": "PlayerAdded", "detail": "Players.PlayerAdded" },
+    { "label": "PlayerRemoving", "detail": "Players.PlayerRemoving" }
+  ],
+  "methods": [
+    { "label": "Fire", "detail": "signal<T>::Fire(...) — emit the signal" },
+    { "label": "Connect", "detail": "RBXScriptSignal:Connect — listen until disconnected" },
+    { "label": "Once", "detail": "RBXScriptSignal:Once — listen for one emission" },
+    { "label": "Wait", "detail": "RBXScriptSignal:Wait — yield until next emission" },
+    { "label": "Destroy", "detail": "Destroy the signal / Instance" },
+    { "label": "GetPropertyChangedSignal", "detail": "Instance::GetPropertyChangedSignal(\"Name\")" },
+    { "label": "GetAttributeChangedSignal", "detail": "Instance::GetAttributeChangedSignal(\"Attr\")" },
+    { "label": "GetChangedSignal", "detail": "DataService path changed signal" },
+    { "label": "FindFirstChild", "detail": "Instance::FindFirstChild" },
+    { "label": "WaitForChild", "detail": "Instance::WaitForChild" },
+    { "label": "GetService", "detail": "GetService<T>()" },
+    { "label": "IsA", "detail": "Instance::IsA" }
+  ],
+  "cleanup": [
+    { "label": "Connect", "detail": "~>Connect — janitor-managed subscription" },
+    { "label": "Once", "detail": "~>Once — janitor-managed one-shot subscription" }
   ]
 }

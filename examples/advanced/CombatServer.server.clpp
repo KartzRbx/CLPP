@@ -1,0 +1,84 @@
+#include <clpp/roblox.clh>
+#include <clpp/libs/janitor.clh>
+
+struct CombatServer {
+    Janitor* janitor;
+    signal<Player*, int> OnHit;
+    void PlayerEntered(Player* player);
+    void BindPart(BasePart* part);
+    void WatchWorkspace();
+};
+
+void CombatServer::BindPart(BasePart* part) {
+    guard (part != null) else {
+        return;
+    }
+
+    part.Touched~>Once(func [](BasePart* other) {
+        Instance* character = other.Parent;
+        guard (character != null) else {
+            return;
+        }
+
+        match (character::FindFirstChild("Humanoid")) {
+            Humanoid* humanoid => {
+                guard (humanoid.Health > 0) else {
+                    return;
+                }
+                Players* players = GetService<Players>();
+                Player* player = players::GetPlayerFromCharacter(character);
+                guard (player != null) else {
+                    return;
+                }
+                OnHit::Fire(player, 10);
+                part::Destroy();
+            },
+            _ => warn("touch without humanoid")
+        };
+    });
+}
+
+void CombatServer::PlayerEntered(Player* player) {
+    guard (player != null) else {
+        return;
+    }
+
+    observable int combo = 0;
+    OnHit~>Connect(func [](Player* victim, int amount) {
+        guard (victim == player) else {
+            return;
+        }
+        combo = combo + 1;
+        post(player.Name .: " combo " .: combo .: " dmg " .: amount);
+    });
+}
+
+[[server]]
+void CombatServer::WatchWorkspace() {
+    workspace.ChildAdded~>Connect(func [](Instance* child) {
+        match (child) {
+            BasePart* p => BindPart(p),
+            Model* m => post("model spawned " .: m.Name),
+            _ => warn("ignored instance")
+        };
+    });
+}
+
+void init() {
+    CombatServer combat;
+    combat.janitor = new Janitor();
+
+    spawn {
+        task::wait(1);
+        post("combat ready");
+    };
+
+    Players* players = GetService<Players>();
+    for (Player* player : players::GetPlayers()) {
+        combat::PlayerEntered(player);
+    }
+    players::PlayerAdded~>Connect(func [](Player* p) {
+        combat::PlayerEntered(p);
+    });
+    combat::WatchWorkspace();
+}

@@ -1,0 +1,50 @@
+#include <clpp/roblox.clh>
+
+void init() {
+    Players* players = GetService<Players>();
+    Player* localPlayer = players.LocalPlayer;
+    guard (localPlayer != null) else {
+        report("LocalPlayer missing");
+        return;
+    }
+
+    Instance* playerGui = localPlayer::WaitForChild("PlayerGui");
+    auto scope = Fusion:scoped();
+    auto Children = Fusion:Children;
+
+    auto coins = Fusion:Value(scope, 0);
+    auto title = Fusion:Computed(scope, func []() {
+        return "Coins: " .: coins();
+    });
+
+    auto newScreenGui = Fusion:New(scope, "ScreenGui");
+    auto newFrame = Fusion:New(scope, "Frame");
+    auto newLabel = Fusion:New(scope, "TextLabel");
+
+    auto label = newLabel({
+        {"Name", "Amount"},
+        {"BackgroundTransparency", 1},
+        {"Size", UDim2.fromScale(1, 1)},
+        {"Text", title},
+        {"TextColor3", Color3.fromRGB(255, 255, 255)},
+        {"TextScaled", true}
+    });
+
+    auto frame = newFrame({
+        {"Name", "Hud"},
+        {"AnchorPoint", Vector2(0, 1)},
+        {"Position", UDim2.fromScale(0, 1)},
+        {"Size", UDim2.fromOffset(220, 64)},
+        {"BackgroundColor3", Color3.fromRGB(28, 18, 48)},
+        {Children, label}
+    });
+
+    newScreenGui({
+        {"Name", "CoinsHud"},
+        {"ResetOnSpawn", false},
+        {"Parent", playerGui},
+        {Children, frame}
+    });
+
+    coins(100);
+}

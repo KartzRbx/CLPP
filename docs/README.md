@@ -1,9 +1,11 @@
+---
+unlisted: true
+---
+
 # docs/
 
-CL++ language documentation.
+The [CL++ course](intro.md) and generated API live on the Moonwave site (`npm run docs`).
 
-- `spec/` — formal specification (files, syntax, types, grammar, emit)
-- `design/` — design decisions and RFCs
-- `tutorials/` — guides for learning the language
-
-Start with [spec/syntax.md](spec/syntax.md) and [spec/files.md](spec/files.md).
+- Course — start at [intro.md](intro.md)
+- Formal spec — [spec/syntax.md](spec/syntax.md)
+- Cluaupp JSON contract — [cluaupp-support.md](cluaupp-support.md)
