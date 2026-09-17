@@ -56,8 +56,49 @@ fn json_diagnostics_on_type_error() {
         "void F() { int n = \"x\"; }",
         Path::new("bad.clp"),
         None,
+    )
+    .expect("artifact");
+    assert!(!art.ok);
+    assert!(
+        art.diagnostics.iter().any(|d| d.message.contains("cannot initialize")),
+        "got {:?}",
+        art.diagnostics
     );
-    assert!(art.is_err());
+    assert!(art.diagnostics[0].line >= 1);
+}
+
+#[test]
+fn diagnostic_const_reassign_and_include_keep_source_line() {
+    let src = "#include <clpp/roblox.clh>\n\nvoid F() {\n\tconst int n = 1;\n\tn = 2;\n}\n";
+    let art = compile_artifact_source(src, Path::new("const.clp"), None).expect("artifact");
+    assert!(!art.ok);
+    let found = art
+        .diagnostics
+        .iter()
+        .find(|d| d.message.contains("const"))
+        .expect("const diagnostic");
+    assert!(
+        found.line >= 5,
+        "expected error on n = 2 (line 5+), got line {}",
+        found.line
+    );
+}
+
+#[test]
+fn diagnostic_wrong_type_after_includes() {
+    let src = "#include <clpp/roblox.clh>\n\nvoid F() {\n\tint n = \"x\";\n}\n";
+    let art = compile_artifact_source(src, Path::new("type.clp"), None).expect("artifact");
+    assert!(!art.ok);
+    let found = art
+        .diagnostics
+        .iter()
+        .find(|d| d.message.contains("cannot initialize"))
+        .expect("type diagnostic");
+    assert!(
+        found.line >= 4,
+        "expected error on int n = \"x\" (line 4), got line {}",
+        found.line
+    );
 }
 
 #[test]
@@ -129,4 +170,25 @@ fn pragma_nostrict_emits_nonstrict() {
     let luau = compile("#pragma nostrict\nvoid init() {}\n").expect("nostrict");
     assert!(luau.contains("--!nonstrict"));
     assert!(!luau.contains("--!strict\n"));
+}
+
+#[test]
+fn to_string_number_bool_emit_luau_conversions() {
+    let luau = compile(
+        r#"
+void F() {
+    string s = to_string(50);
+    float n = to_number("12");
+    bool ok = to_bool(s);
+    post(s, n, ok);
+}
+"#,
+    )
+    .expect("conversions");
+    assert!(luau.contains("tostring(50)"), "got: {luau}");
+    assert!(luau.contains("tonumber(\"12\")"), "got: {luau}");
+    assert!(luau.contains("not not (s)"), "got: {luau}");
+    assert!(!luau.contains("to_string("));
+    assert!(!luau.contains("to_number("));
+    assert!(!luau.contains("to_bool("));
 }

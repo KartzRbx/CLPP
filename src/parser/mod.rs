@@ -51,6 +51,11 @@ fn format_parse_error(err: &pest::error::Error<Rule>) -> String {
         if names.iter().any(|n| n.contains("ident")) {
             return "expected a name after the type, e.g. const int coins = 0;".into();
         }
+        if names.iter().any(|n| {
+            n.contains("assign_op") || n.contains("postfix") || n.contains("cmp_op")
+        }) {
+            return "syntax error — missing ';', a bad operator, or an unexpected token".into();
+        }
     }
     raw.lines()
         .last()
@@ -562,6 +567,7 @@ fn parse_expr(pair: Pair<Rule>) -> Expr {
 }
 
 fn parse_assign(pair: Pair<Rule>) -> Expr {
+    let line = pair.line_col().0;
     let mut inner = pair.into_inner();
     let Some(first) = inner.next() else {
         return Expr::Null;
@@ -577,12 +583,14 @@ fn parse_assign(pair: Pair<Rule>) -> Expr {
             op,
             left: Box::new(left),
             right: Box::new(right),
+            line,
         }
     } else {
         Expr::Assign {
             op: "=".into(),
             left: Box::new(left),
             right: Box::new(parse_expr(op_or_right)),
+            line,
         }
     }
 }

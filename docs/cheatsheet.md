@@ -18,7 +18,7 @@ title: Language cheat sheet
 
 ## I/O
 
-`post` output · `warn` warning · `report` error · `null` empty value
+`post` output · `warn` warning · `report` error · `null` empty value · `to_string` / `to_number` / `to_bool` convert
 
 ## Types
 

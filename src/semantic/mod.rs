@@ -73,6 +73,7 @@ const LIBRARY_TYPES: &[&str] = &[
 const GLOBALS: &[&str] = &[
     "post", "warn", "report", "print", "error", "game", "workspace", "script",
     "cout", "cerr", "endl", "tick", "time", "task", "typeof", "type", "tonumber", "tostring",
+    "to_string", "to_number", "to_bool",
     "pcall", "xpcall", "select", "pairs", "ipairs", "next", "unpack", "rawget", "rawset",
     "setmetatable", "getmetatable", "assert", "require",
 ];

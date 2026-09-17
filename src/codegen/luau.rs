@@ -1083,7 +1083,7 @@ impl<'a> Emitter<'a> {
                 args,
                 access,
             } => self.emit_call(object.as_deref(), name, args, access),
-            Expr::Assign { op, left, right } => {
+            Expr::Assign { op, left, right, .. } => {
                 format!("{} {op} {}", self.emit_expr(left), self.emit_expr(right))
             }
             Expr::Binary { op, left, right } => {
@@ -1120,6 +1120,28 @@ impl<'a> Emitter<'a> {
                 1 => parts[0].clone(),
                 _ => format!("({})", parts.join(" .. ")),
             };
+        }
+        if object.is_none() && (name == "to_string" || name == "tostring") {
+            let inner = args
+                .first()
+                .map(|a| self.emit_expr(a))
+                .unwrap_or_else(|| "nil".into());
+            return format!("tostring({inner})");
+        }
+        if object.is_none() && (name == "to_number" || name == "tonumber") {
+            let inner = args
+                .iter()
+                .map(|a| self.emit_expr(a))
+                .collect::<Vec<_>>()
+                .join(", ");
+            return format!("tonumber({inner})");
+        }
+        if object.is_none() && name == "to_bool" {
+            let inner = args
+                .first()
+                .map(|a| self.emit_expr(a))
+                .unwrap_or_else(|| "nil".into());
+            return format!("not not ({inner})");
         }
         let args_s = args
             .iter()

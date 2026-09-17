@@ -14,7 +14,10 @@
     { "label": "GetService", "detail": "GetService<T>()", "kind": "Function", "returns": "Instance" },
     { "label": "pcall", "detail": "pcall(func []() { })", "kind": "Function" },
     { "label": "typeof", "detail": "typeof(value)", "kind": "Function" },
-    { "label": "tick", "detail": "tick()", "kind": "Function" }
+    { "label": "tick", "detail": "tick()", "kind": "Function" },
+    { "label": "to_string", "detail": "string to_string(value)", "kind": "Function" },
+    { "label": "to_number", "detail": "float to_number(value)", "kind": "Function" },
+    { "label": "to_bool", "detail": "bool to_bool(value)", "kind": "Function" }
   ],
   "types": [
     "Player", "Players", "Folder", "Instance", "IntValue", "NumberValue",

@@ -29,6 +29,27 @@ impl ClppError {
         let span = line_col_span(&src, line, col);
         Self::new(src, span, message)
     }
+
+    pub fn line_col(&self) -> (usize, usize) {
+        offset_to_line_col(&self.src, self.span.offset())
+    }
+}
+
+pub fn offset_to_line_col(src: &str, offset: usize) -> (usize, usize) {
+    let mut line = 1usize;
+    let mut col = 1usize;
+    for (i, ch) in src.char_indices() {
+        if i >= offset {
+            break;
+        }
+        if ch == '\n' {
+            line += 1;
+            col = 1;
+        } else {
+            col += 1;
+        }
+    }
+    (line, col)
 }
 
 pub fn line_col_span(src: &str, line: usize, col: usize) -> SourceSpan {

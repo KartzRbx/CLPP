@@ -139,6 +139,46 @@ function Builtins.static_cast(value) end
 function Builtins.string_concat(...) end
 
 --[=[
+	Convert any value to text. Analog of C++ `std::to_string` / Luau `tostring`.
+
+	**Syntax:** `string to_string(value);`
+
+	**Emit:** `tostring(value)`
+
+	Do not write Luau `tostring` in CL++ source.
+
+	@param value any -- Value to convert
+	@within Builtins
+]=]
+function Builtins.to_string(value) end
+
+--[=[
+	Parse a number from text (or pass a number through). Analog of `std::stod` / Luau `tonumber`.
+
+	**Syntax:** `float to_number(value);` · `float to_number(value, base);`
+
+	**Emit:** `tonumber(value)`
+
+	Fails → `null`. Do not write Luau `tonumber` in CL++ source.
+
+	@param value any -- Text or number
+	@within Builtins
+]=]
+function Builtins.to_number(value) end
+
+--[=[
+	Coerce to boolean. Anything truthy becomes `true`.
+
+	**Syntax:** `bool to_bool(value);`
+
+	**Emit:** `not not (value)`
+
+	@param value any -- Value to coerce
+	@within Builtins
+]=]
+function Builtins.to_bool(value) end
+
+--[=[
 	Absence of a value. `nullptr` is a synonym.
 
 	**Syntax:** `T* ref = null;`

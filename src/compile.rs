@@ -1,18 +1,27 @@
 use crate::ast::Program;
 use crate::codegen::luau::emit;
+use crate::error::ClppError;
 use crate::parser::parse;
-use crate::preprocess::{is_header, preprocess, script_kind, to_luau_path};
-use crate::support::{CompileArtifact, CompileRequest};
+use crate::preprocess::{is_header, preprocess, remap_line, script_kind, to_luau_path};
+use crate::support::{CompileArtifact, CompileDiagnostic, CompileRequest};
 use miette::{IntoDiagnostic, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
 
 pub fn compile_file(path: &Path) -> Result<String> {
-    Ok(compile_artifact(path)?.luau)
+    let art = compile_artifact(path)?;
+    if !art.ok {
+        miette::bail!("{}", art.error.unwrap_or_else(|| "compile failed".into()));
+    }
+    Ok(art.luau)
 }
 
 pub fn compile_source(source: &str, path: &Path) -> Result<String> {
-    Ok(compile_artifact_source(source, path, None)?.luau)
+    let art = compile_artifact_source(source, path, None)?;
+    if !art.ok {
+        miette::bail!("{}", art.error.unwrap_or_else(|| "compile failed".into()));
+    }
+    Ok(art.luau)
 }
 
 pub fn compile_artifact(path: &Path) -> Result<CompileArtifact> {
@@ -30,7 +39,13 @@ pub fn compile_artifact_source(
     path: &Path,
     strict: Option<bool>,
 ) -> Result<CompileArtifact> {
-    let (expanded, mut ctx) = preprocess(source, path)?;
+    let file_name = path.display().to_string();
+    let (expanded, mut ctx) = match preprocess(source, path) {
+        Ok(pair) => pair,
+        Err(err) => {
+            return Ok(fail_report(&file_name, err, &[]));
+        }
+    };
     if is_header(path) {
         ctx.is_header = true;
         ctx.is_script = false;
@@ -39,14 +54,30 @@ pub fn compile_artifact_source(
         ctx.strict = strict;
         ctx.nonstrict = !strict;
     }
-    let program: Program = parse(&expanded, &path.display().to_string())?;
-    crate::semantic::check::check_program(&program, &expanded)?;
+    let program: Program = match parse(&expanded, &file_name) {
+        Ok(program) => program,
+        Err(err) => return Ok(fail_report(&file_name, err, &ctx.line_map)),
+    };
+    let diagnostics = match crate::semantic::check::check_program(&program, &expanded) {
+        Ok(items) => items
+            .into_iter()
+            .map(|d| remap_diagnostic(d, &ctx.line_map))
+            .collect::<Vec<_>>(),
+        Err(err) => return Ok(fail_report(&file_name, err, &ctx.line_map)),
+    };
+    if !diagnostics.is_empty() {
+        let message = diagnostics
+            .first()
+            .map(|d| d.message.clone())
+            .unwrap_or_else(|| "compile failed".into());
+        return Ok(CompileArtifact::fail_with(file_name, message, diagnostics));
+    }
     let luau = emit(&program, &ctx);
     let kind = script_kind(path);
     Ok(CompileArtifact {
         ok: true,
         luau,
-        file_name: path.display().to_string(),
+        file_name,
         output_hint: to_luau_path(Path::new(
             path.file_name()
                 .map(|n| n.to_string_lossy())
@@ -63,6 +94,25 @@ pub fn compile_artifact_source(
         error: None,
         diagnostics: Vec::new(),
     })
+}
+
+fn remap_diagnostic(mut diag: CompileDiagnostic, map: &[usize]) -> CompileDiagnostic {
+    diag.line = remap_line(map, diag.line);
+    diag
+}
+
+fn fail_report(file_name: &str, err: miette::Report, map: &[usize]) -> CompileArtifact {
+    let mut diagnostics = Vec::new();
+    if let Some(clpp) = err.downcast_ref::<ClppError>() {
+        let (line, column) = clpp.line_col();
+        diagnostics.push(CompileDiagnostic {
+            message: clpp.message.clone(),
+            line: remap_line(map, line),
+            column,
+            severity: "error".into(),
+        });
+    }
+    CompileArtifact::fail_with(file_name, format!("{err:#}"), diagnostics)
 }
 
 fn rojo_class(is_header: bool, kind: Option<&str>) -> String {

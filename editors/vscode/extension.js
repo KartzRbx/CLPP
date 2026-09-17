@@ -3,6 +3,7 @@ const path = require("path");
 const fs = require("fs");
 const cp = require("child_process");
 const { loadEngine, lintDocument } = require("./intellisense");
+const { createLens, applyLensToOpenEditors } = require("./lens");
 
 function loadCompletions() {
   const file = path.join(__dirname, "data", "completions.json");
@@ -77,6 +78,9 @@ const HOVER_WORDS = {
   guard: "Continue only when the condition is true; otherwise run the else block.",
   in: "Range-for: each value comes from the collection after `in`.",
   await: "Wait until an async value is ready.",
+  to_string: "Convert a value to text. Emits Luau tostring.",
+  to_number: "Parse a number from text. Emits Luau tonumber. Fails → null.",
+  to_bool: "Coerce to true/false.",
 };
 
 function includeSearchRoots() {
@@ -442,26 +446,28 @@ function activate(context) {
   });
 
   const collection = vscode.languages.createDiagnosticCollection("clpp");
+  const lens = createLens(vscode);
   let timer;
   function refresh(document) {
     if (!document || document.languageId !== "clpp") {
       return;
     }
     const fromCompiler = clppDiagnostics(document);
-    const issues = fromCompiler !== null ? fromCompiler : lintDocument(document.getText());
-    collection.set(
-      document.uri,
-      issues.map((issue) => {
-        const line = Math.min(issue.line, Math.max(0, document.lineCount - 1));
-        const range = document.lineAt(line).range;
-        const start = new vscode.Position(line, issue.column || 0);
-        return new vscode.Diagnostic(
-          new vscode.Range(start, range.end),
-          issue.message,
-          vscode.DiagnosticSeverity.Error
-        );
-      })
-    );
+    const lint = lintDocument(document.getText());
+    const issues = mergeIssues(fromCompiler, lint);
+    const diagnostics = issues.map((issue) => {
+      const line = Math.min(issue.line, Math.max(0, document.lineCount - 1));
+      const row = document.lineAt(line);
+      const startCol = Math.min(issue.column || 0, Math.max(0, row.text.length));
+      const start = new vscode.Position(line, startCol);
+      return new vscode.Diagnostic(
+        new vscode.Range(start, row.range.end),
+        issue.message,
+        vscode.DiagnosticSeverity.Error
+      );
+    });
+    collection.set(document.uri, diagnostics);
+    applyLensToOpenEditors(vscode, lens, collection);
   }
   function refreshAll() {
     for (const doc of vscode.workspace.textDocuments) {
@@ -474,12 +480,33 @@ function activate(context) {
   });
   context.subscriptions.push(
     collection,
+    lens.error,
     vscode.workspace.onDidOpenTextDocument(refresh),
-    vscode.workspace.onDidCloseTextDocument((doc) => collection.delete(doc.uri))
+    vscode.workspace.onDidCloseTextDocument((doc) => collection.delete(doc.uri)),
+    vscode.window.onDidChangeActiveTextEditor(() => applyLensToOpenEditors(vscode, lens, collection)),
+    vscode.workspace.onDidChangeConfiguration((ev) => {
+      if (ev.affectsConfiguration("clpp.lens")) {
+        applyLensToOpenEditors(vscode, lens, collection);
+      }
+    })
   );
 
   context.subscriptions.push(completion, hover, semantic, links, definitions, outline, diagnostics);
   refreshAll();
+}
+
+function mergeIssues(compiler, lint) {
+  const items = compiler ? [...compiler] : [];
+  const seen = new Set(items.map((i) => `${i.line}:${i.message}`));
+  for (const issue of lint) {
+    const key = `${issue.line}:${issue.message}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    items.push(issue);
+  }
+  return items;
 }
 
 function findClpp() {

@@ -657,6 +657,37 @@ function lintDocument(text) {
     if (!trimmed || trimmed.startsWith("//") || trimmed.startsWith("#") || trimmed.startsWith("[[")) {
       continue;
     }
+    if (
+      /\berror\s*\(/.test(trimmed) &&
+      !trimmed.startsWith("report")
+    ) {
+      diagnostics.push({
+        line: i,
+        column: Math.max(0, raw.indexOf("error")),
+        message: "use report(...) — Luau error() is report() in CL++",
+      });
+    }
+    if (/\btostring\s*\(/.test(trimmed)) {
+      diagnostics.push({
+        line: i,
+        column: Math.max(0, raw.indexOf("tostring")),
+        message: "use to_string(...) — Luau tostring() is to_string() in CL++",
+      });
+    }
+    if (/\btonumber\s*\(/.test(trimmed)) {
+      diagnostics.push({
+        line: i,
+        column: Math.max(0, raw.indexOf("tonumber")),
+        message: "use to_number(...) — Luau tonumber() is to_number() in CL++",
+      });
+    }
+    if (/\bcontinue\b/.test(trimmed)) {
+      diagnostics.push({
+        line: i,
+        column: Math.max(0, raw.indexOf("continue")),
+        message: "CL++ has no continue",
+      });
+    }
     if (/\b(?:const|constexpr)\s+(int|float|double|bool|string)\s*=/.test(trimmed)) {
       diagnostics.push({
         line: i,

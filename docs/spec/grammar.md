@@ -97,4 +97,4 @@ lambda = [ "func" ] "[]" [ "(" [ param-list ] ")" ] block ;
 
 Concatenation uses `.:` (not `..`). `::` is method/scope; `:` is table; `.` is property.
 
-Extra mapped tokens, not pure grammar: `string_concat`, `cout`, `cerr`, `endl`, `post`, `warn`, `report`.
+Extra mapped tokens, not pure grammar: `string_concat`, `to_string`, `to_number`, `to_bool`, `cout`, `cerr`, `endl`, `post`, `warn`, `report`.

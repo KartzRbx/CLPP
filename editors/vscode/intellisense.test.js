@@ -3,7 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 const assert = require("assert");
-const { loadEngine } = require("./intellisense");
+const { loadEngine, lintDocument } = require("./intellisense");
 
 const data = JSON.parse(fs.readFileSync(path.join(__dirname, "data", "completions.json"), "utf8"));
 const playerData = fs.readFileSync(
@@ -51,5 +51,20 @@ assert.deepStrictEqual(labels(serverPaths.members), ["Currencies", "Inventory"])
 
 const dataMethods = engine.resolve("    playerData::", symbols);
 assert.ok(labels(dataMethods.members).includes("GetChangedSignal"));
+
+const lint = lintDocument(`void F() {
+    const int = 1;
+    int n = "x"
+    error("no");
+}
+`);
+assert.ok(lint.some((d) => d.message.includes("expected a name")));
+assert.ok(lint.some((d) => d.message.includes("cannot initialize")));
+assert.ok(lint.some((d) => d.message.includes("missing ';'")));
+assert.ok(lint.some((d) => d.message.includes("report")));
+
+const convertLint = lintDocument(`void F() { string s = tostring(1); float n = tonumber("2"); }`);
+assert.ok(convertLint.some((d) => d.message.includes("to_string")));
+assert.ok(convertLint.some((d) => d.message.includes("to_number")));
 
 console.log("intellisense.test.js ok");

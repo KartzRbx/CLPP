@@ -1,5 +1,4 @@
 use crate::ast::{Decl, Expr, Function, Item, Program, Stmt};
-use crate::error::ClppError;
 use crate::support::CompileDiagnostic;
 use miette::Result;
 use std::collections::HashMap;
@@ -48,15 +47,6 @@ pub fn check_program(program: &Program, source: &str) -> Result<Vec<CompileDiagn
     };
     for item in &program.items {
         checker.item(item);
-    }
-    if let Some(first) = checker.diagnostics.first() {
-        return Err(ClppError::at_line(
-            source,
-            first.line.max(1),
-            first.column.max(1),
-            first.message.clone(),
-        )
-        .into());
     }
     Ok(checker.diagnostics)
 }
@@ -247,18 +237,21 @@ impl<'a> Checker<'a> {
             if let Expr::Ident(name) = left.as_ref() {
                 let binding = self.env.get(name).map(|b| (b.is_const, b.ty.clone()));
                 if let Some((is_const, expected)) = binding {
+                    let line = match expr {
+                        Expr::Assign { line, .. } => *line,
+                        _ => 1,
+                    };
                     if is_const {
-                        self.error(1, 1, format!("cannot assign to const '{name}'"));
+                        self.error(line, 1, format!("cannot assign to const '{name}'"));
                     }
                     let actual = self.expr_ty(right);
                     if !compatible(&expected, &actual) {
                         self.error(
-                            1,
+                            line,
                             1,
                             format!(
-                                "cannot assign {} to '{}'; expected {}",
+                                "cannot assign {} to '{name}'; expected {}",
                                 actual.label(),
-                                name,
                                 expected.label()
                             ),
                         );
@@ -335,6 +328,9 @@ impl<'a> Checker<'a> {
                             .unwrap_or_else(|| "Instance".into()),
                     ),
                     "Fire" | "Destroy" | "Kick" => Ty::Auto,
+                    "to_string" | "tostring" => Ty::String,
+                    "to_number" | "tonumber" => Ty::Float,
+                    "to_bool" => Ty::Bool,
                     "Connect" | "Once" => Ty::Named("RBXScriptConnection".into()),
                     "GetPropertyChangedSignal" => Ty::Named("RBXScriptSignal".into()),
                     _ => Ty::Unknown,

@@ -155,7 +155,7 @@ pub fn language_manifest() -> LanguageManifest {
         ],
         builtins: &[
             "post", "warn", "report", "null", "func", "observable", "signal", "guard", "match",
-            "spawn", "parallel", "async", "await", "auto",
+            "spawn", "parallel", "async", "await", "auto", "to_string", "to_number", "to_bool",
         ],
         operators: &[
             OperatorMap {
@@ -196,6 +196,18 @@ pub fn language_manifest() -> LanguageManifest {
             IoMap {
                 clpp: "report",
                 luau: "error",
+            },
+            IoMap {
+                clpp: "to_string",
+                luau: "tostring",
+            },
+            IoMap {
+                clpp: "to_number",
+                luau: "tonumber",
+            },
+            IoMap {
+                clpp: "to_bool",
+                luau: "not not",
             },
         ],
     }

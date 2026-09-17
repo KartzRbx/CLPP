@@ -15,7 +15,7 @@ pub fn preprocess(source: &str, file_path: &Path) -> Result<(String, CompileCont
         script_kind: script_kind(file_path),
         ..CompileContext::default()
     };
-    let expanded = expand(source, file_path, &mut ctx, &mut seen)?;
+    let expanded = expand(source, file_path, &mut ctx, &mut seen, None)?;
     Ok((expanded, ctx))
 }
 
@@ -24,6 +24,7 @@ fn expand(
     file_path: &Path,
     ctx: &mut CompileContext,
     seen: &mut HashSet<PathBuf>,
+    map_to: Option<usize>,
 ) -> Result<String> {
     let key = canonicalize_or(file_path);
     if !seen.insert(key) {
@@ -32,7 +33,10 @@ fn expand(
     let stem = file_stem_name(file_path);
     let dir = file_path.parent().unwrap_or_else(|| Path::new("."));
     let mut out = String::new();
+    let mut orig_line = 0usize;
     for line in source.lines() {
+        orig_line += 1;
+        let mapped = map_to.unwrap_or(orig_line);
         let trimmed = line.trim().trim_start_matches('\u{feff}');
         if is_preprocessor_line(trimmed) {
             if let Some(rest) = preprocessor_payload(trimmed, "include") {
@@ -48,7 +52,7 @@ fn expand(
                     if !resolved.exists() {
                         return Err(ClppError::at_line(
                             source,
-                            1,
+                            orig_line,
                             1,
                             format!("include not found: {path}"),
                         )
@@ -57,10 +61,18 @@ fn expand(
                     let included_stem = file_stem_name(&resolved);
                     if included_stem == stem {
                         let inner = fs::read_to_string(&resolved).map_err(|err| {
-                            ClppError::at_line(source, 1, 1, format!("read {path}: {err}"))
+                            ClppError::at_line(source, orig_line, 1, format!("read {path}: {err}"))
                         })?;
-                        out.push_str(&expand(&inner, &resolved, ctx, seen)?);
-                        out.push('\n');
+                        let inner = expand(&inner, &resolved, ctx, seen, Some(mapped))?;
+                        if inner.is_empty() {
+                            push_mapped_line(ctx, &mut out, "", mapped);
+                        } else {
+                            out.push_str(&inner);
+                            if !inner.ends_with('\n') {
+                                out.push('\n');
+                            }
+                        }
+                        continue;
                     } else {
                         ctx.requires.push(ModuleRequire {
                             name: included_stem,
@@ -69,17 +81,32 @@ fn expand(
                         });
                     }
                 }
-                continue;
             }
             if let Some(rest) = preprocessor_payload(trimmed, "pragma") {
                 apply_pragma(rest, ctx);
             }
+            push_mapped_line(ctx, &mut out, "", mapped);
             continue;
         }
-        out.push_str(line);
-        out.push('\n');
+        push_mapped_line(ctx, &mut out, line, mapped);
     }
     Ok(out)
+}
+
+fn push_mapped_line(ctx: &mut CompileContext, out: &mut String, line: &str, orig_line: usize) {
+    out.push_str(line);
+    out.push('\n');
+    ctx.line_map.push(orig_line.max(1));
+}
+
+pub fn remap_line(map: &[usize], line: usize) -> usize {
+    if map.is_empty() {
+        return line.max(1);
+    }
+    map.get(line.saturating_sub(1))
+        .copied()
+        .unwrap_or(line)
+        .max(1)
 }
 
 fn is_preprocessor_line(trimmed: &str) -> bool {

@@ -87,7 +87,12 @@ fn main() -> Result<()> {
         } => {
             if json {
                 match compile_artifact(&file) {
-                    Ok(art) => print_json(&art)?,
+                    Ok(art) => {
+                        print_json(&art)?;
+                        if !art.ok {
+                            std::process::exit(1);
+                        }
+                    }
                     Err(err) => {
                         print_json(&CompileArtifact::fail(file.display().to_string(), format!("{err:#}")))?;
                         std::process::exit(1);
@@ -140,7 +145,12 @@ fn main() -> Result<()> {
                     serde_json::from_str(&buf).into_diagnostic()?
                 };
                 match compile_request(&request) {
-                    Ok(art) => print_json(&art)?,
+                    Ok(art) => {
+                        print_json(&art)?;
+                        if !art.ok {
+                            std::process::exit(1);
+                        }
+                    }
                     Err(err) => {
                         print_json(&CompileArtifact::fail(&request.file_name, format!("{err:#}")))?;
                         std::process::exit(1);

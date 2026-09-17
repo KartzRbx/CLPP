@@ -160,6 +160,7 @@ Concatenation is the `.:` operator. It emits Luau `..`. **Do not** write `..` or
 
 - `a .: b .: c` associates left-to-right: `(a .. b) .. c`
 - `string_concat(a, b, c)` remains valid: zero args → `""`, one arg → the value, several → `(a .. b .. c)`
+- `to_string(x)` / `to_number(x)` / `to_bool(x)` convert. Do not write Luau `tostring` / `tonumber`.
 
 ```clpp
 return player.Name .: "_LeaderstatsJanitor";
@@ -180,6 +181,9 @@ return (player.Name .. "_" .. "LeaderstatsJanitor")
 | `post(...)` | `print(...)` |
 | `warn(...)` | `warn(...)` |
 | `report(...)` | `error(...)` |
+| `to_string(x)` | `tostring(x)` |
+| `to_number(x)` | `tonumber(x)` |
+| `to_bool(x)` | `not not (x)` |
 
 `cout << … << endl` remains valid (C++ legacy): each `<<` is another argument, `endl` ends the line.
 

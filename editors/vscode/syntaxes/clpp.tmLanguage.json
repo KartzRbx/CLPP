@@ -121,7 +121,7 @@
         },
         {
           "name": "support.function.builtin.clpp",
-          "match": "\\b(post|warn|report|GetService|static_cast|pcall|xpcall)\\b"
+          "match": "\\b(post|warn|report|GetService|static_cast|pcall|xpcall|to_string|to_number|to_bool|string_concat)\\b"
         }
       ]
     },

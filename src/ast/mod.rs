@@ -84,6 +84,7 @@ pub enum Expr {
         op: String,
         left: Box<Expr>,
         right: Box<Expr>,
+        line: usize,
     },
     Member {
         object: Box<Expr>,
@@ -199,4 +200,6 @@ pub struct CompileContext {
     pub script_kind: Option<String>,
     pub libraries: Vec<String>,
     pub requires: Vec<ModuleRequire>,
+    /// Expanded line (1-based index into this vec as 0-based) → original source line.
+    pub line_map: Vec<usize>,
 }
