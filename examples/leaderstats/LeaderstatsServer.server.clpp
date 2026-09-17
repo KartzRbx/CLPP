@@ -42,15 +42,6 @@ void LeaderstatsServer::PlayerEntered(Player* player) {
     Folder* leaderstatsFolder = EnsurePlayerLeaderstatsFolder(player);
     Data* playerData = DataService:Server::WaitFor(player);
 
-    observable string name = "Teste";
-    name.OnChange~>Connect(funct [](string* newValue){
-        guard (newValue != "Teste") else {
-            post("Cannot change for other value!")
-            return;
-        }
-  
-    })
-
     IntValue* coinsValue = static_cast<IntValue*>(leaderstatsFolder::FindFirstChild("Coins"));
     if (coinsValue) {
         playerData::GetChangedSignal(DataService:Server.Paths.Currencies.Coins)~>Connect(func [](int newValue) {

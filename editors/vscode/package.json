@@ -4,6 +4,10 @@
   "description": "CL++ language support for VS Code, Cursor, and compatible editors: highlighting, icon, and IntelliSense (.clpp / .clp / .clh)",
   "version": "0.1.0",
   "publisher": "clpp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/KartzRbx/CLPP"
+  },
   "icon": "icons/clpp.png",
   "engines": {
     "vscode": "^1.74.0"

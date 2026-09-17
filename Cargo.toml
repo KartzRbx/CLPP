@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 description = "CL++ compiler — a C++-inspired language that compiles to Luau"
 license = "MIT"
+repository = "https://github.com/KartzRbx/CLPP"
+homepage = "https://github.com/KartzRbx/CLPP"
 keywords = ["luau", "roblox", "compiler", "language"]
 categories = ["compilers", "command-line-utilities"]
 

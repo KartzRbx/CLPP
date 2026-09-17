@@ -8,8 +8,9 @@ struct PlayerDataCurrencies {
 };
 
 struct PlayerDataInventory {
-    LuaArray<int> HotBar;
-    LuaArray<string> Storage;
+    array<int> HotBar;
+    array<int> Storage;
+    
     int MaxStorage = 90;
 };
 
