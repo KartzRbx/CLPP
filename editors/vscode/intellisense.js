@@ -138,12 +138,64 @@ function loadEngine(data) {
     return SIGNAL_TYPES.has(t);
   }
 
-  function typeExists(name) {
-    return Boolean(catalog[name]);
+  function typeNode(name, overlay) {
+    if (overlay && overlay[name]) {
+      return overlay[name];
+    }
+    return catalog[name] || null;
   }
 
-  function collectType(typeName, seen) {
-    const key = typeName || "";
+  function typeExists(name, overlay) {
+    return Boolean(typeNode(name, overlay));
+  }
+
+  function pickTemplate(overlay) {
+    if (!overlay) {
+      return null;
+    }
+    if (overlay.PlayerData) {
+      return "PlayerData";
+    }
+    const names = Object.keys(overlay).filter((n) => /Data$/.test(n) && n !== "Data");
+    return names[0] || null;
+  }
+
+  function withPathTree(overlay) {
+    const template = pickTemplate(overlay);
+    if (!template) {
+      return overlay || {};
+    }
+    const extra = { ...overlay };
+    extra.DataService = {
+      tableKeys: (catalog.DataService?.tableKeys || []).map((key) =>
+        key.label === "Paths"
+          ? { ...key, type: template, detail: `DataService:Paths (${template})` }
+          : key
+      ),
+    };
+    const pathField = {
+      label: "Paths",
+      type: template,
+      detail: `Paths (${template})`,
+    };
+    extra.DataServiceServer = mergePathOwner(catalog.DataServiceServer, pathField);
+    extra.DataServiceClient = mergePathOwner(catalog.DataServiceClient, pathField);
+    return extra;
+  }
+
+  function mergePathOwner(node, pathField) {
+    const withoutPaths = (list) => (list || []).filter((member) => member.label !== "Paths");
+    return {
+      ...(node || {}),
+      properties: [...withoutPaths(node?.properties), pathField],
+      tableKeys: [...withoutPaths(node?.tableKeys), pathField],
+      methods: [...(node?.methods || [])],
+    };
+  }
+
+  function collectType(typeName, overlay, seen) {
+    const extra = overlay || {};
+    const key = `${typeName || ""}::${Object.keys(extra).sort().join(",")}`;
     if (memberCache.has(key)) {
       return memberCache.get(key);
     }
@@ -159,7 +211,7 @@ function loadEngine(data) {
         return;
       }
       visiting.add(name);
-      const node = catalog[name];
+      const node = typeNode(name, extra);
       if (!node) {
         return;
       }
@@ -179,8 +231,68 @@ function loadEngine(data) {
     return out;
   }
 
-  function findMember(typeName, label) {
-    return collectType(typeName).byName.get(label) || null;
+  function findMember(typeName, label, overlay) {
+    return collectType(typeName, overlay).byName.get(label) || null;
+  }
+
+  function stripInnerBlocks(src) {
+    let out = src;
+    let next = out.replace(/\{[^{}]*\}/g, " ");
+    while (next !== out) {
+      out = next;
+      next = out.replace(/\{[^{}]*\}/g, " ");
+    }
+    return out;
+  }
+
+  function parseStructs(src) {
+    const types = {};
+    const re = /\bstruct\s+([A-Za-z_]\w*)\s*(?::[^{]*)?\{/g;
+    let match;
+    while ((match = re.exec(src))) {
+      const name = match[1];
+      const body = stripInnerBlocks(balancedBody(src, match.index + match[0].length - 1));
+      const node = { properties: [], methods: [] };
+      for (const chunk of body.split(";")) {
+        const line = chunk.replace(/\b(public|private|protected)\s*:/g, " ").trim();
+        if (!line || line.startsWith("#")) {
+          continue;
+        }
+        const method = line.match(
+          /^(?:(?:static|virtual|inline|constexpr|const)\s+)*(.+?)\s+([A-Za-z_]\w*)\s*\(/
+        );
+        if (method) {
+          const ret = method[1].replace(/\b(?:static|virtual|inline|constexpr|const)\b/g, "").trim();
+          if (ret && ret !== "struct") {
+            node.methods.push({
+              label: method[2],
+              returns: ret,
+              detail: `${name}::${method[2]}()`,
+              kind: "methods",
+            });
+          }
+          continue;
+        }
+        const field = line.match(
+          /^(?:(?:static|constexpr|const|mutable)\s+)*(.+?)\s+([A-Za-z_]\w*)\s*(?:=\s*.*)?$/
+        );
+        if (!field) {
+          continue;
+        }
+        const ty = field[1].replace(/\b(?:static|constexpr|const|mutable)\b/g, "").trim();
+        if (!ty || ty === "struct") {
+          continue;
+        }
+        node.properties.push({
+          label: field[2],
+          type: ty.replace(/\*+$/, "").trim(),
+          detail: `${name}.${field[2]}`,
+          kind: "properties",
+        });
+      }
+      types[name] = node;
+    }
+    return types;
   }
 
   function inferFromName(name) {
@@ -248,9 +360,14 @@ function loadEngine(data) {
     return "";
   }
 
-  function indexDocument(raw) {
+  function indexDocument(raw, extraTexts) {
     const vars = new Map();
     const dictKeys = new Map();
+    const types = parseStructs(stripLiterals(raw));
+    for (const extra of extraTexts || []) {
+      Object.assign(types, parseStructs(stripLiterals(extra)));
+    }
+    const overlay = withPathTree(types);
 
     const dictRe = /\bdictionary(?:<[^>]+>)?\s+([A-Za-z_]\w*)\s*=\s*\{/g;
     let match;
@@ -311,7 +428,7 @@ function loadEngine(data) {
       }
     }
 
-    return { vars, dictKeys };
+    return { vars, dictKeys, types: overlay, templateType: pickTemplate(types) };
   }
 
   function parseAccess(line) {
@@ -370,13 +487,14 @@ function loadEngine(data) {
     if (globals[root]) {
       return globals[root].type;
     }
-    if (typeExists(root) && call) {
+    const overlay = symbols && symbols.types;
+    if (typeExists(root, overlay) && call) {
       return root;
     }
     return inferFromName(root);
   }
 
-  function walkType(startType, steps) {
+  function walkType(startType, steps, overlay) {
     let current = startType;
     for (const step of steps) {
       if (!current) {
@@ -386,7 +504,7 @@ function loadEngine(data) {
         current = step.generic;
         continue;
       }
-      const member = findMember(current, step.name);
+      const member = findMember(current, step.name, overlay);
       if (!member) {
         return null;
       }
@@ -395,14 +513,14 @@ function loadEngine(data) {
     return current;
   }
 
-  function fallbackType(type) {
+  function fallbackType(type, overlay) {
     if (!type || PRIMITIVES.has(type)) {
       return type;
     }
-    if (catalog[type]) {
+    if (typeExists(type, overlay)) {
       return type;
     }
-    if (INSTANCE_FALLBACK.has(type) || /^[A-Z]/.test(type)) {
+    if (INSTANCE_FALLBACK.has(type)) {
       return "Instance";
     }
     return type;
@@ -426,7 +544,8 @@ function loadEngine(data) {
       return dictKeys;
     }
 
-    const resolved = fallbackType(type);
+    const overlay = symbols && symbols.types;
+    const resolved = fallbackType(type, overlay);
     if (!resolved || PRIMITIVES.has(resolved)) {
       if (mode === "table" && dictKeys.length) {
         return dictKeys;
@@ -434,7 +553,7 @@ function loadEngine(data) {
       return [];
     }
 
-    const bag = collectType(resolved);
+    const bag = collectType(resolved, overlay);
 
     if (mode === "property") {
       const props = [...bag.properties];
@@ -478,8 +597,9 @@ function loadEngine(data) {
     if (!access || access.mode === "concat") {
       return { mode: access ? "concat" : "global", members: [], access };
     }
+    const overlay = symbols && symbols.types;
     const rootType = typeOfRoot(access.root, access.generic, access.call, symbols);
-    const type = walkType(rootType, access.steps);
+    const type = walkType(rootType, access.steps, overlay);
     const members = membersFor(type, access.mode, symbols, access.root);
     return { mode: access.mode, type, members, access, rootType };
   }
@@ -492,15 +612,21 @@ function loadEngine(data) {
     if (globals[word]) {
       return globals[word].detail || globals[word].type;
     }
-    for (const typeName of Object.keys(catalog)) {
-      const member = findMember(typeName, word);
-      if (member && catalog[typeName].methods?.some((m) => m.label === word) && typeName !== "Instance") {
+    const overlay = symbols && symbols.types;
+    const typeNames = new Set([...Object.keys(catalog), ...Object.keys(overlay || {})]);
+    for (const typeName of typeNames) {
+      const member = findMember(typeName, word, overlay);
+      const node = typeNode(typeName, overlay);
+      if (member && node?.methods?.some((m) => m.label === word) && typeName !== "Instance") {
         if (member.detail) {
           return member.detail;
         }
       }
+      if (member && member.kind === "properties" && member.detail) {
+        return member.detail;
+      }
     }
-    const owned = findMember("signal", word) || findMember("RBXScriptSignal", word);
+    const owned = findMember("signal", word, overlay) || findMember("RBXScriptSignal", word, overlay);
     if (owned?.detail) {
       return owned.detail;
     }
@@ -510,6 +636,7 @@ function loadEngine(data) {
   return {
     indexDocument,
     parseAccess,
+    parseStructs,
     resolve,
     membersFor,
     hoverFor,

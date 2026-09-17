@@ -39,13 +39,13 @@ void LeaderstatsServer::PlayerEntered(Player* player) {
         return;
     }
 
-
     Folder* leaderstatsFolder = EnsurePlayerLeaderstatsFolder(player);
     Data* playerData = DataService:Server::WaitFor(player);
+    PlayerData Paths = DataService:Paths;
 
     IntValue* coinsValue = static_cast<IntValue*>(leaderstatsFolder::FindFirstChild("Coins"));
     if (coinsValue) {
-        playerData::GetChangedSignal(DataService:Server.Paths.Currencies.Coins)~>Connect(func [](int newValue) {
+        playerData::GetChangedSignal(Paths.Currencies.Coins)~>Connect(func [](int newValue) {
             if (coinsValue.Value != newValue) {
                 coinsValue.Value = newValue;
                 post("Coins for " .: player.Name .: ": " .: newValue);

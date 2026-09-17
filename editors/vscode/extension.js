@@ -79,6 +79,70 @@ const HOVER_WORDS = {
   await: "Wait until an async value is ready.",
 };
 
+function includeSearchRoots() {
+  const roots = [];
+  for (const folder of vscode.workspace.workspaceFolders || []) {
+    roots.push(folder.uri.fsPath);
+    roots.push(path.join(folder.uri.fsPath, "stdlib"));
+  }
+  roots.push(path.join(__dirname, "..", ".."));
+  roots.push(path.join(__dirname, "..", "..", "stdlib"));
+  const local = process.env.LOCALAPPDATA || "";
+  if (local) {
+    roots.push(path.join(local, "Programs", "CLPP"));
+    roots.push(path.join(local, "Programs", "CLPP", "stdlib"));
+  }
+  return roots;
+}
+
+function resolveInclude(spec, angled, fromPath) {
+  if (!angled && fromPath) {
+    const relative = path.normalize(path.join(path.dirname(fromPath), spec));
+    if (fs.existsSync(relative)) {
+      return relative;
+    }
+  }
+  for (const root of includeSearchRoots()) {
+    for (const candidate of [path.join(root, spec), path.join(root, "stdlib", spec)]) {
+      if (fs.existsSync(candidate)) {
+        return candidate;
+      }
+    }
+  }
+  return null;
+}
+
+function extraIncludeTexts(document) {
+  const texts = [];
+  const seen = new Set();
+  const visit = (text, fromPath) => {
+    const includeRe = /#include\s+(?:"([^"]+)"|<([^>]+)>)/g;
+    let match;
+    while ((match = includeRe.exec(text))) {
+      const spec = match[1] || match[2];
+      const resolved = resolveInclude(spec, Boolean(match[2]), fromPath);
+      if (!resolved || seen.has(resolved)) {
+        continue;
+      }
+      seen.add(resolved);
+      try {
+        const body = fs.readFileSync(resolved, "utf8");
+        texts.push(body);
+        visit(body, resolved);
+      } catch {
+        // missing include — skip
+      }
+    }
+  };
+  const filePath = document.uri.scheme === "file" ? document.uri.fsPath : null;
+  visit(document.getText(), filePath);
+  return texts;
+}
+
+function symbolsFor(engine, document) {
+  return engine.indexDocument(document.getText(), extraIncludeTexts(document));
+}
+
 function activate(context) {
   const data = loadCompletions();
   const engine = loadEngine(data);
@@ -92,7 +156,7 @@ function activate(context) {
     {
       provideCompletionItems(document, position) {
         const line = document.lineAt(position).text.slice(0, position.character);
-        const symbols = engine.indexDocument(document.getText());
+        const symbols = symbolsFor(engine, document);
         const items = [];
 
         if (/GetService\s*<\s*[A-Za-z_]*$/.test(line)) {
@@ -143,7 +207,7 @@ function activate(context) {
       if (HOVER_WORDS[word]) {
         return new vscode.Hover(HOVER_WORDS[word]);
       }
-      const symbols = engine.indexDocument(document.getText());
+      const symbols = symbolsFor(engine, document);
       const detail = engine.hoverFor(word, symbols);
       if (detail) {
         return new vscode.Hover(detail);

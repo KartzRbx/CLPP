@@ -46,9 +46,10 @@ function LeaderstatsServer:PlayerEntered(player: Player)
 	end
 	local leaderstatsFolder: Folder = self:EnsurePlayerLeaderstatsFolder(player)
 	local playerData: Data = DataService.Server:WaitFor(player)
+	local Paths: PlayerData = DataService.Paths
 	local coinsValue: IntValue = leaderstatsFolder:FindFirstChild("Coins")
 	if coinsValue then
-		self.janitor:Add(playerData:GetChangedSignal(DataService.Server.Paths.Currencies.Coins):Connect(function(newValue: number)
+		self.janitor:Add(playerData:GetChangedSignal(Paths.Currencies.Coins):Connect(function(newValue: number)
 	if coinsValue.Value ~= newValue then
 		coinsValue.Value = newValue
 		print("Coins for " .. player.Name .. ": " .. newValue)

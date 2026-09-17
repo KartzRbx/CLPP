@@ -20,7 +20,7 @@
     "Player", "Players", "Folder", "Instance", "IntValue", "NumberValue",
     "StringValue", "BoolValue", "ObjectValue", "Part", "BasePart", "Model",
     "Humanoid", "RemoteEvent", "RemoteFunction", "BindableEvent", "Vector3",
-    "CFrame", "Color3", "UDim2", "Janitor", "DataService", "Promise",
+    "CFrame", "Color3", "UDim2", "Janitor", "DataService", "PlayerData", "Promise",
     "Workspace", "RunService", "ReplicatedStorage", "DataModel", "Data"
   ],
   "services": [
@@ -318,10 +318,16 @@
       "tableKeys": [
         { "label": "Server", "type": "DataServiceServer", "detail": "DataService:Server" },
         { "label": "Client", "type": "DataServiceClient", "detail": "DataService:Client" },
-        { "label": "Paths", "type": "dictionary", "detail": "DataService:Paths" }
+        { "label": "Paths", "type": "PlayerData", "detail": "DataService:Paths — same shape as the data template" }
       ]
     },
     "DataServiceServer": {
+      "properties": [
+        { "label": "Paths", "type": "PlayerData", "detail": "DataService:Server.Paths" }
+      ],
+      "tableKeys": [
+        { "label": "Paths", "type": "PlayerData", "detail": "DataService:Server:Paths" }
+      ],
       "methods": [
         { "label": "Init", "returns": "void", "detail": "DataService:Server::Init(opts)" },
         { "label": "WaitFor", "returns": "Data", "detail": "DataService:Server::WaitFor(player)" },
@@ -332,6 +338,12 @@
       ]
     },
     "DataServiceClient": {
+      "properties": [
+        { "label": "Paths", "type": "PlayerData", "detail": "DataService:Client.Paths" }
+      ],
+      "tableKeys": [
+        { "label": "Paths", "type": "PlayerData", "detail": "DataService:Client:Paths" }
+      ],
       "methods": [
         { "label": "WaitFor", "returns": "Data", "detail": "DataService:Client::WaitFor(player)" },
         { "label": "Get", "returns": "auto", "detail": "DataService:Client::Get(path)" }
@@ -340,7 +352,8 @@
     "Data": {
       "methods": [
         { "label": "Get", "returns": "auto", "detail": "Data::Get(path)" },
-        { "label": "Set", "returns": "void", "detail": "Data::Set(path, value)" }
+        { "label": "Set", "returns": "void", "detail": "Data::Set(path, value)" },
+        { "label": "GetChangedSignal", "returns": "signal", "detail": "Data::GetChangedSignal(path)" }
       ]
     },
     "Janitor": {
