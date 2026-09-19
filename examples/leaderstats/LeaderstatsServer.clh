@@ -9,13 +9,10 @@
 
 struct LeaderstatsServer {
     static constexpr int STARTING_COINS = 0;
+    Janitor janitor;
 
-    DataServiceServer* dataService;
-    Players* players;
-    Janitor* janitor;
-
-    string GetPlayerJanitorKey(Player* player);
-    Folder* EnsurePlayerLeaderstatsFolder(Player* player);
-    void PlayerEntered(Player* player);
-    void UpdateLeaderstatsWithValues(IntValue* currentValue, int newValue);
+    string GetPlayerJanitorKey(Player player);
+    Folder EnsurePlayerLeaderstatsFolder(Player player);
+    void PlayerEntered(Player player);
+    void UpdateLeaderstatsWithValues(IntValue currentValue, int newValue);
 };

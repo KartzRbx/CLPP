@@ -11,7 +11,7 @@ CL++ anonymous callbacks are now **`func (params) { }`**. The C++ capture list i
 ## Write this
 
 ```clpp
-players.PlayerAdded~>Connect(func (Player* playerEntered) {
+players.PlayerAdded~>Connect(func (Player playerEntered) {
     post("hello, " .: playerEntered.Name);
 });
 
@@ -31,7 +31,7 @@ Zero parameters still need the keyword and empty parens: `func () { }`.
 These **do not compile**:
 
 ```clpp
-func [](Player* player) { }
+func [](Player player) { }
 []() { }
 func []() { }
 ```
@@ -43,7 +43,7 @@ func []() { }
 Cluaupp still receives ordinary Luau from `clpp api compile`. A janitor Connect stays a janitor Connect:
 
 ```clpp
-players.PlayerAdded~>Connect(func (Player* playerEntered) {
+players.PlayerAdded~>Connect(func (Player playerEntered) {
     post(playerEntered.Name);
 });
 ```
@@ -68,7 +68,7 @@ func ( [params] ) { statements }
 - `(` … `)` — parameter list may be empty.
 - `{` … `}` — body. No `->`.
 
-Named functions are unchanged: `void Greet(Player* player) { }`.
+Named functions are unchanged: `void Greet(Player player) { }`.
 
 ## Operators in generated source
 

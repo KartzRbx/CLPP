@@ -11,8 +11,8 @@ CL++ is statically typed in what you write and in the Luau it emits.
 | `string` | `string` | names, paths (not `std::string`) |
 | `void` | no return annotation | procedures |
 | `func` | `(...any) -> any` | callbacks / lambdas |
-| `auto` / `auto*` | inferred | `new`, `GetService`, datatype ctor |
-| `Player*` / `Folder*` | `Player` / `Folder` | Instance, not an address |
+| `auto` | inferred | `new`, `GetService`, datatype ctor |
+| `Player` / `Folder` | `Player` / `Folder` | Instance (class name) |
 | `array<T>` / `LuaArray<T>` / `vector<T>` / `span<T>` | `{T}` | arrays |
 | `dictionary<K, V>` | `{ [K]: V }` | tables / maps |
 | `optional<T>` | `T?` | missing value |
@@ -30,16 +30,16 @@ string name = "Kartz";
 bool isActive = true;
 func callback = func () {};
 auto dynamicVal = DataService.Server;
-Player* playerRef = null;
+Player playerRef = null;
 ```
 
 Always initialize: `int coins = 0;` — `int coins;` emits `nil`.
 
 There is no `delete`, `*part`, `&part`, `int&`, or `->`. Numbers copy; Instances mutate through `.` (property and instance method).
 
-## Instances (`T*` is not a pointer)
+## Instances are class names
 
-`Player*` means “an Instance of class Player”. The star is stripped. Properties and instance methods use `.`. Protected calls use `:`. Static names use `::`. [`match`](../guard-match.md) arms write the class name: `Part p =>`, not `Part* p`.
+`Player player` is an Instance of class Player. Do not write `Player*`. Properties and instance methods use `.`. Protected calls use `:`. Static names use `::`. [`match`](../guard-match.md) arms write `Part p =>`.
 
 ```clpp
 player.Name = "Kartz";

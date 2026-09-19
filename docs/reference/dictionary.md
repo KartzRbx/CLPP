@@ -46,7 +46,7 @@ dictionary<string, int> stats = {
     {"Coins", 100},
     {"Gems", 50}
 };
-post(stats:Coins);
+post(stats.Coins);
 ```
 
 Emits:

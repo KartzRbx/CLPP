@@ -9,8 +9,8 @@ int n = 0;                    // local number
 age: int = 10;                // same, postfix type
 const int MAX = 10;           // Luau const
 observable int coins = 100;   // IntValue; assign to fire Changed
-signal<Player*, int> OnPay;   // BindableEvent wrapper
-auto* players = GetService<Players>();
+signal<Player, int> OnPay;   // BindableEvent wrapper
+auto players = GetService<Players>();
 ```
 
 ## Where a name lives

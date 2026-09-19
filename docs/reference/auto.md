@@ -12,7 +12,7 @@ Infer the type from the initializer. Prefer explicit types on parameters and str
 ## Syntax
 
 ```clpp
-auto* players = GetService<Players>();
+auto players = GetService<Players>();
 auto janitor = new Janitor();
 auto [ok, result] = pcall(fn);
 ```
@@ -31,14 +31,14 @@ Whatever the initializer produces.
 
 ## Description
 
-Inferred for `new Class(...)`, [`GetService<T>()`](GetService), datatype constructors, and destructuring. `auto*` is the Instance form.
+Inferred for `new Class(...)`, [`GetService<T>()`](GetService), datatype constructors, and destructuring.
 
 Do not use `auto` as a replacement for a public API type.
 
 ## Example
 
 ```clpp
-auto* coins = new IntValue(leaderstats);
+auto coins = new IntValue(leaderstats);
 ```
 
 Emits:

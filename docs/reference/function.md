@@ -38,7 +38,7 @@ No overloading. No default arguments. No templates except [`GetService<T>`](GetS
 ## Example
 
 ```clpp
-void CreateLeaderstats(Player* player) {
+void CreateLeaderstats(Player player) {
     return;
 }
 

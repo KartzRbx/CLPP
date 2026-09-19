@@ -13,7 +13,7 @@ Function exists on the server only.
 
 ```clpp
 [[server]]
-void SaveData(Player* player) { }
+void SaveData(Player player) { }
 ```
 
 ## Parameters
@@ -36,7 +36,7 @@ On a `.client.clpp`, the function is omitted. On a `.server.clpp`, it emits norm
 
 ```clpp
 [[server]]
-void SaveData(Player* player) {}
+void SaveData(Player player) {}
 ```
 
 Emits:

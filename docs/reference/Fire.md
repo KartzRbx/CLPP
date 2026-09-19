@@ -36,7 +36,7 @@ This is **send**. Listening is [`Connect`](Connect) / [`Once`](Once) / [`~>`](op
 ## Example
 
 ```clpp
-signal<Player*, int> OnCoinsUpdated;
+signal<Player, int> OnCoinsUpdated;
 OnCoinsUpdated.Fire(player, 500);
 ```
 

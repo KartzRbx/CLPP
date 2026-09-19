@@ -12,10 +12,10 @@ title: Declarative UI with Vide
 #include <clpp/roblox.clh>
 
 void init() {
-    Players* players = GetService<Players>();
-    Player* localPlayer = players.LocalPlayer;
+    Players players = GetService<Players>();
+    Player localPlayer = players.LocalPlayer;
     guard (localPlayer != null) else { return; }
-    PlayerGui* playerGui = localPlayer.WaitForChild("PlayerGui");
+    PlayerGui playerGui = localPlayer.WaitForChild("PlayerGui");
 
     auto create = Vide.create;
     auto source = Vide.source;
@@ -63,7 +63,7 @@ Vide `Text` can be a **function**. CL++ lambdas `func () { return ...; }` become
 If a Roblox event should update UI **once** (tutorial toast):
 
 ```clpp
-workspace.ChildAdded~>Once(func (Instance* child) {
+workspace.ChildAdded~>Once(func (Instance child) {
     match (child) {
         BasePart p => count(count() + 1),
         _ => warn("ignored")

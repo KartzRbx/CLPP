@@ -12,7 +12,7 @@ Looks up a Roblox service by type name. The only generic besides collections and
 ## Syntax
 
 ```clpp
-T* GetService<T>();
+T GetService<T>();
 ```
 
 ## Parameters
@@ -41,7 +41,7 @@ There is no `game:GetService` in CL++ source — always this form.
 #include <clpp/roblox.clh>
 
 void init() {
-    Players* players = GetService<Players>();
+    Players players = GetService<Players>();
     post("online: " .: players.GetPlayers());
 }
 ```

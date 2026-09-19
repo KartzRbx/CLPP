@@ -16,7 +16,7 @@ string title = 'Player';
 string line = `hello {name}`;
 bool isActive = true;
 func callback = func () {};
-Player* playerRef = null;
+Player playerRef = null;
 ```
 
 | Write this | Emit this |
@@ -32,11 +32,11 @@ Player* playerRef = null;
 
 Always initialize: `int coins;` emits `nil`. Prefer `int coins = 0;`.
 
-## Instances (`T*` is not a pointer)
+## Instances are class names
 
-`Player*` is a **type suffix** for an Instance of class Player. The star is stripped in Luau. There is no address, no `delete`, and no `->`. Properties and instance methods use `.`. Protected calls use `:`. Static names use `::`.
+`Player player` is an Instance of class Player. Do not write `Player*`. There is no address, no `delete`, and no `->`. Properties and instance methods use `.`. Protected calls use `:`. Static names use `::`.
 
-[`match`](guard-match) arms are the class name only: `Part p =>`, not `Part* p`.
+[`match`](guard-match) arms use the same class name: `Part p =>`.
 
 ```clpp
 player.Name = "Kartz";
@@ -55,7 +55,7 @@ These are **values**. Do not write `new Vector3`.
 
 ## Casts
 
-`static_cast<Folder*>(existing)` emits `existing`. Luau does not check `ClassName` at the cast.
+`static_cast<Folder>(existing)` emits `existing`. Luau does not check `ClassName` at the cast.
 
 ## `const`
 

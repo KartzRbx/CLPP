@@ -46,12 +46,12 @@ local ControlFlow = {}
 --[=[
 	Range-for. Prefer `in`. The C++-style `:` is the same loop, not a table key.
 
-	**Syntax:** `for (T x in list) { }` · `for (T x : list) { }`
+	**Syntax:** `for (T x in list) { }` · `for (T x in list) { }`
 
 	**Emit:** `for _, x in list do`
 
 	```clpp
-	for (Player* player in players.GetPlayers()) {
+	for (Player player in players.GetPlayers()) {
 	    post(player.Name);
 	}
 	```

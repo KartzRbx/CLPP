@@ -21,14 +21,14 @@ Cluaupp (or your Rojo tree) should `require` Fusion. In CL++ you treat it as a g
 #include <clpp/roblox.clh>
 
 void init() {
-    Players* players = GetService<Players>();
-    Player* localPlayer = players.LocalPlayer;
+    Players players = GetService<Players>();
+    Player localPlayer = players.LocalPlayer;
     guard (localPlayer != null) else {
         report("LocalPlayer missing");
         return;
     }
 
-    PlayerGui* playerGui = localPlayer.WaitForChild("PlayerGui");
+    PlayerGui playerGui = localPlayer.WaitForChild("PlayerGui");
     auto scope = Fusion.scoped();
     auto Children = Fusion.Children;
 
@@ -95,7 +95,7 @@ When the scope is destroyed, Fusion destroys instances and disconnects. You stil
 Drive the same HUD from inventory instances:
 
 ```clpp
-void BindDrop(Instance* inst, auto coins) {
+void BindDrop(Instance inst, auto coins) {
     match (inst) {
         IntValue v => {
             guard (v.Name == "Coins") else { return; }

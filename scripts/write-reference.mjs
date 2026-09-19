@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Writes docs/reference/*.md — one page per language utility,
+ ** Writes docs/reference/*.md — one page per language utility,
  * in the same spirit as https://cplusplus.com/reference/
  */
 import fs from "fs";
@@ -196,7 +196,7 @@ add({
   header: "Builtin · Roblox",
   summary:
     "Looks up a Roblox service by type name. The only generic besides collections and `static_cast`.",
-  syntax: "T* GetService<T>();",
+  syntax: "T GetService<T>();",
   params: [{ name: "T", type: "class name", desc: "Service class, e.g. `Players`, `RunService`." }],
   returns: "An Instance of class `T` (`game:GetService(\"T\")`).",
   emit: 'game:GetService("T")',
@@ -206,7 +206,7 @@ There is no \`game:GetService\` in CL++ source — always this form.`,
   exampleClpp: `#include <clpp/roblox.clh>
 
 void init() {
-    Players* players = GetService<Players>();
+    Players players = GetService<Players>();
     post("online: " .: players.GetPlayers());
 }`,
   exampleLuau: `local players: Players = game:GetService("Players")
@@ -240,8 +240,8 @@ add({
   header: "Builtin · constructor",
   summary:
     "Constructs a Roblox Instance or a library object. Not C++ heap allocation — there is no `delete`.",
-  syntax: `auto* child = new Class(parent);
-auto* janitor = new Janitor();`,
+  syntax: `auto child = new Class(parent);
+auto janitor = new Janitor();`,
   params: [
     { name: "Class", type: "identifier", desc: "Instance class or lib type (`Janitor`)." },
     { name: "parent", type: "Instance?", desc: "First argument becomes `.Parent` on Instances." },
@@ -253,8 +253,8 @@ auto* janitor = new Janitor();`,
 **Libraries** (\`Janitor\` and similar): emit \`Janitor.new()\`.
 
 **Datatypes** (\`Vector3\`, \`CFrame\`, \`UDim2\`, \`Color3\`): do **not** use \`new\`. Call them as values: \`Vector3(8, 1, 8)\`.`,
-  exampleClpp: `auto* coins = new IntValue(leaderstats);
-auto* janitor = new Janitor();
+  exampleClpp: `auto coins = new IntValue(leaderstats);
+auto janitor = new Janitor();
 part.Size = Vector3(8, 1, 8);`,
   exampleLuau: `local coins: IntValue = Instance.new("IntValue")
 coins.Parent = leaderstats
@@ -271,7 +271,7 @@ add({
     "Source-level type annotation. Luau has no runtime casts — this does not check `ClassName`.",
   syntax: "T static_cast<T>(value);",
   params: [
-    { name: "T", type: "type", desc: "Target type, often `Folder*` / `Player*`." },
+    { name: "T", type: "type", desc: "Target type, often `Folder` / `Player`." },
     { name: "value", type: "any", desc: "Expression to re-annotate." },
   ],
   returns: "`value` unchanged, annotated as `T`.",
@@ -279,7 +279,7 @@ add({
   description: `\`const_cast\`, \`reinterpret_cast\`, and \`dynamic_cast\` also emit the argument. \`(void)x;\` is dropped (silences unused in clangd).
 
 To branch on Instance class at runtime, use [\`match\`](match) (\`IsA\`).`,
-  exampleClpp: `Folder* folder = static_cast<Folder*>(existingFolder);`,
+  exampleClpp: `Folder folder = static_cast<Folder>(existingFolder);`,
   exampleLuau: `local folder: Folder = existingFolder`,
   see: ["match", "instance-pointer", "auto"],
 });
@@ -308,7 +308,7 @@ add({
   header: "Literal",
   summary:
     "Absence of a value. `nullptr` is accepted as a synonym. Emits Luau `nil`.",
-  syntax: `T* ref = null;
+  syntax: `Player ref = null;
 if (player != null) { }`,
   params: [],
   returns: "The `nil` value.",
@@ -316,7 +316,7 @@ if (player != null) { }`,
   description: `There is no C \`NULL\` macro. Compare with [\`!=\`](operator-comparison). [\`guard (player != null)\`](guard) is the usual early-out.
 
 Uninitialized locals (\`int coins;\`) also emit \`nil\` — always initialize.`,
-  exampleClpp: `Player* playerRef = null;
+  exampleClpp: `Player playerRef = null;
 guard (playerRef != null) else {
     return;
 }`,
@@ -348,7 +348,7 @@ In \`init()\`, a synthetic \`__janitor\` is created and also \`game:BindToClose\
   exampleClpp: `#include <clpp/roblox.clh>
 
 void init() {
-    Players* players = GetService<Players>();
+    Players players = GetService<Players>();
     post("ready");
 }`,
   exampleLuau: `local players: Players = game:GetService("Players")
@@ -376,7 +376,7 @@ add({
   description: `Only valid inside [\`Class::Method\`](class-method). A free function or \`void init()\` that uses \`@this\` / \`@field\` is an error.
 
 \`@this\` is a value: pass it to other functions (\`other.Register(@this)\` → \`other:Register(self)\`). There is no \`this->\` and no \`@this\` parameter on the signature — \`::\` already injects the receiver.`,
-  exampleClpp: `void CombatServer::BindPart(BasePart* part) {
+  exampleClpp: `void CombatServer::BindPart(BasePart part) {
     @janitor.Add(part, "Destroy");
     other.Register(@this);
 }`,
@@ -484,7 +484,7 @@ add({
   returns: "Nothing. Luau omits the return annotation (or uses `()` internally).",
   emit: "(no return annotation)",
   description: `\`return;\` is valid. \`return expr;\` in a \`void\` function should be avoided. There is no \`void*\`.`,
-  exampleClpp: `void CreateLeaderstats(Player* player) {
+  exampleClpp: `void CreateLeaderstats(Player player) {
     return;
 }`,
   exampleLuau: `const function CreateLeaderstats(player: Player)
@@ -514,16 +514,16 @@ add({
   header: "Type",
   summary:
     "Infer the type from the initializer. Prefer explicit types on parameters and struct fields.",
-  syntax: `auto* players = GetService<Players>();
+  syntax: `auto players = GetService<Players>();
 auto janitor = new Janitor();
 auto [ok, result] = pcall(fn);`,
   params: [],
   returns: "Whatever the initializer produces.",
   emit: "local name = …  (Luau annotation when known)",
-  description: `Inferred for \`new Class(...)\`, [\`GetService<T>()\`](GetService), datatype constructors, and destructuring. \`auto*\` is the Instance form.
+  description: `Inferred for \`new Class(...)\`, [\`GetService<T>()\`](GetService), datatype constructors, and destructuring.
 
 Do not use \`auto\` as a replacement for a public API type.`,
-  exampleClpp: `auto* coins = new IntValue(leaderstats);`,
+  exampleClpp: `auto coins = new IntValue(leaderstats);`,
   exampleLuau: `local coins: IntValue = Instance.new("IntValue")
 coins.Parent = leaderstats`,
   see: ["new", "GetService", "destructure"],
@@ -540,7 +540,7 @@ add({
   returns: "`T` or [`null`](null).",
   emit: "T?",
   description: `Not \`std::optional\` with \`.value()\`. Test with \`!= null\` or [\`guard\`](guard).`,
-  exampleClpp: `optional<Player*> target = null;`,
+  exampleClpp: `optional<Player> target = null;`,
   exampleLuau: `local target: Player? = nil`,
   see: ["null", "guard"],
 });
@@ -560,7 +560,7 @@ add({
 
 \`map<K,V>\` is **not** this — see [\`dictionary\`](dictionary).`,
   exampleClpp: `array<string> names = {"Kartz", "Player1"};
-for (string n : names) {
+for (string n in names) {
     post(n);
 }`,
   exampleLuau: `local names: {string} = { "Kartz", "Player1" }
@@ -605,12 +605,12 @@ add({
   emit: "{ [K]: V }",
   description: `Initializer entries are \`{"Key", value}\` pairs, emitted as \`Key = value\` when the key is a string.
 
-Read/write: \`stats:Coins\` → \`stats.Coins\`. Do **not** use \`.Coins\` unless \`stats\` is an Instance.`,
+Read/write: \`stats.Coins\` → \`stats.Coins\`. Instance properties use the same \`.\`.`,
   exampleClpp: `dictionary<string, int> stats = {
     {"Coins", 100},
     {"Gems", 50}
 };
-post(stats:Coins);`,
+post(stats.Coins);`,
   exampleLuau: `local stats: { [string]: number } = { Coins = 100, Gems = 50 }
 print(stats.Coins)`,
   see: ["array", "operator-table"],
@@ -618,20 +618,20 @@ print(stats.Coins)`,
 
 add({
   id: "instance-pointer",
-  title: "T* (Instance)",
-  sidebar: "T*",
+  title: "Instance types",
+  sidebar: "Instance",
   header: "Type",
   summary:
-    "`Player*` means an Instance of class Player — not a heap pointer. There is no `delete`, `*p`, `&p`, `int&`, or `->`.",
-  syntax: `Player* player = null;
+    "Write the Roblox class name. `Player player` is an Instance of class Player. Do not write `Player*`, `*p`, `&p`, `int&`, or `->`.",
+  syntax: `Player player = null;
 player.Name = "Kartz";
 player.FindFirstChild("leaderstats");`,
   params: [],
   returns: "The Instance.",
-  emit: "Player  (star stripped)",
+  emit: "Player",
   description: `Properties and instance methods use [\`.\`](operator-property). Protected calls use [\`:\`](operator-table). Static names use [\`::\`](operator-method). Lifetime is Roblox's: \`Destroy\` or Janitor.
 
-[\`match\`](match) arms write the class name (\`Part p\`), not a pointer (\`Part* p\`).
+[\`match\`](match) arms use the same class name (\`Part p\`).
 
 [\`observable\`](observable) of a non-primitive becomes \`ObjectValue\`.`,
   exampleClpp: `player.Name = "Kartz";
@@ -671,12 +671,12 @@ add({
   header: "Type",
   summary:
     "Typed BindableEvent. Declaration emits `__signal()`. Fire with `.Fire`; listen with `~>` or `::Connect`.",
-  syntax: "signal<Player*, int> OnCoinsUpdated;",
+  syntax: "signal<Player, int> OnCoinsUpdated;",
   params: [{ name: "T...", type: "types", desc: "Payload types, comma-separated." }],
   returns: "A signal object (`RBXScriptSignal`-like).",
   emit: "__signal()",
   description: `See the operations: [\`Fire\`](Fire), [\`Connect\`](Connect), [\`Once\`](Once), [\`Wait\`](Wait). Prefer [\`~>\`](operator-janitor) so Janitor owns the connection.`,
-  exampleClpp: `signal<Player*, int> OnCoinsUpdated;
+  exampleClpp: `signal<Player, int> OnCoinsUpdated;
 OnCoinsUpdated.Fire(player, 500);`,
   exampleLuau: `local OnCoinsUpdated = __signal()
 OnCoinsUpdated:Fire(player, 500)`,
@@ -767,7 +767,7 @@ auto child = workspace:FindFirstChild("x");`,
 
 Bare \`Table:Key\` without \`()\` still emits \`Table.Key\` (old table-key spelling). New code uses \`.\`: \`DataService.Server\`.`,
   exampleClpp: `age: int = 10;
-Instance* child = workspace:FindFirstChild("Missing");
+Instance child = workspace:FindFirstChild("Missing");
 guard (child != null) else {
     return;
 }`,
@@ -850,10 +850,10 @@ signal~>Once(fn);`,
 Bare \`::Connect\` does **not** register with Janitor. Prefer \`~>\` in production.
 
 \`Once\` disconnects after the first emission.`,
-  exampleClpp: `players.PlayerAdded~>Connect(func (Player* player) {
+  exampleClpp: `players.PlayerAdded~>Connect(func (Player player) {
     post("Connected and managed automatically!");
 });
-players.PlayerAdded~>Once(func (Player* player) {
+players.PlayerAdded~>Once(func (Player player) {
     post("First player only");
 });`,
   exampleLuau: `janitor:Add(players.PlayerAdded:Connect(function(player: Player)
@@ -1055,7 +1055,7 @@ add({
   ],
   returns: "None.",
   emit: "local i = 0 / while i < n do / i += 1",
-  description: `The \`:\` of [range-for](range-for) is a different form: \`for (T name : collection)\`. Do not mix them.`,
+  description: `The \`:\` of [range-for](range-for) is a different form: \`for (T name in collection)\`. Do not mix them.`,
   exampleClpp: `for (int i = 0; i < 10; i++) {
     post("Count: " .: i);
 }`,
@@ -1069,11 +1069,11 @@ end`,
 
 add({
   id: "range-for",
-  title: "for (T x : list)",
+  title: "for (T x in list)",
   sidebar: "for-each",
   header: "Control flow",
   summary: "Range-for. Emits `for _, x in list`. The `:` here is not a table key.",
-  syntax: "for (T x : list) {\n}",
+  syntax: "for (T x in list) {\n}",
   params: [
     { name: "T", type: "type", desc: "Element type." },
     { name: "x", type: "ident", desc: "Loop variable." },
@@ -1084,7 +1084,7 @@ add({
   description: `The index is discarded (\`_\`). To get keys, iterate a dictionary in Luau style via a helper, or use C-for on numeric arrays.
 
 Parentheses and braces are required.`,
-  exampleClpp: `for (Player* player : players.GetPlayers()) {
+  exampleClpp: `for (Player player in players.GetPlayers()) {
     post("Player connected: " .: player.Name);
 }`,
   exampleLuau: `for _, player in players:GetPlayers() do
@@ -1239,7 +1239,7 @@ add({
   description: `No overloading. No default arguments. No templates except [\`GetService<T>\`](GetService) / collections / [\`static_cast\`](static_cast).
 
 [\`async\`](async) functions may [\`await\`](await). [\`void init()\`](init) is the script entry.`,
-  exampleClpp: `void CreateLeaderstats(Player* player) {
+  exampleClpp: `void CreateLeaderstats(Player player) {
     return;
 }
 
@@ -1272,7 +1272,7 @@ func cb = func () {};`,
   description: `[\`func\`](func) is both the type and the keyword that starts an inline callback. Passing a method by name from inside \`Class::\` binds \`self\`: \`function(...) self:OnPlayer(...) end\`.
 
 Keep Instances alive with Janitor; closures do not own Roblox lifetime. Do **not** write \`func [](…)\` or \`[]() { }\`.`,
-  exampleClpp: `players.PlayerAdded~>Connect(func (Player* playerEntered) {
+  exampleClpp: `players.PlayerAdded~>Connect(func (Player playerEntered) {
     post("New player: " .: playerEntered.Name);
 });`,
   exampleLuau: `janitor:Add(players.PlayerAdded:Connect(function(playerEntered: Player)
@@ -1294,8 +1294,8 @@ add({
   returns: "`T`.",
   emit: "const function  (body uses __await)",
   description: `[\`await expr\`](await) calls \`__await\`: if the value has \`:expect()\` (Promise), wait; otherwise return it (already yielded).`,
-  exampleClpp: `async Data* FetchData(Player* player) {
-    Data* data = await DataService.Server.WaitFor(player);
+  exampleClpp: `async Data FetchData(Player player) {
+    Data data = await DataService.Server.WaitFor(player);
     return data;
 }`,
   exampleLuau: `const function FetchData(player: Player): Data
@@ -1315,7 +1315,7 @@ add({
   returns: "The resolved value.",
   emit: "__await(expr)",
   description: `Not JS \`await\` in the event loop sense beyond what Luau Promises provide. Use [\`spawn\`](spawn) to run a block without blocking the caller.`,
-  exampleClpp: `Data* data = await DataService.Server.WaitFor(player);`,
+  exampleClpp: `Data data = await DataService.Server.WaitFor(player);`,
   exampleLuau: `local data: Data = __await(DataService.Server:WaitFor(player))`,
   see: ["async", "spawn", "pcall"],
 });
@@ -1393,8 +1393,8 @@ add({
   summary:
     "Declare the type in a `.clh`. Implement `Class::Method` in the sibling `.clp` / `.clpp`.",
   syntax: `struct LeaderstatsServer {
-    Janitor* janitor;
-    void OnPlayer(Player* player);
+    Janitor janitor;
+    void OnPlayer(Player player);
 };`,
   params: [],
   returns: "A type (and, for field-only headers, a constructor function).",
@@ -1407,7 +1407,7 @@ Stems must match: \`LeaderstatsServer.clh\` beside \`LeaderstatsServer.server.cl
 
 Instances are not RAII. Leaving a block does **not** \`Destroy\` — use Janitor.`,
   exampleClpp: `struct LeaderstatsServer {
-    Janitor* janitor;
+    Janitor janitor;
 };`,
   exampleLuau: `-- export type LeaderstatsServer = { janitor: Janitor, ... }`,
   see: ["class-method", "this", "init", "access-labels"],
@@ -1428,7 +1428,7 @@ add({
   description: `[\`this\`](this) / [\`@this\`](this) is \`self\`. Bare fields become \`self.field\`. \`@janitor\` is \`self.janitor\`. Untagged files with only \`Class::\` \`return\` the table (ModuleScript).
 
 Construct **one** service in [\`init()\`](init) and use it from lambdas.`,
-  exampleClpp: `void LeaderstatsServer::OnPlayer(Player* player) {
+  exampleClpp: `void LeaderstatsServer::OnPlayer(Player player) {
     post(player.Name);
 }`,
   exampleLuau: `function LeaderstatsServer:OnPlayer(player: Player)
@@ -1472,7 +1472,7 @@ add({
   returns: "`void`.",
   emit: "name:Fire(...)",
   description: `This is **send**. Listening is [\`Connect\`](Connect) / [\`Once\`](Once) / [\`~>\`](operator-janitor).`,
-  exampleClpp: `signal<Player*, int> OnCoinsUpdated;
+  exampleClpp: `signal<Player, int> OnCoinsUpdated;
 OnCoinsUpdated.Fire(player, 500);`,
   exampleLuau: `local OnCoinsUpdated = __signal()
 OnCoinsUpdated:Fire(player, 500)`,
@@ -1490,7 +1490,7 @@ name~>Connect(fn);`,
   returns: "A connection with `:Disconnect()`.",
   emit: "name:Connect(fn)  — or janitor:Add(..., \"Disconnect\")",
   description: `Works on \`signal<T>\`, RBXScriptSignals (\`PlayerAdded\`), and anything with \`:Connect\`.`,
-  exampleClpp: `players.PlayerAdded::Connect(func (Player* player) {
+  exampleClpp: `players.PlayerAdded::Connect(func (Player player) {
     post(player.Name);
 });`,
   exampleLuau: `players.PlayerAdded:Connect(function(player: Player)
@@ -1510,7 +1510,7 @@ name~>Once(fn);`,
   returns: "A connection.",
   emit: "name:Once(fn)",
   description: `Use for “first player only”, one-shot setup, or handshake events.`,
-  exampleClpp: `players.PlayerAdded~>Once(func (Player* player) {
+  exampleClpp: `players.PlayerAdded~>Once(func (Player player) {
     post("First player only");
 });`,
   exampleLuau: `janitor:Add(players.PlayerAdded:Once(function(player: Player)
@@ -1581,13 +1581,13 @@ add({
   header: "Attribute",
   summary: "Function exists on the server only.",
   syntax: `[[server]]
-void SaveData(Player* player) { }`,
+void SaveData(Player player) { }`,
   params: [],
   returns: "Per function.",
   emit: "omitted on client files; RunService:IsServer() wrapper in modules",
   description: `On a \`.client.clpp\`, the function is omitted. On a \`.server.clpp\`, it emits normally. In a module, emit wraps \`RunService:IsServer()\`.`,
   exampleClpp: `[[server]]
-void SaveData(Player* player) {}`,
+void SaveData(Player player) {}`,
   exampleLuau: `-- emitted only when the file is a server Script / IsServer()`,
   see: ["attr-client", "../files"],
 });
@@ -1701,7 +1701,7 @@ add({
   description: `Gives the editor \`game\`, \`workspace\`, services, and the usual Roblox globals. Runtime wiring of generated Instance classes is [Cluaupp](https://github.com/KartzRbx/Cluaupp).`,
   exampleClpp: `#include <clpp/roblox.clh>
 void init() {
-    Players* players = GetService<Players>();
+    Players players = GetService<Players>();
 }`,
   exampleLuau: `local players: Players = game:GetService("Players")`,
   see: ["GetService", "include", "header-instances"],
@@ -1753,7 +1753,7 @@ add({
   emit: "require(Janitor)",
   description: `\`new Janitor()\` emits \`Janitor.new()\`. \`~>\` looks up a janitor in scope.`,
   exampleClpp: `#include <clpp/libs/janitor.clh>
-auto* janitor = new Janitor();`,
+auto janitor = new Janitor();`,
   exampleLuau: `local Janitor = require(...)
 local janitor = Janitor.new()`,
   see: ["operator-janitor", "new", "include"],
@@ -1764,7 +1764,7 @@ add({
   title: "<clpp/libs/dataservice.clh>",
   sidebar: "dataservice.clh",
   header: "Standard header",
-  summary: "DataService table (`:Server` / `:Client`) plus `require`.",
+  summary: "DataService table (`.Server` / `.Client`) plus `require`.",
   syntax: "#include <clpp/libs/dataservice.clh>",
   params: [],
   returns: "None.",
@@ -1864,7 +1864,7 @@ The generated **API** tab ([Builtins](/CLPP/api/Builtins), [Operators](/CLPP/api
 <li><a href="/CLPP/docs/reference/array">array&lt;T&gt;</a></li>
 <li><a href="/CLPP/docs/reference/vector">vector&lt;T&gt;</a></li>
 <li><a href="/CLPP/docs/reference/dictionary">dictionary&lt;K,V&gt;</a></li>
-<li><a href="/CLPP/docs/reference/instance-pointer">T* (Instance)</a></li>
+<li><a href="/CLPP/docs/reference/instance-pointer">Instance types</a></li>
 <li><a href="/CLPP/docs/reference/const">const</a></li>
 <li><a href="/CLPP/docs/reference/signal-type">signal&lt;T...&gt;</a></li>
 <li><a href="/CLPP/docs/reference/observable">observable T</a></li>
@@ -1874,9 +1874,9 @@ The generated **API** tab ([Builtins](/CLPP/api/Builtins), [Operators](/CLPP/api
 <div>
 <h3>Operators</h3>
 <ul>
-<li><a href="/CLPP/docs/reference/operator-method">:: method / scope</a></li>
-<li><a href="/CLPP/docs/reference/operator-table">: table key</a></li>
-<li><a href="/CLPP/docs/reference/operator-property">. property</a></li>
+<li><a href="/CLPP/docs/reference/operator-method">:: static / manual Connect</a></li>
+<li><a href="/CLPP/docs/reference/operator-table">: type / protected call</a></li>
+<li><a href="/CLPP/docs/reference/operator-property">. property / instance method</a></li>
 <li><a href="/CLPP/docs/reference/operator-concat">.: concat</a></li>
 <li><a href="/CLPP/docs/reference/operator-janitor">~&gt; janitor</a></li>
 <li><a href="/CLPP/docs/reference/operator-arithmetic">+ − * /</a></li>
@@ -1894,7 +1894,7 @@ The generated **API** tab ([Builtins](/CLPP/api/Builtins), [Operators](/CLPP/api
 <li><a href="/CLPP/docs/reference/if">if / else if / else</a></li>
 <li><a href="/CLPP/docs/reference/while">while</a></li>
 <li><a href="/CLPP/docs/reference/for">for (C-style)</a></li>
-<li><a href="/CLPP/docs/reference/range-for">for (T x : list)</a></li>
+<li><a href="/CLPP/docs/reference/range-for">for (T x in list)</a></li>
 <li><a href="/CLPP/docs/reference/switch">switch</a></li>
 <li><a href="/CLPP/docs/reference/guard">guard</a></li>
 <li><a href="/CLPP/docs/reference/match">match</a></li>

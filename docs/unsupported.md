@@ -7,7 +7,7 @@ title: What CL++ does not do
 CL++ is a **subset**. If you reach for these, rewrite the idea in Luau terms.
 
 - Full ISO C++ (templates, overloading, RAII `delete`, `std::`)
-- `->`, `int&`, pointer arithmetic, `*part`
+- `->`, `int&`, pointer arithmetic, `*part`, `Player*` (write `Player`)
 - `continue`, ternary `? :`, `do/while`, `try/catch`, `goto`
 - C++ lambda captures `[x]`, `[&]`, `func [](…)`, `[]() { }`
 - `@this` / `@field` outside `Class::Method`

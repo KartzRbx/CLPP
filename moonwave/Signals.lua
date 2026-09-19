@@ -16,7 +16,7 @@ local Signals = {}
 --[=[
 	Declare a typed signal.
 
-	**Syntax:** `signal<Player*, int> OnCoinsUpdated;`
+	**Syntax:** `signal<Player, int> OnCoinsUpdated;`
 
 	**Emit:** `local OnCoinsUpdated = __signal()`
 
@@ -33,7 +33,7 @@ local Signals = {}
 	**Emit:** `name:Fire(...)`
 
 	```clpp
-	signal<Player*, int> OnCoinsUpdated;
+	signal<Player, int> OnCoinsUpdated;
 	OnCoinsUpdated.Fire(player, 500);
 	```
 

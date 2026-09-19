@@ -40,17 +40,17 @@ Formatting is StyLua's job; Luau type checking is `luau-analyze`'s job.
 
 | CL++ | Luau |
 | --- | --- |
-| `string GetPlayerJanitorKey(Player* player)` | `const function GetPlayerJanitorKey(player: Player): string` |
+| `string GetPlayerJanitorKey(Player player)` | `const function GetPlayerJanitorKey(player: Player): string` |
 | `player.Name .: "_LeaderstatsJanitor"` | `player.Name .. "_LeaderstatsJanitor"` |
 | `currentValue.Value != newValue` | `currentValue.Value ~= newValue` |
 | `player.FindFirstChild("leaderstats")` | `player:FindFirstChild("leaderstats")` |
-| `static_cast<Folder*>(existingFolder)` | `existingFolder` (annotated `Folder`) |
+| `static_cast<Folder>(existingFolder)` | `existingFolder` (annotated `Folder`) |
 | `new Folder(player)` | `Instance.new("Folder"); folder.Parent = player` |
 | `new IntValue(newFolder)` | `Instance.new("IntValue"); coins.Parent = newFolder` |
 | `GetService<Players>()` | `game:GetService("Players")` |
 | `DataService.Server.WaitFor(player)` | `DataService.Server:WaitFor(player)` |
 | `signal::Connect(func (int n) { ... })` | `signal:Connect(function(n: number) ... end)` |
-| `for (Player* player in players.GetPlayers())` | `for _, player in players:GetPlayers() do` |
+| `for (Player player in players.GetPlayers())` | `for _, player in players:GetPlayers() do` |
 | `game.BindToClose(func () { ... })` | `game:BindToClose(function() ... end)` |
 | `null` / `if (existingFolder)` | `nil` / truthy |
 | `observable int coins = 100` | `Instance.new("IntValue"); coins.Value = 100` |

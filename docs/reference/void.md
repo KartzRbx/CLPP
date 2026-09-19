@@ -36,7 +36,7 @@ Nothing. Luau omits the return annotation (or uses `()` internally).
 ## Example
 
 ```clpp
-void CreateLeaderstats(Player* player) {
+void CreateLeaderstats(Player player) {
     return;
 }
 ```

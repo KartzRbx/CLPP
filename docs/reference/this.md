@@ -43,7 +43,7 @@ Only valid inside [`Class::Method`](class-method). A free function or `void init
 ## Example
 
 ```clpp
-void CombatServer::BindPart(BasePart* part) {
+void CombatServer::BindPart(BasePart part) {
     @janitor.Add(part, "Destroy");
     other.Register(@this);
 }

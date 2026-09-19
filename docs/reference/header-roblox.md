@@ -36,7 +36,7 @@ Gives the editor `game`, `workspace`, services, and the usual Roblox globals. Ru
 ```clpp
 #include <clpp/roblox.clh>
 void init() {
-    Players* players = GetService<Players>();
+    Players players = GetService<Players>();
 }
 ```
 

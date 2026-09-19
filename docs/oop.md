@@ -12,20 +12,20 @@ title: Structs and methods
 
 struct LeaderstatsServer {
     static constexpr int STARTING_COINS = 0;
-    Janitor* janitor;
-    void PlayerEntered(Player* player);
+    Janitor janitor;
+    void PlayerEntered(Player player);
 };
 ```
 
 ## Implementation
 
 ```clpp
-void LeaderstatsServer::PlayerEntered(Player* player) {
+void LeaderstatsServer::PlayerEntered(Player player) {
     guard (player != null) else {
         warn("Invalid player");
         return;
     }
-    Folder* folder = new Folder(player);
+    Folder folder = new Folder(player);
     folder.Name = "leaderstats";
 }
 ```
@@ -36,15 +36,15 @@ void LeaderstatsServer::PlayerEntered(Player* player) {
 
 ```clpp
 void init() {
-    Players* players = GetService<Players>();
+    Players players = GetService<Players>();
     LeaderstatsServer leaderstatsServer;
 
-    for (Player* player : players.GetPlayers()) {
-        leaderstatsServer::PlayerEntered(player);
+    for (Player player in players.GetPlayers()) {
+        leaderstatsServer.PlayerEntered(player);
     }
 
-    players.PlayerAdded~>Connect(func (Player* playerEntered) {
-        leaderstatsServer::PlayerEntered(playerEntered);
+    players.PlayerAdded~>Connect(func (Player playerEntered) {
+        leaderstatsServer.PlayerEntered(playerEntered);
     });
 }
 ```

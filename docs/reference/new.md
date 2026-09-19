@@ -12,8 +12,8 @@ Constructs a Roblox Instance or a library object. Not C++ heap allocation — th
 ## Syntax
 
 ```clpp
-auto* child = new Class(parent);
-auto* janitor = new Janitor();
+auto child = new Class(parent);
+auto janitor = new Janitor();
 ```
 
 ## Parameters
@@ -42,8 +42,8 @@ The constructed object.
 ## Example
 
 ```clpp
-auto* coins = new IntValue(leaderstats);
-auto* janitor = new Janitor();
+auto coins = new IntValue(leaderstats);
+auto janitor = new Janitor();
 part.Size = Vector3(8, 1, 8);
 ```
 

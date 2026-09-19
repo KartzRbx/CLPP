@@ -34,8 +34,8 @@ CL++ is the **language**. You write C++-looking source; `clpp` emits one Luau fi
 #include <clpp/roblox.clh>
 
 void init() {
-    Players* players = GetService<Players>();
-    players.PlayerAdded~>Connect(func (Player* player) {
+    Players players = GetService<Players>();
+    players.PlayerAdded~>Connect(func (Player player) {
         post("hello, " .: player.Name);
     });
 }

@@ -36,7 +36,7 @@ This is not a protected call and not a C-style `for` header. Prefer `in`. The C+
 ## Example
 
 ```clpp
-for (Player* player in players.GetPlayers()) {
+for (Player player in players.GetPlayers()) {
     post("Player connected: " .: player.Name);
 }
 ```

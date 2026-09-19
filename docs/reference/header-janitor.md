@@ -35,7 +35,7 @@ None.
 
 ```clpp
 #include <clpp/libs/janitor.clh>
-auto* janitor = new Janitor();
+auto janitor = new Janitor();
 ```
 
 Emits:

@@ -39,7 +39,7 @@ local Collections = {}
 ]=]
 
 --[=[
-	String-keyed (or typed-key) map. Access keys with `:`, not `.`.
+	String-keyed (or typed-key) map. Access keys with `.`.
 
 	**Syntax:**
 	```clpp
@@ -47,7 +47,7 @@ local Collections = {}
 	    {"Coins", 100},
 	    {"Gems", 50}
 	};
-	post(stats:Coins);
+	post(stats.Coins);
 	```
 
 	**Emit:** `{ [K]: V }` with `Key = value` fields

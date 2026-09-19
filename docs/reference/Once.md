@@ -37,7 +37,7 @@ Use for “first player only”, one-shot setup, or handshake events.
 ## Example
 
 ```clpp
-players.PlayerAdded~>Once(func (Player* player) {
+players.PlayerAdded~>Once(func (Player player) {
     post("First player only");
 });
 ```

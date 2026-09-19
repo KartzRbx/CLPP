@@ -1,13 +1,10 @@
 #include <clpp/roblox.clh>
 
-void init() {
-    Players* players = GetService<Players>();
-    Player* localPlayer = players.LocalPlayer;
-    guard (localPlayer != null) else {
-        return;
-    }
+struct VideCounter {
+    void Mount(PlayerGui playerGui);
+};
 
-    Instance* playerGui = localPlayer.WaitForChild("PlayerGui");
+void VideCounter::Mount(PlayerGui playerGui) {
     auto create = Vide.create;
     auto source = Vide.source;
     auto apply = Vide.apply;
@@ -43,4 +40,16 @@ void init() {
 
     auto mount = apply(gui);
     mount({ label, button });
+}
+
+void init() {
+    Players players = GetService<Players>();
+    Player localPlayer = players.LocalPlayer;
+    guard (localPlayer != null) else {
+        return;
+    }
+
+    PlayerGui playerGui = localPlayer.WaitForChild("PlayerGui");
+    VideCounter counter;
+    counter.Mount(playerGui);
 }

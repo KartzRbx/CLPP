@@ -12,7 +12,7 @@ local Attributes = {}
 --[=[
 	Runs on the server only.
 
-	**Syntax:** `[[server]] void SaveData(Player* player) { }`
+	**Syntax:** `[[server]] void SaveData(Player player) { }`
 
 	**Emit:** omitted on client files; `IsServer()` wrapper in modules
 

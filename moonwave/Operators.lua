@@ -113,7 +113,7 @@ local Operators = {}
 	```clpp
 	string first = items[0];
 	playerData["Coins"] = 600;
-	Instance* root = character["HumanoidRootPart"];
+	Instance root = character["HumanoidRootPart"];
 	```
 
 	@function []
@@ -162,7 +162,7 @@ local Operators = {}
 
 	**Syntax:** `name = value;` · `name += 1;`
 
-	**Emit:** `=` `+=` `-=` `*=` `/=`
+	**Emit:** `=` `+=` `-=` `**=` `/=`
 
 	@function =
 	@within Operators

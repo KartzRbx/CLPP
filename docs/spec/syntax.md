@@ -13,7 +13,7 @@ Extensions and tags: [Files](files.md). Types: [Types](types.md). Emit: [Mapping
 ## Functions
 
 ```clpp
-void CreateLeaderstats(Player* player) {
+void CreateLeaderstats(Player player) {
     return;
 }
 
@@ -63,7 +63,7 @@ for (int i = 0; i < 10; i++) {
     post("Count: " .: i);
 }
 
-for (Player* player in players.GetPlayers()) {
+for (Player player in players.GetPlayers()) {
     post("Player connected: " .: player.Name);
 }
 
@@ -110,7 +110,7 @@ end
 
 `switch` evaluates the discriminant **once**, then becomes `if` / `elseif` / `else` inside `repeat … until true` so `break` still leaves the switch. Stacked `case`s share the body. No C-style fall-through.
 
-`else if` emits Luau `elseif`. Range-for: `for (Type name : list)`. C loop: `for (int i = 0; i < n; i++)`. Unsupported: `continue`, `do/while`, ternary, `->`.
+`else if` emits Luau `elseif`. Range-for: `for (Type name in list)`. C loop: `for (int i = 0; i < n; i++)`. Unsupported: `continue`, `do/while`, ternary, `->`.
 
 ## Expressions and operators
 
@@ -203,9 +203,9 @@ error("failed")
 ## `new` and services
 
 ```clpp
-auto* coins = new IntValue(leaderstats);
-auto* players = GetService<Players>();
-auto* janitor = new Janitor();
+auto coins = new IntValue(leaderstats);
+auto players = GetService<Players>();
+auto janitor = new Janitor();
 part.Size = Vector3(8, 1, 8);
 part.CFrame = CFrame.lookAt(from, look);
 part.Material = Enum.Material.Plastic;
@@ -232,7 +232,7 @@ func onCoinsChanged = func (int newValue) {
     post("New value: " .: newValue);
 };
 
-players.PlayerAdded::Connect(func (Player* playerEntered) {
+players.PlayerAdded::Connect(func (Player playerEntered) {
     post("New player: " .: playerEntered.Name);
 });
 
@@ -344,11 +344,11 @@ print(player.Name)
 `signal~>Connect(fn)` and `signal~>Once(fn)` register the connection on the scope Janitor (`janitor` local, `self.janitor`, or a synthetic `__janitor`). `Once` disconnects after the first emission. In `void init()`, the synthetic `__janitor` also gets `game:BindToClose`.
 
 ```clpp
-players.PlayerAdded~>Connect(func (Player* player) {
+players.PlayerAdded~>Connect(func (Player player) {
     post("Connected and managed automatically!");
 });
 
-players.PlayerAdded~>Once(func (Player* player) {
+players.PlayerAdded~>Once(func (Player player) {
     post("First player only");
 });
 ```
@@ -365,13 +365,13 @@ end), "Disconnect")
 ## signal
 
 ```clpp
-signal<Player*, int> OnCoinsUpdated;
+signal<Player, int> OnCoinsUpdated;
 
-OnCoinsUpdated~>Connect(func (Player* player, int newAmount) {
+OnCoinsUpdated~>Connect(func (Player player, int newAmount) {
     post(player.Name .: ": " .: newAmount);
 });
 
-OnCoinsUpdated~>Once(func (Player* player, int newAmount) {
+OnCoinsUpdated~>Once(func (Player player, int newAmount) {
     post("first: " .: newAmount);
 });
 
@@ -409,8 +409,8 @@ end)
 ## async / await
 
 ```clpp
-async Data* FetchData(Player* player) {
-    Data* data = await DataService.Server.WaitFor(player);
+async Data FetchData(Player player) {
+    Data data = await DataService.Server.WaitFor(player);
     return data;
 }
 ```
@@ -440,7 +440,7 @@ match (instance) {
 };
 
 [[server]]
-void SaveData(Player* player) {}
+void SaveData(Player player) {}
 
 [[client]]
 void UpdateUI() {}

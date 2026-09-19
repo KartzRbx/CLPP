@@ -36,7 +36,7 @@ Not `std::optional` with `.value()`. Test with `!= null` or [`guard`](guard).
 ## Example
 
 ```clpp
-optional<Player*> target = null;
+optional<Player> target = null;
 ```
 
 Emits:

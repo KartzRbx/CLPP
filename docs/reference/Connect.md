@@ -37,7 +37,7 @@ Works on `signal<T>`, RBXScriptSignals (`PlayerAdded`), and anything with `:Conn
 ## Example
 
 ```clpp
-players.PlayerAdded::Connect(func (Player* player) {
+players.PlayerAdded::Connect(func (Player player) {
     post(player.Name);
 });
 ```

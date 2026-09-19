@@ -29,7 +29,7 @@ dictionary<string, int> stats = {
 local stats: { [string]: number } = { Coins = 100, Gems = 50 }
 ```
 
-Table keys in expressions use `:` (`stats:Coins` if you go through a table API). Instance properties stay `.`.
+Table keys in expressions use `.` (`stats.Coins`). Instance properties use the same `.`.
 
 These tables are what Fusion and Vide property lists look like: string keys to values. See [Fusion](ui-fusion) and [Vide](ui-vide).
 

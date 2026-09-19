@@ -27,14 +27,14 @@ func CanMerge = func (ItemStack a, ItemStack b) {
     return true;
 };
 
-ItemStack* FindTool(Model* character, string id) {
+ItemStack FindTool(Model character, string id) {
     guard (character != null) else { return null; }
 
-    for (Instance* child : character.GetChildren()) {
+    for (Instance child in character.GetChildren()) {
         match (child) {
             Tool tool => {
                 guard (tool.Name == id) else { /* keep scanning */ }
-                return static_cast<ItemStack*>(null);
+                return static_cast<ItemStack>(null);
             },
             _ => {}
         };
@@ -42,7 +42,7 @@ ItemStack* FindTool(Model* character, string id) {
     return null;
 }
 
-void Grant(Inventory* bag, string id, int n) {
+void Grant(Inventory bag, string id, int n) {
     guard (bag != null) else { report("inventory missing"); }
     guard (n > 0) else { return; }
 
@@ -62,16 +62,16 @@ void Grant(Inventory* bag, string id, int n) {
 | `dictionary<K,V>` | id → count |
 | `func` | first-class predicates |
 | `static_cast<T>` | annotate after `FindFirstChild` |
-| `match { Player p => }` | narrows with `IsA` (class name, not a pointer) |
-| `signal<Player*, ItemStack>` | typed economy events |
+| `match { Player p => }` | narrows with `IsA` |
+| `signal<Player, ItemStack>` | typed economy events |
 | `observable int` | HUD-facing counts |
 
 ## Signal of structs
 
 ```clpp
-signal<Player*, ItemStack> OnGrant;
+signal<Player, ItemStack> OnGrant;
 
-OnGrant~>Connect(func (Player* player, ItemStack stack) {
+OnGrant~>Connect(func (Player player, ItemStack stack) {
     guard (stack.Count > 0) else { return; }
     post(player.Name .: " got " .: stack.Id);
 });

@@ -22,7 +22,7 @@ title: Language cheat sheet
 
 ## Types
 
-`int` `float` `double` `bool` `string` `void` `func` `auto` `optional<T>` `array<T>` `dictionary<K,V>` `Player*` `signal<T...>` `observable T`
+`int` `float` `double` `bool` `string` `void` `func` `auto` `optional<T>` `array<T>` `dictionary<K,V>` `Player` `signal<T...>` `observable T`
 
 ## Control
 
@@ -50,7 +50,7 @@ title: Language cheat sheet
 
 ## Forbidden (by design)
 
-`->` · `continue` · ternary · `do/while` · `try/catch` · `goto` · pointer arithmetic · C++ captures · `func []` · generic templates · `std::`
+`->` · `Player*` · `continue` · ternary · `do/while` · `try/catch` · `goto` · pointer arithmetic · C++ captures · `func []` · generic templates · `std::`
 
 Generated API: [Builtins](/CLPP/api/Builtins) · [Operators](/CLPP/api/Operators) · [Signals](/CLPP/api/Signals)
 

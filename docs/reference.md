@@ -53,7 +53,7 @@ Every utility has its own page: syntax, parameters, return value, Luau emit, exa
 - [array&lt;T&gt;](reference/array)
 - [vector&lt;T&gt;](reference/vector)
 - [dictionary&lt;K,V&gt;](reference/dictionary)
-- [T* (Instance)](reference/instance-pointer)
+- [Instance types](reference/instance-pointer)
 - [const](reference/const)
 - [signal&lt;T...&gt;](reference/signal-type)
 - [observable T](reference/observable)

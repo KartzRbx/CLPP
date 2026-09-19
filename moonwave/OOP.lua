@@ -12,7 +12,7 @@ local OOP = {}
 --[=[
 	Type declaration. `class` is a synonym of `struct`.
 
-	**Syntax:** `struct LeaderstatsServer { Janitor* janitor; };`
+	**Syntax:** `struct LeaderstatsServer { Janitor janitor; };`
 
 	**Emit:** `export type` plus methods; field-only headers emit `const function Name()` with defaults.
 

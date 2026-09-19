@@ -7,7 +7,7 @@ sidebar_label: "dataservice.clh"
 
 <div class="clpp-ref-meta">Standard header</div>
 
-DataService table (`:Server` / `:Client`) plus `require`.
+DataService table (`.Server` / `.Client`) plus `require`.
 
 ## Syntax
 

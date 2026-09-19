@@ -1,16 +1,30 @@
+struct Wallet {
+    int coins;
+    void Add(int n);
+};
+
+void Wallet::Add(int n) {
+    @coins = coins + n;
+    post("wallet " .: @coins);
+}
+
 void Features(int coins) {
     int n = 100;
     float speed = 16.5;
     string name = "Kartz";
     bool isActive = true;
-    func callback = func() {};
-    auto playerRef = null;
+    func callback = func () {};
+    Player playerRef = null;
+    Wallet pocket;
+    pocket.coins = coins;
+    pocket.Add(10);
 
     array<string> names = {"Kartz", "Player1"};
     dictionary<string, int> stats = {
         {"Coins", 100},
         {"Gems", 50}
     };
+    post(stats.Coins);
 
     if (coins > 50) {
         post("Enough balance!");
@@ -31,11 +45,11 @@ void Features(int coins) {
         post("Coins changed to: " .: newValue);
     });
 
-    signal<Player*, int> OnCoinsUpdated;
-    OnCoinsUpdated~>Connect(func (Player* player, int newAmount) {
+    signal<Player, int> OnCoinsUpdated;
+    OnCoinsUpdated~>Connect(func (Player player, int newAmount) {
         post("New coins for " .: player.Name .: ": " .: newAmount);
     });
-    OnCoinsUpdated~>Once(func (Player* player, int newAmount) {
+    OnCoinsUpdated~>Once(func (Player player, int newAmount) {
         post("First coins for " .: player.Name);
     });
     OnCoinsUpdated.Fire(playerRef, wallet);
@@ -62,7 +76,7 @@ void Features(int coins) {
     match (moeda) {
         int a => post(a),
         _ => post("Not found")
-    }; 
+    };
 
     if (success) {
         post("Data loaded successfully!");
@@ -83,13 +97,13 @@ void Features(int coins) {
     };
 }
 
-async Data* FetchData(Player* player) {
-    Data* data = await DataService.Server.WaitFor(player);
+async Data FetchData(Player player) {
+    Data data = await DataService.Server.WaitFor(player);
     return data;
 }
 
 [[server]]
-void SaveData(Player* player) {
+void SaveData(Player player) {
     post(player.Name);
 }
 

@@ -38,7 +38,7 @@ Construct **one** service in [`init()`](init) and use it from lambdas.
 ## Example
 
 ```clpp
-void LeaderstatsServer::OnPlayer(Player* player) {
+void LeaderstatsServer::OnPlayer(Player player) {
     post(player.Name);
 }
 ```

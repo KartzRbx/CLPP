@@ -6,7 +6,7 @@ title: Server and client attributes
 
 ```clpp
 [[server]]
-void SaveData(Player* player) {
+void SaveData(Player player) {
     post("saving " .: player.Name);
 }
 

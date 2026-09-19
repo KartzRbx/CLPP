@@ -64,14 +64,14 @@ function Builtins.report(...) end
 --[=[
 	Looks up a Roblox service by class name. The only generic besides collections and `static_cast`.
 
-	**Syntax:** `T* GetService<T>();`
+	**Syntax:** `T GetService<T>();`
 
 	**Return:** Instance of class `T`
 
 	**Emit:** `game:GetService("T")`
 
 	```clpp
-	Players* players = GetService<Players>();
+	Players players = GetService<Players>();
 	```
 
 	There is no `game:GetService` in CL++ source.
@@ -97,7 +97,7 @@ function Builtins.pcall(fn) end
 --[=[
 	Constructs a Roblox Instance or a library object. Not C++ heap allocation — there is no `delete`.
 
-	**Syntax:** `auto* child = new Class(parent);`
+	**Syntax:** `auto child = new Class(parent);`
 
 	**Emit:** `Instance.new("Class")` for Instances (first arg → `.Parent`); `Janitor.new()` for libs.
 
@@ -181,7 +181,7 @@ function Builtins.to_bool(value) end
 --[=[
 	Absence of a value. `nullptr` is a synonym.
 
-	**Syntax:** `T* ref = null;`
+	**Syntax:** `Player ref = null;`
 
 	**Emit:** `nil`
 

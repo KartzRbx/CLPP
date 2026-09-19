@@ -13,8 +13,8 @@ Declare the type in a `.clh`. Implement `Class::Method` in the sibling `.clp` / 
 
 ```clpp
 struct LeaderstatsServer {
-    Janitor* janitor;
-    void OnPlayer(Player* player);
+    Janitor janitor;
+    void OnPlayer(Player player);
 };
 ```
 
@@ -44,7 +44,7 @@ Instances are not RAII. Leaving a block does **not** `Destroy` — use Janitor.
 
 ```clpp
 struct LeaderstatsServer {
-    Janitor* janitor;
+    Janitor janitor;
 };
 ```
 

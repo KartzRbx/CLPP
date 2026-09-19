@@ -5,7 +5,7 @@ title: Functions and callbacks
 # Functions and callbacks
 
 ```clpp
-void CreateLeaderstats(Player* player) {
+void CreateLeaderstats(Player player) {
     return;
 }
 
@@ -28,7 +28,7 @@ func onCoinsChanged = func (int newValue) {
     post("New value: " .: newValue);
 };
 
-players.PlayerAdded~>Connect(func (Player* playerEntered) {
+players.PlayerAdded~>Connect(func (Player playerEntered) {
     post("New player: " .: playerEntered.Name);
 });
 ```
@@ -40,8 +40,8 @@ Passing a method by name from inside `Class::` binds `self`.
 ## `async`
 
 ```clpp
-async Data* FetchData(Player* player) {
-    Data* data = await DataService.Server.WaitFor(player);
+async Data FetchData(Player player) {
+    Data data = await DataService.Server.WaitFor(player);
     return data;
 }
 ```

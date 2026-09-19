@@ -98,7 +98,7 @@ function Types.func() end
 --[=[
 	Infer the type from the initializer.
 
-	**Syntax:** `auto* players = GetService<Players>();`
+	**Syntax:** `auto players = GetService<Players>();`
 
 	Inferred for `new`, `GetService<T>()`, datatype constructors, and destructuring.
 
@@ -120,23 +120,23 @@ function Types.auto() end
 ]=]
 
 --[=[
-	`Player*` means an Instance of class Player — not a heap pointer.
+	Instance types use the Roblox class name. `Player player` is a Player Instance. Do not write `Player*`.
 
-	**Syntax:** `Player* player = null;` · `player.FindFirstChild("x")`
+	**Syntax:** `Player player = null;` · `player.FindFirstChild("x")`
 
-	**Emit:** star stripped (`Player`)
+	**Emit:** `Player`
 
 	Properties and instance methods use `.` (`player.FindFirstChild`, `player.Kick`). Protected calls use `:`. Static names use `::` (`task::wait`, `Vector3::new`). No `delete`, `*p`, `&p`, `int&`, or `->`.
 
 	```clpp
-	Player* player = null;
+	Player player = null;
 	player.Name = "Kartz";
 	player.FindFirstChild("leaderstats");
 	```
 
-	`match` arms are the class name (`Part p`), not a pointer (`Part* p`).
+	`match` arms use the same class name (`Part p`).
 
-	@function T*
+	@function Instance
 	@within Types
 	@tag type
 ]=]

@@ -38,7 +38,7 @@ Keep Instances alive with Janitor; closures do not own Roblox lifetime. Do **not
 ## Example
 
 ```clpp
-players.PlayerAdded~>Connect(func (Player* playerEntered) {
+players.PlayerAdded~>Connect(func (Player playerEntered) {
     post("New player: " .: playerEntered.Name);
 });
 ```

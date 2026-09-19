@@ -30,13 +30,13 @@ post(coins);  // reads .Value
 ## signal — fire with `.Fire`
 
 ```clpp
-signal<Player*, int> OnCoinsUpdated;
+signal<Player, int> OnCoinsUpdated;
 
-OnCoinsUpdated~>Connect(func (Player* player, int amount) {
+OnCoinsUpdated~>Connect(func (Player player, int amount) {
     post(player.Name .: ": " .: amount);
 });
 
-OnCoinsUpdated~>Once(func (Player* player, int amount) {
+OnCoinsUpdated~>Once(func (Player player, int amount) {
     post("first pay");
 });
 

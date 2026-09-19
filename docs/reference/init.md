@@ -43,7 +43,7 @@ In `init()`, a synthetic `__janitor` is created and also `game:BindToClose`.
 #include <clpp/roblox.clh>
 
 void init() {
-    Players* players = GetService<Players>();
+    Players players = GetService<Players>();
     post("ready");
 }
 ```

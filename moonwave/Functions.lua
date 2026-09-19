@@ -13,7 +13,7 @@ local Functions = {}
 	**Emit:** `const function Name(arg: T): ReturnType`
 
 	```clpp
-	void CreateLeaderstats(Player* player) {
+	void CreateLeaderstats(Player player) {
 	    return;
 	}
 	```
@@ -30,7 +30,7 @@ local Functions = {}
 	**Emit:** `function(arg: T) … end`
 
 	```clpp
-	players.PlayerAdded~>Connect(func (Player* playerEntered) {
+	players.PlayerAdded~>Connect(func (Player playerEntered) {
 	    post("New player: " .: playerEntered.Name);
 	});
 	```

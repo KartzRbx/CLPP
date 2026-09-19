@@ -13,7 +13,7 @@ Two jobs: **types** on names, and **Safe Mode** calls that cannot crash the scri
 
 ```clpp
 age: int = 10;
-void Greet(player: Player*) { }
+void Greet(player: Player) { }
 
 player:Kick();
 auto child = workspace:FindFirstChild("x");
@@ -54,7 +54,7 @@ Bare `Table:Key` without `()` still emits `Table.Key` (old table-key spelling). 
 
 ```clpp
 age: int = 10;
-Instance* child = workspace:FindFirstChild("Missing");
+Instance child = workspace:FindFirstChild("Missing");
 guard (child != null) else {
     return;
 }

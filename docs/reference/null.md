@@ -12,7 +12,7 @@ Absence of a value. `nullptr` is accepted as a synonym. Emits Luau `nil`.
 ## Syntax
 
 ```clpp
-T* ref = null;
+Player ref = null;
 if (player != null) { }
 ```
 
@@ -37,7 +37,7 @@ Uninitialized locals (`int coins;`) also emit `nil` — always initialize.
 ## Example
 
 ```clpp
-Player* playerRef = null;
+Player playerRef = null;
 guard (playerRef != null) else {
     return;
 }

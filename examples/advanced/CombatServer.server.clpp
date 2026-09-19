@@ -2,57 +2,57 @@
 #include <clpp/libs/janitor.clh>
 
 struct CombatServer {
-    Janitor* janitor;
-    signal<Player*, int> OnHit;
-    void PlayerEntered(Player* player);
-    void BindPart(BasePart* part);
+    Janitor janitor;
+    signal<Player, int> OnHit;
+    void PlayerEntered(Player player);
+    void BindPart(BasePart part);
     void WatchWorkspace();
 };
 
-void CombatServer::BindPart(BasePart* part) {
+void CombatServer::BindPart(BasePart part) {
     guard (part != null) else {
         return;
     }
 
-    part.Touched~>Once(func (BasePart* other) {
-        Instance* character = other.Parent;
+    @janitor.Add(part, "Destroy");
+
+    part.Touched~>Once(func (BasePart other) {
+        Instance character = other.Parent;
         guard (character != null) else {
             return;
         }
 
         match (character.FindFirstChild("Humanoid")) {
-            Humanoid* humanoid => {
+            Humanoid humanoid => {
                 guard (humanoid.Health > 0) else {
                     return;
                 }
-                Players* players = GetService<Players>();
-                Player* player = players.GetPlayerFromCharacter(character);
+                Players players = GetService<Players>();
+                Player player = players.GetPlayerFromCharacter(character);
                 guard (player != null) else {
                     return;
                 }
-                OnHit.Fire(player, 10);
-                
+                @OnHit.Fire(player, 10);
                 part.Destroy();
             },
             _ => {
-                for (const Instance* instance in character.GetChildren())  {
+                for (Instance instance in character.GetChildren()) {
                     post(instance.Name);
                 }
-
                 report("touch without humanoid");
             }
         };
     });
 }
 
-void CombatServer::PlayerEntered(Player* player) {
+void CombatServer::PlayerEntered(Player player) {
     guard (player != null) else {
         return;
     }
 
     observable int combo = 1;
 
-    OnHit~>Connect(func (Player* victim, int amount) {
+    @OnHit~>Connect(func (Player victim, int amount) {
         guard (victim == player) else {
             return;
         }
@@ -60,17 +60,17 @@ void CombatServer::PlayerEntered(Player* player) {
         post(player.Name .: " combo " .: combo .: " dmg " .: amount);
     });
 
-    combo.OnChange(func (const int* newValue) {
-        post('NovoValor: ' .: to_string(newValue));
+    combo.OnChange(func (int newValue) {
+        post("NovoValor: " .: to_string(newValue));
     });
 }
 
 [[server]]
 void CombatServer::WatchWorkspace() {
-    workspace.ChildAdded~>Connect(func (Instance* child) {
+    workspace.ChildAdded~>Connect(func (Instance child) {
         match (child) {
-            BasePart* p => BindPart(p),
-            Model* m => post("model spawned " .: m.Name),
+            BasePart p => @this.BindPart(p),
+            Model m => post("model spawned " .: m.Name),
             _ => warn("ignored instance")
         };
     });
@@ -78,21 +78,26 @@ void CombatServer::WatchWorkspace() {
 
 void init() {
     CombatServer combat;
-    combat.janitor = new Janitor();
+    Janitor janitor = new Janitor();
+    combat.janitor = janitor;
 
     spawn {
         task::wait(1);
         post("combat ready");
     };
 
-    Players* players = GetService<Players>();
-    for (Player* player : players.GetPlayers()) {
+    Players players = GetService<Players>();
+    for (Player player in players.GetPlayers()) {
         combat.PlayerEntered(player);
     }
 
-
-    players.PlayerAdded~>Connect(func (Player* p) {
+    players.PlayerAdded~>Connect(func (Player p) {
         combat.PlayerEntered(p);
     });
     combat.WatchWorkspace();
+
+    game.BindToClose(func () {
+        janitor.Cleanup();
+        janitor.Destroy();
+    });
 }

@@ -22,9 +22,9 @@ Hold these five rules and the rest of the language clicks.
 | `players.PlayerAdded~>Connect` | Janitor connection |
 | `a .: b` | string join |
 
-## 3. `T*` is an Instance type, not a pointer
+## 3. Instances are class names
 
-`Player*` is a Roblox `Player`. The star is stripped in Luau. There is no `delete`, no `*player`, no `player->Name`. Lifetime is `Destroy` or Janitor. [`match`](guard-match) arms are the class name: `Part p =>`, not `Part* p`.
+`Player player` is a Roblox `Player`. Do not write `Player*`, `*player`, or `player->Name`. Lifetime is `Destroy` or Janitor. [`match`](guard-match) arms use the same class name: `Part p =>`.
 
 ## 4. `init` starts a script; modules return tables
 

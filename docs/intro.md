@@ -25,7 +25,7 @@ By the end of this course you will:
 #include <clpp/roblox.clh>
 
 void init() {
-    Players* players = GetService<Players>();
+    Players players = GetService<Players>();
     post("online: " .: players.GetPlayers());
 }
 ```

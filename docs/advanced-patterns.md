@@ -11,23 +11,23 @@ A compact combat pickup script: **guard**, **match**, **observable**, **signal**
 #include <clpp/libs/janitor.clh>
 
 struct CombatServer {
-    Janitor* janitor;
-    signal<Player*, int> OnHit;
-    void PlayerEntered(Player* player);
-    void BindPart(BasePart* part);
+    Janitor janitor;
+    signal<Player, int> OnHit;
+    void PlayerEntered(Player player);
+    void BindPart(BasePart part);
 };
 
-void CombatServer::BindPart(BasePart* part) {
+void CombatServer::BindPart(BasePart part) {
     guard (part != null) else { return; }
 
-    part.Touched~>Once(func (BasePart* other) {
-        Instance* character = other.Parent;
+    part.Touched~>Once(func (BasePart other) {
+        Instance character = other.Parent;
         guard (character != null) else { return; }
 
         match (character.FindFirstChild("Humanoid")) {
             Humanoid humanoid => {
                 guard (humanoid.Health > 0) else { return; }
-                Player* player = GetService<Players>().GetPlayerFromCharacter(character);
+                Player player = GetService<Players>().GetPlayerFromCharacter(character);
                 guard (player != null) else { return; }
                 OnHit.Fire(player, 10);
                 part.Destroy();
@@ -37,11 +37,11 @@ void CombatServer::BindPart(BasePart* part) {
     });
 }
 
-void CombatServer::PlayerEntered(Player* player) {
+void CombatServer::PlayerEntered(Player player) {
     guard (player != null) else { return; }
     observable int combo = 0;
 
-    OnHit~>Connect(func (Player* victim, int amount) {
+    OnHit~>Connect(func (Player victim, int amount) {
         guard (victim == player) else { return; }
         combo = combo + 1;
         post(player.Name .: " combo " .: combo .: " dmg " .: amount);
@@ -50,7 +50,7 @@ void CombatServer::PlayerEntered(Player* player) {
 
 [[server]]
 void CombatServer::WatchWorkspace() {
-    workspace.ChildAdded~>Connect(func (Instance* child) {
+    workspace.ChildAdded~>Connect(func (Instance child) {
         match (child) {
             BasePart p => BindPart(p),
             Model m => post("model spawned " .: m.Name),
@@ -68,11 +68,11 @@ void init() {
         post("combat ready");
     };
 
-    Players* players = GetService<Players>();
-    for (Player* player : players.GetPlayers()) {
+    Players players = GetService<Players>();
+    for (Player player in players.GetPlayers()) {
         combat.PlayerEntered(player);
     }
-    players.PlayerAdded~>Connect(func (Player* p) {
+    players.PlayerAdded~>Connect(func (Player p) {
         combat.PlayerEntered(p);
     });
     combat.WatchWorkspace();

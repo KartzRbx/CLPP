@@ -11,7 +11,7 @@ These two constructs replace a large class of nested `if`s.
 If the condition is **false**, the `else` block runs. Almost always you `return` (or `report`).
 
 ```clpp
-void LeaderstatsServer::PlayerEntered(Player* player) {
+void LeaderstatsServer::PlayerEntered(Player player) {
     guard (player != null) else {
         warn("Invalid player");
         return;

@@ -39,7 +39,7 @@ Brace lists are arrays. Iterate with [range-for](range-for). There is no `std::v
 
 ```clpp
 array<string> names = {"Kartz", "Player1"};
-for (string n : names) {
+for (string n in names) {
     post(n);
 }
 ```

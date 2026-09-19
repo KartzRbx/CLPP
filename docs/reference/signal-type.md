@@ -12,7 +12,7 @@ Typed BindableEvent. Declaration emits `__signal()`. Fire with `.Fire`; listen w
 ## Syntax
 
 ```clpp
-signal<Player*, int> OnCoinsUpdated;
+signal<Player, int> OnCoinsUpdated;
 ```
 
 ## Parameters
@@ -36,7 +36,7 @@ See the operations: [`Fire`](Fire), [`Connect`](Connect), [`Once`](Once), [`Wait
 ## Example
 
 ```clpp
-signal<Player*, int> OnCoinsUpdated;
+signal<Player, int> OnCoinsUpdated;
 OnCoinsUpdated.Fire(player, 500);
 ```
 

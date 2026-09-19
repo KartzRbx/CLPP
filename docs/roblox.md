@@ -7,8 +7,8 @@ title: Roblox instances and services
 ## new
 
 ```clpp
-auto* coins = new IntValue(leaderstats);
-auto* janitor = new Janitor();
+auto coins = new IntValue(leaderstats);
+auto janitor = new Janitor();
 ```
 
 | Construct | Emit |
@@ -20,14 +20,14 @@ auto* janitor = new Janitor();
 ## GetService
 
 ```clpp
-Players* players = GetService<Players>();
-RunService* run = GetService<RunService>();
+Players players = GetService<Players>();
+RunService run = GetService<RunService>();
 ```
 
 ## Events
 
 ```clpp
-players.PlayerAdded~>Connect(func (Player* player) {
+players.PlayerAdded~>Connect(func (Player player) {
     post(player.Name);
 });
 

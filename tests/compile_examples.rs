@@ -37,7 +37,11 @@ fn compile_syntax_features() {
     assert!(luau.contains("local isActive: boolean = true"));
     assert!(luau.contains("local callback"));
     assert!(luau.contains("function()"));
-    assert!(luau.contains("local playerRef = nil"));
+    assert!(luau.contains("local playerRef: Player = nil"));
+    assert!(luau.contains("function Wallet:Add"));
+    assert!(luau.contains("self.coins = self.coins + n"));
+    assert!(luau.contains("pocket:Add(10)"));
+    assert!(luau.contains("print(stats.Coins)"));
     assert!(luau.contains("{ \"Kartz\", \"Player1\" }"));
     assert!(luau.contains("Coins = 100"));
     assert!(luau.contains("Gems = 50"));
@@ -89,4 +93,28 @@ fn compile_leaderstats() {
         normalize(&luau),
         normalize(&golden("LeaderstatsServer.server.luau"))
     );
+}
+
+#[test]
+fn compile_combat() {
+    let luau = compile_file(&example("advanced/CombatServer.server.clpp")).expect("compile combat");
+    assert!(luau.contains("function CombatServer:BindPart"));
+    assert!(luau.contains("self.janitor:Add"));
+    assert!(luau.contains("self.OnHit:Fire"));
+    assert!(luau.contains("self:BindPart(p)"));
+    assert!(luau.contains("combat:PlayerEntered"));
+}
+
+#[test]
+fn compile_fusion_hud() {
+    let luau = compile_file(&example("ui/FusionHud.client.clpp")).expect("compile fusion");
+    assert!(luau.contains("function FusionHud:Mount"));
+    assert!(luau.contains("hud:Mount(playerGui)"));
+}
+
+#[test]
+fn compile_vide_counter() {
+    let luau = compile_file(&example("ui/VideCounter.client.clpp")).expect("compile vide");
+    assert!(luau.contains("function VideCounter:Mount"));
+    assert!(luau.contains("counter:Mount(playerGui)"));
 }

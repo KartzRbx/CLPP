@@ -34,7 +34,7 @@ playerData["Coins"] = 600;             // playerData["Coins"] = 600
 workspace["Baseplate"];                // workspace["Baseplate"]
 task::wait(1);                         // task.wait(1)
 DataService.Server.WaitFor(p);         // DataService.Server:WaitFor(p)
-for (Player* p in players.GetPlayers()) { }
+for (Player p in players.GetPlayers()) { }
 ```
 
 `player.Kick()` is the normal method call (it passes `self` in Luau). `player:Kick()` is the same call wrapped in `pcall`: on error it returns `nil` instead of stopping the script.

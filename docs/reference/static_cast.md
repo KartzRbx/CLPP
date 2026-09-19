@@ -19,7 +19,7 @@ T static_cast<T>(value);
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `T` | `type` | Target type, often `Folder*` / `Player*`. |
+| `T` | `type` | Target type, often `Folder` / `Player`. |
 | `value` | `any` | Expression to re-annotate. |
 
 ## Return value
@@ -39,7 +39,7 @@ To branch on Instance class at runtime, use [`match`](match) (`IsA`).
 ## Example
 
 ```clpp
-Folder* folder = static_cast<Folder*>(existingFolder);
+Folder folder = static_cast<Folder>(existingFolder);
 ```
 
 Emits:

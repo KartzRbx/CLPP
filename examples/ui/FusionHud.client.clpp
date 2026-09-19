@@ -1,14 +1,10 @@
 #include <clpp/roblox.clh>
 
-void init() {
-    Players* players = GetService<Players>();
-    Player* localPlayer = players.LocalPlayer;
-    guard (localPlayer != null) else {
-        report("LocalPlayer missing");
-        return;
-    }
+struct FusionHud {
+    void Mount(PlayerGui playerGui);
+};
 
-    Instance* playerGui = localPlayer.WaitForChild("PlayerGui");
+void FusionHud::Mount(PlayerGui playerGui) {
     auto scope = Fusion.scoped();
     auto Children = Fusion.Children;
 
@@ -47,4 +43,17 @@ void init() {
     });
 
     coins(100);
+}
+
+void init() {
+    Players players = GetService<Players>();
+    Player localPlayer = players.LocalPlayer;
+    guard (localPlayer != null) else {
+        report("LocalPlayer missing");
+        return;
+    }
+
+    PlayerGui playerGui = localPlayer.WaitForChild("PlayerGui");
+    FusionHud hud;
+    hud.Mount(playerGui);
 }
