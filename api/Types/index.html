@@ -8,8 +8,8 @@
 Full pages: [int](/CLPP/docs/reference/int), [array](/CLPP/docs/reference/array), [signal](/CLPP/docs/reference/signal-type), [observable](/CLPP/docs/reference/observable)."><meta data-rh="true" property="og:description" content="Every value you write in CL++ has a type, and the compiler emits a Luau annotation.
 
 Full pages: [int](/CLPP/docs/reference/int), [array](/CLPP/docs/reference/array), [signal](/CLPP/docs/reference/signal-type), [observable](/CLPP/docs/reference/observable)."><link data-rh="true" rel="icon" href="/CLPP/img/favicon.png"><link data-rh="true" rel="canonical" href="https://kartzrbx.github.io/CLPP/api/Types"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Types" hreflang="en"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Types" hreflang="x-default"><link rel="stylesheet" href="/CLPP/assets/css/styles.796e4892.css">
-<script src="/CLPP/assets/js/runtime~main.62079f9b.js" defer="defer"></script>
-<script src="/CLPP/assets/js/main.2388e376.js" defer="defer"></script>
+<script src="/CLPP/assets/js/runtime~main.3cd77f2d.js" defer="defer"></script>
+<script src="/CLPP/assets/js/main.143a79f2.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -57,10 +57,10 @@ Full pages: [int](/CLPP/docs/reference/int), [array](/CLPP/docs/reference/array)
 <p><strong>Syntax:</strong> <code>optional&#x3C;T> name = null;</code></p>
 <p><strong>Emit:</strong> <code>T?</code></p>
 </div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="Instance"><code style="text-decoration:none">Instance</code><a href="#Instance" class="hash-link" aria-label="Direct link to Instance" title="Direct link to Instance" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#dc0073;color:#dc0073">type</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Types.lua#L143"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Types<!-- -->.</code><code class="green_DgR4">Instance</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
-<p>Instance types use the Roblox class name. <code>Player player</code> is a Player Instance. Do not write <code>Player*</code>.</p>
+<p>Instance types use the Roblox class name. <code>Player player</code> is a Player Instance.</p>
 <p><strong>Syntax:</strong> <code>Player player = null;</code> · <code>player.FindFirstChild("x")</code></p>
 <p><strong>Emit:</strong> <code>Player</code></p>
-<p>Properties and instance methods use <code>.</code> (<code>player.FindFirstChild</code>, <code>player.Kick</code>). Protected calls use <code>:</code>. Static names use <code>::</code> (<code>task::wait</code>, <code>Vector3::new</code>). No <code>delete</code>, <code>*p</code>, <code>&#x26;p</code>, <code>int&#x26;</code>, or <code>-></code>.</p>
+<p>Properties and instance methods use <code>.</code> (<code>player.FindFirstChild</code>, <code>player.Kick</code>). Protected calls use <code>:</code>. Static names use <code>::</code> (<code>task::wait</code>, <code>Vector3::new</code>). No <code>delete</code>, address-of, or <code>-></code>.</p>
 <pre class="language-clpp"><code class="language-clpp">Player player <span class="token operator">=</span> null<span class="token punctuation">;</span>
 player<span class="token punctuation">.</span>Name <span class="token operator">=</span> <span class="token string">"Kartz"</span><span class="token punctuation">;</span>
 player<span class="token punctuation">.</span><span class="token function">FindFirstChild</span><span class="token punctuation">(</span><span class="token string">"leaderstats"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
@@ -204,7 +204,7 @@ player<span class="token punctuation">.</span><span class="token function">FindF
         },
         {
             &quot;name&quot;: &quot;Instance&quot;,
-            &quot;desc&quot;: &quot;Instance types use the Roblox class name. `Player player` is a Player Instance. Do not write `Player*`.\n\n**Syntax:** `Player player = null;` · `player.FindFirstChild(\&quot;x\&quot;)`\n\n**Emit:** `Player`\n\nProperties and instance methods use `.` (`player.FindFirstChild`, `player.Kick`). Protected calls use `:`. Static names use `::` (`task::wait`, `Vector3::new`). No `delete`, `*p`, `&amp;p`, `int&amp;`, or `-&gt;`.\n\n```clpp\nPlayer player = null;\nplayer.Name = \&quot;Kartz\&quot;;\nplayer.FindFirstChild(\&quot;leaderstats\&quot;);\n```\n\n`match` arms use the same class name (`Part p`).&quot;,
+            &quot;desc&quot;: &quot;Instance types use the Roblox class name. `Player player` is a Player Instance.\n\n**Syntax:** `Player player = null;` · `player.FindFirstChild(\&quot;x\&quot;)`\n\n**Emit:** `Player`\n\nProperties and instance methods use `.` (`player.FindFirstChild`, `player.Kick`). Protected calls use `:`. Static names use `::` (`task::wait`, `Vector3::new`). No `delete`, address-of, or `-&gt;`.\n\n```clpp\nPlayer player = null;\nplayer.Name = \&quot;Kartz\&quot;;\nplayer.FindFirstChild(\&quot;leaderstats\&quot;);\n```\n\n`match` arms use the same class name (`Part p`).&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;static&quot;,
