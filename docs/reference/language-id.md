@@ -33,11 +33,11 @@ CL++ is **not** C++. Fences must use the language id `clpp` (aliases `clp`, `clh
 
 **Editors.** `clpp install` copies the VS Code / Cursor pack. `package.json` contributes language id `clpp` for `*.clpp` / `*.clp` / `*.clh`, with grammar `source.clpp`. That is a TextMate registry, not Prism.
 
-**This site (Moonwave / Docusaurus).** Prism does not ship `clpp`. The docs build injects `src/theme/prism-include-languages.js`, loads Prism's C++ grammar, and aliases `clpp`. The API tab uses Refractor via `@mapbox/rehype-prism`; the same build aliases `cpp → clpp`. Without that registration, SSG throws `Unknown language: clpp is not registered`.
+**This site (Starlight / Astro).** Fences use the language id `clpp` (aliases `clp`, `clh`). The highlighter is the same TextMate grammar as the editor pack (`editors/vscode/syntaxes/clpp.tmLanguage.json`), loaded into Shiki. `@` is punctuation, `this` is the language receiver, `@field` is a property.
 
 **GitHub.com.** [Linguist](https://github.com/github-linguist/linguist) highlights files from extensions. `.gitattributes` maps `*.clpp` to C++ so repository blobs have syntax color. Markdown fences on github.com stay plain until Linguist accepts a custom language. That is a separate registry from this site.
 
-**How to add a new highlighter.** (1) Editors: `editors/vscode/syntaxes/clpp.tmLanguage.json`. (2) Docs site: `.moonwave/src/theme/prism-include-languages.js` plus `scripts/moonwave-docs.cjs`. (3) GitHub: a Linguist PR, not something this repo can finish alone.
+**How to add a new highlighter.** (1) Editors: `editors/vscode/syntaxes/clpp.tmLanguage.json` — keep `#receiver` so `@` and `@this` are `keyword.other.receiver.clpp`, and `@field` keeps that keyword on `@`. (2) Docs site: that same grammar is registered in `www/astro.config.mjs`. (3) GitHub: a Linguist PR, not something this repo can finish alone.
 
 ## Notes
 

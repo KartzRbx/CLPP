@@ -12,7 +12,7 @@ const data = JSON.parse(fs.readFileSync(path.join(__dirname, "data", "completion
 const engine = loadEngine(data);
 
 const methodSrc = `struct Service {
-    Janitor* janitor;
+    Janitor janitor;
     void Tick();
 };
 
@@ -36,7 +36,21 @@ const built = buildCompletionItems(
 );
 assert.ok(built.some((item) => item.label === "@this"));
 
-assert.ok(hoverText(engine, methodSrc, "Service.clpp", "@this", []).includes("self"));
+const globalItems = buildCompletionItems(
+  engine,
+  data,
+  "void init() {\n  \n}\n",
+  "Service.clpp",
+  "  ",
+  15,
+  []
+);
+assert.ok(globalItems.some((item) => item.label === "void"));
+assert.ok(globalItems.some((item) => item.label === "GetService"));
+assert.ok(globalItems.some((item) => item.label === "Player"));
+
+assert.ok(hoverText(engine, methodSrc, "Service.clpp", "@this", []).includes("sigil"));
+assert.ok(hoverText(engine, methodSrc, "Service.clpp", "@janitor", []).includes("self.janitor"));
 
 const session = createSession();
 const replies = [];
@@ -47,8 +61,18 @@ session.handle(
   send
 );
 assert.ok(replies[0].result.capabilities.completionProvider);
+assert.deepStrictEqual(replies[0].result.capabilities.completionProvider.triggerCharacters, [
+  ".",
+  ":",
+  ">",
+  "@",
+]);
 assert.ok(replies[0].result.capabilities.hoverProvider);
 assert.ok(replies[0].result.capabilities.definitionProvider);
+
+const emptyAt = atCompletions("    @", { types: {} }, null);
+assert.ok(emptyAt.some((item) => item.label === "@this"));
+assert.ok(emptyAt.some((item) => item.label === "@janitor"));
 
 session.handle(
   {

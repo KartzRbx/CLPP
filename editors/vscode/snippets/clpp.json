@@ -4,11 +4,20 @@
     "body": ["${1:void} ${2:Name}($3) {", "\t$0", "}"],
     "description": "CL++ function"
   },
+  "method": {
+    "prefix": "method",
+    "body": [
+      "void ${1:Class}::${2:Method}($3) {",
+      "\t@${4:janitor}.Add($0);",
+      "}"
+    ],
+    "description": "Class::Method with @field (self.field)"
+  },
   "init": {
     "prefix": "init",
     "body": [
       "void init() {",
-      "\tPlayers* players = GetService<Players>();",
+      "\tPlayers players = GetService<Players>();",
       "\t$0",
       "}"
     ],
@@ -22,7 +31,12 @@
   "atthis": {
     "prefix": "@this",
     "body": ["@this"],
-    "description": "Current object (self)"
+    "description": "Receiver: current object (Luau self)"
+  },
+  "atfield": {
+    "prefix": "@",
+    "body": ["@${1:janitor}"],
+    "description": "Receiver field: @name → self.name"
   },
   "guard": {
     "prefix": "guard",
@@ -42,7 +56,7 @@
   "connect": {
     "prefix": "~>",
     "body": [
-      "${1:players}::${2:PlayerAdded}~>Connect(func ($3) {",
+      "${1:players}.${2:PlayerAdded}~>Connect(func ($3) {",
       "\t$0",
       "});"
     ],
@@ -65,7 +79,7 @@
   "changed": {
     "prefix": "changed",
     "body": [
-      "${1:instance}::GetPropertyChangedSignal(\"${2:Name}\")~>Connect(func () {",
+      "${1:instance}.GetPropertyChangedSignal(\"${2:Name}\")~>Connect(func () {",
       "\t$0",
       "});"
     ],
@@ -84,7 +98,7 @@
   "foreach": {
     "prefix": "forin",
     "body": [
-      "for (${1:Player*} ${2:player} in ${3:players.GetPlayers()}) {",
+      "for (${1:Player} ${2:player} in ${3:players.GetPlayers()}) {",
       "\t$0",
       "}"
     ],

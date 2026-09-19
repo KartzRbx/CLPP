@@ -161,7 +161,7 @@ fn main() -> Result<()> {
         },
         Commands::Install { editor } => {
             let dests = install_language(editor.as_deref())?;
-            eprintln!("CL++ editor pack installed:");
+            eprintln!("CL++ {} editor pack installed:", env!("CARGO_PKG_VERSION"));
             for dest in dests {
                 eprintln!("  {}", dest.display());
             }
@@ -175,7 +175,7 @@ fn main() -> Result<()> {
 
 fn run_setup(pause: bool) -> Result<()> {
     let report = setup_machine()?;
-    eprintln!("CL++ is installed on this machine.");
+    eprintln!("CL++ {} is installed on this machine.", report.version);
     eprintln!("  compiler: {}", report.compiler.display());
     eprintln!("  PATH:     {}", report.path_dir.display());
     eprintln!("  pack:     {}", report.pack.display());

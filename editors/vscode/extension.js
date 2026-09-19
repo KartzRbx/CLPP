@@ -4,7 +4,8 @@ const fs = require("fs");
 const { loadEngine, lintDocument } = require("./intellisense");
 const { createLens, applyLensToOpenEditors } = require("./lens");
 const { buildCompletionItems, hoverText } = require("./complete");
-const { compileDiagnostics, mergeIssues } = require("./compile-api");
+const { compileDiagnosticsAsync, mergeIssues } = require("./compile-api");
+const { extrasFor, cachedText, resolveCached, scheduleLoad } = require("./include-cache");
 const { startLspClient } = require("./lsp-client");
 
 function loadCompletions() {
@@ -84,64 +85,11 @@ function filePathOf(document) {
   return document.uri.scheme === "file" ? document.uri.fsPath : null;
 }
 
-function includeSearchRoots() {
-  const roots = [];
-  for (const folder of vscode.workspace.workspaceFolders || []) {
-    roots.push(folder.uri.fsPath);
-    roots.push(path.join(folder.uri.fsPath, "stdlib"));
+function noteDocument(document) {
+  if (!document || document.languageId !== "clpp") {
+    return;
   }
-  roots.push(path.join(__dirname, "..", ".."));
-  roots.push(path.join(__dirname, "..", "..", "stdlib"));
-  const local = process.env.LOCALAPPDATA || "";
-  if (local) {
-    roots.push(path.join(local, "Programs", "CLPP"));
-    roots.push(path.join(local, "Programs", "CLPP", "stdlib"));
-  }
-  return roots;
-}
-
-function resolveInclude(spec, angled, fromPath) {
-  if (!angled && fromPath) {
-    const relative = path.normalize(path.join(path.dirname(fromPath), spec));
-    if (fs.existsSync(relative)) {
-      return relative;
-    }
-  }
-  for (const root of includeSearchRoots()) {
-    for (const candidate of [path.join(root, spec), path.join(root, "stdlib", spec)]) {
-      if (fs.existsSync(candidate)) {
-        return candidate;
-      }
-    }
-  }
-  return null;
-}
-
-function extraIncludeTexts(document) {
-  const texts = [];
-  const seen = new Set();
-  const visit = (text, fromPath) => {
-    const includeRe = /#include\s+(?:"([^"]+)"|<([^>]+)>)/g;
-    let match;
-    while ((match = includeRe.exec(text))) {
-      const spec = match[1] || match[2];
-      const resolved = resolveInclude(spec, Boolean(match[2]), fromPath);
-      if (!resolved || seen.has(resolved)) {
-        continue;
-      }
-      seen.add(resolved);
-      try {
-        const body = fs.readFileSync(resolved, "utf8");
-        texts.push(body);
-        visit(body, resolved);
-      } catch {
-        // missing include — skip
-      }
-    }
-  };
-  const filePath = document.uri.scheme === "file" ? document.uri.fsPath : null;
-  visit(document.getText(), filePath);
-  return texts;
+  scheduleLoad(document.getText(), filePathOf(document), workspaceFolders());
 }
 
 function rangeAt(document, start, end) {
@@ -160,7 +108,7 @@ function eachInclude(document) {
     out.push({
       spec,
       angled: Boolean(match[2]),
-      resolved: resolveInclude(spec, Boolean(match[2]), fromPath),
+      resolved: resolveCached(spec, Boolean(match[2]), fromPath, workspaceFolders()),
       lineRange: rangeAt(document, match.index, match.index + match[0].length),
       specRange: rangeAt(document, specIndex, specIndex + spec.length),
     });
@@ -195,14 +143,12 @@ function includeOutline(engine, document) {
       inc.specRange
     );
     if (inc.resolved) {
-      try {
-        const body = fs.readFileSync(inc.resolved, "utf8");
+      const body = cachedText(inc.resolved);
+      if (body) {
         const types = engine.parseStructs(body);
         for (const [name, node] of Object.entries(types)) {
           fileSym.children.push(structOutline(name, node, inc.lineRange));
         }
-      } catch {
-        // skip unreadable include
       }
     }
     symbols.push(fileSym);
@@ -239,7 +185,8 @@ function localOutline(engine, document) {
 }
 
 function symbolsFor(engine, document) {
-  return engine.indexDocument(document.getText(), extraIncludeTexts(document));
+  noteDocument(document);
+  return engine.indexDocument(document.getText(), extrasFor(filePathOf(document)));
 }
 
 function typeNamesFor(data, symbols) {
@@ -322,14 +269,13 @@ function wireLens(context, lens, collection) {
   applyLensToOpenEditors(vscode, lens, collection);
 }
 
-function registerChrome(context, engine, selector) {
+function registerChrome(context, engine, selector, data) {
   const legend = new vscode.SemanticTokensLegend(["type", "property"], []);
   const semantic = vscode.languages.registerDocumentSemanticTokensProvider(
     selector,
     {
       provideDocumentSemanticTokens(document) {
         const builder = new vscode.SemanticTokensBuilder(legend);
-        const data = loadCompletions();
         const symbols = symbolsFor(engine, document);
         const text = document.getText();
         const mask = codeMask(text);
@@ -380,20 +326,23 @@ function registerChrome(context, engine, selector) {
   context.subscriptions.push(semantic, links, outline);
 }
 
-function registerInProcessIntelligence(context, engine, data, selector, lens) {
+function registerLocalCompletions(context, engine, data, selector) {
   const completion = vscode.languages.registerCompletionItemProvider(
     selector,
     {
       provideCompletionItems(document, position) {
+        noteDocument(document);
         const line = document.lineAt(position).text.slice(0, position.character);
+        const filePath = filePathOf(document);
         const raw = buildCompletionItems(
           engine,
           data,
           document.getText(),
-          filePathOf(document),
+          filePath,
           line,
           document.offsetAt(position),
-          workspaceFolders()
+          workspaceFolders(),
+          extrasFor(filePath)
         );
         return raw.map(memberItem);
       },
@@ -403,24 +352,28 @@ function registerInProcessIntelligence(context, engine, data, selector, lens) {
     ">",
     "@"
   );
-
   const hover = vscode.languages.registerHoverProvider(selector, {
     provideHover(document, position) {
       const range = document.getWordRangeAtPosition(position, WORD_RE);
       if (!range) {
         return null;
       }
+      const filePath = filePathOf(document);
       const detail = hoverText(
         engine,
         document.getText(),
-        filePathOf(document),
+        filePath,
         document.getText(range),
-        workspaceFolders()
+        workspaceFolders(),
+        extrasFor(filePath)
       );
       return detail ? new vscode.Hover(detail) : null;
     },
   });
+  context.subscriptions.push(completion, hover);
+}
 
+function registerInProcessDiagnostics(context, selector, lens) {
   const definitions = vscode.languages.registerDefinitionProvider(selector, {
     provideDefinition(document, position) {
       for (const inc of eachInclude(document)) {
@@ -438,22 +391,28 @@ function registerInProcessIntelligence(context, engine, data, selector, lens) {
     if (!document || document.languageId !== "clpp") {
       return;
     }
-    const fromCompiler = compileDiagnostics(document.getText(), document.fileName, workspaceFolders());
     const lint = lintDocument(document.getText());
-    const issues = mergeIssues(fromCompiler, lint);
-    const diagnostics = issues.map((issue) => {
-      const line = Math.min(issue.line, Math.max(0, document.lineCount - 1));
-      const row = document.lineAt(line);
-      const startCol = Math.min(issue.column || 0, Math.max(0, row.text.length));
-      const start = new vscode.Position(line, startCol);
-      return new vscode.Diagnostic(
-        new vscode.Range(start, row.range.end),
-        issue.message,
-        vscode.DiagnosticSeverity.Error
-      );
-    });
-    collection.set(document.uri, diagnostics);
-    applyLensToOpenEditors(vscode, lens, collection);
+    compileDiagnosticsAsync(
+      document.getText(),
+      document.fileName,
+      workspaceFolders(),
+      (compiler) => {
+        const issues = mergeIssues(compiler, lint);
+        const diagnostics = issues.map((issue) => {
+          const line = Math.min(issue.line, Math.max(0, document.lineCount - 1));
+          const row = document.lineAt(line);
+          const startCol = Math.min(issue.column || 0, Math.max(0, row.text.length));
+          const start = new vscode.Position(line, startCol);
+          return new vscode.Diagnostic(
+            new vscode.Range(start, row.range.end),
+            issue.message,
+            vscode.DiagnosticSeverity.Error
+          );
+        });
+        collection.set(document.uri, diagnostics);
+        applyLensToOpenEditors(vscode, lens, collection);
+      }
+    );
   }
   function refreshAll() {
     for (const doc of vscode.workspace.textDocuments) {
@@ -462,12 +421,10 @@ function registerInProcessIntelligence(context, engine, data, selector, lens) {
   }
   const diagnostics = vscode.workspace.onDidChangeTextDocument((ev) => {
     clearTimeout(timer);
-    timer = setTimeout(() => refresh(ev.document), 350);
+    timer = setTimeout(() => refresh(ev.document), 250);
   });
   context.subscriptions.push(
     collection,
-    completion,
-    hover,
     definitions,
     diagnostics,
     vscode.workspace.onDidOpenTextDocument(refresh),
@@ -477,50 +434,7 @@ function registerInProcessIntelligence(context, engine, data, selector, lens) {
   refreshAll();
 }
 
-function lspKindName(kind) {
-  const map = {
-    2: "Method",
-    3: "Function",
-    5: "Field",
-    6: "Variable",
-    7: "Class",
-    10: "Property",
-    14: "Keyword",
-    23: "Event",
-    24: "Operator",
-  };
-  return map[kind] || "Text";
-}
-
 function registerLspIntelligence(context, client, selector, lens) {
-  const completion = vscode.languages.registerCompletionItemProvider(
-    selector,
-    {
-      provideCompletionItems(document, position) {
-        return client.completion(document, position).then((result) =>
-          (result || []).map((entry) => item(entry.label, lspKindName(entry.kind), entry.detail))
-        );
-      },
-    },
-    ".",
-    ":",
-    ">",
-    "@"
-  );
-  const hover = vscode.languages.registerHoverProvider(selector, {
-    provideHover(document, position) {
-      return client.hover(document, position).then((result) => {
-        if (!result || !result.contents) {
-          return null;
-        }
-        const value =
-          typeof result.contents === "string"
-            ? result.contents
-            : result.contents.value || result.contents;
-        return value ? new vscode.Hover(String(value)) : null;
-      });
-    },
-  });
   const definitions = vscode.languages.registerDefinitionProvider(selector, {
     provideDefinition(document, position) {
       return client.definition(document, position).then((result) => {
@@ -541,8 +455,6 @@ function registerLspIntelligence(context, client, selector, lens) {
     },
   });
   context.subscriptions.push(
-    completion,
-    hover,
     definitions,
     vscode.workspace.onDidOpenTextDocument((doc) => client.open(doc)),
     vscode.workspace.onDidChangeTextDocument((ev) => client.change(ev.document)),
@@ -562,7 +474,15 @@ function activate(context) {
     { language: "clpp", scheme: "untitled" },
   ];
   const lens = createLens(vscode);
-  registerChrome(context, engine, selector);
+  registerChrome(context, engine, selector, data);
+  registerLocalCompletions(context, engine, data, selector);
+  context.subscriptions.push(
+    vscode.workspace.onDidOpenTextDocument(noteDocument),
+    vscode.workspace.onDidChangeTextDocument((ev) => noteDocument(ev.document))
+  );
+  for (const doc of vscode.workspace.textDocuments) {
+    noteDocument(doc);
+  }
 
   const useLsp = vscode.workspace.getConfiguration("clpp").get("lsp.enabled", true);
   if (useLsp) {
@@ -571,12 +491,12 @@ function activate(context) {
       if (ok && client.isAlive()) {
         registerLspIntelligence(context, client, selector, lens);
       } else {
-        registerInProcessIntelligence(context, engine, data, selector, lens);
+        registerInProcessDiagnostics(context, selector, lens);
       }
     });
     return;
   }
-  registerInProcessIntelligence(context, engine, data, selector, lens);
+  registerInProcessDiagnostics(context, selector, lens);
 }
 
 function deactivate() {}

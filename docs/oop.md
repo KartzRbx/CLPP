@@ -32,6 +32,10 @@ void LeaderstatsServer::PlayerEntered(Player player) {
 
 `Class::Method` emits `function Class:Method(...)`. Inside, [`@this`](reference/this) is `self`. `@janitor` is `self.janitor`. Bare fields still become `self.field`. `this` without `@` is the same alias.
 
+:::tip[Receiver]
+`@` is the sigil. `@this` is the object. `@field` is `self.field`. Calls from outside still use `.` (`hello.Greet(player)`).
+:::
+
 ## init singleton
 
 ```clpp

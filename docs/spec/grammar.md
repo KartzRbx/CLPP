@@ -1,6 +1,18 @@
+---
+title: Grammar (subset)
+description: EBNF of the slice the CL++ parser accepts. Not ISO C++.
+---
+
 # Grammar (subset)
 
-EBNF of the slice the lexer/parser must accept. This is not ISO C++.
+EBNF of the slice the lexer/parser must accept. This is not ISO C++. The running grammar is Pest (`src/parser/grammar.pest`).
+
+```mermaid
+flowchart LR
+  src["Source"] --> pest["Pest EBNF"]
+  pest --> ast["AST"]
+  ast --> luau["Luau"]
+```
 
 ```
 translation-unit = { include | pragma | using-skip | declaration } ;
@@ -33,7 +45,7 @@ param      = type ident | ident ":" type ;
 
 type =
     "void" | "int" | "float" | "double" | "bool" | "string" | "func" | "auto"
-  | ident [ "*" ]
+  | ident
   | ( "LuaArray" | "vector" | "array" | "span" | "optional" ) "<" type ">"
   | "dictionary" "<" type "," type ">"
   | "const" type

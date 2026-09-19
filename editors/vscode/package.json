@@ -2,7 +2,7 @@
   "name": "clpp-language",
   "displayName": "CL++",
   "description": "CL++ language support for VS Code, Cursor, and compatible editors: highlighting, icon, and IntelliSense (.clpp / .clp / .clh)",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "publisher": "clpp",
   "repository": {
     "type": "git",
@@ -55,7 +55,7 @@
         "clpp.lsp.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Use the CL++ language server for completion, hover, definition, and diagnostics."
+          "description": "Use the CL++ language server for definition and diagnostics. Completions stay in-process so @this / @janitor do not wait on the compiler."
         }
       }
     },

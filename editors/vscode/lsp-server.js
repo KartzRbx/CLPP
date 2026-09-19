@@ -2,12 +2,13 @@
 
 const fs = require("fs");
 const path = require("path");
+const { Worker } = require("worker_threads");
 const { createFramer, writeMessage } = require("./jsonrpc");
 const { loadEngine, lintDocument } = require("./intellisense");
-const { compileDiagnostics, mergeIssues } = require("./compile-api");
+const { compileDiagnostics, compileDiagnosticsAsync, mergeIssues } = require("./compile-api");
 const { buildCompletionItems, hoverText } = require("./complete");
+const { extrasFor, scheduleLoad } = require("./include-cache");
 const {
-  extraIncludeTexts,
   findDefinitions,
   indexMethods,
   wordAt,
@@ -30,11 +31,45 @@ function createSession() {
   const documents = new Map();
   let folders = [];
   let methods = [];
+  let indexWorker = null;
   const timers = new Map();
 
   function setFolders(next) {
     folders = (next || []).filter(Boolean);
-    methods = indexMethods(folders);
+  }
+
+  function startIndexWorker() {
+    methods = [];
+    if (indexWorker) {
+      indexWorker.terminate().catch(() => {});
+      indexWorker = null;
+    }
+    if (!folders.length) {
+      return;
+    }
+    const roots = folders.slice();
+    try {
+      indexWorker = new Worker(path.join(__dirname, "index-worker.js"), {
+        workerData: { folders: roots },
+      });
+      indexWorker.on("message", (result) => {
+        methods = Array.isArray(result) ? result : [];
+        if (indexWorker) {
+          indexWorker.terminate().catch(() => {});
+          indexWorker = null;
+        }
+      });
+      indexWorker.on("error", () => {
+        indexWorker = null;
+        setImmediate(() => {
+          methods = indexMethods(roots);
+        });
+      });
+    } catch {
+      setImmediate(() => {
+        methods = indexMethods(roots);
+      });
+    }
   }
 
   function lineAt(text, position) {
@@ -46,10 +81,29 @@ function createSession() {
     return documents.get(uri) || null;
   }
 
-  function collectDiagnostics(doc) {
+  function collectDiagnosticsSync(doc) {
     const compiler = compileDiagnostics(doc.text, doc.filePath || "untitled.clpp", folders);
     const lint = lintDocument(doc.text);
     return mergeIssues(compiler, lint);
+  }
+
+  function publishDiagnostics(uri, issues, send) {
+    send({
+      jsonrpc: "2.0",
+      method: "textDocument/publishDiagnostics",
+      params: {
+        uri,
+        diagnostics: issues.map((issue) => ({
+          range: {
+            start: { line: issue.line, character: issue.column || 0 },
+            end: { line: issue.line, character: (issue.column || 0) + 1 },
+          },
+          message: issue.message,
+          severity: 1,
+          source: "clpp",
+        })),
+      },
+    });
   }
 
   function handle(message, send) {
@@ -76,12 +130,31 @@ function createSession() {
             completionProvider: { triggerCharacters: [".", ":", ">", "@"] },
             hoverProvider: true,
             definitionProvider: true,
+            workspace: { workspaceFolders: { supported: true, changeNotifications: true } },
           },
         },
       });
       return;
     }
-    if (method === "initialized" || method === "shutdown") {
+    if (method === "initialized") {
+      startIndexWorker();
+      return;
+    }
+    if (method === "workspace/didChangeWorkspaceFolders") {
+      const added = ((params && params.event && params.event.added) || [])
+        .map((f) => uriToPath(f.uri))
+        .filter(Boolean);
+      const removed = new Set(
+        ((params && params.event && params.event.removed) || [])
+          .map((f) => uriToPath(f.uri))
+          .filter(Boolean)
+      );
+      const next = folders.filter((folder) => !removed.has(folder)).concat(added);
+      setFolders(next);
+      startIndexWorker();
+      return;
+    }
+    if (method === "shutdown") {
       if (id !== undefined) {
         send({ jsonrpc: "2.0", id, result: null });
       }
@@ -97,6 +170,7 @@ function createSession() {
         text: doc.text || "",
         filePath: uriToPath(doc.uri),
       });
+      scheduleLoad(doc.text || "", uriToPath(doc.uri), folders);
       scheduleDiagnostics(doc.uri, send);
       return;
     }
@@ -108,6 +182,7 @@ function createSession() {
         current.text = change.text;
       }
       documents.set(uri, current);
+      scheduleLoad(current.text, current.filePath, folders);
       scheduleDiagnostics(uri, send);
       return;
     }
@@ -140,7 +215,8 @@ function createSession() {
         doc.filePath,
         lineText,
         offset,
-        folders
+        folders,
+        extrasFor(doc.filePath)
       );
       send({
         jsonrpc: "2.0",
@@ -165,7 +241,8 @@ function createSession() {
         doc.text,
         doc.filePath,
         hit && hit.word,
-        folders
+        folders,
+        extrasFor(doc.filePath)
       );
       send({
         jsonrpc: "2.0",
@@ -206,24 +283,14 @@ function createSession() {
         if (!doc) {
           return;
         }
-        const issues = collectDiagnostics(doc);
-        send({
-          jsonrpc: "2.0",
-          method: "textDocument/publishDiagnostics",
-          params: {
-            uri,
-            diagnostics: issues.map((issue) => ({
-              range: {
-                start: { line: issue.line, character: issue.column || 0 },
-                end: { line: issue.line, character: (issue.column || 0) + 1 },
-              },
-              message: issue.message,
-              severity: 1,
-              source: "clpp",
-            })),
-          },
+        const lint = lintDocument(doc.text);
+        compileDiagnosticsAsync(doc.text, doc.filePath || "untitled.clpp", folders, (compiler) => {
+          if (!documents.has(uri)) {
+            return;
+          }
+          publishDiagnostics(uri, mergeIssues(compiler, lint), send);
         });
-      }, 350)
+      }, 250)
     );
   }
 
@@ -232,31 +299,16 @@ function createSession() {
     setFolders,
     documents,
     engine,
-    extraIncludeTexts: (text, filePath) => extraIncludeTexts(text, filePath, folders),
-    collectDiagnostics,
+    extrasFor: (filePath) => extrasFor(filePath),
+    collectDiagnostics: collectDiagnosticsSync,
     flushDiagnostics(uri, send) {
       const doc = documents.get(uri);
       if (!doc) {
         return [];
       }
-      const issues = collectDiagnostics(doc);
+      const issues = collectDiagnosticsSync(doc);
       if (send) {
-        send({
-          jsonrpc: "2.0",
-          method: "textDocument/publishDiagnostics",
-          params: {
-            uri,
-            diagnostics: issues.map((issue) => ({
-              range: {
-                start: { line: issue.line, character: issue.column || 0 },
-                end: { line: issue.line, character: (issue.column || 0) + 1 },
-              },
-              message: issue.message,
-              severity: 1,
-              source: "clpp",
-            })),
-          },
-        });
+        publishDiagnostics(uri, issues, send);
       }
       return issues;
     },

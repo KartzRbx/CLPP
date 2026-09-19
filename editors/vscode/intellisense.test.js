@@ -19,10 +19,10 @@ function labels(members) {
 const source = `
 #include "../shared/PlayerData.clh"
 
-void LeaderstatsServer::PlayerEntered(Player* player) {
-    Players* players = GetService<Players>();
+void LeaderstatsServer::PlayerEntered(Player player) {
+    Players players = GetService<Players>();
     PlayerData Paths = DataService.Paths;
-    Data* playerData = DataService.Server.WaitFor(player);
+    Data playerData = DataService.Server.WaitFor(player);
     Paths.
     playerData.GetChangedSignal(Paths.Currencies.
 }
@@ -99,11 +99,50 @@ const atOutside = lintDocument(`void init() {
 assert.ok(atOutside.some((d) => d.message.includes("@this") && d.message.includes("Class::Method")));
 assert.ok(atOutside.some((d) => d.message.includes("@janitor")));
 
-const atInside = lintDocument(`void CombatServer::BindPart(BasePart* part) {
+const atInside = lintDocument(`void CombatServer::BindPart(BasePart part) {
     @janitor.Add(part, "Destroy");
     other.Register(@this);
 }
 `);
 assert.ok(!atInside.some((d) => d.message.includes("Class::Method")));
+
+const combat = `struct CombatServer {
+    Janitor janitor;
+};
+void CombatServer::BindPart(BasePart part) {
+    @janitor.Add(part, "Destroy");
+    other.Register(@this);
+}
+`;
+const combatSymbols = engine.indexDocument(combat);
+assert.ok(engine.hoverFor("@this", combatSymbols).includes("`@`"));
+assert.ok(engine.hoverFor("@janitor", combatSymbols).includes("self.janitor"));
+assert.ok(engine.hoverFor("@janitor", combatSymbols).includes("receiver field"));
+
+const grammar = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "syntaxes", "clpp.tmLanguage.json"), "utf8")
+);
+assert.ok(grammar.patterns.some((p) => p.include === "#receiver"));
+assert.strictEqual(grammar.repository.receiver.patterns[0].name, "keyword.other.receiver.clpp");
+assert.strictEqual(grammar.repository.receiver.patterns[0].match, "@this\\b");
+assert.strictEqual(
+  grammar.repository.receiver.patterns[1].captures["1"].name,
+  "keyword.other.receiver.clpp"
+);
+assert.strictEqual(
+  grammar.repository.receiver.patterns[1].captures["2"].name,
+  "variable.other.property.receiver.clpp"
+);
+assert.ok(!JSON.stringify(grammar).includes("keyword.operator.pointer"));
+assert.ok(!JSON.stringify(grammar).includes("keyword.operator.receiver.clpp"));
+
+const { atCompletions, STATIC_AT_ITEMS } = require("./intellisense");
+assert.ok(STATIC_AT_ITEMS.some((item) => item.label === "@this"));
+assert.ok(STATIC_AT_ITEMS.some((item) => item.label === "@janitor"));
+const staticOnly = atCompletions("@", null, null);
+assert.deepStrictEqual(
+  staticOnly.map((item) => item.label),
+  ["@this", "@janitor"]
+);
 
 console.log("intellisense.test.js ok");

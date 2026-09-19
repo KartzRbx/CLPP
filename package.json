@@ -1,7 +1,8 @@
 {
   "private": true,
+  "workspaces": ["www"],
   "scripts": {
-    "docs": "node scripts/moonwave-docs.cjs dev --code moonwave",
-    "docs:build": "node scripts/moonwave-docs.cjs build --code moonwave"
+    "docs": "npm run dev -w clpp-docs",
+    "docs:build": "npm run build -w clpp-docs"
   }
 }

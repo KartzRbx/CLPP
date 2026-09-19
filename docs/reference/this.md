@@ -9,6 +9,10 @@ sidebar_label: "@this"
 
 The current object inside `Class::Method`. Emits Luau `self`. `@field` is that object's member. `this` (no `@`) is the same alias.
 
+:::tip[How to read `@`]
+`@` is the receiver sigil — not a pointer and not an attribute. `@this` is the object. `@janitor` is `self.janitor`. Only valid inside `Class::Method`.
+:::
+
 ## Syntax
 
 ```clpp

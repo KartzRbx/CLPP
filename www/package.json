@@ -1,0 +1,18 @@
+{
+  "name": "clpp-docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "predev": "node ../scripts/prepare-starlight.mjs",
+    "dev": "astro dev",
+    "prebuild": "node ../scripts/prepare-starlight.mjs",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.35.3",
+    "astro": "^5.13.7",
+    "mermaid": "^11.6.0",
+    "sharp": "^0.34.3"
+  }
+}

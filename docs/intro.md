@@ -17,7 +17,7 @@ By the end of this course you will:
 3. Use `.` for the default, `:` for types and safe calls, `::` for static/manual Connect, `~>` for Janitor.
 4. Build services with `struct`, `guard`, `match`, `observable`, and `signal`.
 5. Drive UI with Fusion and Vide in CL++.
-6. Read the **[language reference](reference)** the same way you would read [cplusplus.com/reference](https://cplusplus.com/reference/) — every utility has syntax, parameters, emit, and an example. The **API** tab groups the same surface as Moonwave classes.
+6. Read the **[language reference](reference)** the same way you would read [cplusplus.com/reference](https://cplusplus.com/reference/) — every utility has syntax, parameters, emit, and an example.
 
 ## A tiny program
 
@@ -36,10 +36,11 @@ void init() {
 
 | Part | You learn |
 | --- | --- |
-| Start here | Install, hello world, mental model |
+| Start here | Install, hello world, mental model, [style](style) |
 | The language | Types, operators, functions, OOP, Roblox |
 | Modern syntax | Signals, guard, match, async, attributes |
 | UI & advanced | Fusion, Vide, advanced types, production patterns |
-| Reference | [Language reference](reference) (every utility), cheat sheet, unsupported list, emit spec |
+| Reference | [Language reference](reference) (every utility), cheat sheet, unsupported list |
+| Specification | [Compiler pipeline](spec/compiler), EBNF, type table, emit |
 
 Next: [Install the compiler](install).

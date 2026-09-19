@@ -4,7 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-const EXTENSION_ID: &str = concat!("clpp.clpp-language-", env!("CARGO_PKG_VERSION"));
+const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
 static LANG_PACK: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/editors/vscode");
 
 struct Editor {
@@ -50,6 +50,8 @@ const EDITORS: &[Editor] = &[
 
 pub fn install_language(editor: Option<&str>) -> Result<Vec<PathBuf>> {
     let source = language_pack_dir()?;
+    let version = pack_version(&source);
+    let extension_id = format!("clpp.clpp-language-{version}");
     let home = dirs_home();
     let selected = selected_editors(editor);
     if selected.is_empty() {
@@ -69,8 +71,8 @@ pub fn install_language(editor: Option<&str>) -> Result<Vec<PathBuf>> {
                 }
             }
             fs::create_dir_all(&dest_root).into_diagnostic()?;
-            remove_old_packs(&dest_root, EXTENSION_ID);
-            let dest = dest_root.join(EXTENSION_ID);
+            remove_clpp_packs(&dest_root);
+            let dest = dest_root.join(&extension_id);
             copy_dir(&source, &dest)?;
             written.push(dest);
         }
@@ -123,14 +125,14 @@ pub fn setup_machine() -> Result<SetupReport> {
 
     let exe = std::env::current_exe().into_diagnostic()?;
     let dest_exe = bin_dir.join(if cfg!(windows) { "clpp.exe" } else { "clpp" });
-    if exe != dest_exe {
-        fs::copy(&exe, &dest_exe).into_diagnostic()?;
-    }
+    replace_compiler_if_newer(&exe, &dest_exe)?;
     if cfg!(windows) {
         let setup = bin_dir.join("clpp-setup.exe");
-        if exe != setup {
-            fs::copy(&exe, &setup).into_diagnostic()?;
-        }
+        replace_compiler_if_newer(&exe, &setup)?;
+    }
+    let cargo_clpp = cargo_bin_clpp();
+    if cargo_clpp.is_file() {
+        replace_compiler_if_newer(&exe, &cargo_clpp)?;
     }
 
     let pack_dest = root.join("editors/vscode");
@@ -144,6 +146,7 @@ pub fn setup_machine() -> Result<SetupReport> {
         pack: pack_dest,
         editors,
         path_dir: bin_dir,
+        version: PACKAGE_VERSION.to_string(),
     })
 }
 
@@ -153,15 +156,81 @@ pub struct SetupReport {
     pub pack: PathBuf,
     pub editors: Vec<PathBuf>,
     pub path_dir: PathBuf,
+    pub version: String,
+}
+
+fn pack_version(pack: &Path) -> String {
+    let pkg = pack.join("package.json");
+    fs::read_to_string(&pkg)
+        .ok()
+        .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
+        .and_then(|v| v.get("version")?.as_str().map(str::to_string))
+        .filter(|v| !v.is_empty())
+        .unwrap_or_else(|| PACKAGE_VERSION.to_string())
 }
 
 fn extract_language_pack(dest: &Path) -> Result<()> {
-    if dest.join("package.json").is_file() {
+    if dest.exists() {
         let _ = fs::remove_dir_all(dest);
     }
     fs::create_dir_all(dest).into_diagnostic()?;
     LANG_PACK.extract(dest).into_diagnostic()?;
     Ok(())
+}
+
+fn cargo_bin_clpp() -> PathBuf {
+    dirs_home().join(".cargo/bin").join(if cfg!(windows) {
+        "clpp.exe"
+    } else {
+        "clpp"
+    })
+}
+
+fn replace_compiler_if_newer(src: &Path, dest: &Path) -> Result<()> {
+    if !dest.exists() {
+        if let Some(parent) = dest.parent() {
+            fs::create_dir_all(parent).into_diagnostic()?;
+        }
+        fs::copy(src, dest).into_diagnostic()?;
+        return Ok(());
+    }
+    if same_file(src, dest) {
+        return Ok(());
+    }
+    let incoming = parse_semver(PACKAGE_VERSION);
+    let installed = parse_semver(&compiler_version(dest).unwrap_or_default());
+    if incoming < installed {
+        return Ok(());
+    }
+    fs::copy(src, dest).into_diagnostic()?;
+    Ok(())
+}
+
+fn compiler_version(exe: &Path) -> Option<String> {
+    let out = Command::new(exe).arg("--version").output().ok()?;
+    String::from_utf8(out.stdout)
+        .ok()
+        .map(|s| s.trim().to_string())
+}
+
+fn parse_semver(s: &str) -> [u32; 3] {
+    let digits: String = s
+        .chars()
+        .filter(|c| c.is_ascii_digit() || *c == '.')
+        .collect();
+    let mut parts = digits.split('.');
+    [
+        parts.next().and_then(|x| x.parse().ok()).unwrap_or(0),
+        parts.next().and_then(|x| x.parse().ok()).unwrap_or(0),
+        parts.next().and_then(|x| x.parse().ok()).unwrap_or(0),
+    ]
+}
+
+fn same_file(a: &Path, b: &Path) -> bool {
+    match (fs::canonicalize(a), fs::canonicalize(b)) {
+        (Ok(left), Ok(right)) => left == right,
+        _ => a == b,
+    }
 }
 
 fn add_to_user_path(dir: &Path) -> Result<()> {
@@ -215,12 +284,12 @@ fn dirs_home() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("."))
 }
 
-fn remove_old_packs(dest_root: &Path, keep: &str) {
+fn remove_clpp_packs(dest_root: &Path) {
     if let Ok(entries) = fs::read_dir(dest_root) {
         for entry in entries.flatten() {
             let name = entry.file_name();
             let name = name.to_string_lossy();
-            if name.starts_with("clpp.clpp-language") && name != keep {
+            if name.starts_with("clpp.clpp-language") {
                 let _ = fs::remove_dir_all(entry.path());
             }
         }

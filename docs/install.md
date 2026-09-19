@@ -6,7 +6,7 @@ title: Install CL++
 
 Download the installer, run it, and CL++ is on your machine: the `clpp` compiler, editor highlighting, IntelliSense, and a language server.
 
-<div className="clpp-download">
+<div class="clpp-download">
 
 [Download CL++ installer for Windows](https://github.com/KartzRbx/CLPP/releases/latest/download/clpp-setup.exe)
 
@@ -26,6 +26,8 @@ If you already have `clpp`:
 ```bash
 clpp setup
 ```
+
+That replaces an older compiler on this machine (for example `0.1.0`) with the one you just ran, then copies the matching editor pack.
 
 Editor pack only (compiler already installed):
 

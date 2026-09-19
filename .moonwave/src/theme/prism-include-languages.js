@@ -41,7 +41,7 @@ export default function prismIncludeLanguages(PrismObject) {
           lookbehind: true,
         },
         {
-          pattern: /\b[A-Z][A-Za-z0-9_]*(?=\s*\*?\s+[A-Za-z_])/,
+          pattern: /\b[A-Z][A-Za-z0-9_]*(?=\s+[A-Za-z_])/,
         },
         {
           pattern: /\b[A-Z][A-Za-z0-9_]*(?=\s*::)/,
@@ -57,6 +57,30 @@ export default function prismIncludeLanguages(PrismObject) {
           lookbehind: true,
         },
       ],
+    });
+
+    PrismObject.languages.insertBefore("clpp", "keyword", {
+      "receiver-this": {
+        pattern: /@this\b/,
+        alias: "keyword",
+      },
+      receiver: {
+        pattern: /@[A-Za-z_]\w*/,
+        inside: {
+          keyword: /^@/,
+          property: /[A-Za-z_]\w*/,
+        },
+      },
+    });
+    PrismObject.languages.insertBefore("clpp", "operator", {
+      cleanup: {
+        pattern: /~>/,
+        alias: "operator",
+      },
+      concat: {
+        pattern: /\.:/,
+        alias: "operator",
+      },
     });
   } else {
     PrismObject.languages.clpp =

@@ -1,0 +1,32 @@
+---
+import Default from "@astrojs/starlight/components/Head.astro";
+---
+
+<Default><slot /></Default>
+<script>
+  import mermaid from "mermaid";
+
+  function render() {
+    const theme =
+      document.documentElement.getAttribute("data-theme") === "dark"
+        ? "dark"
+        : "neutral";
+    mermaid.initialize({
+      startOnLoad: false,
+      theme,
+      securityLevel: "strict",
+    });
+    const nodes = document.querySelectorAll("pre.mermaid:not([data-processed])");
+    if (nodes.length) {
+      mermaid.run({ nodes });
+    }
+  }
+
+  render();
+  document.addEventListener("astro:page-load", render);
+  const observer = new MutationObserver(render);
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["data-theme"],
+  });
+</script>

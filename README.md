@@ -87,11 +87,11 @@ clpp api compile          # JSON stdin/stdout — Cluaupp contract
 
 ## Docs
 
-The site is a full course plus a [cplusplus.com-style reference](https://kartzrbx.github.io/CLPP/docs/reference) (one page per utility) and a generated API.
+The site is a **user guide** (install, tutorials, style) plus a [cplusplus.com-style reference](https://kartzrbx.github.io/CLPP/docs/reference) and a [specification](https://kartzrbx.github.io/CLPP/docs/spec/compiler) (Pest EBNF, type table, emit). Built with Starlight.
 
 ```bash
-npm run docs          # local
-npm run docs:build    # static → build/  (gitignored)
+npm run docs          # local Starlight
+npm run docs:build    # static → www/dist  (gitignored)
 ```
 
 Live: **[kartzrbx.github.io/CLPP](https://kartzrbx.github.io/CLPP/)**.
@@ -102,8 +102,9 @@ Code fences on the docs site use the language id **clpp** (not `cpp`).
 
 ```
 src/              compiler (pest + AST + Luau codegen)
-docs/             course, spec, per-utility reference
-moonwave/         API stubs for the docs site
+docs/             user guide, spec, per-utility reference
+www/              Starlight / Astro docs site
+moonwave/         legacy API stubs (redirected to the reference)
 examples/         leaderstats, Fusion, Vide, combat
 stdlib/           IntelliSense headers
 editors/vscode    language pack (IntelliSense + LSP server)

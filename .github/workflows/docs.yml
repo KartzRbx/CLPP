@@ -9,8 +9,7 @@ permissions:
   contents: write
 
 # GitHub Pages must use branch `gh-pages` and folder `/` (repo root on that
-# branch), not `/docs`. The Moonwave site lives at the branch root: index.html,
-# docs/, and api/Builtins. Folder `/docs` would 404 the API tab.
+# branch). Starlight builds to www/dist with base `/CLPP/`.
 
 jobs:
   build:
@@ -20,10 +19,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: Build Moonwave site
-        run: npm run docs:build
+      - name: Install and build Starlight
+        run: |
+          npm install
+          npm run docs:build
       - name: Deploy GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./build
+          publish_dir: ./www/dist

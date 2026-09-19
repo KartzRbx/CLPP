@@ -6,7 +6,7 @@ toc_max_heading_level: 2
 
 # Language reference
 
-Every utility has its own page: syntax, parameters, return value, Luau emit, example, and see-also. Same job as [cplusplus.com/reference](https://cplusplus.com/reference/). Generated class pages live under the **API** tab.
+Every utility has its own page: syntax, parameters, return value, Luau emit, example, and see-also. Same job as [cplusplus.com/reference](https://cplusplus.com/reference/).
 
 <div class="clpp-ref-quick" aria-label="Quick access">
 

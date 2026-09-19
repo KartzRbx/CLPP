@@ -604,10 +604,10 @@ function loadEngine(data) {
 
   function hoverFor(word, symbols) {
     if (word === "@this") {
-      return "Current object inside Class::Method. Emits Luau self. @field is self.field.";
+      return "`@` marks the receiver. `@this` is the current object (Luau self). Only inside Class::Method.";
     }
     if (word === "this") {
-      return "Current object inside Class::Method. Emits self. Prefer @this.";
+      return "Receiver alias inside Class::Method. Emits self. Prefer @this.";
     }
     if (word && word.startsWith("@") && word.length > 1) {
       const field = word.slice(1);
@@ -615,10 +615,10 @@ function loadEngine(data) {
       for (const typeName of Object.keys(overlay || {})) {
         const member = findMember(typeName, field, overlay);
         if (member && member.detail) {
-          return `${member.detail} (self.${field})`;
+          return `\`@${field}\` is the receiver field (self.${field}). ${member.detail}`;
         }
       }
-      return `self.${field} — member of the current object`;
+      return `\`@${field}\` is the receiver field — emits self.${field}. Only inside Class::Method.`;
     }
     if (symbols.vars.has(word)) {
       const info = symbols.vars.get(word);
@@ -671,16 +671,27 @@ function enclosingOwner(text, offset) {
   return last;
 }
 
+const STATIC_AT_ITEMS = [
+  {
+    label: "@this",
+    kind: "Keyword",
+    detail: "@this — receiver sigil + current object (Luau self)",
+  },
+  {
+    label: "@janitor",
+    kind: "Keyword",
+    detail: "@janitor → self.janitor (Janitor field)",
+  },
+];
+
 function atCompletions(line, symbols, owner) {
   if (!/@[A-Za-z_]*$/.test(line)) {
     return null;
   }
-  const items = [
-    { label: "@this", kind: "Keyword", detail: "Current object in Class::Method (Luau self)" },
-  ];
+  const items = STATIC_AT_ITEMS.map((item) => ({ ...item }));
+  const seen = new Set(items.map((item) => item.label.slice(1)));
   const types = (symbols && symbols.types) || {};
   const nodes = owner && types[owner] ? [types[owner]] : Object.values(types);
-  const seen = new Set(["this"]);
   for (const node of nodes) {
     for (const member of [...(node.properties || []), ...(node.methods || [])]) {
       if (seen.has(member.label)) {
@@ -690,7 +701,7 @@ function atCompletions(line, symbols, owner) {
       items.push({
         label: `@${member.label}`,
         kind: member.kind === "methods" ? "Method" : "Property",
-        detail: member.detail || `self.${member.label}`,
+        detail: member.detail || `@${member.label} → self.${member.label}`,
       });
     }
   }
@@ -747,6 +758,7 @@ function lintReceiverSigil(text) {
 module.exports = {
   loadEngine,
   PRIMITIVES,
+  STATIC_AT_ITEMS,
   lintDocument,
   lintReceiverSigil,
   enclosingOwner,

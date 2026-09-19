@@ -159,11 +159,29 @@
       "name": "constant.numeric.clpp",
       "match": "\\b\\d+(\\.\\d+)?\\b"
     },
+    "receiver": {
+      "patterns": [
+        {
+          "name": "keyword.other.receiver.clpp",
+          "match": "@this\\b"
+        },
+        {
+          "match": "(@)([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "keyword.other.receiver.clpp" },
+            "2": { "name": "variable.other.property.receiver.clpp" }
+          }
+        },
+        {
+          "name": "keyword.other.receiver.clpp",
+          "match": "\\bthis\\b"
+        }
+      ]
+    },
     "operators": {
       "patterns": [
         { "name": "keyword.operator.concat.clpp", "match": "\\.:" },
         { "name": "keyword.operator.cleanup.clpp", "match": "~>" },
-        { "name": "keyword.operator.receiver.clpp", "match": "@this\\b|@[A-Za-z_][A-Za-z0-9_]*" },
         { "name": "keyword.operator.scope.clpp", "match": "::" },
         { "name": "keyword.operator.arrow.clpp", "match": "=>" },
         { "name": "keyword.operator.comparison.clpp", "match": "==|!=|<=|>=|<|>" },

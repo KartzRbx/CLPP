@@ -4,9 +4,6 @@ unlisted: true
 
 # docs/
 
-The [CL++ course](intro.md) and generated API live on the Moonwave site (`npm run docs`).
+The [CL++ course](intro.md) is the **user guide**. Every construct has a page under [reference](reference.md). Formal grammar and emit live in [spec/](spec/compiler.md).
 
-- Course — start at [intro.md](intro.md)
-- Formal spec — [spec/syntax.md](spec/syntax.md)
-- Cluaupp JSON contract — [cluaupp-support.md](cluaupp-support.md)
-- Cluaupp callbacks — [cluaupp-callbacks.md](cluaupp-callbacks.md)
+The published site is Starlight (`npm run docs` → `www/`). Markdown in this folder is the source; `scripts/prepare-starlight.mjs` copies it into the Starlight collection so URLs stay `/docs/...`.

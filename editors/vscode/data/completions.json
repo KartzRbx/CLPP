@@ -33,7 +33,8 @@
     "Debris", "SoundService", "Teams", "TeleportService", "MarketplaceService"
   ],
   "operators": [
-    { "label": "@this", "detail": "Current object in Class::Method (Luau self)" },
+    { "label": "@", "detail": "Receiver sigil. @this is self; @field is self.field." },
+    { "label": "@this", "detail": "@this — receiver (Luau self). @field is self.field." },
     { "label": ".", "detail": "Property or instance method (the default)" },
     { "label": ":", "detail": "Type annotation or protected (pcall) call" },
     { "label": "::", "detail": "Static scope or manual Connect without Janitor" },

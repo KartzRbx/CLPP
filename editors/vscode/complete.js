@@ -1,6 +1,5 @@
 "use strict";
 
-const { extraIncludeTexts } = require("./workspace-index");
 const { atCompletions, enclosingOwner } = require("./intellisense");
 
 const HOVER_WORDS = {
@@ -23,26 +22,27 @@ const HOVER_WORDS = {
   await: "Wait until an async value is ready.",
   to_string: "Convert a value to text. Emits Luau tostring.",
   to_number: "Parse a number from text. Emits Luau tonumber. Fails → null.",
-  this: "Current object inside Class::Method. Emits self. Prefer @this.",
-  "@this": "Current object inside Class::Method. Emits Luau self. @field is self.field.",
+  this: "Receiver alias inside Class::Method. Emits self. Prefer @this.",
+  "@this":
+    "`@` is the receiver sigil. `@this` is the current object (Luau self). Only inside Class::Method.",
 };
 
-function symbolsFor(engine, text, filePath, folders) {
-  return engine.indexDocument(text, extraIncludeTexts(text, filePath, folders));
+function symbolsFor(engine, text, extraTexts) {
+  return engine.indexDocument(text, extraTexts || []);
 }
 
-function buildCompletionItems(engine, data, text, filePath, lineText, offset, folders) {
-  const symbols = symbolsFor(engine, text, filePath, folders);
-  const at = atCompletions(lineText, symbols, enclosingOwner(text, offset));
-  if (at) {
-    return at;
-  }
+function buildCompletionItems(engine, data, text, filePath, lineText, offset, folders, extraTexts) {
   if (/GetService\s*<\s*[A-Za-z_]*$/.test(lineText)) {
     return (data.services || data.types || []).map((ty) => ({
       label: ty,
       kind: "Class",
       detail: `GetService<${ty}>()`,
     }));
+  }
+  const symbols = symbolsFor(engine, text, extraTexts);
+  const at = atCompletions(lineText, symbols, enclosingOwner(text, offset));
+  if (at) {
+    return at;
   }
   const resolved = engine.resolve(lineText, symbols);
   if (resolved.mode !== "global" && resolved.mode !== "concat") {
@@ -75,15 +75,14 @@ function buildCompletionItems(engine, data, text, filePath, lineText, offset, fo
   return items;
 }
 
-function hoverText(engine, text, filePath, word, folders) {
+function hoverText(engine, text, filePath, word, folders, extraTexts) {
   if (!word) {
     return null;
   }
   if (HOVER_WORDS[word]) {
     return HOVER_WORDS[word];
   }
-  const symbols = symbolsFor(engine, text, filePath, folders);
-  return engine.hoverFor(word, symbols);
+  return engine.hoverFor(word, symbolsFor(engine, text, extraTexts));
 }
 
 module.exports = { HOVER_WORDS, symbolsFor, buildCompletionItems, hoverText };

@@ -3,7 +3,19 @@
 const fs = require("fs");
 const path = require("path");
 
-const SKIP = new Set(["node_modules", "target", ".git", "out", "build", ".moonwave"]);
+const SKIP = new Set([
+  "node_modules",
+  "target",
+  ".git",
+  "out",
+  "build",
+  "dist",
+  "www",
+  ".astro",
+  ".moonwave",
+  ".odr",
+  ".tmp",
+]);
 const SOURCE_EXT = new Set([".clpp", ".clp", ".clh"]);
 
 function includeSearchRoots(folders) {
