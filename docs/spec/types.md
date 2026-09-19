@@ -35,11 +35,11 @@ Player playerRef = null;
 
 Always initialize: `int coins = 0;` — `int coins;` emits `nil`.
 
-There is no `delete`, `*part`, `&part`, `int&`, or `->`. Numbers copy; Instances mutate through `.` (property and instance method).
+There is no `delete`, no address-of, and no `->`. Numbers copy; Instances mutate through `.` (property and instance method).
 
 ## Instances are class names
 
-`Player player` is an Instance of class Player. Do not write `Player*`. Properties and instance methods use `.`. Protected calls use `:`. Static names use `::`. [`match`](../guard-match.md) arms write `Part p =>`.
+`Player player` is an Instance of class Player. Properties and instance methods use `.`. Protected calls use `:`. Static names use `::`. [`match`](../guard-match.md) arms write `Part p =>`.
 
 ```clpp
 player.Name = "Kartz";

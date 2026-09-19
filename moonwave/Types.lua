@@ -120,13 +120,13 @@ function Types.auto() end
 ]=]
 
 --[=[
-	Instance types use the Roblox class name. `Player player` is a Player Instance. Do not write `Player*`.
+	Instance types use the Roblox class name. `Player player` is a Player Instance.
 
 	**Syntax:** `Player player = null;` · `player.FindFirstChild("x")`
 
 	**Emit:** `Player`
 
-	Properties and instance methods use `.` (`player.FindFirstChild`, `player.Kick`). Protected calls use `:`. Static names use `::` (`task::wait`, `Vector3::new`). No `delete`, `*p`, `&p`, `int&`, or `->`.
+	Properties and instance methods use `.` (`player.FindFirstChild`, `player.Kick`). Protected calls use `:`. Static names use `::` (`task::wait`, `Vector3::new`). No `delete`, address-of, or `->`.
 
 	```clpp
 	Player player = null;

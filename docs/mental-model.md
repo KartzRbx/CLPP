@@ -24,7 +24,7 @@ Hold these five rules and the rest of the language clicks.
 
 ## 3. Instances are class names
 
-`Player player` is a Roblox `Player`. Do not write `Player*`, `*player`, or `player->Name`. Lifetime is `Destroy` or Janitor. [`match`](guard-match) arms use the same class name: `Part p =>`.
+`Player player` is a Roblox `Player`. Lifetime is `Destroy` or Janitor. Access is `player.Name`, never `->`. [`match`](guard-match) arms use the same class name: `Part p =>`.
 
 ## 4. `init` starts a script; modules return tables
 

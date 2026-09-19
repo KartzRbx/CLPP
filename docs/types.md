@@ -34,7 +34,7 @@ Always initialize: `int coins;` emits `nil`. Prefer `int coins = 0;`.
 
 ## Instances are class names
 
-`Player player` is an Instance of class Player. Do not write `Player*`. There is no address, no `delete`, and no `->`. Properties and instance methods use `.`. Protected calls use `:`. Static names use `::`.
+`Player player` is an Instance of class Player. There is no address, no `delete`, and no `->`. Properties and instance methods use `.`. Protected calls use `:`. Static names use `::`.
 
 [`match`](guard-match) arms use the same class name: `Part p =>`.
 

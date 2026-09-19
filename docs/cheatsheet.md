@@ -50,7 +50,7 @@ title: Language cheat sheet
 
 ## Forbidden (by design)
 
-`->` · `Player*` · `continue` · ternary · `do/while` · `try/catch` · `goto` · pointer arithmetic · C++ captures · `func []` · generic templates · `std::`
+`->` · C pointers · `continue` · ternary · `do/while` · `try/catch` · `goto` · C++ captures · `func []` · generic templates · `std::`
 
 Generated API: [Builtins](/CLPP/api/Builtins) · [Operators](/CLPP/api/Operators) · [Signals](/CLPP/api/Signals)
 

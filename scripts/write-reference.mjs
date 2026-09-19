@@ -483,7 +483,7 @@ add({
   params: [],
   returns: "Nothing. Luau omits the return annotation (or uses `()` internally).",
   emit: "(no return annotation)",
-  description: `\`return;\` is valid. \`return expr;\` in a \`void\` function should be avoided. There is no \`void*\`.`,
+  description: `\`return;\` is valid. \`return expr;\` in a \`void\` function should be avoided. \`void\` is only a return type.`,
   exampleClpp: `void CreateLeaderstats(Player player) {
     return;
 }`,
@@ -622,7 +622,7 @@ add({
   sidebar: "Instance",
   header: "Type",
   summary:
-    "Write the Roblox class name. `Player player` is an Instance of class Player. Do not write `Player*`, `*p`, `&p`, `int&`, or `->`.",
+    "Write the Roblox class name. `Player player` is an Instance of class Player. There is no address-of, no `->`, and no C pointer type.",
   syntax: `Player player = null;
 player.Name = "Kartz";
 player.FindFirstChild("leaderstats");`,

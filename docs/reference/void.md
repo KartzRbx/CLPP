@@ -31,7 +31,7 @@ Nothing. Luau omits the return annotation (or uses `()` internally).
 
 ## Description
 
-`return;` is valid. `return expr;` in a `void` function should be avoided. There is no `void*`.
+`return;` is valid. `return expr;` in a `void` function should be avoided. `void` is only a return type.
 
 ## Example
 

@@ -7,7 +7,7 @@ sidebar_label: "Instance"
 
 <div class="clpp-ref-meta">Type</div>
 
-Write the Roblox class name. `Player player` is an Instance of class Player. There is no pointer: do not write `Player*`, `*p`, `&p`, `int&`, or `->`.
+Write the Roblox class name. `Player player` is an Instance of class Player. There is no address-of, no `->`, and no C pointer type.
 
 ## Syntax
 

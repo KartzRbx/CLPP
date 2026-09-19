@@ -142,4 +142,4 @@ Every utility has its own page: syntax, parameters, return value, Luau emit, exa
 
 ## Not in the language
 
-See [What CL++ does not do](unsupported): `->`, `continue`, ternary, `do/while`, `try/catch`, `goto`, pointer arithmetic, C++ captures, generic templates, `std::`.
+See [What CL++ does not do](unsupported): `->`, `continue`, ternary, `do/while`, `try/catch`, `goto`, C pointers, C++ captures, generic templates, `std::`.
