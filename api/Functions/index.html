@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.10.1">
 <title data-rh="true">Functions | CL++</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://kartzrbx.github.io/CLPP/api/Functions"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docusaurus_tag" content="default"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docsearch:docusaurus_tag" content="default"><meta data-rh="true" property="og:title" content="Functions | CL++"><meta data-rh="true" name="description" content="Named functions, `func (…)` callbacks, and `@this`. No overloading. No default arguments. No C++ captures."><meta data-rh="true" property="og:description" content="Named functions, `func (…)` callbacks, and `@this`. No overloading. No default arguments. No C++ captures."><link data-rh="true" rel="icon" href="/CLPP/img/favicon.png"><link data-rh="true" rel="canonical" href="https://kartzrbx.github.io/CLPP/api/Functions"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Functions" hreflang="en"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Functions" hreflang="x-default"><link rel="stylesheet" href="/CLPP/assets/css/styles.796e4892.css">
-<script src="/CLPP/assets/js/runtime~main.989fd11b.js" defer="defer"></script>
-<script src="/CLPP/assets/js/main.dda7d2e5.js" defer="defer"></script>
+<script src="/CLPP/assets/js/runtime~main.62079f9b.js" defer="defer"></script>
+<script src="/CLPP/assets/js/main.2388e376.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -17,7 +17,7 @@
 <p>Named function. Only bodies in <code>.clp</code> / <code>.clpp</code> emit. Prototypes in <code>.clh</code> become <code>export type</code> fields.</p>
 <p><strong>Syntax:</strong> <code>ReturnType Name(T arg) { return arg; }</code></p>
 <p><strong>Emit:</strong> <code>const function Name(arg: T): ReturnType</code></p>
-<pre class="language-clpp"><code class="language-clpp"><span class="token keyword">void</span> <span class="token function">CreateLeaderstats</span><span class="token punctuation">(</span>Player<span class="token operator">*</span> player<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+<pre class="language-clpp"><code class="language-clpp"><span class="token keyword">void</span> <span class="token function">CreateLeaderstats</span><span class="token punctuation">(</span>Player player<span class="token punctuation">)</span> <span class="token punctuation">{</span>
     <span class="token keyword">return</span><span class="token punctuation">;</span>
 <span class="token punctuation">}</span>
 </code></pre>
@@ -27,7 +27,7 @@
 <p>Closure. <code>func (params) { }</code> — no C++ captures. Luau still closes over outer locals.</p>
 <p><strong>Syntax:</strong> <code>func (T arg) { }</code> · <code>func cb = func () {};</code></p>
 <p><strong>Emit:</strong> <code>function(arg: T) … end</code></p>
-<pre class="language-clpp"><code class="language-clpp">players<span class="token punctuation">.</span>PlayerAdded<span class="token operator">~</span><span class="token operator">></span><span class="token function">Connect</span><span class="token punctuation">(</span><span class="token function">func</span> <span class="token punctuation">(</span>Player<span class="token operator">*</span> playerEntered<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+<pre class="language-clpp"><code class="language-clpp">players<span class="token punctuation">.</span>PlayerAdded<span class="token operator">~</span><span class="token operator">></span><span class="token function">Connect</span><span class="token punctuation">(</span><span class="token function">func</span> <span class="token punctuation">(</span>Player playerEntered<span class="token punctuation">)</span> <span class="token punctuation">{</span>
     <span class="token function">post</span><span class="token punctuation">(</span><span class="token string">"New player: "</span> <span class="token punctuation">.</span><span class="token operator">:</span> playerEntered<span class="token punctuation">.</span>Name<span class="token punctuation">)</span><span class="token punctuation">;</span>
 <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
@@ -39,7 +39,7 @@
     &quot;functions&quot;: [
         {
             &quot;name&quot;: &quot;function&quot;,
-            &quot;desc&quot;: &quot;Named function. Only bodies in `.clp` / `.clpp` emit. Prototypes in `.clh` become `export type` fields.\n\n**Syntax:** `ReturnType Name(T arg) { return arg; }`\n\n**Emit:** `const function Name(arg: T): ReturnType`\n\n```clpp\nvoid CreateLeaderstats(Player* player) {\n    return;\n}\n```&quot;,
+            &quot;desc&quot;: &quot;Named function. Only bodies in `.clp` / `.clpp` emit. Prototypes in `.clh` become `export type` fields.\n\n**Syntax:** `ReturnType Name(T arg) { return arg; }`\n\n**Emit:** `const function Name(arg: T): ReturnType`\n\n```clpp\nvoid CreateLeaderstats(Player player) {\n    return;\n}\n```&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;static&quot;,
@@ -50,7 +50,7 @@
         },
         {
             &quot;name&quot;: &quot;lambda&quot;,
-            &quot;desc&quot;: &quot;Closure. `func (params) { }` — no C++ captures. Luau still closes over outer locals.\n\n**Syntax:** `func (T arg) { }` · `func cb = func () {};`\n\n**Emit:** `function(arg: T) … end`\n\n```clpp\nplayers.PlayerAdded~&gt;Connect(func (Player* playerEntered) {\n    post(\&quot;New player: \&quot; .: playerEntered.Name);\n});\n```&quot;,
+            &quot;desc&quot;: &quot;Closure. `func (params) { }` — no C++ captures. Luau still closes over outer locals.\n\n**Syntax:** `func (T arg) { }` · `func cb = func () {};`\n\n**Emit:** `function(arg: T) … end`\n\n```clpp\nplayers.PlayerAdded~&gt;Connect(func (Player playerEntered) {\n    post(\&quot;New player: \&quot; .: playerEntered.Name);\n});\n```&quot;,
             &quot;params&quot;: [
                 {
                     &quot;name&quot;: &quot;arg&quot;,

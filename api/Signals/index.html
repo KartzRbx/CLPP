@@ -20,8 +20,8 @@
 | `name~&gt;Once(fn)` | listen once (Janitor) | [Once](/CLPP/docs/reference/Once) |
 | `name.Wait()` | yield until the next fire | [Wait](/CLPP/docs/reference/Wait) |
 | `obj.GetPropertyChangedSignal(&quot;X&quot;)` | Instance property changes | [GetPropertyChangedSignal](/CLPP/docs/reference/GetPropertyChangedSignal) |"><link data-rh="true" rel="icon" href="/CLPP/img/favicon.png"><link data-rh="true" rel="canonical" href="https://kartzrbx.github.io/CLPP/api/Signals"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Signals" hreflang="en"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Signals" hreflang="x-default"><link rel="stylesheet" href="/CLPP/assets/css/styles.796e4892.css">
-<script src="/CLPP/assets/js/runtime~main.989fd11b.js" defer="defer"></script>
-<script src="/CLPP/assets/js/main.dda7d2e5.js" defer="defer"></script>
+<script src="/CLPP/assets/js/runtime~main.62079f9b.js" defer="defer"></script>
+<script src="/CLPP/assets/js/main.2388e376.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -67,7 +67,7 @@
 </table>
 </div></header><h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="functions">Functions<a href="#functions" class="hash-link" aria-label="Direct link to Functions" title="Direct link to Functions" translate="no">​</a></h2><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="signal&lt;T&gt;"><code style="text-decoration:none">signal&lt;T&gt;</code><a href="#signal&lt;T&gt;" class="hash-link" aria-label="Direct link to signal&lt;T&gt;" title="Direct link to signal&lt;T&gt;" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#925FB9;color:#925FB9">signal</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Signals.lua#L27"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Signals<!-- -->.</code><code class="green_DgR4">signal&lt;T&gt;</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p>Declare a typed signal.</p>
-<p><strong>Syntax:</strong> <code>signal&#x3C;Player*, int> OnCoinsUpdated;</code></p>
+<p><strong>Syntax:</strong> <code>signal&#x3C;Player, int> OnCoinsUpdated;</code></p>
 <p><strong>Emit:</strong> <code>local OnCoinsUpdated = __signal()</code></p>
 </div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="Fire"><code style="text-decoration:none">Fire</code><a href="#Fire" class="hash-link" aria-label="Direct link to Fire" title="Direct link to Fire" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#925FB9;color:#925FB9">signal</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Signals.lua#L44"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Signals<!-- -->.</code><code class="green_DgR4">Fire</code><code>(</code><div class="inset_uKQm"><div><code>...<!-- -->: </code><code class="blue_P4bS">any</code><span class="inlineDescription_G7Er">-- <span>
 <p>Payload matching <code>signal&#x3C;T...></code></p>
@@ -75,7 +75,7 @@
 <p>Emits to every current listener.</p>
 <p><strong>Syntax:</strong> <code>name.Fire(...);</code></p>
 <p><strong>Emit:</strong> <code>name:Fire(...)</code></p>
-<pre class="language-clpp"><code class="language-clpp">signal<span class="token operator">&#x3C;</span>Player<span class="token operator">*</span><span class="token punctuation">,</span> <span class="token keyword">int</span><span class="token operator">></span> OnCoinsUpdated<span class="token punctuation">;</span>
+<pre class="language-clpp"><code class="language-clpp">signal<span class="token operator">&#x3C;</span>Player<span class="token punctuation">,</span> <span class="token keyword">int</span><span class="token operator">></span> OnCoinsUpdated<span class="token punctuation">;</span>
 OnCoinsUpdated<span class="token punctuation">.</span><span class="token function">Fire</span><span class="token punctuation">(</span>player<span class="token punctuation">,</span> <span class="token number">500</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
 </div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="Connect"><code style="text-decoration:none">Connect</code><a href="#Connect" class="hash-link" aria-label="Direct link to Connect" title="Direct link to Connect" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#925FB9;color:#925FB9">signal</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Signals.lua#L57"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Signals<!-- -->.</code><code class="green_DgR4">Connect</code><code>(</code><div class="inset_uKQm"><div><code>handler<!-- -->: </code><code class="blue_P4bS">func</code><span class="inlineDescription_G7Er">-- <span>
@@ -104,7 +104,7 @@ OnCoinsUpdated<span class="token punctuation">.</span><span class="token functio
     &quot;functions&quot;: [
         {
             &quot;name&quot;: &quot;signal&lt;T&gt;&quot;,
-            &quot;desc&quot;: &quot;Declare a typed signal.\n\n**Syntax:** `signal&lt;Player*, int&gt; OnCoinsUpdated;`\n\n**Emit:** `local OnCoinsUpdated = __signal()`&quot;,
+            &quot;desc&quot;: &quot;Declare a typed signal.\n\n**Syntax:** `signal&lt;Player, int&gt; OnCoinsUpdated;`\n\n**Emit:** `local OnCoinsUpdated = __signal()`&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;static&quot;,
@@ -118,7 +118,7 @@ OnCoinsUpdated<span class="token punctuation">.</span><span class="token functio
         },
         {
             &quot;name&quot;: &quot;Fire&quot;,
-            &quot;desc&quot;: &quot;Emits to every current listener.\n\n**Syntax:** `name.Fire(...);`\n\n**Emit:** `name:Fire(...)`\n\n```clpp\nsignal&lt;Player*, int&gt; OnCoinsUpdated;\nOnCoinsUpdated.Fire(player, 500);\n```&quot;,
+            &quot;desc&quot;: &quot;Emits to every current listener.\n\n**Syntax:** `name.Fire(...);`\n\n**Emit:** `name:Fire(...)`\n\n```clpp\nsignal&lt;Player, int&gt; OnCoinsUpdated;\nOnCoinsUpdated.Fire(player, 500);\n```&quot;,
             &quot;params&quot;: [
                 {
                     &quot;name&quot;: &quot;...&quot;,

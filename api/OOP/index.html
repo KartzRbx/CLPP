@@ -12,8 +12,8 @@ Stems must match: `LeaderstatsServer.clh` beside `LeaderstatsServer.server.clpp`
 `@this` is `self`. `@field` and bare fields become `self.field`. `this` without `@` is the same alias. `public:` / `private:` are ignored.
 There is no `int main()` — Scripts use `void init()`.
 Stems must match: `LeaderstatsServer.clh` beside `LeaderstatsServer.server.clpp`."><link data-rh="true" rel="icon" href="/CLPP/img/favicon.png"><link data-rh="true" rel="canonical" href="https://kartzrbx.github.io/CLPP/api/OOP"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/OOP" hreflang="en"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/OOP" hreflang="x-default"><link rel="stylesheet" href="/CLPP/assets/css/styles.796e4892.css">
-<script src="/CLPP/assets/js/runtime~main.989fd11b.js" defer="defer"></script>
-<script src="/CLPP/assets/js/main.dda7d2e5.js" defer="defer"></script>
+<script src="/CLPP/assets/js/runtime~main.62079f9b.js" defer="defer"></script>
+<script src="/CLPP/assets/js/main.2388e376.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -28,7 +28,7 @@ Stems must match: `LeaderstatsServer.clh` beside `LeaderstatsServer.server.clpp`
 </p>
 </div></header><h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="functions">Functions<a href="#functions" class="hash-link" aria-label="Direct link to Functions" title="Direct link to Functions" translate="no">​</a></h2><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="struct"><code style="text-decoration:none">struct</code><a href="#struct" class="hash-link" aria-label="Direct link to struct" title="Direct link to struct" translate="no">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/OOP.lua#L24"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>OOP<!-- -->.</code><code class="green_DgR4">struct</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p>Type declaration. <code>class</code> is a synonym of <code>struct</code>.</p>
-<p><strong>Syntax:</strong> <code>struct LeaderstatsServer { Janitor* janitor; };</code></p>
+<p><strong>Syntax:</strong> <code>struct LeaderstatsServer { Janitor janitor; };</code></p>
 <p><strong>Emit:</strong> <code>export type</code> plus methods; field-only headers emit <code>const function Name()</code> with defaults.</p>
 <p>Instances are not RAII. Leaving a block does not <code>Destroy</code> — use Janitor.</p>
 </div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="Class::Method"><code style="text-decoration:none">Class::Method</code><a href="#Class::Method" class="hash-link" aria-label="Direct link to Class::Method" title="Direct link to Class::Method" translate="no">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/OOP.lua#L38"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>OOP<!-- -->.</code><code class="green_DgR4">Class::Method</code><code>(</code><code>arg<!-- -->: </code><code class="blue_P4bS">any</code><code>) → </code><code>(</code><code>)</code></div><div>
@@ -47,7 +47,7 @@ Stems must match: `LeaderstatsServer.clh` beside `LeaderstatsServer.server.clpp`
     &quot;functions&quot;: [
         {
             &quot;name&quot;: &quot;struct&quot;,
-            &quot;desc&quot;: &quot;Type declaration. `class` is a synonym of `struct`.\n\n**Syntax:** `struct LeaderstatsServer { Janitor* janitor; };`\n\n**Emit:** `export type` plus methods; field-only headers emit `const function Name()` with defaults.\n\nInstances are not RAII. Leaving a block does not `Destroy` — use Janitor.&quot;,
+            &quot;desc&quot;: &quot;Type declaration. `class` is a synonym of `struct`.\n\n**Syntax:** `struct LeaderstatsServer { Janitor janitor; };`\n\n**Emit:** `export type` plus methods; field-only headers emit `const function Name()` with defaults.\n\nInstances are not RAII. Leaving a block does not `Destroy` — use Janitor.&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;static&quot;,

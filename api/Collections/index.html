@@ -8,8 +8,8 @@
 Aliases: `vector&lt;T&gt;`, `LuaArray&lt;T&gt;`, `span&lt;T&gt;` → `{T}`. `map&lt;K,V&gt;` → `{ [K]: V }`."><meta data-rh="true" property="og:description" content="Arrays are ordered lists. Dictionaries are maps. Both become Luau tables.
 
 Aliases: `vector&lt;T&gt;`, `LuaArray&lt;T&gt;`, `span&lt;T&gt;` → `{T}`. `map&lt;K,V&gt;` → `{ [K]: V }`."><link data-rh="true" rel="icon" href="/CLPP/img/favicon.png"><link data-rh="true" rel="canonical" href="https://kartzrbx.github.io/CLPP/api/Collections"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Collections" hreflang="en"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Collections" hreflang="x-default"><link rel="stylesheet" href="/CLPP/assets/css/styles.796e4892.css">
-<script src="/CLPP/assets/js/runtime~main.989fd11b.js" defer="defer"></script>
-<script src="/CLPP/assets/js/main.dda7d2e5.js" defer="defer"></script>
+<script src="/CLPP/assets/js/runtime~main.62079f9b.js" defer="defer"></script>
+<script src="/CLPP/assets/js/main.2388e376.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -33,13 +33,13 @@ Aliases: `vector&lt;T&gt;`, `LuaArray&lt;T&gt;`, `span&lt;T&gt;` → `{T}`. `map
 <p><strong>Syntax:</strong> <code>vector&#x3C;T> name = { a, b };</code></p>
 <p><strong>Emit:</strong> <code>{T}</code></p>
 </div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="dictionary&lt;K,V&gt;"><code style="text-decoration:none">dictionary&lt;K,V&gt;</code><a href="#dictionary&lt;K,V&gt;" class="hash-link" aria-label="Direct link to dictionary&lt;K,V&gt;" title="Direct link to dictionary&lt;K,V&gt;" translate="no">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Collections.lua#L58"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Collections<!-- -->.</code><code class="green_DgR4">dictionary&lt;K,V&gt;</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
-<p>String-keyed (or typed-key) map. Access keys with <code>:</code>, not <code>.</code>.</p>
+<p>String-keyed (or typed-key) map. Access keys with <code>.</code>.</p>
 <p><strong>Syntax:</strong></p>
 <pre class="language-clpp"><code class="language-clpp">dictionary<span class="token operator">&#x3C;</span>string<span class="token punctuation">,</span> <span class="token keyword">int</span><span class="token operator">></span> stats <span class="token operator">=</span> <span class="token punctuation">{</span>
     <span class="token punctuation">{</span><span class="token string">"Coins"</span><span class="token punctuation">,</span> <span class="token number">100</span><span class="token punctuation">}</span><span class="token punctuation">,</span>
     <span class="token punctuation">{</span><span class="token string">"Gems"</span><span class="token punctuation">,</span> <span class="token number">50</span><span class="token punctuation">}</span>
 <span class="token punctuation">}</span><span class="token punctuation">;</span>
-<span class="token function">post</span><span class="token punctuation">(</span>stats<span class="token operator">:</span>Coins<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token function">post</span><span class="token punctuation">(</span>stats<span class="token punctuation">.</span>Coins<span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
 <p><strong>Emit:</strong> <code>{ [K]: V }</code> with <code>Key = value</code> fields</p>
 </div></div></article></div><details><summary>Show raw api</summary><pre style="max-width:100%;white-space:pre-wrap">{
@@ -68,7 +68,7 @@ Aliases: `vector&lt;T&gt;`, `LuaArray&lt;T&gt;`, `span&lt;T&gt;` → `{T}`. `map
         },
         {
             &quot;name&quot;: &quot;dictionary&lt;K,V&gt;&quot;,
-            &quot;desc&quot;: &quot;String-keyed (or typed-key) map. Access keys with `:`, not `.`.\n\n**Syntax:**\n```clpp\ndictionary&lt;string, int&gt; stats = {\n    {\&quot;Coins\&quot;, 100},\n    {\&quot;Gems\&quot;, 50}\n};\npost(stats:Coins);\n```\n\n**Emit:** `{ [K]: V }` with `Key = value` fields&quot;,
+            &quot;desc&quot;: &quot;String-keyed (or typed-key) map. Access keys with `.`.\n\n**Syntax:**\n```clpp\ndictionary&lt;string, int&gt; stats = {\n    {\&quot;Coins\&quot;, 100},\n    {\&quot;Gems\&quot;, 50}\n};\npost(stats.Coins);\n```\n\n**Emit:** `{ [K]: V }` with `Key = value` fields&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;static&quot;,

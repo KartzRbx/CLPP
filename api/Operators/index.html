@@ -30,8 +30,8 @@ Full pages: [Language reference — Operators](/CLPP/docs/reference)."><meta dat
 `+` only adds numbers. `!=` `&amp;&amp;` `||` `!` emit `~=` `and` `or` `not`. `++` / `--` emit `+= 1` / `-= 1`.
 
 Full pages: [Language reference — Operators](/CLPP/docs/reference)."><link data-rh="true" rel="icon" href="/CLPP/img/favicon.png"><link data-rh="true" rel="canonical" href="https://kartzrbx.github.io/CLPP/api/Operators"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Operators" hreflang="en"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Operators" hreflang="x-default"><link rel="stylesheet" href="/CLPP/assets/css/styles.796e4892.css">
-<script src="/CLPP/assets/js/runtime~main.989fd11b.js" defer="defer"></script>
-<script src="/CLPP/assets/js/main.dda7d2e5.js" defer="defer"></script>
+<script src="/CLPP/assets/js/runtime~main.62079f9b.js" defer="defer"></script>
+<script src="/CLPP/assets/js/main.2388e376.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -124,7 +124,7 @@ task<span class="token double-colon punctuation">::</span><span class="token fun
 <p><strong>Emit:</strong> <code>items[0]</code> / <code>data["Coins"]</code> / <code>workspace["PlayerCharacter"]</code></p>
 <pre class="language-clpp"><code class="language-clpp">string first <span class="token operator">=</span> items<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
 playerData<span class="token punctuation">[</span><span class="token string">"Coins"</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token number">600</span><span class="token punctuation">;</span>
-Instance<span class="token operator">*</span> root <span class="token operator">=</span> character<span class="token punctuation">[</span><span class="token string">"HumanoidRootPart"</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+Instance root <span class="token operator">=</span> character<span class="token punctuation">[</span><span class="token string">"HumanoidRootPart"</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
 </code></pre>
 </div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="+"><code style="text-decoration:none">+</code><a href="#+" class="hash-link" aria-label="Direct link to +" title="Direct link to +" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#2b8ab6;color:#2b8ab6">operator</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Operators.lua#L135"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Operators<!-- -->.</code><code class="green_DgR4">+</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p>Numeric arithmetic. <code>+</code> does not concatenate. <code>*</code> is never pointer deref.</p>
@@ -141,7 +141,7 @@ Instance<span class="token operator">*</span> root <span class="token operator">
 </div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="="><code style="text-decoration:none">=</code><a href="#=" class="hash-link" aria-label="Direct link to =" title="Direct link to =" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#2b8ab6;color:#2b8ab6">operator</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Operators.lua#L171"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Operators<!-- -->.</code><code class="green_DgR4">=</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p>Assignment and compound assignment. Observable assignment writes <code>.Value</code>.</p>
 <p><strong>Syntax:</strong> <code>name = value;</code> · <code>name += 1;</code></p>
-<p><strong>Emit:</strong> <code>=</code> <code>+=</code> <code>-=</code> <code>*=</code> <code>/=</code></p>
+<p><strong>Emit:</strong> <code>=</code> <code>+=</code> <code>-=</code> <code>**=</code> <code>/=</code></p>
 </div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="++"><code style="text-decoration:none">++</code><a href="#++" class="hash-link" aria-label="Direct link to ++" title="Direct link to ++" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#2b8ab6;color:#2b8ab6">operator</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/Operators.lua#L181"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Operators<!-- -->.</code><code class="green_DgR4">++</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p>Always emits <code>+= 1</code> / <code>-= 1</code>. Prefix/postfix value is not preserved.</p>
 <p><strong>Syntax:</strong> <code>i++;</code> · <code>i--;</code></p>
@@ -229,7 +229,7 @@ Instance<span class="token operator">*</span> root <span class="token operator">
         },
         {
             &quot;name&quot;: &quot;[]&quot;,
-            &quot;desc&quot;: &quot;Index an array, map, or Roblox child by dynamic name. Not a lambda capture.\n\n**Syntax:** `items[0]` · `data[\&quot;Coins\&quot;]` · `workspace[\&quot;PlayerCharacter\&quot;]`\n\n**Emit:** `items[0]` / `data[\&quot;Coins\&quot;]` / `workspace[\&quot;PlayerCharacter\&quot;]`\n\n```clpp\nstring first = items[0];\nplayerData[\&quot;Coins\&quot;] = 600;\nInstance* root = character[\&quot;HumanoidRootPart\&quot;];\n```&quot;,
+            &quot;desc&quot;: &quot;Index an array, map, or Roblox child by dynamic name. Not a lambda capture.\n\n**Syntax:** `items[0]` · `data[\&quot;Coins\&quot;]` · `workspace[\&quot;PlayerCharacter\&quot;]`\n\n**Emit:** `items[0]` / `data[\&quot;Coins\&quot;]` / `workspace[\&quot;PlayerCharacter\&quot;]`\n\n```clpp\nstring first = items[0];\nplayerData[\&quot;Coins\&quot;] = 600;\nInstance root = character[\&quot;HumanoidRootPart\&quot;];\n```&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;static&quot;,
@@ -285,7 +285,7 @@ Instance<span class="token operator">*</span> root <span class="token operator">
         },
         {
             &quot;name&quot;: &quot;=&quot;,
-            &quot;desc&quot;: &quot;Assignment and compound assignment. Observable assignment writes `.Value`.\n\n**Syntax:** `name = value;` · `name += 1;`\n\n**Emit:** `=` `+=` `-=` `*=` `/=`&quot;,
+            &quot;desc&quot;: &quot;Assignment and compound assignment. Observable assignment writes `.Value`.\n\n**Syntax:** `name = value;` · `name += 1;`\n\n**Emit:** `=` `+=` `-=` `**=` `/=`&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;static&quot;,
