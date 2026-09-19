@@ -14,8 +14,8 @@ Reading or writing the identifier uses `.Value`. Assigning **fires** `Changed`.
 `.OnChange(fn)` is `Changed:Connect(fn)`.
 
 Full page: [observable](/CLPP/docs/reference/observable)."><link data-rh="true" rel="icon" href="/CLPP/img/favicon.png"><link data-rh="true" rel="canonical" href="https://kartzrbx.github.io/CLPP/api/Observables"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Observables" hreflang="en"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/Observables" hreflang="x-default"><link rel="stylesheet" href="/CLPP/assets/css/styles.796e4892.css">
-<script src="/CLPP/assets/js/runtime~main.39e3a999.js" defer="defer"></script>
-<script src="/CLPP/assets/js/main.87b22523.js" defer="defer"></script>
+<script src="/CLPP/assets/js/runtime~main.989fd11b.js" defer="defer"></script>
+<script src="/CLPP/assets/js/main.dda7d2e5.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -40,7 +40,7 @@ Full page: [observable](/CLPP/docs/reference/observable)."><link data-rh="true" 
 <p><strong>Syntax:</strong> <code>name.OnChange(fn);</code></p>
 <p><strong>Emit:</strong> <code>name.Changed:Connect(fn)</code></p>
 <pre class="language-clpp"><code class="language-clpp">observable <span class="token keyword">int</span> coins <span class="token operator">=</span> <span class="token number">100</span><span class="token punctuation">;</span>
-coins<span class="token punctuation">.</span><span class="token function">OnChange</span><span class="token punctuation">(</span>func <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token keyword">int</span> newValue<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+coins<span class="token punctuation">.</span><span class="token function">OnChange</span><span class="token punctuation">(</span><span class="token function">func</span> <span class="token punctuation">(</span><span class="token keyword">int</span> newValue<span class="token punctuation">)</span> <span class="token punctuation">{</span>
     <span class="token function">post</span><span class="token punctuation">(</span><span class="token string">"now "</span> <span class="token punctuation">.</span><span class="token operator">:</span> newValue<span class="token punctuation">)</span><span class="token punctuation">;</span>
 <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 coins <span class="token operator">=</span> <span class="token number">50</span><span class="token punctuation">;</span>
@@ -63,7 +63,7 @@ coins <span class="token operator">=</span> <span class="token number">50</span>
         },
         {
             &quot;name&quot;: &quot;OnChange&quot;,
-            &quot;desc&quot;: &quot;Listen to value changes. Argument is the new `.Value`.\n\n**Syntax:** `name.OnChange(fn);`\n\n**Emit:** `name.Changed:Connect(fn)`\n\n```clpp\nobservable int coins = 100;\ncoins.OnChange(func [](int newValue) {\n    post(\&quot;now \&quot; .: newValue);\n});\ncoins = 50;\n```&quot;,
+            &quot;desc&quot;: &quot;Listen to value changes. Argument is the new `.Value`.\n\n**Syntax:** `name.OnChange(fn);`\n\n**Emit:** `name.Changed:Connect(fn)`\n\n```clpp\nobservable int coins = 100;\ncoins.OnChange(func (int newValue) {\n    post(\&quot;now \&quot; .: newValue);\n});\ncoins = 50;\n```&quot;,
             &quot;params&quot;: [
                 {
                     &quot;name&quot;: &quot;handler&quot;,

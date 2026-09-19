@@ -8,8 +8,8 @@
 There is no `continue`, ternary `? :`, or `do/while`. Full pages: [if](/CLPP/docs/reference/if), [guard](/CLPP/docs/reference/guard), [match](/CLPP/docs/reference/match)."><meta data-rh="true" property="og:description" content="Branching, loops, `guard`, `match`, and `switch`.
 
 There is no `continue`, ternary `? :`, or `do/while`. Full pages: [if](/CLPP/docs/reference/if), [guard](/CLPP/docs/reference/guard), [match](/CLPP/docs/reference/match)."><link data-rh="true" rel="icon" href="/CLPP/img/favicon.png"><link data-rh="true" rel="canonical" href="https://kartzrbx.github.io/CLPP/api/ControlFlow"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/ControlFlow" hreflang="en"><link data-rh="true" rel="alternate" href="https://kartzrbx.github.io/CLPP/api/ControlFlow" hreflang="x-default"><link rel="stylesheet" href="/CLPP/assets/css/styles.796e4892.css">
-<script src="/CLPP/assets/js/runtime~main.39e3a999.js" defer="defer"></script>
-<script src="/CLPP/assets/js/main.87b22523.js" defer="defer"></script>
+<script src="/CLPP/assets/js/runtime~main.989fd11b.js" defer="defer"></script>
+<script src="/CLPP/assets/js/main.dda7d2e5.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -34,7 +34,7 @@ There is no `continue`, ternary `? :`, or `do/while`. Full pages: [if](/CLPP/doc
 <p>Range-for. Prefer <code>in</code>. The C++-style <code>:</code> is the same loop, not a table key.</p>
 <p><strong>Syntax:</strong> <code>for (T x in list) { }</code> · <code>for (T x : list) { }</code></p>
 <p><strong>Emit:</strong> <code>for _, x in list do</code></p>
-<pre class="language-clpp"><code class="language-clpp"><span class="token keyword">for</span> <span class="token punctuation">(</span>Player<span class="token operator">*</span> player in players<span class="token double-colon punctuation">::</span><span class="token function">GetPlayers</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+<pre class="language-clpp"><code class="language-clpp"><span class="token keyword">for</span> <span class="token punctuation">(</span>Player<span class="token operator">*</span> player in players<span class="token punctuation">.</span><span class="token function">GetPlayers</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
     <span class="token function">post</span><span class="token punctuation">(</span>player<span class="token punctuation">.</span>Name<span class="token punctuation">)</span><span class="token punctuation">;</span>
 <span class="token punctuation">}</span>
 </code></pre>
@@ -47,24 +47,25 @@ There is no `continue`, ternary `? :`, or `do/while`. Full pages: [if](/CLPP/doc
     <span class="token keyword">return</span><span class="token punctuation">;</span>
 <span class="token punctuation">}</span>
 </code></pre>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="match"><code style="text-decoration:none">match</code><a href="#match" class="hash-link" aria-label="Direct link to match" title="Direct link to match" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#00a1e4;color:#00a1e4">control</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/ControlFlow.lua#L101"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>ControlFlow<!-- -->.</code><code class="green_DgR4">match</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="match"><code style="text-decoration:none">match</code><a href="#match" class="hash-link" aria-label="Direct link to match" title="Direct link to match" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#00a1e4;color:#00a1e4">control</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/ControlFlow.lua#L103"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>ControlFlow<!-- -->.</code><code class="green_DgR4">match</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p>Type switch. Instance types use <code>IsA</code>; primitives use <code>typeof</code>. <code>_</code> is the fallback.</p>
 <p><strong>Syntax:</strong> <code>match (value) { Type name => stmt, _ => stmt };</code></p>
 <p><strong>Emit:</strong> <code>if x:IsA("Type") then</code> / <code>typeof</code></p>
+<p>Arms are a class or primitive name (<code>Part p</code>, <code>string s</code>) — not a C++ pointer.</p>
 <pre class="language-clpp"><code class="language-clpp"><span class="token function">match</span> <span class="token punctuation">(</span>instance<span class="token punctuation">)</span> <span class="token punctuation">{</span>
-    Part<span class="token operator">*</span> p <span class="token operator">=</span><span class="token operator">></span> p<span class="token punctuation">.</span>BrickColor <span class="token operator">=</span> <span class="token class-name">BrickColor</span><span class="token double-colon punctuation">::</span><span class="token function">Red</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    Part p <span class="token operator">=</span><span class="token operator">></span> p<span class="token punctuation">.</span>BrickColor <span class="token operator">=</span> <span class="token class-name">BrickColor</span><span class="token double-colon punctuation">::</span><span class="token function">Red</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
     _ <span class="token operator">=</span><span class="token operator">></span> <span class="token function">warn</span><span class="token punctuation">(</span><span class="token string">"unsupported"</span><span class="token punctuation">)</span>
 <span class="token punctuation">}</span><span class="token punctuation">;</span>
 </code></pre>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="switch"><code style="text-decoration:none">switch</code><a href="#switch" class="hash-link" aria-label="Direct link to switch" title="Direct link to switch" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#00a1e4;color:#00a1e4">control</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/ControlFlow.lua#L113"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>ControlFlow<!-- -->.</code><code class="green_DgR4">switch</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="switch"><code style="text-decoration:none">switch</code><a href="#switch" class="hash-link" aria-label="Direct link to switch" title="Direct link to switch" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#00a1e4;color:#00a1e4">control</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/ControlFlow.lua#L115"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>ControlFlow<!-- -->.</code><code class="green_DgR4">switch</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p>Evaluates the discriminant once. <code>break</code> leaves the switch. No C fall-through; stacked <code>case</code>s share a body.</p>
 <p><strong>Syntax:</strong> <code>switch (action) { case "buy": … break; default: … break; }</code></p>
 <p><strong>Emit:</strong> <code>if</code> / <code>elseif</code> inside <code>repeat … until true</code></p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="break"><code style="text-decoration:none">break</code><a href="#break" class="hash-link" aria-label="Direct link to break" title="Direct link to break" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#00a1e4;color:#00a1e4">control</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/ControlFlow.lua#L125"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>ControlFlow<!-- -->.</code><code class="green_DgR4">break</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="break"><code style="text-decoration:none">break</code><a href="#break" class="hash-link" aria-label="Direct link to break" title="Direct link to break" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#00a1e4;color:#00a1e4">control</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/ControlFlow.lua#L127"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>ControlFlow<!-- -->.</code><code class="green_DgR4">break</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p>Leaves the innermost loop or <code>switch</code>. There is no <code>continue</code>.</p>
 <p><strong>Syntax:</strong> <code>break;</code></p>
 <p><strong>Emit:</strong> <code>break</code></p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="return"><code style="text-decoration:none">return</code><a href="#return" class="hash-link" aria-label="Direct link to return" title="Direct link to return" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#00a1e4;color:#00a1e4">control</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/ControlFlow.lua#L137"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>ControlFlow<!-- -->.</code><code class="green_DgR4">return</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="return"><code style="text-decoration:none">return</code><a href="#return" class="hash-link" aria-label="Direct link to return" title="Direct link to return" translate="no">​</a></h3><span class="docTag__6UZ" style="border-color:#00a1e4;color:#00a1e4">control</span><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/KartzRbx/CLPP/blob/main/moonwave/ControlFlow.lua#L139"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>ControlFlow<!-- -->.</code><code class="green_DgR4">return</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p>Leave the current function.</p>
 <p><strong>Syntax:</strong> <code>return;</code> · <code>return expr;</code></p>
 <p><strong>Emit:</strong> <code>return</code> / <code>return expr</code></p>
@@ -114,7 +115,7 @@ There is no `continue`, ternary `? :`, or `do/while`. Full pages: [if](/CLPP/doc
         },
         {
             &quot;name&quot;: &quot;for-in&quot;,
-            &quot;desc&quot;: &quot;Range-for. Prefer `in`. The C++-style `:` is the same loop, not a table key.\n\n**Syntax:** `for (T x in list) { }` · `for (T x : list) { }`\n\n**Emit:** `for _, x in list do`\n\n```clpp\nfor (Player* player in players::GetPlayers()) {\n    post(player.Name);\n}\n```&quot;,
+            &quot;desc&quot;: &quot;Range-for. Prefer `in`. The C++-style `:` is the same loop, not a table key.\n\n**Syntax:** `for (T x in list) { }` · `for (T x : list) { }`\n\n**Emit:** `for _, x in list do`\n\n```clpp\nfor (Player* player in players.GetPlayers()) {\n    post(player.Name);\n}\n```&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;static&quot;,
@@ -142,7 +143,7 @@ There is no `continue`, ternary `? :`, or `do/while`. Full pages: [if](/CLPP/doc
         },
         {
             &quot;name&quot;: &quot;match&quot;,
-            &quot;desc&quot;: &quot;Type switch. Instance types use `IsA`; primitives use `typeof`. `_` is the fallback.\n\n**Syntax:** `match (value) { Type name =&gt; stmt, _ =&gt; stmt };`\n\n**Emit:** `if x:IsA(\&quot;Type\&quot;) then` / `typeof`\n\n```clpp\nmatch (instance) {\n    Part* p =&gt; p.BrickColor = BrickColor::Red(),\n    _ =&gt; warn(\&quot;unsupported\&quot;)\n};\n```&quot;,
+            &quot;desc&quot;: &quot;Type switch. Instance types use `IsA`; primitives use `typeof`. `_` is the fallback.\n\n**Syntax:** `match (value) { Type name =&gt; stmt, _ =&gt; stmt };`\n\n**Emit:** `if x:IsA(\&quot;Type\&quot;) then` / `typeof`\n\nArms are a class or primitive name (`Part p`, `string s`) — not a C++ pointer.\n\n```clpp\nmatch (instance) {\n    Part p =&gt; p.BrickColor = BrickColor::Red(),\n    _ =&gt; warn(\&quot;unsupported\&quot;)\n};\n```&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;static&quot;,
@@ -150,7 +151,7 @@ There is no `continue`, ternary `? :`, or `do/while`. Full pages: [if](/CLPP/doc
                 &quot;control&quot;
             ],
             &quot;source&quot;: {
-                &quot;line&quot;: 101,
+                &quot;line&quot;: 103,
                 &quot;path&quot;: &quot;moonwave/ControlFlow.lua&quot;
             }
         },
@@ -164,7 +165,7 @@ There is no `continue`, ternary `? :`, or `do/while`. Full pages: [if](/CLPP/doc
                 &quot;control&quot;
             ],
             &quot;source&quot;: {
-                &quot;line&quot;: 113,
+                &quot;line&quot;: 115,
                 &quot;path&quot;: &quot;moonwave/ControlFlow.lua&quot;
             }
         },
@@ -178,7 +179,7 @@ There is no `continue`, ternary `? :`, or `do/while`. Full pages: [if](/CLPP/doc
                 &quot;control&quot;
             ],
             &quot;source&quot;: {
-                &quot;line&quot;: 125,
+                &quot;line&quot;: 127,
                 &quot;path&quot;: &quot;moonwave/ControlFlow.lua&quot;
             }
         },
@@ -192,7 +193,7 @@ There is no `continue`, ternary `? :`, or `do/while`. Full pages: [if](/CLPP/doc
                 &quot;control&quot;
             ],
             &quot;source&quot;: {
-                &quot;line&quot;: 137,
+                &quot;line&quot;: 139,
                 &quot;path&quot;: &quot;moonwave/ControlFlow.lua&quot;
             }
         }
