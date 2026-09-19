@@ -48,7 +48,8 @@
             {
               "name": "string.quoted.other.include.clpp",
               "begin": "<",
-              "end": ">"
+              "end": ">",
+              "contentName": "string.quoted.other.include.clpp"
             }
           ]
         },

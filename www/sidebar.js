@@ -208,6 +208,7 @@ export const sidebar = [
     label: "Cluaupp",
     collapsed: true,
     items: [
+      { label: "Update Cluaupp for 0.3.2", slug: "docs/cluaupp-032" },
       { slug: "docs/cluaupp" },
       { slug: "docs/cluaupp-callbacks" },
       { slug: "docs/cluaupp-support" },

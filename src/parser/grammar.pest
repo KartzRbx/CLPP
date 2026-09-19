@@ -150,8 +150,11 @@ stmt = {
     | destructure
     | var_decl
     | expr_stmt
+    | empty_stmt
     | block
 }
+
+empty_stmt = { ";" }
 
 if_stmt = { KW_IF ~ "(" ~ expr ~ ")" ~ stmt ~ (KW_ELSE ~ stmt)? }
 guard_stmt = { KW_GUARD ~ "(" ~ expr ~ ")" ~ KW_ELSE ~ stmt }
@@ -160,7 +163,7 @@ for_stmt = { c_for_stmt | range_for_stmt }
 c_for_stmt = { KW_FOR ~ "(" ~ c_for_init? ~ ";" ~ expr? ~ ";" ~ expr? ~ ")" ~ stmt }
 c_for_init = { specifiers? ~ (type_spec ~ ident | ident ~ ":" ~ type_spec) ~ ("=" ~ expr)? }
 range_for_stmt = { KW_FOR ~ "(" ~ type_spec ~ ident ~ (KW_IN | ":") ~ expr ~ ")" ~ stmt }
-return_stmt = { KW_RETURN ~ expr? ~ ";" }
+return_stmt = { KW_RETURN ~ (expr ~ ("," ~ expr)*)? ~ ";" }
 break_stmt = { KW_BREAK ~ ";" }
 expr_stmt = { expr ~ ";" }
 spawn_stmt = { KW_SPAWN ~ block ~ ";"? }

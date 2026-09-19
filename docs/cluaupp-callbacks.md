@@ -98,7 +98,7 @@ After shipping a new `clpp`, Cluaupp users need a language-pack refresh so Error
 4. **Docs and UI copy** that showed `[]()` as “CL++ lambda”.
 5. **Tests** that asserted `func []` still compiled — they should now expect failure.
 
-The `CompileRequest` / `CompileArtifact` types in [`support/cluaupp.d.ts`](https://github.com/KartzRbx/CLPP/blob/main/support/cluaupp.d.ts) stay the same.
+The `CompileRequest` / `CompileArtifact` types in [`support/cluaupp.d.ts`](https://github.com/KartzRbx/CLPP/blob/main/support/cluaupp.d.ts) stay the same shape. Full CLI upgrade (0.3.3): [Update Cluaupp for CL++ 0.3.2](cluaupp-032).
 
 ## Language pages
 

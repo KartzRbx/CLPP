@@ -66,6 +66,8 @@ assert.deepStrictEqual(replies[0].result.capabilities.completionProvider.trigger
   ":",
   ">",
   "@",
+  "\"",
+  "/",
 ]);
 assert.ok(replies[0].result.capabilities.hoverProvider);
 assert.ok(replies[0].result.capabilities.definitionProvider);

@@ -25,6 +25,7 @@ pub struct Function {
     pub is_const: bool,
     pub is_async: bool,
     pub target: Option<String>,
+    pub line: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -68,6 +69,7 @@ pub enum Expr {
         parts: Vec<InterpPart>,
     },
     Ident(String),
+    Tuple(Vec<Expr>),
     This {
         line: usize,
     },
@@ -209,4 +211,5 @@ pub struct CompileContext {
     pub requires: Vec<ModuleRequire>,
     /// Expanded line (1-based index into this vec as 0-based) → original source line.
     pub line_map: Vec<usize>,
+    pub comments: Vec<String>,
 }

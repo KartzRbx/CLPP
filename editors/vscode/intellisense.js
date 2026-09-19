@@ -419,6 +419,30 @@ function loadEngine(data) {
       addVar(vars, match[1], match[2], `${match[2]} (GetService)`);
     }
 
+    const rangeFor =
+      /\bfor\s*\(\s*(?:const\s+)?([A-Z][A-Za-z0-9_]*)\s+([A-Za-z_]\w*)\s+(?:in|:)/g;
+    while ((match = rangeFor.exec(text))) {
+      addVar(vars, match[2], match[1], `${match[1]} (for)`);
+    }
+
+    const functions = new Map();
+    const fnRe =
+      /\b((?:async\s+)?(?:void|int|float|double|bool|string|auto|func|[A-Z][A-Za-z0-9_]*))\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*\{/g;
+    while ((match = fnRe.exec(text))) {
+      const ret = match[1].replace(/^async\s+/, "").trim();
+      const name = match[2];
+      if (KEYWORDS.has(name) || name === "if" || name === "for" || name === "while") {
+        continue;
+      }
+      const params = match[3].trim();
+      functions.set(name, {
+        returnType: ret,
+        params,
+        detail: `${ret} ${name}(${params})`,
+      });
+      addVar(vars, name, "func", `${ret} ${name}(${params})`);
+    }
+
     for (const [name, info] of vars) {
       if (!info.type || info.type === "auto") {
         const inferred = inferFromName(name);
@@ -429,7 +453,7 @@ function loadEngine(data) {
       }
     }
 
-    return { vars, dictKeys, types: overlay, templateType: pickTemplate(types) };
+    return { vars, dictKeys, types: overlay, templateType: pickTemplate(types), functions };
   }
 
   function parseAccess(line) {
@@ -489,7 +513,7 @@ function loadEngine(data) {
       return globals[root].type;
     }
     const overlay = symbols && symbols.types;
-    if (typeExists(root, overlay) && call) {
+    if (typeExists(root, overlay) || catalog[root]) {
       return root;
     }
     return inferFromName(root);
@@ -623,6 +647,9 @@ function loadEngine(data) {
     if (symbols.vars.has(word)) {
       const info = symbols.vars.get(word);
       return info.detail || info.type || "local";
+    }
+    if (symbols.functions && symbols.functions.has(word)) {
+      return symbols.functions.get(word).detail;
     }
     if (globals[word]) {
       return globals[word].detail || globals[word].type;

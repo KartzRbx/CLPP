@@ -40,4 +40,4 @@ clpp api compile    # JSON stdin/stdout
 clpp manifest       # extensions, tags, operators
 ```
 
-See [Cluaupp support](../cluaupp-support).
+See [Update Cluaupp for CL++ 0.3.2](../cluaupp-032) and [Cluaupp support](../cluaupp-support). Current compiler: **0.3.3**.

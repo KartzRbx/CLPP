@@ -95,7 +95,8 @@ impl<'a> Checker<'a> {
     fn item(&mut self, item: &Item) {
         match item {
             Item::Decl(decl) => self.decl(decl),
-            Item::Function(func) | Item::Proto(func) => self.function(func),
+            Item::Function(func) => self.function(func),
+            Item::Proto(_) => {}
             Item::Destructure { names, value } => {
                 let _ = self.expr_ty(value);
                 for name in names {
@@ -147,12 +148,101 @@ impl<'a> Checker<'a> {
             );
         }
         self.stmts(&func.body);
+        self.check_returns(func);
         self.env = saved;
         self.in_method = saved_method;
         self.method_fields = saved_fields;
         self.method_methods = saved_methods;
         let _ = self.file_name;
         let _ = self.source;
+    }
+
+    fn needs_value_return(ret: &Option<String>) -> bool {
+        match ret.as_deref().map(str::trim) {
+            None | Some("") | Some("void") => false,
+            _ => true,
+        }
+    }
+
+    fn check_returns(&mut self, func: &Function) {
+        if !Self::needs_value_return(&func.return_type) {
+            return;
+        }
+        let ty = func.return_type.as_deref().unwrap_or("a value");
+        if self.has_bare_return(&func.body) {
+            self.error(
+                func.line,
+                1,
+                format!("`{}` returns {ty} — `return;` has no value", func.name),
+            );
+        }
+        if !self.always_returns_value(&func.body) {
+            self.error(
+                func.line,
+                1,
+                format!("`{}` must return {ty} on every path", func.name),
+            );
+        }
+    }
+
+    fn has_bare_return(&self, stmts: &[Stmt]) -> bool {
+        stmts.iter().any(|stmt| match stmt {
+            Stmt::Return(None) => true,
+            Stmt::Return(_) => false,
+            Stmt::If {
+                consequent,
+                alternate,
+                ..
+            } => {
+                self.has_bare_return(consequent)
+                    || alternate.as_ref().is_some_and(|a| self.has_bare_return(a))
+            }
+            Stmt::Guard { body, .. }
+            | Stmt::While { body, .. }
+            | Stmt::ForEach { body, .. }
+            | Stmt::Spawn { body, .. }
+            | Stmt::Block(body) => self.has_bare_return(body),
+            Stmt::CFor { body, init, .. } => {
+                self.has_bare_return(body)
+                    || init.as_ref().is_some_and(|s| self.has_bare_return(std::slice::from_ref(s)))
+            }
+            Stmt::Match { arms, .. } => arms.iter().any(|a| self.has_bare_return(&a.body)),
+            Stmt::Switch { cases, .. } => cases.iter().any(|c| self.has_bare_return(&c.body)),
+            _ => false,
+        })
+    }
+
+    fn always_returns_value(&self, stmts: &[Stmt]) -> bool {
+        let mut ok = false;
+        for stmt in stmts {
+            match stmt {
+                Stmt::Return(Some(_)) => return true,
+                Stmt::Return(None) => return false,
+                Stmt::If {
+                    consequent,
+                    alternate,
+                    ..
+                } => {
+                    if let Some(alt) = alternate {
+                        if self.always_returns_value(consequent) && self.always_returns_value(alt) {
+                            ok = true;
+                        }
+                    }
+                }
+                Stmt::Block(body) | Stmt::Spawn { body, .. } => {
+                    if self.always_returns_value(body) {
+                        ok = true;
+                    }
+                }
+                Stmt::Match { arms, .. } => {
+                    if !arms.is_empty() && arms.iter().all(|a| self.always_returns_value(&a.body)) {
+                        ok = true;
+                    }
+                }
+                _ => {}
+            }
+        }
+        ok
     }
 
     fn stmts(&mut self, stmts: &[Stmt]) {
@@ -332,6 +422,10 @@ impl<'a> Checker<'a> {
                 .env
                 .get(name)
                 .map(|b| b.ty.clone())
+                .unwrap_or(Ty::Unknown),
+            Expr::Tuple(values) => values
+                .last()
+                .map(|v| self.expr_ty(v))
                 .unwrap_or(Ty::Unknown),
             Expr::This { line } => {
                 if !self.in_method {

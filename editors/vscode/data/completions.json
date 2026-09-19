@@ -48,8 +48,9 @@
     "task": { "type": "task", "detail": "task library" },
     "table": { "type": "tablelib", "detail": "table library" },
     "math": { "type": "math", "detail": "math library" },
-    "DataService": { "type": "DataService", "detail": "DataService module" },
-    "Janitor": { "type": "Janitor", "detail": "Janitor library" }
+    "DataService": { "type": "DataService", "detail": "DataService module — use .Server / .Client" },
+    "Janitor": { "type": "Janitor", "detail": "Janitor library" },
+    "Players": { "type": "Players", "detail": "Players service" }
   },
   "catalog": {
     "Instance": {
@@ -321,20 +322,20 @@
     },
     "DataService": {
       "tableKeys": [
-        { "label": "Server", "type": "DataServiceServer", "detail": "DataService:Server" },
-        { "label": "Client", "type": "DataServiceClient", "detail": "DataService:Client" },
-        { "label": "Paths", "type": "PlayerData", "detail": "DataService:Paths — same shape as the data template" }
+        { "label": "Server", "type": "DataServiceServer", "detail": "DataService.Server" },
+        { "label": "Client", "type": "DataServiceClient", "detail": "DataService.Client" },
+        { "label": "Paths", "type": "PlayerData", "detail": "DataService.Paths — same shape as the data template" }
       ]
     },
     "DataServiceServer": {
       "properties": [
-        { "label": "Paths", "type": "PlayerData", "detail": "DataService:Server.Paths" }
+        { "label": "Paths", "type": "PlayerData", "detail": "DataService.Server.Paths" }
       ],
       "tableKeys": [
-        { "label": "Paths", "type": "PlayerData", "detail": "DataService:Server:Paths" }
+        { "label": "Paths", "type": "PlayerData", "detail": "DataService.Server.Paths" }
       ],
       "methods": [
-        { "label": "Init", "returns": "void", "detail": "DataService.Server.Init(opts)" },
+        { "label": "Init", "returns": "void", "detail": "DataService.Server.Init({ .Template, .StoreName, .UseMock })" },
         { "label": "WaitFor", "returns": "Data", "detail": "DataService.Server.WaitFor(player)" },
         { "label": "Get", "returns": "auto", "detail": "DataService.Server.Get(player, path)" },
         { "label": "Set", "returns": "void", "detail": "DataService.Server.Set(player, path, value)" },
@@ -344,14 +345,21 @@
     },
     "DataServiceClient": {
       "properties": [
-        { "label": "Paths", "type": "PlayerData", "detail": "DataService:Client.Paths" }
+        { "label": "Paths", "type": "PlayerData", "detail": "DataService.Client.Paths" }
       ],
       "tableKeys": [
-        { "label": "Paths", "type": "PlayerData", "detail": "DataService:Client:Paths" }
+        { "label": "Paths", "type": "PlayerData", "detail": "DataService.Client.Paths" }
       ],
       "methods": [
         { "label": "WaitFor", "returns": "Data", "detail": "DataService.Client.WaitFor(player)" },
         { "label": "Get", "returns": "auto", "detail": "DataService.Client.Get(path)" }
+      ]
+    },
+    "DataServiceOptions": {
+      "properties": [
+        { "label": "Template", "type": "auto", "detail": "DataService.Server.Init({ .Template = playerData })" },
+        { "label": "StoreName", "type": "string", "detail": "DataStore name" },
+        { "label": "UseMock", "type": "bool", "detail": "Studio mock store" }
       ]
     },
     "Data": {

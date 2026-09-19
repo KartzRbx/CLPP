@@ -22,6 +22,8 @@ struct Emitter<'a> {
     nested_types: HashSet<String>,
     local_names: HashSet<String>,
     observables: HashSet<String>,
+    needs_obs_table: bool,
+    fresh_values: HashSet<String>,
     self_owner: Option<String>,
     switch_id: usize,
     match_id: usize,
@@ -72,7 +74,9 @@ impl<'a> Emitter<'a> {
             class_methods,
             nested_types,
             local_names: HashSet::new(),
+            needs_obs_table: !observables.is_empty(),
             observables,
+            fresh_values: HashSet::new(),
             self_owner: None,
             switch_id: 0,
             match_id: 0,
@@ -93,6 +97,12 @@ impl<'a> Emitter<'a> {
         }
         self.lines.push("-- Compiled by CL++ — C++ × Luau".into());
         self.lines.push(String::new());
+        for comment in &self.ctx.comments {
+            self.lines.push(comment.clone());
+        }
+        if !self.ctx.comments.is_empty() {
+            self.lines.push(String::new());
+        }
 
         self.emit_requires();
         self.emit_runtime_helpers();
@@ -106,10 +116,6 @@ impl<'a> Emitter<'a> {
                 _ => None,
             })
             .collect();
-        let has_owned_methods = self.program.items.iter().any(|item| match item {
-            Item::Function(f) | Item::Proto(f) => f.owner.is_some(),
-            _ => false,
-        });
         let has_owned_functions = functions.iter().any(|f| f.owner.is_some());
         let class_module = !functions.is_empty() && functions.iter().all(|f| f.owner.is_some());
         let struct_roots: Vec<String> = self
@@ -132,9 +138,22 @@ impl<'a> Emitter<'a> {
                 .iter()
                 .all(|item| matches!(item, Item::Decl(_) | Item::Proto(_)));
 
-        if self.ctx.is_header && has_owned_methods {
+        if self.ctx.is_header {
             self.emit_header_type(&struct_roots);
-            self.lines.push("return {}".into());
+            for root in &struct_roots {
+                self.emit_struct_ctor(root);
+            }
+            if struct_roots.len() == 1 {
+                self.lines.push(format!("return {}", struct_roots[0]));
+            } else if !struct_roots.is_empty() {
+                self.lines.push("return {".into());
+                for root in &struct_roots {
+                    self.lines.push(format!("\t{root} = {root},"));
+                }
+                self.lines.push("}".into());
+            } else {
+                self.lines.push("return {}".into());
+            }
             self.lines.push(String::new());
             return;
         }
@@ -284,6 +303,12 @@ impl<'a> Emitter<'a> {
             self.lines.push(String::new());
             injected = true;
         }
+        if self.needs_obs_table {
+            self.lines
+                .push("local __clpp_obs = setmetatable({}, { __mode = \"k\" })".into());
+            self.lines.push(String::new());
+            injected = true;
+        }
         let _ = injected;
     }
 
@@ -299,6 +324,7 @@ impl<'a> Emitter<'a> {
         fn walk_expr(expr: &Expr, name: &str) -> bool {
             match expr {
                 Expr::Ident(n) => n == name,
+                Expr::Tuple(values) => values.iter().any(|v| walk_expr(v, name)),
                 Expr::Unary { argument, .. }
                 | Expr::Cast { argument, .. }
                 | Expr::Await { argument } => walk_expr(argument, name),
@@ -570,9 +596,19 @@ impl<'a> Emitter<'a> {
                     )];
                     if let Some(value) = &decl.value {
                         out.push(format!(
-                            "{prefix}{owner}.{}.Value = {}",
+                            "{prefix}__clpp_obs[{owner}.{}] = true",
+                            decl.name
+                        ));
+                        out.push(format!(
+                            "{prefix}{owner}.{}.Value = {} -- initial value; not a Changed event",
                             decl.name,
                             self.emit_expr(value)
+                        ));
+                        out.push(format!("{prefix}__clpp_obs[{owner}.{}] = nil", decl.name));
+                    } else {
+                        out.push(format!(
+                            "{prefix}__clpp_obs[{owner}.{}] = true",
+                            decl.name
                         ));
                     }
                     return out;
@@ -620,11 +656,15 @@ impl<'a> Emitter<'a> {
                 decl.name
             )];
             if let Some(value) = &decl.value {
+                out.push(format!("{prefix}__clpp_obs[{}] = true", decl.name));
                 out.push(format!(
-                    "{prefix}{}.Value = {}",
+                    "{prefix}{}.Value = {} -- initial value; not a Changed event",
                     decl.name,
                     self.emit_expr(value)
                 ));
+                out.push(format!("{prefix}__clpp_obs[{}] = nil", decl.name));
+            } else {
+                out.push(format!("{prefix}__clpp_obs[{}] = true", decl.name));
             }
             return out;
         }
@@ -646,6 +686,9 @@ impl<'a> Emitter<'a> {
                         decl.name,
                         self.emit_expr(parent)
                     ));
+                }
+                if class_name.ends_with("Value") {
+                    self.fresh_values.insert(decl.name.clone());
                 }
                 return out;
             }
@@ -691,6 +734,28 @@ impl<'a> Emitter<'a> {
                     }
                 }
                 if let Expr::Assign { left, right, .. } = expr {
+                    if let Expr::Ident(name) = left.as_ref() {
+                        if self.observables.contains(name) {
+                            let rhs = self.emit_expr(right);
+                            return vec![
+                                format!("{prefix}{}.Value = {rhs}", self.emit_self_ident(name)),
+                                format!("{prefix}__clpp_obs[{}] = nil", self.emit_self_ident(name)),
+                            ];
+                        }
+                    }
+                    if let Expr::Member { object, name, .. } = left.as_ref() {
+                        if name == "Value" {
+                            if let Expr::Ident(id) = object.as_ref() {
+                                if self.fresh_values.remove(id) {
+                                    return vec![format!(
+                                        "{prefix}{}.Value = {} -- initial value; not a Changed event",
+                                        self.emit_object(object),
+                                        self.emit_expr(right)
+                                    )];
+                                }
+                            }
+                        }
+                    }
                     if let Expr::New { class_name, args } = right.as_ref() {
                         if is_instance_type(class_name) && !is_library_type(class_name) {
                             let left_s = self.emit_expr(left);
@@ -702,6 +767,11 @@ impl<'a> Emitter<'a> {
                                     "{prefix}{left_s}.Parent = {}",
                                     self.emit_expr(parent)
                                 ));
+                            }
+                            if class_name.ends_with("Value") {
+                                if let Expr::Ident(name) = left.as_ref() {
+                                    self.fresh_values.insert(name.clone());
+                                }
                             }
                             return out;
                         }
@@ -968,6 +1038,11 @@ impl<'a> Emitter<'a> {
                     base
                 }
             }
+            Expr::Tuple(values) => values
+                .iter()
+                .map(|v| self.emit_expr(v))
+                .collect::<Vec<_>>()
+                .join(", "),
             Expr::This { .. } => "self".into(),
             Expr::AtField { name, .. } => format!("self.{name}"),
             Expr::Await { argument } => format!("__await({})", self.emit_expr(argument)),
@@ -1041,6 +1116,8 @@ impl<'a> Emitter<'a> {
                     nested_types: self.nested_types.clone(),
                     local_names: self.local_names.clone(),
                     observables: self.observables.clone(),
+                    needs_obs_table: self.needs_obs_table,
+                    fresh_values: self.fresh_values.clone(),
                     self_owner: self.self_owner.clone(),
                     switch_id: self.switch_id,
                     match_id: self.match_id,
@@ -1165,8 +1242,15 @@ impl<'a> Emitter<'a> {
         }
         let obj_expr = object.unwrap();
         let obj = self.emit_object(obj_expr);
-        if name == "OnChange" {
-            let conn = format!("{obj}.Changed:Connect({args_s})");
+        if name == "OnChange" && self.observable_instance(obj_expr).is_some()
+            || name == "Connect" && self.is_observable_changed(obj_expr)
+        {
+            let target = if name == "OnChange" {
+                format!("{obj}.Changed")
+            } else {
+                obj.clone()
+            };
+            let conn = self.emit_obs_connect(&target, obj_expr, &args_s);
             if access == "~>" {
                 return format!("{}:Add({conn}, \"Disconnect\")", self.janitor_expr());
             }
@@ -1251,6 +1335,31 @@ impl<'a> Emitter<'a> {
         }
     }
 
+    fn observable_instance(&self, expr: &Expr) -> Option<String> {
+        match expr {
+            Expr::Ident(name) if self.observables.contains(name) => {
+                Some(self.emit_self_ident(name))
+            }
+            Expr::Member { object, name, .. } if name == "Changed" => {
+                self.observable_instance(object)
+            }
+            _ => None,
+        }
+    }
+
+    fn is_observable_changed(&self, expr: &Expr) -> bool {
+        self.observable_instance(expr).is_some()
+    }
+
+    fn emit_obs_connect(&self, signal: &str, object: &Expr, handler: &str) -> String {
+        let inst = self
+            .observable_instance(object)
+            .unwrap_or_else(|| "nil".into());
+        format!(
+            "(function(__fn) return {signal}:Connect(function(...)\n\t\tif __clpp_obs[{inst}] then\n\t\t\treturn\n\t\tend\n\t\treturn __fn(...)\n\tend) end)({handler})"
+        )
+    }
+
     fn emit_method_arg(&self, arg: &Expr) -> String {
         if let Expr::Ident(name) = arg {
             if self.self_owner.is_some()
@@ -1259,6 +1368,7 @@ impl<'a> Emitter<'a> {
             {
                 return format!("function(...) self:{name}(...) end");
             }
+            return self.emit_self_ident(name);
         }
         self.emit_expr(arg)
     }

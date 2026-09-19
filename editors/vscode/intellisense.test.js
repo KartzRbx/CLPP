@@ -145,4 +145,65 @@ assert.deepStrictEqual(
   ["@this", "@janitor"]
 );
 
+const { buildCompletionItems } = require("./complete");
+const fnSrc = `void PlayerEntered(Player playerEntered) {
+}
+
+void init() {
+    PlayerEntered
+}
+`;
+const fnItems = buildCompletionItems(
+  engine,
+  data,
+  fnSrc,
+  "x.server.clpp",
+  "    Player",
+  fnSrc.indexOf("PlayerEntered") + 6,
+  []
+);
+assert.ok(
+  fnItems.some((item) => item.label === "PlayerEntered" && String(item.detail).includes("void")),
+  JSON.stringify(fnItems.filter((i) => i.label === "PlayerEntered"))
+);
+
+const forSrc = `void init() {
+    for (Player jogador in players.GetPlayers()) {
+        jogador.
+    }
+}
+`;
+const forItems = engine.resolve("        jogador.", engine.indexDocument(forSrc));
+assert.ok(
+  labels(forItems.members).includes("Name") || labels(forItems.members).includes("Kick"),
+  labels(forItems.members).join(",")
+);
+
+const initSrc = `void init() {
+    DataService dataService = DataService;
+    dataService.Server.Init({
+        .
+    });
+}
+`;
+const initItems = buildCompletionItems(
+  engine,
+  data,
+  initSrc,
+  "x.server.clpp",
+  "        .",
+  initSrc.indexOf("        .") + 9,
+  []
+);
+assert.ok(
+  initItems.some((item) => String(item.label).includes("Template")),
+  JSON.stringify(initItems)
+);
+
+const playersItems = engine.resolve("Players.", engine.indexDocument("void init() { Players. }"));
+assert.ok(
+  labels(playersItems.members).includes("GetPlayers") || labels(playersItems.members).includes("PlayerAdded"),
+  labels(playersItems.members).join(",")
+);
+
 console.log("intellisense.test.js ok");

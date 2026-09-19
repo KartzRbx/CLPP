@@ -31,13 +31,22 @@ fn expand(
         return Ok(String::new());
     }
     let stem = file_stem_name(file_path);
-    let dir = file_path.parent().unwrap_or_else(|| Path::new("."));
     let mut out = String::new();
     let mut orig_line = 0usize;
     for line in source.lines() {
         orig_line += 1;
         let mapped = map_to.unwrap_or(orig_line);
-        let trimmed = line.trim().trim_start_matches('\u{feff}');
+        let (code, comment) = split_line_comment(line);
+        if let Some(text) = comment {
+            if !text.is_empty() {
+                ctx.comments.push(format!("-- {text}"));
+            }
+        }
+        let trimmed = code.trim().trim_start_matches('\u{feff}');
+        if trimmed.is_empty() {
+            push_mapped_line(ctx, &mut out, "", mapped);
+            continue;
+        }
         if is_preprocessor_line(trimmed) {
             if let Some(rest) = preprocessor_payload(trimmed, "include") {
                 let rest = rest.trim();
@@ -48,8 +57,7 @@ fn expand(
                         }
                     }
                 } else if let Some(path) = quoted(rest) {
-                    let resolved = dir.join(&path);
-                    if !resolved.exists() {
+                    let Some(resolved) = resolve_quoted_include(&path, file_path) else {
                         return Err(ClppError::at_line(
                             source,
                             orig_line,
@@ -57,7 +65,7 @@ fn expand(
                             format!("include not found: {path}"),
                         )
                         .into());
-                    }
+                    };
                     let included_stem = file_stem_name(&resolved);
                     if included_stem == stem {
                         let inner = fs::read_to_string(&resolved).map_err(|err| {
@@ -88,7 +96,7 @@ fn expand(
             push_mapped_line(ctx, &mut out, "", mapped);
             continue;
         }
-        push_mapped_line(ctx, &mut out, line, mapped);
+        push_mapped_line(ctx, &mut out, &code, mapped);
     }
     Ok(out)
 }
@@ -107,6 +115,127 @@ pub fn remap_line(map: &[usize], line: usize) -> usize {
         .copied()
         .unwrap_or(line)
         .max(1)
+}
+
+fn split_line_comment(line: &str) -> (String, Option<String>) {
+    let trimmed = line.trim_start();
+    if let Some(rest) = trimmed.strip_prefix("//") {
+        return (String::new(), Some(rest.trim().to_string()));
+    }
+    let chars: Vec<char> = line.chars().collect();
+    let mut in_str = false;
+    let mut quote = '\0';
+    let mut i = 0;
+    while i < chars.len() {
+        let c = chars[i];
+        if in_str {
+            if c == '\\' {
+                i += 2;
+                continue;
+            }
+            if c == quote {
+                in_str = false;
+            }
+            i += 1;
+            continue;
+        }
+        if c == '"' || c == '\'' || c == '`' {
+            in_str = true;
+            quote = c;
+            i += 1;
+            continue;
+        }
+        if c == '/' && i + 1 < chars.len() && chars[i + 1] == '/' {
+            let code: String = chars[..i].iter().collect();
+            let comment: String = chars[i + 2..].iter().collect();
+            return (code.trim_end().to_string(), Some(comment.trim().to_string()));
+        }
+        i += 1;
+    }
+    (line.to_string(), None)
+}
+
+fn join_normalized(base: &Path, spec: &str) -> PathBuf {
+    let mut out = base.to_path_buf();
+    for comp in Path::new(spec).components() {
+        match comp {
+            std::path::Component::CurDir => {}
+            std::path::Component::ParentDir => {
+                out.pop();
+            }
+            std::path::Component::Normal(part) => out.push(part),
+            _ => {}
+        }
+    }
+    out
+}
+
+fn exists_file(path: &Path) -> bool {
+    path.is_file()
+}
+
+fn strip_dot_segments(spec: &str) -> String {
+    let mut spec = spec.trim().trim_start_matches("./").to_string();
+    while spec.starts_with("../") {
+        spec = spec[3..].to_string();
+    }
+    spec.trim_start_matches("./").to_string()
+}
+
+fn resolve_quoted_include(spec: &str, from: &Path) -> Option<PathBuf> {
+    let spec = spec.replace('\\', "/");
+    let spec = spec.trim().trim_start_matches("./");
+    let stripped = strip_dot_segments(spec);
+    let from_src = spec.strip_prefix("src/").unwrap_or(stripped.as_str());
+    let dir = from.parent().unwrap_or_else(|| Path::new("."));
+    let mut candidates = Vec::new();
+    let mut push = |base: &Path, rest: &str| {
+        if rest.is_empty() {
+            return;
+        }
+        candidates.push(join_normalized(base, rest));
+    };
+    push(dir, spec);
+    push(dir, stripped.as_str());
+    for (i, ancestor) in dir.ancestors().enumerate() {
+        if i > 16 {
+            break;
+        }
+        push(ancestor, spec);
+        push(ancestor, stripped.as_str());
+        let src_dir = ancestor.join("src");
+        push(&src_dir, spec);
+        push(&src_dir, stripped.as_str());
+        push(&src_dir, from_src);
+        if let Some(rest) = spec.strip_prefix("src/") {
+            push(ancestor, rest);
+            push(&src_dir, rest);
+        }
+        if ancestor.join(".git").is_dir()
+            || ancestor.join("default.project.json").is_file()
+            || ancestor.join("src").is_dir() && i > 0
+        {
+            if ancestor.join(".git").is_dir() || ancestor.join("default.project.json").is_file() {
+                break;
+            }
+        }
+    }
+    for candidate in candidates {
+        if exists_file(&candidate) {
+            return Some(candidate);
+        }
+        if candidate.extension().is_some() {
+            continue;
+        }
+        for ext in [".clh", ".clp", ".clpp"] {
+            let mut with_ext = candidate.clone();
+            with_ext.set_extension(&ext[1..]);
+            if exists_file(&with_ext) {
+                return Some(with_ext);
+            }
+        }
+    }
+    None
 }
 
 fn is_preprocessor_line(trimmed: &str) -> bool {

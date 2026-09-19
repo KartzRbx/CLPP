@@ -1,6 +1,7 @@
 "use strict";
 
 const { atCompletions, enclosingOwner } = require("./intellisense");
+const { includePathCompletions } = require("./include-cache");
 
 const HOVER_WORDS = {
   post: "Write a line to output.",
@@ -31,7 +32,53 @@ function symbolsFor(engine, text, extraTexts) {
   return engine.indexDocument(text, extraTexts || []);
 }
 
+function designatedInitCompletions(text, offset, lineText, data, symbols) {
+  const lineOk =
+    /^\s*\.[A-Za-z_]*$/.test(lineText) || /Init\s*\(\s*\{\s*\.?[A-Za-z_]*$/.test(lineText);
+  if (!lineOk) {
+    return null;
+  }
+  const before = text.slice(0, offset);
+  const match = before.match(/Init\s*\(\s*\{[\s\S]*$/);
+  if (!match) {
+    return null;
+  }
+  let depth = 0;
+  for (const ch of match[0]) {
+    if (ch === "{") {
+      depth += 1;
+    } else if (ch === "}") {
+      depth -= 1;
+    }
+  }
+  if (depth < 1) {
+    return null;
+  }
+  if (depth >= 2 && symbols && symbols.templateType && symbols.types[symbols.templateType]) {
+    return (symbols.types[symbols.templateType].properties || []).map((member) => ({
+      label: member.label.startsWith(".") ? member.label : `.${member.label}`,
+      kind: "Property",
+      detail: member.detail || `${symbols.templateType} template field`,
+    }));
+  }
+  return (data.catalog && data.catalog.DataServiceOptions
+    ? data.catalog.DataServiceOptions.properties
+    : []
+  ).map((member) => ({
+    label: member.label.startsWith(".") ? member.label : `.${member.label}`,
+    kind: "Property",
+    detail: member.detail || "DataService.Server.Init option",
+  }));
+}
+
 function buildCompletionItems(engine, data, text, filePath, lineText, offset, folders, extraTexts) {
+  if (/^\s*#include\s+"[^"]*$/.test(lineText) || /^\s*#include\s+"[^"]*\/[^"]*$/.test(lineText)) {
+    return includePathCompletions(lineText, filePath, folders);
+  }
+  const designated = designatedInitCompletions(text, offset, lineText, data, symbolsFor(engine, text, extraTexts));
+  if (designated && designated.length) {
+    return designated;
+  }
   if (/GetService\s*<\s*[A-Za-z_]*$/.test(lineText)) {
     return (data.services || data.types || []).map((ty) => ({
       label: ty,
@@ -71,6 +118,13 @@ function buildCompletionItems(engine, data, text, filePath, lineText, offset, fo
   }
   for (const [name, info] of symbols.vars) {
     items.push({ label: name, kind: "Variable", detail: info.detail });
+  }
+  for (const [name, info] of symbols.functions || []) {
+    items.push({
+      label: name,
+      kind: "Function",
+      detail: info.detail || `${info.returnType} ${name}()`,
+    });
   }
   return items;
 }

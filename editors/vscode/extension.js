@@ -28,6 +28,7 @@ function kindOf(name) {
     Variable: vscode.CompletionItemKind.Variable,
     Event: vscode.CompletionItemKind.Event,
     Field: vscode.CompletionItemKind.Field,
+    File: vscode.CompletionItemKind.File,
     tableKeys: vscode.CompletionItemKind.Field,
     properties: vscode.CompletionItemKind.Property,
     methods: vscode.CompletionItemKind.Method,
@@ -65,9 +66,11 @@ function memberItem(member) {
                     ? "Variable"
                     : member.kind === "Method"
                       ? "Method"
-                      : member.kind === "Property"
-                        ? "Property"
-                        : "Property";
+                      : member.kind === "File"
+                        ? "File"
+                        : member.kind === "Property"
+                          ? "Property"
+                          : "Property";
   const sort =
     member.kind === "tableKeys" || member.kind === "properties" || member.kind === "Variable"
       ? "0_"
@@ -350,7 +353,9 @@ function registerLocalCompletions(context, engine, data, selector) {
     ".",
     ":",
     ">",
-    "@"
+    "@",
+    "\"",
+    "/"
   );
   const hover = vscode.languages.registerHoverProvider(selector, {
     provideHover(document, position) {

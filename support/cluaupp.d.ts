@@ -1,4 +1,5 @@
-/** Stable CL++ ↔ Cluaupp contract. Cluaupp invokes the `clpp` binary.
+/** Stable CL++ ↔ Cluaupp contract (CL++ 0.3.3). Cluaupp invokes the `clpp` binary.
+ *  Full CLI handoff: docs/cluaupp-032.md
  *  Anonymous callbacks in generated CL++ must be `func (params) { }`.
  *  See docs/cluaupp-callbacks.md — `func [](…)` / `[]() { }` do not compile.
  */
@@ -7,6 +8,15 @@ export interface CompileRequest {
   source: string;
   fileName: string;
   strict?: boolean;
+}
+
+export interface CompileDiagnostic {
+  message: string;
+  /** 1-based */
+  line: number;
+  /** 1-based */
+  column: number;
+  severity: string;
 }
 
 export interface CompileArtifact {
@@ -20,6 +30,7 @@ export interface CompileArtifact {
   rojoClass: "Script" | "LocalScript" | "ModuleScript";
   libraries: string[];
   error?: string;
+  diagnostics?: CompileDiagnostic[];
 }
 
 export interface LanguageManifest {
@@ -40,6 +51,7 @@ export interface LanguageManifest {
 /**
  * CLI
  *
+ *   clpp --version                  // must be 0.3.3
  *   clpp api compile --file path.server.clpp
  *   echo '{"source":"...","fileName":"x.server.clpp"}' | clpp api compile
  *   clpp api manifest

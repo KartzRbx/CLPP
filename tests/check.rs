@@ -322,3 +322,127 @@ void Service::Tick() {
     assert!(err.contains("@nope"), "got: {err}");
 }
 
+#[test]
+fn missing_return_value_is_an_error() {
+    let err = compile(
+        r#"
+Player Find() {
+    return;
+}
+"#,
+    )
+    .unwrap_err();
+    assert!(err.contains("return"), "got: {err}");
+}
+
+#[test]
+fn pcall_destructure_and_multi_return() {
+    let luau = compile(
+        r#"
+void F() {
+    auto [success, erromessage] = pcall(func () {
+        return true, "Deu erro prq sim";
+    });
+    post(success);
+}
+"#,
+    )
+    .expect("pcall");
+    assert!(luau.contains("local success, erromessage"), "got: {luau}");
+    assert!(luau.contains("return true, \"Deu erro prq sim\""), "got: {luau}");
+}
+
+#[test]
+fn comments_emit_as_luau() {
+    let luau = compile(
+        r#"
+// setup the service
+void F() {
+    post("ok"); // greet
+}
+"#,
+    )
+    .expect("comments");
+    assert!(luau.contains("-- setup the service"), "got: {luau}");
+    assert!(luau.contains("-- greet"), "got: {luau}");
+}
+
+#[test]
+fn extra_semicolon_after_for_is_ok() {
+    let luau = compile(
+        r#"
+void F() {
+    for (int i = 0; i < 2; i++) {
+        post(i);
+    };
+}
+"#,
+    )
+    .expect("extra semicolon");
+    assert!(
+        luau.contains("while") || luau.contains("for"),
+        "got: {luau}"
+    );
+}
+
+#[test]
+fn header_emits_type_and_ctor() {
+    let art = compile_artifact_source(
+        r#"
+struct Leaderstats {
+    Janitor janitor = new Janitor();
+    Player PegarJogador(string NomeDoJogador);
+};
+"#,
+        Path::new("Leaderstats.clh"),
+        None,
+    )
+    .expect("header");
+    assert!(art.ok, "{:?}", art.error);
+    assert!(art.luau.contains("export type Leaderstats"), "got: {}", art.luau);
+    assert!(art.luau.contains("PegarJogador"), "got: {}", art.luau);
+    assert!(art.luau.contains("const function Leaderstats"), "got: {}", art.luau);
+}
+
+#[test]
+fn observable_initial_value_is_marked() {
+    let luau = compile(
+        r#"
+void F() {
+    observable int moeda = 10;
+    moeda = 150;
+    moeda.OnChange(func (int NovoValorDaMoeda) {
+        post(NovoValorDaMoeda);
+    });
+}
+"#,
+    )
+    .expect("observable");
+    assert!(luau.contains("initial value"), "got: {luau}");
+    assert!(luau.contains("__clpp_obs"), "got: {luau}");
+    assert!(luau.contains("moeda.Value = 150"), "got: {luau}");
+}
+
+#[test]
+fn quoted_include_searches_src() {
+    let root = std::env::temp_dir().join(format!("clpp-inc-{}", std::process::id()));
+    let data_dir = root.join("src").join("ReplicatedStorage").join("Shareds");
+    std::fs::create_dir_all(&data_dir).unwrap();
+    std::fs::write(data_dir.join("PlayerData.clp"), "const int kCoins = 1;\n").unwrap();
+    let server = root.join("src").join("Server");
+    std::fs::create_dir_all(&server).unwrap();
+    let from = server.join("Main.server.clpp");
+    let src = r#"
+#include "src/ReplicatedStorage/Shareds/PlayerData.clp"
+void F() { post("ok"); }
+"#;
+    let art = compile_artifact_source(src, &from, None).expect("include");
+    let _ = std::fs::remove_dir_all(&root);
+    assert!(art.ok, "{:?}", art.error);
+    assert!(
+        art.luau.contains("require") || art.luau.contains("kCoins") || art.luau.contains("post"),
+        "got: {}",
+        art.luau
+    );
+}
+

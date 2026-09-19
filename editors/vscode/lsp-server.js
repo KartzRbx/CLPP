@@ -127,7 +127,7 @@ function createSession() {
         result: {
           capabilities: {
             textDocumentSync: 1,
-            completionProvider: { triggerCharacters: [".", ":", ">", "@"] },
+            completionProvider: { triggerCharacters: [".", ":", ">", "@", "\"", "/"] },
             hoverProvider: true,
             definitionProvider: true,
             workspace: { workspaceFolders: { supported: true, changeNotifications: true } },
@@ -326,6 +326,7 @@ function lspCompletionKind(kind) {
     Variable: 6,
     Event: 23,
     Field: 5,
+    File: 17,
     tableKeys: 5,
     properties: 10,
     methods: 2,

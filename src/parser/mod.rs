@@ -134,6 +134,7 @@ fn parse_struct_member(pair: Pair<Rule>, owner: &str) -> Vec<Item> {
 }
 
 fn parse_function(pair: Pair<Rule>) -> Item {
+    let line = pair.line_col().0;
     let mut is_const = false;
     let mut is_async = false;
     let mut target = None;
@@ -174,6 +175,7 @@ fn parse_function(pair: Pair<Rule>) -> Item {
         is_const,
         is_async,
         target,
+        line,
     };
     if body.is_some() {
         Item::Function(func)
@@ -293,9 +295,18 @@ fn parse_stmt(pair: Pair<Rule>) -> Stmt {
             parallel: true,
         },
         Rule::return_stmt => {
-            let value = inner.into_inner().find(|p| p.as_rule() == Rule::expr).map(parse_expr);
-            Stmt::Return(value)
+            let values: Vec<Expr> = inner
+                .into_inner()
+                .filter(|p| p.as_rule() == Rule::expr)
+                .map(parse_expr)
+                .collect();
+            match values.len() {
+                0 => Stmt::Return(None),
+                1 => Stmt::Return(Some(values.into_iter().next().unwrap())),
+                _ => Stmt::Return(Some(Expr::Tuple(values))),
+            }
         }
+        Rule::empty_stmt => Stmt::Block(Vec::new()),
         Rule::break_stmt => Stmt::Break,
         Rule::destructure => {
             let (names, value) = parse_destructure_parts(inner);

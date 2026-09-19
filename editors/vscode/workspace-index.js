@@ -2,6 +2,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const { resolveOnDisk } = require("./include-cache");
 
 const SKIP = new Set([
   "node_modules",
@@ -35,20 +36,7 @@ function includeSearchRoots(folders) {
 }
 
 function resolveInclude(spec, angled, fromPath, folders) {
-  if (!angled && fromPath) {
-    const relative = path.normalize(path.join(path.dirname(fromPath), spec));
-    if (fs.existsSync(relative)) {
-      return relative;
-    }
-  }
-  for (const root of includeSearchRoots(folders)) {
-    for (const candidate of [path.join(root, spec), path.join(root, "stdlib", spec)]) {
-      if (fs.existsSync(candidate)) {
-        return candidate;
-      }
-    }
-  }
-  return null;
+  return resolveOnDisk(spec, angled, fromPath, folders);
 }
 
 function extraIncludeTexts(text, fromPath, folders) {

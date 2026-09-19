@@ -1,1 +1,36 @@
 #pragma once
+
+struct DataServiceOptions {
+    auto Template;
+    string StoreName;
+    bool UseMock;
+};
+
+struct Data {
+    auto Get(auto path);
+    void Set(auto path, auto value);
+    auto GetChangedSignal(auto path);
+    void Destroy();
+};
+
+struct DataServiceServer {
+    PlayerData Paths;
+    void Init(DataServiceOptions options);
+    Data WaitFor(Player player);
+    auto Get(Player player, auto path);
+    void Set(Player player, auto path, auto value);
+    void Update(Player player, auto path, func updater);
+    void Remove(Player player);
+};
+
+struct DataServiceClient {
+    PlayerData Paths;
+    Data WaitFor();
+    auto Get(auto path);
+};
+
+struct DataService {
+    DataServiceServer Server;
+    DataServiceClient Client;
+    PlayerData Paths;
+};
