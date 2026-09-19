@@ -40,7 +40,7 @@ end
 
 - File-level declarations become file `local` / `const`.
 - Function declarations last from that line to the end of the block. Nested `{ }` may shadow.
-- In `Class::Method`, `this` is `self`. Bare fields become `self.field`. Calls to other methods become `self:Method(...)`. Parameters and locals shadow fields.
+- In `Class::Method`, `@this` / `this` is `self`. `@field` and bare fields become `self.field`. Calls to other methods become `self:Method(...)`. Parameters and locals shadow fields.
 - Globals stay bare: `post`, `warn`, `report`, `game`, `workspace`, lib types, Instances, datatypes.
 - Instances are not RAII. Leaving a block **does not** `Destroy` — use Janitor.
 
@@ -63,7 +63,7 @@ for (int i = 0; i < 10; i++) {
     post("Count: " .: i);
 }
 
-for (Player* player : players::GetPlayers()) {
+for (Player* player in players.GetPlayers()) {
     post("Player connected: " .: player.Name);
 }
 
@@ -127,8 +127,9 @@ end
 | `=` `+=` `-=` `*=` `/=` | same |
 | `++` / `--` | `+= 1` / `-= 1` |
 | `obj.Prop` | `obj.Prop` |
-| `DataService:Server` | `DataService.Server` |
-| `obj::Method(a)` | `obj:Method(a)` |
+| `obj.Method(a)` | `obj:Method(a)` |
+| `obj:Method(a)` | `pcall` of `obj:Method(a)` |
+| `DataService.Server` | `DataService.Server` |
 | `a .: b` | `a .. b` |
 | `fn(a)` | `fn(a)` |
 | `Type { .Field = value }` | `{ Field = value }` |
@@ -139,7 +140,7 @@ Binary operators associate left-to-right — use parentheses when mixing.
 Designated initializers become Luau tables:
 
 ```clpp
-DataService:Server::Init(DataServiceOptions {
+DataService.Server.Init(DataServiceOptions {
     .Template = playerData,
     .StoreName = "PlayerData",
     .UseMock = true,
@@ -222,21 +223,21 @@ part.Material = Enum.Material.Plastic
 
 The first argument of `new Class(parent)` becomes `.Parent` on Instance classes. Libs use `Janitor.new()`. Datatypes use `Vector3(...)`, not `new`.
 
-## Callbacks (events and lambdas)
+## Callbacks
 
-Lambdas use empty `[]` (no C++ captures). `func` is the type and may prefix the lambda. Luau closures capture the environment; keep Instances alive with Janitor.
+Anonymous callbacks are `func (params) { }`. There is no C++ capture list. `func` is also the type. Luau closures capture the environment; keep Instances alive with Janitor.
 
 ```clpp
-func onCoinsChanged = [](int newValue) {
+func onCoinsChanged = func (int newValue) {
     post("New value: " .: newValue);
 };
 
-players::PlayerAdded::Connect(func [](Player* playerEntered) {
+players.PlayerAdded::Connect(func (Player* playerEntered) {
     post("New player: " .: playerEntered.Name);
 });
 
-game::BindToClose(func []() {
-    janitor::Cleanup();
+game.BindToClose(func () {
+    janitor.Cleanup();
 });
 ```
 
@@ -267,31 +268,31 @@ The type lives in a `struct` (or `class`) in the sibling `.clh`. Methods are `Cl
 - Nested structs with defaults become nested tables (DataService Templates). `array<T>` / `LuaArray<T>` fields stay on the table.
 - `Class::` emits `function Class:Method(...)`.
 - Construct **one** service in `init()` (`LeaderstatsServer leaderstatsServer;`) and use it in lambdas. That is the game singleton.
-- Lib singletons: `DataService:Server` / `DataService:Client`.
+- Lib singletons: `DataService.Server` / `DataService.Client`.
 - Field-only structs in the header emit `const function Name()` with defaults.
 - Untagged files with only `Class::` `return` the table (ModuleScript).
 
 Stems must match: `LeaderstatsServer.clh` next to `LeaderstatsServer.server.clpp`.
 
-## `::` vs `:` vs `.` vs `.:`
+## `.` vs `:` vs `::` vs `~>`
 
-CL++ **does not use `->`**. Methods and scope use `::`. Tables/dictionaries use `:`. Instance properties use `.`. Concatenation is `.:`.
+CL++ **does not use `->`**. `.` is the default (properties and instance methods). `:` types a name or wraps a call in `pcall`. `::` is static scope and manual Connect. `~>` gives the connection to Janitor. Concatenation is `.:`.
 
 | CL++ | Luau | When |
 | --- | --- | --- |
-| `players::PlayerAdded::Connect(fn)` | `players.PlayerAdded:Connect(fn)` | method / signal |
-| `player::FindFirstChild("x")` | `player:FindFirstChild("x")` | Instance method |
-| `janitor::Add(conn)` | `janitor:Add(conn)` | lib method |
-| `DataService:Server` | `DataService.Server` | table key |
-| `DataService:Server::WaitFor(p)` | `DataService.Server:WaitFor(p)` | table + method |
 | `player.Name` | `player.Name` | property |
+| `player.Kick()` | `player:Kick()` | instance method |
+| `player:Kick()` | `pcall` of `player:Kick()` | protected call |
+| `age: int = 10` | `local age: number = 10` | type |
+| `players.PlayerAdded::Connect(fn)` | `players.PlayerAdded:Connect(fn)` | manual Connect |
+| `players.PlayerAdded~>Connect(fn)` | `janitor:Add(..., "Disconnect")` | Janitor Connect |
+| `task::wait(1)` | `task.wait(1)` | static / library |
+| `DataService.Server.WaitFor(p)` | `DataService.Server:WaitFor(p)` | table + method |
+| `janitor.Add(conn)` | `janitor:Add(conn)` | instance method |
 | `a .: b` | `a .. b` | concatenation |
 | `for (T x in list)` | `for _, x in list do` | range-for (`:` still works) |
-| `for (int i = 0; i < n; i++)` | `while` + `i += 1` | C loop |
-| `signal~>Connect(fn)` | `janitor:Add(signal:Connect(fn), "Disconnect")` | auto-cleanup |
-| `signal~>Once(fn)` | `janitor:Add(signal:Once(fn), "Disconnect")` | one-shot auto-cleanup |
-| `signal::Fire(...)` | `signal:Fire(...)` | emit / send |
-| `obj::GetPropertyChangedSignal("Name")` | `obj:GetPropertyChangedSignal("Name")` | property change signal |
+| `signal.Fire(...)` | `signal:Fire(...)` | emit / send |
+| `obj.GetPropertyChangedSignal("Name")` | `obj:GetPropertyChangedSignal("Name")` | property change signal |
 
 ## observable
 
@@ -300,7 +301,7 @@ CL++ **does not use `->`**. Methods and scope use `::`. Tables/dictionaries use 
 ```clpp
 observable int coins = 100;
 
-coins.OnChange(func [](int newValue) {
+coins.OnChange(func (int newValue) {
     post("Coins changed to: " .: newValue);
 });
 
@@ -343,11 +344,11 @@ print(player.Name)
 `signal~>Connect(fn)` and `signal~>Once(fn)` register the connection on the scope Janitor (`janitor` local, `self.janitor`, or a synthetic `__janitor`). `Once` disconnects after the first emission. In `void init()`, the synthetic `__janitor` also gets `game:BindToClose`.
 
 ```clpp
-players::PlayerAdded~>Connect(func [](Player* player) {
+players.PlayerAdded~>Connect(func (Player* player) {
     post("Connected and managed automatically!");
 });
 
-players::PlayerAdded~>Once(func [](Player* player) {
+players.PlayerAdded~>Once(func (Player* player) {
     post("First player only");
 });
 ```
@@ -366,17 +367,17 @@ end), "Disconnect")
 ```clpp
 signal<Player*, int> OnCoinsUpdated;
 
-OnCoinsUpdated~>Connect(func [](Player* player, int newAmount) {
+OnCoinsUpdated~>Connect(func (Player* player, int newAmount) {
     post(player.Name .: ": " .: newAmount);
 });
 
-OnCoinsUpdated~>Once(func [](Player* player, int newAmount) {
+OnCoinsUpdated~>Once(func (Player* player, int newAmount) {
     post("first: " .: newAmount);
 });
 
-OnCoinsUpdated::Fire(player, 500);
+OnCoinsUpdated.Fire(player, 500);
 
-part::GetPropertyChangedSignal("Transparency")~>Connect(func []() {
+part.GetPropertyChangedSignal("Transparency")~>Connect(func () {
     post(part.Transparency);
 });
 ```
@@ -398,18 +399,18 @@ end)
 | CL++ | Meaning |
 | --- | --- |
 | `signal<T...> name;` | typed signal (`BindableEvent` under `__signal()`) |
-| `name::Fire(...)` | **send** the signal |
+| `name.Fire(...)` | **send** the signal |
 | `name~>Connect(fn)` | listen until disconnected (Janitor) |
 | `name~>Once(fn)` | listen **once**, then disconnect |
-| `name::Wait()` | yield until the next fire |
+| `name.Wait()` | yield until the next fire |
 | assign an `observable` | writes `.Value` and fires `Changed` |
-| `obj::GetPropertyChangedSignal("X")` | Instance property change signal |
+| `obj.GetPropertyChangedSignal("X")` | Instance property change signal |
 
 ## async / await
 
 ```clpp
 async Data* FetchData(Player* player) {
-    Data* data = await DataService:Server::WaitFor(player);
+    Data* data = await DataService.Server.WaitFor(player);
     return data;
 }
 ```
@@ -419,8 +420,8 @@ async Data* FetchData(Player* player) {
 ## Destructuring, spawn, parallel, match, targets
 
 ```clpp
-auto [success, result] = pcall(func []() {
-    return DataStore::GetAsync("PlayerData");
+auto [success, result] = pcall(func () {
+    return DataStore.GetAsync("PlayerData");
 });
 
 spawn {
@@ -433,8 +434,8 @@ parallel {
 };
 
 match (instance) {
-    Part* p => p.BrickColor = BrickColor::Red(),
-    Model* m => m.PrimaryPart.BrickColor = BrickColor::Blue(),
+    Part p => p.BrickColor = BrickColor::Red(),
+    Model m => m.PrimaryPart.BrickColor = BrickColor::Blue(),
     _ => warn("Instance not supported")
 };
 

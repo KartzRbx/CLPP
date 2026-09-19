@@ -60,9 +60,9 @@ Every utility has its own page: syntax, parameters, return value, Luau emit, exa
 
 ## Operators
 
-- [:: method / scope](reference/operator-method)
-- [: table key](reference/operator-table)
-- [. property](reference/operator-property)
+- [:: static / manual Connect](reference/operator-method)
+- [: type / protected call](reference/operator-table)
+- [. property / instance method](reference/operator-property)
 - [.: concat](reference/operator-concat)
 - [~&gt; janitor](reference/operator-janitor)
 - [+ − * /](reference/operator-arithmetic)
@@ -91,7 +91,7 @@ Every utility has its own page: syntax, parameters, return value, Luau emit, exa
 ## Functions &amp; OOP
 
 - [function](reference/function)
-- [`lambda []`](reference/lambda)
+- [`func (...)`](reference/lambda)
 - [struct / class](reference/struct)
 - [Class::Method](reference/class-method)
 - [public / private](reference/access-labels)

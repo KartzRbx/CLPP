@@ -1,7 +1,7 @@
 use crate::ast::{Decl, Expr, Function, Item, Program, Stmt};
 use crate::support::CompileDiagnostic;
 use miette::Result;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Clone, Debug, PartialEq)]
 enum Ty {
@@ -39,11 +39,39 @@ struct Binding {
 }
 
 pub fn check_program(program: &Program, source: &str) -> Result<Vec<CompileDiagnostic>> {
+    let mut owner_fields: HashMap<String, HashSet<String>> = HashMap::new();
+    let mut owner_methods: HashMap<String, HashSet<String>> = HashMap::new();
+    for item in &program.items {
+        match item {
+            Item::Decl(decl) => {
+                if let Some(owner) = &decl.owner {
+                    owner_fields
+                        .entry(owner.clone())
+                        .or_default()
+                        .insert(decl.name.clone());
+                }
+            }
+            Item::Function(func) | Item::Proto(func) => {
+                if let Some(owner) = &func.owner {
+                    owner_methods
+                        .entry(owner.clone())
+                        .or_default()
+                        .insert(func.name.clone());
+                }
+            }
+            Item::Destructure { .. } => {}
+        }
+    }
     let mut checker = Checker {
         source,
         file_name: &program.file_name,
         env: HashMap::new(),
         diagnostics: Vec::new(),
+        in_method: false,
+        method_fields: HashSet::new(),
+        method_methods: HashSet::new(),
+        owner_fields,
+        owner_methods,
     };
     for item in &program.items {
         checker.item(item);
@@ -56,6 +84,11 @@ struct Checker<'a> {
     file_name: &'a str,
     env: HashMap<String, Binding>,
     diagnostics: Vec<CompileDiagnostic>,
+    in_method: bool,
+    method_fields: HashSet<String>,
+    method_methods: HashSet<String>,
+    owner_fields: HashMap<String, HashSet<String>>,
+    owner_methods: HashMap<String, HashSet<String>>,
 }
 
 impl<'a> Checker<'a> {
@@ -80,6 +113,25 @@ impl<'a> Checker<'a> {
 
     fn function(&mut self, func: &Function) {
         let saved = self.env.clone();
+        let saved_method = self.in_method;
+        let saved_fields = self.method_fields.clone();
+        let saved_methods = self.method_methods.clone();
+        self.in_method = func.owner.is_some();
+        if let Some(owner) = &func.owner {
+            self.method_fields = self
+                .owner_fields
+                .get(owner)
+                .cloned()
+                .unwrap_or_default();
+            self.method_methods = self
+                .owner_methods
+                .get(owner)
+                .cloned()
+                .unwrap_or_default();
+        } else {
+            self.method_fields.clear();
+            self.method_methods.clear();
+        }
         for param in &func.params {
             let ty = param
                 .value_type
@@ -96,6 +148,9 @@ impl<'a> Checker<'a> {
         }
         self.stmts(&func.body);
         self.env = saved;
+        self.in_method = saved_method;
+        self.method_fields = saved_fields;
+        self.method_methods = saved_methods;
         let _ = self.file_name;
         let _ = self.source;
     }
@@ -278,6 +333,33 @@ impl<'a> Checker<'a> {
                 .get(name)
                 .map(|b| b.ty.clone())
                 .unwrap_or(Ty::Unknown),
+            Expr::This { line } => {
+                if !self.in_method {
+                    self.error(
+                        *line,
+                        1,
+                        "`@this` is only valid inside Class::Method".into(),
+                    );
+                }
+                Ty::Auto
+            }
+            Expr::AtField { name, line } => {
+                if !self.in_method {
+                    self.error(
+                        *line,
+                        1,
+                        format!("`@{name}` is only valid inside Class::Method"),
+                    );
+                } else if !self.method_fields.contains(name) && !self.method_methods.contains(name)
+                {
+                    self.error(
+                        *line,
+                        1,
+                        format!("`@{name}` is not a field or method of this struct"),
+                    );
+                }
+                Ty::Unknown
+            }
             Expr::Unary { argument, .. } | Expr::Await { argument } | Expr::Cast { argument, .. } => {
                 if let Expr::Cast { value_type, .. } = expr {
                     return parse_ty(value_type);
@@ -300,7 +382,10 @@ impl<'a> Checker<'a> {
                     _ => Ty::Unknown,
                 }
             }
-            Expr::Assign { right, .. } => self.expr_ty(right),
+            Expr::Assign { left, right, .. } => {
+                let _ = self.expr_ty(left);
+                self.expr_ty(right)
+            }
             Expr::Member { object, name, .. } => {
                 let _ = self.expr_ty(object);
                 match name.as_str() {
@@ -343,7 +428,10 @@ impl<'a> Checker<'a> {
                 }
                 Ty::Named(class_name.clone())
             }
-            Expr::Lambda { .. } => Ty::Func,
+            Expr::Lambda { body, .. } => {
+                self.stmts(body);
+                Ty::Func
+            }
             Expr::InitList { .. } | Expr::ArrayLit { .. } => Ty::Named("array".into()),
             Expr::DictLit { .. } => Ty::Named("dictionary".into()),
             Expr::Update { target, .. } => self.expr_ty(target),

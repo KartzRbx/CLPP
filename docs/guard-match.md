@@ -38,14 +38,14 @@ Use `guard` at the top of methods. Happy-path code stays unindented.
 
 ```clpp
 match (instance) {
-    Part* p => p.Anchored = true,
-    Model* m => post(m.Name),
+    Part p => p.Anchored = true,
+    Model m => post(m.Name),
     string s => post(s),
     _ => warn("Instance not supported")
 };
 ```
 
-- `Part* p` → `x:IsA("Part")` then bind `p`.
+- `Part p` → `x:IsA("Part")` then bind `p`. There is no pointer in the arm.
 - `string s` → `typeof(x) == "string"`.
 - `_` is required as a fallback in real UI code so unknown instances do not silently drop.
 
@@ -53,9 +53,9 @@ Arms can be a block:
 
 ```clpp
 match (tool) {
-    Tool* t => {
+    Tool t => {
         guard (t.Parent != null) else { return; }
-        t::Activate();
+        t.Activate();
     },
     _ => warn("not a tool")
 };

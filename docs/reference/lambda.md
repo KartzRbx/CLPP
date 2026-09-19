@@ -1,20 +1,20 @@
 ---
-title: "lambda []"
-sidebar_label: "[]"
+title: "func (...)"
+sidebar_label: "func (...)"
 ---
 
-# lambda []
+# func (...)
 
 <div class="clpp-ref-meta">Functions</div>
 
-Closure. Empty `[]` only — no C++ captures `[x]` / `[&]`. Luau still closes over outer locals.
+Anonymous callback. There is no C++ capture list — CL++ has no pointers to capture. Luau still closes over outer locals.
 
 ## Syntax
 
 ```clpp
-func [](T arg) { }
-[]() { }
-func cb = []() {};
+func (T arg) { }
+func () { }
+func cb = func () {};
 ```
 
 ## Parameters
@@ -31,14 +31,14 @@ A function value.
 
 ## Description
 
-Prefix with [`func`](func) when you want the type on the lambda. Passing a method by name from inside `Class::` binds `self`: `function(...) self:OnPlayer(...) end`.
+[`func`](func) is both the type and the keyword that starts an inline callback. Passing a method by name from inside `Class::` binds `self`: `function(...) self:OnPlayer(...) end`.
 
-Keep Instances alive with Janitor; closures do not own Roblox lifetime.
+Keep Instances alive with Janitor; closures do not own Roblox lifetime. Do **not** write `func [](…)` or `[]() { }`.
 
 ## Example
 
 ```clpp
-players::PlayerAdded::Connect(func [](Player* playerEntered) {
+players.PlayerAdded~>Connect(func (Player* playerEntered) {
     post("New player: " .: playerEntered.Name);
 });
 ```
@@ -46,9 +46,9 @@ players::PlayerAdded::Connect(func [](Player* playerEntered) {
 Emits:
 
 ```luau
-players.PlayerAdded:Connect(function(playerEntered: Player)
+janitor:Add(players.PlayerAdded:Connect(function(playerEntered: Player)
 	print("New player: " .. playerEntered.Name)
-end)
+end), "Disconnect")
 ```
 
 ## See also

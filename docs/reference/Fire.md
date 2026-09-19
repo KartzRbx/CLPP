@@ -12,7 +12,7 @@ Send a payload to every current listener of a `signal`.
 ## Syntax
 
 ```clpp
-name::Fire(...);
+name.Fire(...);
 ```
 
 ## Parameters
@@ -37,7 +37,7 @@ This is **send**. Listening is [`Connect`](Connect) / [`Once`](Once) / [`~>`](op
 
 ```clpp
 signal<Player*, int> OnCoinsUpdated;
-OnCoinsUpdated::Fire(player, 500);
+OnCoinsUpdated.Fire(player, 500);
 ```
 
 Emits:

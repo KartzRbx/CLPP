@@ -33,6 +33,21 @@ fn rejects_const_int_without_name() {
 }
 
 #[test]
+fn rejects_func_capture_list() {
+    let err = compile("void F() { auto cb = func [](int n) { return; }; }").unwrap_err();
+    assert!(
+        err.contains("expected") || err.contains("func"),
+        "got: {err}"
+    );
+}
+
+#[test]
+fn accepts_func_callback() {
+    let luau = compile("void F() { auto cb = func (int n) { post(n); }; }").expect("func callback");
+    assert!(luau.contains("function(n: number)"), "got: {luau}");
+}
+
+#[test]
 fn accepts_single_quotes_and_templates() {
     let luau = compile(
         r#"
@@ -155,14 +170,53 @@ fn janitor_cleanup_after_scope_member() {
         r#"
 void F() {
     Players* players = GetService<Players>();
-    players::PlayerAdded~>Once(func [](Player* p) {
+    players.PlayerAdded~>Once(func (Player* p) {
         return;
     });
 }
 "#,
     )
-    .expect("cleanup after :: and .");
+    .expect("cleanup after . and ~>");
     assert!(luau.contains(":Once(") || luau.contains("Once"), "got: {luau}");
+}
+
+#[test]
+fn accessors_dot_colon_scope_and_protected() {
+    let luau = compile(
+        r#"
+void F(Player* player) {
+    Players* players = GetService<Players>();
+    player.Name = "Kartz";
+    player.Kick();
+    Instance* child = player:FindFirstChild("x");
+    players.PlayerAdded::Connect(func (Player* p) {
+        post(p.Name);
+    });
+}
+"#,
+    )
+    .expect("accessors");
+    assert!(luau.contains("player.Name = \"Kartz\""), "got: {luau}");
+    assert!(luau.contains("player:Kick()"), "got: {luau}");
+    assert!(luau.contains("pcall"), "protected : call, got: {luau}");
+    assert!(luau.contains("FindFirstChild"), "got: {luau}");
+    assert!(luau.contains("PlayerAdded:Connect"), "got: {luau}");
+    assert!(!luau.contains("janitor:Add") && !luau.contains("__janitor:Add"), "manual ::Connect, got: {luau}");
+}
+
+#[test]
+fn postfix_type_annotation() {
+    let luau = compile(
+        r#"
+void F() {
+    age: int = 10;
+    post(age);
+}
+"#,
+    )
+    .expect("postfix type");
+    assert!(luau.contains("age"), "got: {luau}");
+    assert!(luau.contains("10"), "got: {luau}");
 }
 
 #[test]
@@ -192,3 +246,79 @@ void F() {
     assert!(!luau.contains("to_number("));
     assert!(!luau.contains("to_bool("));
 }
+
+#[test]
+fn at_this_and_at_field_emit_self() {
+    let luau = compile(
+        r#"
+struct Service {
+    Janitor* janitor;
+    void Tick();
+};
+
+void Service::Tick() {
+    @janitor.Add(@this, "Destroy");
+    this.janitor.Cleanup();
+}
+"#,
+    )
+    .expect("@this emit");
+    assert!(luau.contains("self.janitor:Add(self, \"Destroy\")"), "got: {luau}");
+    assert!(luau.contains("self.janitor:Cleanup()"), "got: {luau}");
+    assert!(!luau.contains("@this"), "got: {luau}");
+}
+
+#[test]
+fn at_this_outside_method_fails() {
+    let err = compile(
+        r#"
+void init() {
+    @this;
+}
+"#,
+    )
+    .unwrap_err();
+    assert!(
+        err.contains("@this") && err.to_lowercase().contains("class::method"),
+        "got: {err}"
+    );
+}
+
+#[test]
+fn this_alias_still_emits_self() {
+    let luau = compile(
+        r#"
+struct Service {
+    int coins;
+    void Tick();
+};
+
+void Service::Tick() {
+    this;
+    coins = 1;
+}
+"#,
+    )
+    .expect("this alias");
+    assert!(luau.contains("self"), "got: {luau}");
+    assert!(luau.contains("self.coins = 1"), "got: {luau}");
+}
+
+#[test]
+fn at_unknown_field_fails() {
+    let err = compile(
+        r#"
+struct Service {
+    int coins;
+    void Tick();
+};
+
+void Service::Tick() {
+    @nope = 1;
+}
+"#,
+    )
+    .unwrap_err();
+    assert!(err.contains("@nope"), "got: {err}");
+}
+

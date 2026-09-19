@@ -8,4 +8,4 @@ clpp install --editor code
 clpp install --editor cursor
 ```
 
-Includes `.clpp` / `.clp` / `.clh` identification, icon, TextMate highlighting, snippets, and IntelliSense.
+Includes `.clpp` / `.clp` / `.clh` identification, icon, TextMate highlighting, snippets, IntelliSense, and a language server (`lsp-server.js`). Set `clpp.lsp.enabled` to false to stay in-process.

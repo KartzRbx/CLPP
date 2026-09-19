@@ -11,7 +11,7 @@ Two ways to broadcast change: **observable** (a ValueBase) and **signal** (a typ
 ```clpp
 observable int coins = 100;
 
-coins.OnChange(func [](int newValue) {
+coins.OnChange(func (int newValue) {
     post("Coins changed to: " .: newValue);
 });
 
@@ -27,34 +27,34 @@ post(coins);  // reads .Value
 | `bool` | `BoolValue` |
 | anything else | `ObjectValue` |
 
-## signal — fire with `::Fire`
+## signal — fire with `.Fire`
 
 ```clpp
 signal<Player*, int> OnCoinsUpdated;
 
-OnCoinsUpdated~>Connect(func [](Player* player, int amount) {
+OnCoinsUpdated~>Connect(func (Player* player, int amount) {
     post(player.Name .: ": " .: amount);
 });
 
-OnCoinsUpdated~>Once(func [](Player* player, int amount) {
+OnCoinsUpdated~>Once(func (Player* player, int amount) {
     post("first pay");
 });
 
-OnCoinsUpdated::Fire(player, 500);
-OnCoinsUpdated::Wait();
+OnCoinsUpdated.Fire(player, 500);
+OnCoinsUpdated.Wait();
 ```
 
 | API | Role |
 | --- | --- |
-| `::Fire(...)` | send |
+| `.Fire(...)` | send |
 | `~>Connect` | listen until disconnected |
 | `~>Once` | listen **once** |
-| `::Wait()` | yield until next fire |
+| `.Wait()` | yield until next fire |
 
 ## Property change “shots”
 
 ```clpp
-humanoid::GetPropertyChangedSignal("Health")~>Connect(func []() {
+humanoid.GetPropertyChangedSignal("Health")~>Connect(func () {
     post(humanoid.Health);
 });
 ```

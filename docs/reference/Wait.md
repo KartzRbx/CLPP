@@ -12,7 +12,7 @@ Yield until the next `Fire` (or next RBXScriptSignal fire).
 ## Syntax
 
 ```clpp
-auto payload = name::Wait();
+auto payload = name.Wait();
 ```
 
 ## Parameters
@@ -34,7 +34,7 @@ Blocks the current thread. Prefer [`Connect`](Connect) for ongoing work. Combine
 ## Example
 
 ```clpp
-OnCoinsUpdated::Wait();
+OnCoinsUpdated.Wait();
 ```
 
 Emits:

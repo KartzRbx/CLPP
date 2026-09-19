@@ -26,6 +26,7 @@ const KEYWORDS = new Set([
   "true",
   "false",
   "this",
+  "@this",
   "observable",
   "signal",
   "array",
@@ -408,7 +409,7 @@ function loadEngine(data) {
       parseParams(match[1], vars);
     }
 
-    const lambdas = /func\s*\[\]\s*\(([^)]*)\)/g;
+    const lambdas = /func\s*\(([^)]*)\)\s*\{/g;
     while ((match = lambdas.exec(text))) {
       parseParams(match[1], vars);
     }
@@ -556,7 +557,7 @@ function loadEngine(data) {
     const bag = collectType(resolved, overlay);
 
     if (mode === "property") {
-      const props = [...bag.properties];
+      const props = [...bag.properties, ...bag.methods, ...bag.events];
       if (type === "dictionary" || dictKeys.length) {
         return props.concat(dictKeys);
       }
@@ -580,13 +581,10 @@ function loadEngine(data) {
       if (bag.tableKeys.length) {
         return bag.tableKeys;
       }
-      if (isSignalLike(resolved)) {
-        return bag.methods;
-      }
       if (dictKeys.length) {
         return dictKeys;
       }
-      return [];
+      return [...bag.methods, ...bag.events];
     }
 
     return [];
@@ -605,6 +603,23 @@ function loadEngine(data) {
   }
 
   function hoverFor(word, symbols) {
+    if (word === "@this") {
+      return "Current object inside Class::Method. Emits Luau self. @field is self.field.";
+    }
+    if (word === "this") {
+      return "Current object inside Class::Method. Emits self. Prefer @this.";
+    }
+    if (word && word.startsWith("@") && word.length > 1) {
+      const field = word.slice(1);
+      const overlay = symbols && symbols.types;
+      for (const typeName of Object.keys(overlay || {})) {
+        const member = findMember(typeName, field, overlay);
+        if (member && member.detail) {
+          return `${member.detail} (self.${field})`;
+        }
+      }
+      return `self.${field} — member of the current object`;
+    }
     if (symbols.vars.has(word)) {
       const info = symbols.vars.get(word);
       return info.detail || info.type || "local";
@@ -645,7 +660,98 @@ function loadEngine(data) {
   };
 }
 
-module.exports = { loadEngine, PRIMITIVES, lintDocument };
+function enclosingOwner(text, offset) {
+  const before = text.slice(0, Math.max(0, offset));
+  let last = null;
+  const re = /\b([A-Za-z_]\w*)::[A-Za-z_]\w*\s*\(/g;
+  let match;
+  while ((match = re.exec(before))) {
+    last = match[1];
+  }
+  return last;
+}
+
+function atCompletions(line, symbols, owner) {
+  if (!/@[A-Za-z_]*$/.test(line)) {
+    return null;
+  }
+  const items = [
+    { label: "@this", kind: "Keyword", detail: "Current object in Class::Method (Luau self)" },
+  ];
+  const types = (symbols && symbols.types) || {};
+  const nodes = owner && types[owner] ? [types[owner]] : Object.values(types);
+  const seen = new Set(["this"]);
+  for (const node of nodes) {
+    for (const member of [...(node.properties || []), ...(node.methods || [])]) {
+      if (seen.has(member.label)) {
+        continue;
+      }
+      seen.add(member.label);
+      items.push({
+        label: `@${member.label}`,
+        kind: member.kind === "methods" ? "Method" : "Property",
+        detail: member.detail || `self.${member.label}`,
+      });
+    }
+  }
+  return items;
+}
+
+function lintReceiverSigil(text) {
+  const diagnostics = [];
+  const lines = text.split(/\r?\n/);
+  let brace = 0;
+  let methodDepth = 0;
+  let pendingMethod = false;
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    const code = raw.replace(/\/\/.*$/, "").replace(/"(?:\\.|[^"\\])*"/g, '""');
+    if (/\b[A-Za-z_]\w*\s*::\s*[A-Za-z_]\w*\s*\(/.test(code)) {
+      pendingMethod = !/;\s*$/.test(code.trim()) || code.includes("{");
+    }
+    for (let c = 0; c < code.length; c++) {
+      const ch = code[c];
+      if (ch === "{") {
+        brace += 1;
+        if (pendingMethod) {
+          methodDepth = brace;
+          pendingMethod = false;
+        }
+      } else if (ch === "}") {
+        if (methodDepth && brace === methodDepth) {
+          methodDepth = 0;
+        }
+        brace = Math.max(0, brace - 1);
+      }
+    }
+    const atRe = /@([A-Za-z_]\w*)/g;
+    let match;
+    while ((match = atRe.exec(code))) {
+      if (methodDepth) {
+        continue;
+      }
+      const name = match[1];
+      diagnostics.push({
+        line: i,
+        column: Math.max(0, raw.indexOf(match[0])),
+        message:
+          name === "this"
+            ? "`@this` is only valid inside Class::Method"
+            : `\`@${name}\` is only valid inside Class::Method`,
+      });
+    }
+  }
+  return diagnostics;
+}
+
+module.exports = {
+  loadEngine,
+  PRIMITIVES,
+  lintDocument,
+  lintReceiverSigil,
+  enclosingOwner,
+  atCompletions,
+};
 
 function lintDocument(text) {
   const diagnostics = [];
@@ -686,6 +792,13 @@ function lintDocument(text) {
         line: i,
         column: Math.max(0, raw.indexOf("continue")),
         message: "CL++ has no continue",
+      });
+    }
+    if (/\bfunc\s*\[\]/.test(trimmed) || /^\s*\[\]\s*\(/.test(raw)) {
+      diagnostics.push({
+        line: i,
+        column: Math.max(0, raw.search(/func\s*\[\]|\[\]\s*\(/)),
+        message: "use `func (params) { }` — CL++ does not use captures `[]`",
       });
     }
     if (/\b(?:const|constexpr)\s+(int|float|double|bool|string)\s*=/.test(trimmed)) {
@@ -732,6 +845,9 @@ function lintDocument(text) {
         message: "missing ';' at the end of this statement",
       });
     }
+  }
+  for (const issue of lintReceiverSigil(text)) {
+    diagnostics.push(issue);
   }
   return diagnostics;
 }

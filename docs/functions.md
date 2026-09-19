@@ -1,8 +1,8 @@
 ---
-title: Functions and lambdas
+title: Functions and callbacks
 ---
 
-# Functions and lambdas
+# Functions and callbacks
 
 ```clpp
 void CreateLeaderstats(Player* player) {
@@ -19,16 +19,16 @@ const int DoubleCoins(int coins) {
 - No overloading. No default arguments.
 - `void init()` is the script entry. No `int main()`.
 
-## Lambdas
+## Anonymous callbacks
 
-Empty `[]` — no C++ captures `[x]` / `[&]`. Prefix with `func` when you want the type:
+Write `func (params) { }`. There are no C++ captures `[x]` / `[&]`.
 
 ```clpp
-func onCoinsChanged = [](int newValue) {
+func onCoinsChanged = func (int newValue) {
     post("New value: " .: newValue);
 };
 
-players::PlayerAdded::Connect(func [](Player* playerEntered) {
+players.PlayerAdded~>Connect(func (Player* playerEntered) {
     post("New player: " .: playerEntered.Name);
 });
 ```
@@ -41,7 +41,7 @@ Passing a method by name from inside `Class::` binds `self`.
 
 ```clpp
 async Data* FetchData(Player* player) {
-    Data* data = await DataService:Server::WaitFor(player);
+    Data* data = await DataService.Server.WaitFor(player);
     return data;
 }
 ```

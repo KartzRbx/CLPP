@@ -14,7 +14,7 @@ By the end of this course you will:
 
 1. Install `clpp` and the editor pack.
 2. Write `.clh` / `.clp` / `.clpp` files and know which Roblox instance they become.
-3. Use the four accessors `::` `:` `.` `.:` without guessing.
+3. Use `.` for the default, `:` for types and safe calls, `::` for static/manual Connect, `~>` for Janitor.
 4. Build services with `struct`, `guard`, `match`, `observable`, and `signal`.
 5. Drive UI with Fusion and Vide in CL++.
 6. Read the **[language reference](reference)** the same way you would read [cplusplus.com/reference](https://cplusplus.com/reference/) — every utility has syntax, parameters, emit, and an example. The **API** tab groups the same surface as Moonwave classes.
@@ -26,7 +26,7 @@ By the end of this course you will:
 
 void init() {
     Players* players = GetService<Players>();
-    post("online: " .: players::GetPlayers());
+    post("online: " .: players.GetPlayers());
 }
 ```
 

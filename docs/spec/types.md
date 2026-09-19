@@ -28,22 +28,22 @@ int coins = 100;
 float speed = 16.5;
 string name = "Kartz";
 bool isActive = true;
-func callback = []() {};
-auto dynamicVal = DataService:Server;
+func callback = func () {};
+auto dynamicVal = DataService.Server;
 Player* playerRef = null;
 ```
 
 Always initialize: `int coins = 0;` — `int coins;` emits `nil`.
 
-There is no `delete`, `*part`, `&part`, `int&`, or `->`. Numbers copy; Instances mutate through `::` (method) and `.` (property).
+There is no `delete`, `*part`, `&part`, `int&`, or `->`. Numbers copy; Instances mutate through `.` (property and instance method).
 
-## Pointers are Instances
+## Instances (`T*` is not a pointer)
 
-`Player*` means “an Instance of class Player”. Properties use `.`. Methods use `::`.
+`Player*` means “an Instance of class Player”. The star is stripped. Properties and instance methods use `.`. Protected calls use `:`. Static names use `::`. [`match`](../guard-match.md) arms write the class name: `Part p =>`, not `Part* p`.
 
 ```clpp
 player.Name = "Kartz";
-player::FindFirstChild("leaderstats");
+player.FindFirstChild("leaderstats");
 ```
 
 ```luau

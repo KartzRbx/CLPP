@@ -2,7 +2,7 @@ local Functions = {}
 
 --[=[
 	@class Functions
-	Named functions, lambdas, and `this`. No overloading. No default arguments. No C++ captures.
+	Named functions, `func (…)` callbacks, and `@this`. No overloading. No default arguments. No C++ captures.
 ]=]
 
 --[=[
@@ -23,14 +23,14 @@ local Functions = {}
 ]=]
 
 --[=[
-	Closure. Empty `[]` only — no `[x]` / `[&]`. Luau still closes over outer locals.
+	Closure. `func (params) { }` — no C++ captures. Luau still closes over outer locals.
 
-	**Syntax:** `func [](T arg) { }` · `func cb = []() {};`
+	**Syntax:** `func (T arg) { }` · `func cb = func () {};`
 
 	**Emit:** `function(arg: T) … end`
 
 	```clpp
-	players::PlayerAdded~>Connect(func [](Player* playerEntered) {
+	players.PlayerAdded~>Connect(func (Player* playerEntered) {
 	    post("New player: " .: playerEntered.Name);
 	});
 	```
@@ -43,9 +43,9 @@ local Functions = {}
 --[=[
 	The current object inside `Class::Method`. Emits `self`.
 
-	**Syntax:** `this.field` · bare `field` → `self.field`
+	**Syntax:** `@this` · `@field` · `this` (alias) · bare `field` → `self.field`
 
-	There is no `this->`.
+	There is no `this->`. Only valid inside `Class::Method`.
 
 	@function this
 	@within Functions

@@ -7,7 +7,7 @@ sidebar_label: "func"
 
 <div class="clpp-ref-meta">Type</div>
 
-Function type and optional lambda prefix. Callbacks, listeners, `pcall` bodies.
+Function type and anonymous callback prefix. Callbacks, listeners, `pcall` bodies.
 
 ## Syntax
 
@@ -29,12 +29,12 @@ A value of type `func`, emitted as `(...any) -> any`.
 
 ## Description
 
-Lambdas: empty `[]` (no C++ captures). You may write `func [](int n) { }` or assign `func cb = []() {};`.
+There are no C++ captures. Write `func (int n) { }` or assign `func cb = func () {};`.
 
 ## Example
 
 ```clpp
-func onCoinsChanged = [](int newValue) {
+func onCoinsChanged = func (int newValue) {
     post("New value: " .: newValue);
 };
 ```

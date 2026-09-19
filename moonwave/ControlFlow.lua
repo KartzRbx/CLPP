@@ -51,7 +51,7 @@ local ControlFlow = {}
 	**Emit:** `for _, x in list do`
 
 	```clpp
-	for (Player* player in players::GetPlayers()) {
+	for (Player* player in players.GetPlayers()) {
 	    post(player.Name);
 	}
 	```
@@ -87,9 +87,11 @@ local ControlFlow = {}
 
 	**Emit:** `if x:IsA("Type") then` / `typeof`
 
+	Arms are a class or primitive name (`Part p`, `string s`) — not a C++ pointer.
+
 	```clpp
 	match (instance) {
-	    Part* p => p.BrickColor = BrickColor::Red(),
+	    Part p => p.BrickColor = BrickColor::Red(),
 	    _ => warn("unsupported")
 	};
 	```

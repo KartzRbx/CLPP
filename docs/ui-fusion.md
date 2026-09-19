@@ -4,7 +4,7 @@ title: Declarative UI with Fusion
 
 # Declarative UI with Fusion
 
-[Fusion](https://elttob.uk/Fusion) builds UI from **state** and **trees of instances**. CL++ talks to it like any other table library: `Fusion:scoped`, `Fusion:New`, `Fusion:Value`.
+[Fusion](https://elttob.uk/Fusion) builds UI from **state** and **trees of instances**. CL++ talks to it like any other table library: `Fusion.scoped`, `Fusion.New`, `Fusion.Value`.
 
 Cluaupp (or your Rojo tree) should `require` Fusion. In CL++ you treat it as a global table, same as `DataService`.
 
@@ -28,18 +28,18 @@ void init() {
         return;
     }
 
-    PlayerGui* playerGui = localPlayer::WaitForChild("PlayerGui");
-    auto scope = Fusion:scoped();
-    auto Children = Fusion:Children;
+    PlayerGui* playerGui = localPlayer.WaitForChild("PlayerGui");
+    auto scope = Fusion.scoped();
+    auto Children = Fusion.Children;
 
-    auto coins = Fusion:Value(scope, 0);
-    auto title = Fusion:Computed(scope, func []() {
+    auto coins = Fusion.Value(scope, 0);
+    auto title = Fusion.Computed(scope, func () {
         return "Coins: " .: coins();
     });
 
-    auto newScreenGui = Fusion:New(scope, "ScreenGui");
-    auto newFrame = Fusion:New(scope, "Frame");
-    auto newLabel = Fusion:New(scope, "TextLabel");
+    auto newScreenGui = Fusion.New(scope, "ScreenGui");
+    auto newFrame = Fusion.New(scope, "Frame");
+    auto newLabel = Fusion.New(scope, "TextLabel");
 
     auto label = newLabel({
         {"Name", "Amount"},
@@ -77,12 +77,12 @@ void init() {
 Fusion's `OnEvent` is a table key, just like `Children`:
 
 ```clpp
-auto OnEvent = Fusion:OnEvent;
-auto newButton = Fusion:New(scope, "TextButton");
+auto OnEvent = Fusion.OnEvent;
+auto newButton = Fusion.New(scope, "TextButton");
 
 newButton({
     {"Text", "+10"},
-    {OnEvent("Activated"), func []() {
+    {OnEvent("Activated"), func () {
         coins(coins() + 10);
     }}
 });
@@ -97,10 +97,10 @@ Drive the same HUD from inventory instances:
 ```clpp
 void BindDrop(Instance* inst, auto coins) {
     match (inst) {
-        IntValue* v => {
+        IntValue v => {
             guard (v.Name == "Coins") else { return; }
             coins(v.Value);
-            v.OnChange(func [](int n) { coins(n); });
+            v.OnChange(func (int n) { coins(n); });
         },
         _ => warn("not a coins value")
     };

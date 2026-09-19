@@ -12,7 +12,7 @@ Engine signal for one Instance property. Listen with `~>` or `::Connect`.
 ## Syntax
 
 ```clpp
-obj::GetPropertyChangedSignal("Name")~>Connect(fn);
+obj.GetPropertyChangedSignal("Name")~>Connect(fn);
 ```
 
 ## Parameters
@@ -36,7 +36,7 @@ The callback receives no property value on some engine signals — read `obj.Pro
 ## Example
 
 ```clpp
-part::GetPropertyChangedSignal("Transparency")~>Connect(func []() {
+part.GetPropertyChangedSignal("Transparency")~>Connect(func () {
     post(part.Transparency);
 });
 ```

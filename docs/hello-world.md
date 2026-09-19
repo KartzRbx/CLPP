@@ -16,11 +16,11 @@ void Greet(Player* player) {
 void init() {
     Players* players = GetService<Players>();
 
-    for (Player* player in players::GetPlayers()) {
+    for (Player* player in players.GetPlayers()) {
         Greet(player);
     }
 
-    players::PlayerAdded::Connect(func [](Player* playerEntered) {
+    players.PlayerAdded~>Connect(func (Player* playerEntered) {
         post("New player connected: " .: playerEntered.Name);
     });
 }
@@ -34,9 +34,9 @@ void init() {
 4. `"Player name: " .: player.Name` — **concatenation** (`.:` → Luau `..`).
 5. `void init()` — runs at the end of Scripts and LocalScripts.
 6. `GetService<Players>()` — typed service lookup.
-7. `for (Player* player in players::GetPlayers())` — range-for. `in` is the collection; not a table key.
-8. `players::PlayerAdded::Connect` — `::` is method/scope. Emitted `players.PlayerAdded:Connect`.
-9. `func [](Player* playerEntered) { ... }` — lambda. Captures are empty `[]`; Luau closures still see outer locals.
+7. `for (Player* player in players.GetPlayers())` — range-for. `in` is the collection.
+8. `players.PlayerAdded~>Connect` — `.` reads the signal, `~>` gives Connect to Janitor. Manual (no janitor) is `::Connect`.
+9. `func (Player* playerEntered) { ... }` — anonymous callback. Luau closures still see outer locals. There is no C++ capture list `[]`.
 
 Compile:
 

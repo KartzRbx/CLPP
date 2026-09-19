@@ -695,6 +695,7 @@ fn parse_atom(pair: Pair<Rule>) -> Expr {
         Rule::boolean => Expr::Bool(pair.as_str().contains("true")),
         Rule::null_lit => Expr::Null,
         Rule::init_list => parse_init_list(pair),
+        Rule::at_sigil => parse_at_sigil(pair),
         Rule::ident => match pair.as_str() {
             "true" => Expr::Bool(true),
             "false" => Expr::Bool(false),
@@ -715,6 +716,20 @@ fn parse_atom(pair: Pair<Rule>) -> Expr {
             }
             _ => parse_atom_or_inner(pair),
         },
+    }
+}
+
+fn parse_at_sigil(pair: Pair<Rule>) -> Expr {
+    let line = pair.line_col().0;
+    let name = pair
+        .into_inner()
+        .find(|p| p.as_rule() == Rule::ident)
+        .map(|p| p.as_str().to_string())
+        .unwrap_or_default();
+    if name == "this" {
+        Expr::This { line }
+    } else {
+        Expr::AtField { name, line }
     }
 }
 
@@ -762,6 +777,12 @@ fn apply_postfix(node: Expr, suffix: Pair<Rule>) -> Expr {
             match node {
                 Expr::Ident(name) => Expr::Call {
                     object: None,
+                    name,
+                    args,
+                    access: ".".to_string(),
+                },
+                Expr::AtField { name, .. } => Expr::Call {
+                    object: Some(Box::new(Expr::This { line: 0 })),
                     name,
                     args,
                     access: ".".to_string(),

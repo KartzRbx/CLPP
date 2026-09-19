@@ -110,14 +110,14 @@ type_name = {
 type_generic = { "<" ~ type_spec ~ ("," ~ type_spec)* ~ ">" }
 type_spec = { specifiers? ~ type_name ~ type_generic? ~ "*"* }
 
-param = { type_spec ~ ident }
+param = { type_spec ~ ident | ident ~ ":" ~ type_spec }
 param_list = { param ~ ("," ~ param)* }
 
 function_item = {
     attr* ~ specifiers? ~ type_spec ~ ident ~ ("::" ~ ident)? ~ "(" ~ param_list? ~ ")" ~ (block | ";")
 }
 
-var_decl = { specifiers? ~ type_spec ~ ident ~ ("=" ~ expr)? ~ ";" }
+var_decl = { specifiers? ~ (type_spec ~ ident | ident ~ ":" ~ type_spec) ~ ("=" ~ expr)? ~ ";" }
 destructure = { KW_AUTO ~ "[" ~ ident ~ ("," ~ ident)* ~ "]" ~ "=" ~ expr ~ ";" }
 
 struct_decl = { (KW_STRUCT | KW_CLASS) ~ ident ~ "{" ~ struct_member* ~ "}" ~ ";" }
@@ -132,7 +132,7 @@ struct_member = {
 access_label = { (KW_PUBLIC | KW_PRIVATE | KW_PROTECTED) ~ ":" }
 nested_struct = { struct_decl ~ ident? ~ ("=" ~ expr)? ~ ";"? }
 method_proto = { specifiers? ~ type_spec ~ ident ~ "(" ~ param_list? ~ ")" ~ ";" }
-field_decl = { specifiers? ~ type_spec ~ ident ~ ("=" ~ expr)? ~ ";" }
+field_decl = { specifiers? ~ (type_spec ~ ident | ident ~ ":" ~ type_spec) ~ ("=" ~ expr)? ~ ";" }
 
 block = { "{" ~ stmt* ~ "}" }
 
@@ -158,7 +158,7 @@ guard_stmt = { KW_GUARD ~ "(" ~ expr ~ ")" ~ KW_ELSE ~ stmt }
 while_stmt = { KW_WHILE ~ "(" ~ expr ~ ")" ~ stmt }
 for_stmt = { c_for_stmt | range_for_stmt }
 c_for_stmt = { KW_FOR ~ "(" ~ c_for_init? ~ ";" ~ expr? ~ ";" ~ expr? ~ ")" ~ stmt }
-c_for_init = { specifiers? ~ type_spec ~ ident ~ ("=" ~ expr)? }
+c_for_init = { specifiers? ~ (type_spec ~ ident | ident ~ ":" ~ type_spec) ~ ("=" ~ expr)? }
 range_for_stmt = { KW_FOR ~ "(" ~ type_spec ~ ident ~ (KW_IN | ":") ~ expr ~ ")" ~ stmt }
 return_stmt = { KW_RETURN ~ expr? ~ ";" }
 break_stmt = { KW_BREAK ~ ";" }
@@ -208,9 +208,12 @@ atom = {
     | char_string
     | string
     | init_list
+    | at_sigil
     | ident
     | "(" ~ expr ~ ")"
 }
+
+at_sigil = { "@" ~ ident }
 
 boolean = { KW_TRUE | KW_FALSE }
 null_lit = { KW_NULL | KW_NULLPTR }
@@ -239,4 +242,4 @@ new_expr = { KW_NEW ~ ident ~ call_args? }
 get_service = { "GetService" ~ "<" ~ ident ~ ">" ~ "(" ~ ")" }
 named_cast = { ("static_cast" | "const_cast" | "reinterpret_cast" | "dynamic_cast") ~ "<" ~ type_spec ~ ">" ~ "(" ~ expr ~ ")" }
 
-lambda = { KW_FUNC? ~ "[]" ~ ("(" ~ param_list? ~ ")")? ~ block }
+lambda = { KW_FUNC ~ "(" ~ param_list? ~ ")" ~ block }

@@ -171,6 +171,7 @@
       "patterns": [
         { "name": "keyword.operator.concat.clpp", "match": "\\.:" },
         { "name": "keyword.operator.cleanup.clpp", "match": "~>" },
+        { "name": "keyword.operator.receiver.clpp", "match": "@this\\b|@[A-Za-z_][A-Za-z0-9_]*" },
         { "name": "keyword.operator.scope.clpp", "match": "::" },
         { "name": "keyword.operator.arrow.clpp", "match": "=>" },
         { "name": "keyword.operator.comparison.clpp", "match": "==|!=|<=|>=|<|>" },

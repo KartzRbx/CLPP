@@ -2,13 +2,14 @@ local Operators = {}
 
 --[=[
 	@class Operators
-	CL++ does **not** use `->`. Four accessors cover Roblox, plus janitor `~>` and C-like arithmetic.
+	CL++ does **not** use `->`. `.` is the default (property and instance method). `:` types and protects calls. `::` is static / manual Connect. `~>` is Janitor. `[]` indexes arrays, maps, and dynamic child names — never a C++ capture list. Callbacks are `func (params) { }`.
 
 	| Operator | Meaning | Luau |
 	| --- | --- | --- |
-	| `::` | method / scope | `:` on a call, `.` otherwise |
-	| `:` | table / dictionary key | `.` |
-	| `.` | Instance or value property | `.` |
+	| `.` | property / instance method | `.` / `:` on a call |
+	| `:` | type annotation / protected call | `pcall` on a call |
+	| `::` | static scope / manual Connect | `.` / `:` |
+	| `[]` | array / map / dynamic child index | `[key]` |
 	| `.:` | string concatenation | `..` |
 	| `~>` | Connect / Once with Janitor | `janitor:Add(..., "Disconnect")` |
 
@@ -18,36 +19,34 @@ local Operators = {}
 ]=]
 
 --[=[
-	Method call and nested name.
+	Property or instance method. The default accessor.
 
-	**Syntax:** `obj::Method(args);` · `obj::Child` (no call) · `Class::Method` (definition)
+	**Syntax:** `obj.Prop` · `obj.Method(args)`
 
-	**Emit:** `obj:Method(args)` / `obj.Child`
+	**Emit:** `obj.Prop` / `obj:Method(args)`
 
 	```clpp
-	player::FindFirstChild("x");
+	player.Name = "Kartz";
+	player.Kick();
+	workspace.FindFirstChild("x");
 	```
 
-	Datatype / `task::wait` emit `.` (not Instance methods).
-
-	@function ::
+	@function .
 	@within Operators
 	@tag operator
 ]=]
 
 --[=[
-	Dictionary / module table key. Not a method call.
+	Type annotation, or a protected (Safe Mode) call.
 
-	**Syntax:** `Table:Key`
+	**Syntax:** `age: int = 10` · `player:Kick()`
 
-	**Emit:** `Table.Key`
+	**Emit:** `local age: number = 10` / `pcall` of the method; `nil` on error.
 
 	```clpp
-	DataService:Server::WaitFor(p);
-	post(stats:Coins);
+	age: int = 10;
+	auto child = workspace:FindFirstChild("x");
 	```
-
-	Range-for uses `in` (or `:`) in a different position: `for (T x in list)`.
 
 	@function :
 	@within Operators
@@ -55,17 +54,20 @@ local Operators = {}
 ]=]
 
 --[=[
-	Instance or value property.
+	Static scope, class method definition, or a Connect you Disconnect yourself.
 
-	**Syntax:** `instance.Property`
+	**Syntax:** `task::wait(1)` · `Class::Method` · `players.PlayerAdded::Connect(fn)`
 
-	**Emit:** `instance.Property`
+	**Emit:** `task.wait(1)` / `function Class:Method` / `signal:Connect(fn)` (no Janitor)
 
 	```clpp
-	player.Name = "Kartz";
+	players.PlayerAdded::Connect(fn);
+	task::wait(1);
 	```
 
-	@function .
+	Datatype / `task::wait` emit `.`. Prefer `~>` when a janitor should own the connection.
+
+	@function ::
 	@within Operators
 	@tag operator
 ]=]
@@ -97,6 +99,24 @@ local Operators = {}
 
 	@param fn func -- Listener
 	@function ~>
+	@within Operators
+	@tag operator
+]=]
+
+--[=[
+	Index an array, map, or Roblox child by dynamic name. Not a lambda capture.
+
+	**Syntax:** `items[0]` · `data["Coins"]` · `workspace["PlayerCharacter"]`
+
+	**Emit:** `items[0]` / `data["Coins"]` / `workspace["PlayerCharacter"]`
+
+	```clpp
+	string first = items[0];
+	playerData["Coins"] = 600;
+	Instance* root = character["HumanoidRootPart"];
+	```
+
+	@function []
 	@within Operators
 	@tag operator
 ]=]

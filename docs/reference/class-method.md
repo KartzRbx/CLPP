@@ -13,7 +13,7 @@ Method implementation. Emits `function Class:Method(...)`.
 
 ```clpp
 void Class::Method(T arg) {
-    this.field = arg;
+    @field = arg;
 }
 ```
 
@@ -31,7 +31,7 @@ Per signature.
 
 ## Description
 
-[`this`](this) is `self`. Bare fields become `self.field`. Untagged files with only `Class::` `return` the table (ModuleScript).
+[`this`](this) / [`@this`](this) is `self`. Bare fields become `self.field`. `@janitor` is `self.janitor`. Untagged files with only `Class::` `return` the table (ModuleScript).
 
 Construct **one** service in [`init()`](init) and use it from lambdas.
 

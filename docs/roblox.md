@@ -27,11 +27,11 @@ RunService* run = GetService<RunService>();
 ## Events
 
 ```clpp
-players::PlayerAdded~>Connect(func [](Player* player) {
+players.PlayerAdded~>Connect(func (Player* player) {
     post(player.Name);
 });
 
-player::GetPropertyChangedSignal("Name")~>Connect(func []() {
+player.GetPropertyChangedSignal("Name")~>Connect(func () {
     post("renamed");
 });
 ```
@@ -40,6 +40,6 @@ player::GetPropertyChangedSignal("Name")~>Connect(func []() {
 
 ## Libraries
 
-`#include <clpp/libs/janitor.clh>` both documents Janitor and emits `require`. DataService tables use `DataService:Server` / `DataService:Client`.
+`#include <clpp/libs/janitor.clh>` both documents Janitor and emits `require`. DataService tables use `DataService.Server` / `DataService.Client`.
 
 Next: [Observable and signals](observables-signals).

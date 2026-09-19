@@ -14,26 +14,33 @@ void CombatServer::BindPart(BasePart* part) {
         return;
     }
 
-    part.Touched~>Once(func [](BasePart* other) {
+    part.Touched~>Once(func (BasePart* other) {
         Instance* character = other.Parent;
         guard (character != null) else {
             return;
         }
 
-        match (character::FindFirstChild("Humanoid")) {
+        match (character.FindFirstChild("Humanoid")) {
             Humanoid* humanoid => {
                 guard (humanoid.Health > 0) else {
                     return;
                 }
                 Players* players = GetService<Players>();
-                Player* player = players::GetPlayerFromCharacter(character);
+                Player* player = players.GetPlayerFromCharacter(character);
                 guard (player != null) else {
                     return;
                 }
-                OnHit::Fire(player, 10);
-                part::Destroy();
+                OnHit.Fire(player, 10);
+                
+                part.Destroy();
             },
-            _ => warn("touch without humanoid")
+            _ => {
+                for (const Instance* instance in character.GetChildren())  {
+                    post(instance.Name);
+                }
+
+                report("touch without humanoid");
+            }
         };
     });
 }
@@ -43,19 +50,24 @@ void CombatServer::PlayerEntered(Player* player) {
         return;
     }
 
-    observable int combo = 0;
-    OnHit~>Connect(func [](Player* victim, int amount) {
+    observable int combo = 1;
+
+    OnHit~>Connect(func (Player* victim, int amount) {
         guard (victim == player) else {
             return;
         }
         combo = combo + 1;
         post(player.Name .: " combo " .: combo .: " dmg " .: amount);
     });
+
+    combo.OnChange(func (const int* newValue) {
+        post('NovoValor: ' .: to_string(newValue));
+    });
 }
 
 [[server]]
 void CombatServer::WatchWorkspace() {
-    workspace.ChildAdded~>Connect(func [](Instance* child) {
+    workspace.ChildAdded~>Connect(func (Instance* child) {
         match (child) {
             BasePart* p => BindPart(p),
             Model* m => post("model spawned " .: m.Name),
@@ -74,11 +86,13 @@ void init() {
     };
 
     Players* players = GetService<Players>();
-    for (Player* player : players::GetPlayers()) {
-        combat::PlayerEntered(player);
+    for (Player* player : players.GetPlayers()) {
+        combat.PlayerEntered(player);
     }
-    players::PlayerAdded~>Connect(func [](Player* p) {
-        combat::PlayerEntered(p);
+
+
+    players.PlayerAdded~>Connect(func (Player* p) {
+        combat.PlayerEntered(p);
     });
-    combat::WatchWorkspace();
+    combat.WatchWorkspace();
 }

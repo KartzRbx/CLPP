@@ -1,20 +1,21 @@
 ---
-title: ":: (method / scope)"
+title: ":: (static / manual Connect)"
 sidebar_label: "::"
 ---
 
-# :: (method / scope)
+# :: (static / manual Connect)
 
 <div class="clpp-ref-meta">Operator</div>
 
-CL++ does **not** use `->`. `::` is method call and nested name. On a call it emits `:`; without a call it emits `.`.
+CL++ does **not** use `->`. `::` is static scope, datatype/library names, class method definitions, and **manual** signal connections (you Disconnect; Janitor does not).
 
 ## Syntax
 
 ```clpp
-obj::Method(args);
-obj::Child::Connect(fn);
-Class::Method(...) { }
+Vector3::new(1, 0, 1);
+task::wait(1);
+players.PlayerAdded::Connect(fn);
+void Class::Method(...) { }
 ```
 
 ## Parameters
@@ -27,33 +28,31 @@ The call result, or the nested name.
 
 ## Luau emit
 
-`obj:Method(args)  /  obj.Child`
+`Vector3.new(...)` · `task.wait(1)` · `players.PlayerAdded:Connect(fn)` · `function Class:Method`
 
 ## Description
 
-**Call:** `player::FindFirstChild("x")` → `player:FindFirstChild("x")`.
+**Static / modules:** `task::wait`, `Vector3::new`, `BrickColor::Red()`.
 
-**No call:** `players::PlayerAdded` → `players.PlayerAdded` (then `::Connect` becomes `:Connect`).
+**Manual connections:** `players.PlayerAdded::Connect(fn)` emits `players.PlayerAdded:Connect(fn)` with **no** Janitor. You own `Disconnect`. Prefer [`~>`](operator-janitor) when a janitor is in scope.
 
-**Datatype / task:** `Vector3::new` / `task::wait` emit `.` (they are not Instance methods).
+**Definitions:** `Class::Method` in a `.clpp` is the method body (`function Class:Method`).
 
-**Definition:** `Class::Method` in a `.clpp` is a method implementation (`function Class:Method`).
-
-## Notes
-
-Table keys use [`:`](operator-table). Properties use [`.`](operator-property).
+Instance methods on a value use [`.`](operator-property): `player.Kick()`, `workspace.FindFirstChild("x")`. Protected calls use [`:`](operator-table).
 
 ## Example
 
 ```clpp
-players::PlayerAdded::Connect(fn);
-player::FindFirstChild("x");
-DataService:Server::WaitFor(p);
+task::wait(1);
+players.PlayerAdded::Connect(fn);
+player.FindFirstChild("x");
+DataService.Server.WaitFor(p);
 ```
 
 Emits:
 
 ```luau
+task.wait(1)
 players.PlayerAdded:Connect(fn)
 player:FindFirstChild("x")
 DataService.Server:WaitFor(p)
@@ -61,4 +60,4 @@ DataService.Server:WaitFor(p)
 
 ## See also
 
-[operator-table](operator-table) · [operator-property](operator-property) · [class-method](class-method) · [Connect](Connect)
+[operator-property](operator-property) · [operator-table](operator-table) · [operator-janitor](operator-janitor) · [class-method](class-method) · [Connect](Connect)

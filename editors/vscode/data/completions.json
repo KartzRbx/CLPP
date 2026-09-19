@@ -4,7 +4,7 @@
     "struct", "class", "namespace", "using", "static", "const", "constexpr",
     "if", "else", "guard", "for", "in", "while", "switch", "case", "default",
     "break", "return", "match", "spawn", "parallel", "async", "await",
-    "new", "null", "true", "false", "observable", "signal", "array",
+    "new", "null", "true", "false", "this", "@this", "observable", "signal", "array",
     "dictionary", "optional"
   ],
   "builtins": [
@@ -12,7 +12,7 @@
     { "label": "warn", "detail": "Write a warning", "kind": "Function" },
     { "label": "report", "detail": "Stop with an error", "kind": "Function" },
     { "label": "GetService", "detail": "GetService<T>()", "kind": "Function", "returns": "Instance" },
-    { "label": "pcall", "detail": "pcall(func []() { })", "kind": "Function" },
+    { "label": "pcall", "detail": "pcall(func () { })", "kind": "Function" },
     { "label": "typeof", "detail": "typeof(value)", "kind": "Function" },
     { "label": "tick", "detail": "tick()", "kind": "Function" },
     { "label": "to_string", "detail": "string to_string(value)", "kind": "Function" },
@@ -33,9 +33,10 @@
     "Debris", "SoundService", "Teams", "TeleportService", "MarketplaceService"
   ],
   "operators": [
-    { "label": "::", "detail": "Call a method or open an event on the receiver" },
-    { "label": ":", "detail": "Read a table / dictionary key" },
-    { "label": ".", "detail": "Read a property of the receiver" },
+    { "label": "@this", "detail": "Current object in Class::Method (Luau self)" },
+    { "label": ".", "detail": "Property or instance method (the default)" },
+    { "label": ":", "detail": "Type annotation or protected (pcall) call" },
+    { "label": "::", "detail": "Static scope or manual Connect without Janitor" },
     { "label": ".:", "detail": "Join two values into a string" },
     { "label": "~>", "detail": "Connect or Once with automatic cleanup" }
   ],
@@ -58,11 +59,11 @@
         { "label": "Archivable", "type": "bool", "detail": "Instance.Archivable" }
       ],
       "methods": [
-        { "label": "FindFirstChild", "returns": "Instance", "detail": "Instance::FindFirstChild(name)" },
-        { "label": "FindFirstChildOfClass", "returns": "Instance", "detail": "Instance::FindFirstChildOfClass(className)" },
-        { "label": "FindFirstChildWhichIsA", "returns": "Instance", "detail": "Instance::FindFirstChildWhichIsA(className)" },
-        { "label": "WaitForChild", "returns": "Instance", "detail": "Instance::WaitForChild(name)" },
-        { "label": "GetChildren", "returns": "array", "detail": "Instance::GetChildren()" },
+        { "label": "FindFirstChild", "returns": "Instance", "detail": "Instance.FindFirstChild(name)" },
+        { "label": "FindFirstChildOfClass", "returns": "Instance", "detail": "Instance.FindFirstChildOfClass(className)" },
+        { "label": "FindFirstChildWhichIsA", "returns": "Instance", "detail": "Instance.FindFirstChildWhichIsA(className)" },
+        { "label": "WaitForChild", "returns": "Instance", "detail": "Instance.WaitForChild(name)" },
+        { "label": "GetChildren", "returns": "array", "detail": "Instance.GetChildren()" },
         { "label": "GetDescendants", "returns": "array", "detail": "Instance::GetDescendants()" },
         { "label": "Clone", "returns": "Instance", "detail": "Instance::Clone()" },
         { "label": "Destroy", "returns": "void", "detail": "Instance::Destroy()" },
@@ -105,7 +106,7 @@
         { "label": "HasAppearanceLoaded", "type": "bool", "detail": "Player.HasAppearanceLoaded" }
       ],
       "methods": [
-        { "label": "Kick", "returns": "void", "detail": "Player::Kick(message)" },
+        { "label": "Kick", "returns": "void", "detail": "Player.Kick(message)" },
         { "label": "LoadCharacter", "returns": "void", "detail": "Player::LoadCharacter()" },
         { "label": "LoadCharacterBlocking", "returns": "void", "detail": "Player::LoadCharacterBlocking()" },
         { "label": "GetMouse", "returns": "Instance", "detail": "Player::GetMouse()" },
@@ -132,7 +133,7 @@
         { "label": "CharacterAutoLoads", "type": "bool", "detail": "Players.CharacterAutoLoads" }
       ],
       "methods": [
-        { "label": "GetPlayers", "returns": "array", "detail": "Players::GetPlayers()" },
+        { "label": "GetPlayers", "returns": "array", "detail": "Players.GetPlayers()" },
         { "label": "GetPlayerFromCharacter", "returns": "Player", "detail": "Players::GetPlayerFromCharacter(character)" },
         { "label": "GetPlayerByUserId", "returns": "Player", "detail": "Players::GetPlayerByUserId(userId)" },
         { "label": "GetUserIdFromNameAsync", "returns": "int", "detail": "Players::GetUserIdFromNameAsync(name)" },
@@ -332,12 +333,12 @@
         { "label": "Paths", "type": "PlayerData", "detail": "DataService:Server:Paths" }
       ],
       "methods": [
-        { "label": "Init", "returns": "void", "detail": "DataService:Server::Init(opts)" },
-        { "label": "WaitFor", "returns": "Data", "detail": "DataService:Server::WaitFor(player)" },
-        { "label": "Get", "returns": "auto", "detail": "DataService:Server::Get(player, path)" },
-        { "label": "Set", "returns": "void", "detail": "DataService:Server::Set(player, path, value)" },
-        { "label": "Update", "returns": "void", "detail": "DataService:Server::Update(player, path, fn)" },
-        { "label": "Remove", "returns": "void", "detail": "DataService:Server::Remove(player, path)" }
+        { "label": "Init", "returns": "void", "detail": "DataService.Server.Init(opts)" },
+        { "label": "WaitFor", "returns": "Data", "detail": "DataService.Server.WaitFor(player)" },
+        { "label": "Get", "returns": "auto", "detail": "DataService.Server.Get(player, path)" },
+        { "label": "Set", "returns": "void", "detail": "DataService.Server.Set(player, path, value)" },
+        { "label": "Update", "returns": "void", "detail": "DataService.Server.Update(player, path, fn)" },
+        { "label": "Remove", "returns": "void", "detail": "DataService.Server.Remove(player, path)" }
       ]
     },
     "DataServiceClient": {
@@ -348,8 +349,8 @@
         { "label": "Paths", "type": "PlayerData", "detail": "DataService:Client:Paths" }
       ],
       "methods": [
-        { "label": "WaitFor", "returns": "Data", "detail": "DataService:Client::WaitFor(player)" },
-        { "label": "Get", "returns": "auto", "detail": "DataService:Client::Get(path)" }
+        { "label": "WaitFor", "returns": "Data", "detail": "DataService.Client.WaitFor(player)" },
+        { "label": "Get", "returns": "auto", "detail": "DataService.Client.Get(path)" }
       ]
     },
     "Data": {
@@ -361,7 +362,7 @@
     },
     "Janitor": {
       "methods": [
-        { "label": "Add", "returns": "auto", "detail": "Janitor::Add(object, methodName)" },
+        { "label": "Add", "returns": "auto", "detail": "Janitor.Add(object, methodName)" },
         { "label": "AddPromise", "returns": "auto", "detail": "Janitor::AddPromise(promise)" },
         { "label": "Cleanup", "returns": "void", "detail": "Janitor::Cleanup()" },
         { "label": "Destroy", "returns": "void", "detail": "Janitor::Destroy()" },

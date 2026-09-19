@@ -14,7 +14,7 @@ sidebar_label: "T*"
 ```clpp
 Player* player = null;
 player.Name = "Kartz";
-player::FindFirstChild("leaderstats");
+player.FindFirstChild("leaderstats");
 ```
 
 ## Parameters
@@ -31,7 +31,9 @@ The Instance.
 
 ## Description
 
-Properties use [`.`](operator-property). Methods use [`::`](operator-method). Lifetime is Roblox's: `Destroy` or Janitor.
+Properties and instance methods use [`.`](operator-property): `player.Name`, `player.FindFirstChild("leaderstats")`, `player.Kick()`. Protected calls use [`:`](operator-table). Static names use [`::`](operator-method) (`task::wait`, `Vector3::new`). Lifetime is Roblox's: `Destroy` or Janitor.
+
+[`match`](match) arms write the class name (`Part p`), not a pointer (`Part* p`).
 
 [`observable`](observable) of a non-primitive becomes `ObjectValue`.
 
@@ -39,7 +41,7 @@ Properties use [`.`](operator-property). Methods use [`::`](operator-method). Li
 
 ```clpp
 player.Name = "Kartz";
-player::FindFirstChild("leaderstats");
+player.FindFirstChild("leaderstats");
 ```
 
 Emits:

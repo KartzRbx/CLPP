@@ -3,7 +3,7 @@ void Features(int coins) {
     float speed = 16.5;
     string name = "Kartz";
     bool isActive = true;
-    func callback = []() {};
+    func callback = func() {};
     auto playerRef = null;
 
     array<string> names = {"Kartz", "Player1"};
@@ -27,20 +27,20 @@ void Features(int coins) {
     n += 1;
 
     observable int wallet = 100;
-    wallet.OnChange(func [](int newValue) {
+    wallet.OnChange(func (int newValue) {
         post("Coins changed to: " .: newValue);
     });
 
     signal<Player*, int> OnCoinsUpdated;
-    OnCoinsUpdated~>Connect(func [](Player* player, int newAmount) {
+    OnCoinsUpdated~>Connect(func (Player* player, int newAmount) {
         post("New coins for " .: player.Name .: ": " .: newAmount);
     });
-    OnCoinsUpdated~>Once(func [](Player* player, int newAmount) {
+    OnCoinsUpdated~>Once(func (Player* player, int newAmount) {
         post("First coins for " .: player.Name);
     });
-    OnCoinsUpdated::Fire(playerRef, wallet);
+    OnCoinsUpdated.Fire(playerRef, wallet);
 
-    playerRef::GetPropertyChangedSignal("Name")~>Connect(func []() {
+    playerRef.GetPropertyChangedSignal("Name")~>Connect(func () {
         post("Name changed");
     });
 
@@ -53,7 +53,7 @@ void Features(int coins) {
         return;
     }
 
-    auto [success, result] = pcall(func []() {
+    auto [success, result] = pcall(func () {
         return 1;
     });
 
@@ -84,7 +84,7 @@ void Features(int coins) {
 }
 
 async Data* FetchData(Player* player) {
-    Data* data = await DataService:Server::WaitFor(player);
+    Data* data = await DataService.Server.WaitFor(player);
     return data;
 }
 

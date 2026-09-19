@@ -16,8 +16,13 @@
   },
   "lambda": {
     "prefix": "lambda",
-    "body": ["func []($1) {", "\t$0", "}"],
-    "description": "CL++ lambda"
+    "body": ["func ($1) {", "\t$0", "}"],
+    "description": "CL++ func callback"
+  },
+  "atthis": {
+    "prefix": "@this",
+    "body": ["@this"],
+    "description": "Current object (self)"
   },
   "guard": {
     "prefix": "guard",
@@ -28,7 +33,7 @@
     "prefix": "obs",
     "body": [
       "observable ${1:int} ${2:coins} = ${3:0};",
-      "${2}.OnChange(func [](${1} newValue) {",
+      "${2}.OnChange(func (${1} newValue) {",
       "\tpost(\"$2: \" .: newValue);",
       "});"
     ],
@@ -37,7 +42,7 @@
   "connect": {
     "prefix": "~>",
     "body": [
-      "${1:players}::${2:PlayerAdded}~>Connect(func []($3) {",
+      "${1:players}::${2:PlayerAdded}~>Connect(func ($3) {",
       "\t$0",
       "});"
     ],
@@ -46,7 +51,7 @@
   "once": {
     "prefix": "once",
     "body": [
-      "${1:signal}~>Once(func []($2) {",
+      "${1:signal}~>Once(func ($2) {",
       "\t$0",
       "});"
     ],
@@ -54,13 +59,13 @@
   },
   "fire": {
     "prefix": "fire",
-    "body": ["${1:OnCoinsUpdated}::Fire($2);"],
+    "body": ["${1:OnCoinsUpdated}.Fire($2);"],
     "description": "Fire a CL++ signal"
   },
   "changed": {
     "prefix": "changed",
     "body": [
-      "${1:instance}::GetPropertyChangedSignal(\"${2:Name}\")~>Connect(func []() {",
+      "${1:instance}::GetPropertyChangedSignal(\"${2:Name}\")~>Connect(func () {",
       "\t$0",
       "});"
     ],
@@ -70,7 +75,7 @@
     "prefix": "match",
     "body": [
       "match ($1) {",
-      "\t${2:Part*} p => $3,",
+      "\t${2:Part} p => $3,",
       "\t_ => warn(\"unsupported\")",
       "};"
     ],
@@ -79,7 +84,7 @@
   "foreach": {
     "prefix": "forin",
     "body": [
-      "for (${1:Player*} ${2:player} in ${3:players::GetPlayers()}) {",
+      "for (${1:Player*} ${2:player} in ${3:players.GetPlayers()}) {",
       "\t$0",
       "}"
     ],

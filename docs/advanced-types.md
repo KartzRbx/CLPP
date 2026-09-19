@@ -21,7 +21,7 @@ struct Inventory {
     int MaxSlots = 30;
 };
 
-func CanMerge = [](ItemStack a, ItemStack b) {
+func CanMerge = func (ItemStack a, ItemStack b) {
     guard (a.Id == b.Id) else { return false; }
     guard (a.Count + b.Count <= 99) else { return false; }
     return true;
@@ -30,9 +30,9 @@ func CanMerge = [](ItemStack a, ItemStack b) {
 ItemStack* FindTool(Model* character, string id) {
     guard (character != null) else { return null; }
 
-    for (Instance* child : character::GetChildren()) {
+    for (Instance* child : character.GetChildren()) {
         match (child) {
-            Tool* tool => {
+            Tool tool => {
                 guard (tool.Name == id) else { /* keep scanning */ }
                 return static_cast<ItemStack*>(null);
             },
@@ -62,7 +62,7 @@ void Grant(Inventory* bag, string id, int n) {
 | `dictionary<K,V>` | id → count |
 | `func` | first-class predicates |
 | `static_cast<T>` | annotate after `FindFirstChild` |
-| `Player*` vs `Instance*` | match narrows with `IsA` |
+| `match { Player p => }` | narrows with `IsA` (class name, not a pointer) |
 | `signal<Player*, ItemStack>` | typed economy events |
 | `observable int` | HUD-facing counts |
 
@@ -71,12 +71,12 @@ void Grant(Inventory* bag, string id, int n) {
 ```clpp
 signal<Player*, ItemStack> OnGrant;
 
-OnGrant~>Connect(func [](Player* player, ItemStack stack) {
+OnGrant~>Connect(func (Player* player, ItemStack stack) {
     guard (stack.Count > 0) else { return; }
     post(player.Name .: " got " .: stack.Id);
 });
 
-OnGrant::Fire(player, ItemStack { .Id = "gem", .Count = 3 });
+OnGrant.Fire(player, ItemStack { .Id = "gem", .Count = 3 });
 ```
 
 Designated initializers fill the struct/table in one expression.

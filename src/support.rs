@@ -159,19 +159,19 @@ pub fn language_manifest() -> LanguageManifest {
         ],
         operators: &[
             OperatorMap {
-                clpp: "::",
-                luau: ":",
-                meaning: "method call / scope",
+                clpp: ".",
+                luau: ". / :",
+                meaning: "property / instance method",
             },
             OperatorMap {
                 clpp: ":",
-                luau: ".",
-                meaning: "table / dictionary",
+                luau: "pcall",
+                meaning: "type annotation / protected call",
             },
             OperatorMap {
-                clpp: ".",
-                luau: ".",
-                meaning: "instance property",
+                clpp: "::",
+                luau: ". / :",
+                meaning: "static scope / manual Connect",
             },
             OperatorMap {
                 clpp: ".:",

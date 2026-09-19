@@ -16,14 +16,15 @@ Hold these five rules and the rest of the language clicks.
 
 | You write | You mean |
 | --- | --- |
-| `player.Name` | property |
-| `player::FindFirstChild("x")` | method |
-| `DataService:Server` | table key |
+| `player.Name` / `player.Kick()` | property / instance method |
+| `age: int` / `player:Kick()` | type / protected (`pcall`) call |
+| `task::wait` / `players.PlayerAdded::Connect` | static / manual connection |
+| `players.PlayerAdded~>Connect` | Janitor connection |
 | `a .: b` | string join |
 
-## 3. Pointers are Instances
+## 3. `T*` is an Instance type, not a pointer
 
-`Player*` is a Roblox `Player`. There is no `delete`, no `*player`, no `player->Name`. Lifetime is `Destroy` or Janitor.
+`Player*` is a Roblox `Player`. The star is stripped in Luau. There is no `delete`, no `*player`, no `player->Name`. Lifetime is `Destroy` or Janitor. [`match`](guard-match) arms are the class name: `Part p =>`, not `Part* p`.
 
 ## 4. `init` starts a script; modules return tables
 

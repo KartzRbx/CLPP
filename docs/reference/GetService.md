@@ -42,7 +42,7 @@ There is no `game:GetService` in CL++ source — always this form.
 
 void init() {
     Players* players = GetService<Players>();
-    post("online: " .: players::GetPlayers());
+    post("online: " .: players.GetPlayers());
 }
 ```
 

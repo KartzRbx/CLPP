@@ -7,11 +7,11 @@ void Greet(Player* player) {
 void init() {
     Players* players = GetService<Players>();
 
-    for (Player* player in players::GetPlayers()) {
+    for (Player* player in players.GetPlayers()) {
         Greet(player);
     }
 
-    players::PlayerAdded::Connect(func [](Player* playerEntered) {
+    players.PlayerAdded~>Connect(func (Player* playerEntered) {
         post("New player connected: " .: playerEntered.Name);
     });
 }

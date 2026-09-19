@@ -1,6 +1,6 @@
 [package]
 name = "clpp"
-version = "0.2.6"
+version = "0.3.0"
 edition = "2021"
 description = "CL++ compiler — a C++-inspired language that compiles to Luau"
 license = "MIT"

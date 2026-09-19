@@ -4,7 +4,7 @@ local OOP = {}
 	@class OOP
 	Declare the type in a `.clh`. Implement `Class::Method` in the sibling `.clp` / `.clpp`.
 
-	`this` is `self`. Bare fields become `self.field`. `public:` / `private:` are ignored.
+	`@this` is `self`. `@field` and bare fields become `self.field`. `this` without `@` is the same alias. `public:` / `private:` are ignored.
 	There is no `int main()` — Scripts use `void init()`.
 	Stems must match: `LeaderstatsServer.clh` beside `LeaderstatsServer.server.clpp`.
 ]=]
@@ -25,7 +25,7 @@ local OOP = {}
 --[=[
 	Method implementation.
 
-	**Syntax:** `void Class::Method(T arg) { this.field = arg; }`
+	**Syntax:** `void Class::Method(T arg) { @field = arg; }`
 
 	**Emit:** `function Class:Method(arg: T)`
 

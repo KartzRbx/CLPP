@@ -41,10 +41,10 @@ Bare `::Connect` does **not** register with Janitor. Prefer `~>` in production.
 ## Example
 
 ```clpp
-players::PlayerAdded~>Connect(func [](Player* player) {
+players.PlayerAdded~>Connect(func (Player* player) {
     post("Connected and managed automatically!");
 });
-players::PlayerAdded~>Once(func [](Player* player) {
+players.PlayerAdded~>Once(func (Player* player) {
     post("First player only");
 });
 ```

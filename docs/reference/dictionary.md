@@ -7,7 +7,7 @@ sidebar_label: "dictionary"
 
 <div class="clpp-ref-meta">Collection</div>
 
-String-keyed (or typed-key) map. `map<K,V>` is the same emit. Access keys with [`:`](operator-table), not `.`.
+String-keyed (or typed-key) map. `map<K,V>` is the same emit. Access keys with [`.`](operator-property).
 
 ## Syntax
 
@@ -37,7 +37,7 @@ A map table.
 
 Initializer entries are `{"Key", value}` pairs, emitted as `Key = value` when the key is a string.
 
-Read/write: `stats:Coins` → `stats.Coins`. Do **not** use `.Coins` unless `stats` is an Instance.
+Read/write: `stats.Coins` → `stats.Coins`. Instance properties use the same `.`.
 
 ## Example
 

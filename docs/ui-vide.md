@@ -15,11 +15,11 @@ void init() {
     Players* players = GetService<Players>();
     Player* localPlayer = players.LocalPlayer;
     guard (localPlayer != null) else { return; }
-    PlayerGui* playerGui = localPlayer::WaitForChild("PlayerGui");
+    PlayerGui* playerGui = localPlayer.WaitForChild("PlayerGui");
 
-    auto create = Vide:create;
-    auto source = Vide:source;
-    auto apply = Vide:apply;
+    auto create = Vide.create;
+    auto source = Vide.source;
+    auto apply = Vide.apply;
 
     auto count = source(0);
 
@@ -31,7 +31,7 @@ void init() {
         {"BackgroundTransparency", 1},
         {"Size", UDim2.fromScale(1, 0.5)},
         {"TextColor3", Color3.fromRGB(240, 240, 255)},
-        {"Text", func []() {
+        {"Text", func () {
             return "Clicks: " .: count();
         }}
     });
@@ -40,7 +40,7 @@ void init() {
         {"Size", UDim2.fromScale(1, 0.5)},
         {"Position", UDim2.fromScale(0, 0.5)},
         {"Text", "Once-safe click"},
-        {"Activated", func []() {
+        {"Activated", func () {
             count(count() + 1);
         }}
     });
@@ -56,16 +56,16 @@ void init() {
 }
 ```
 
-Vide `Text` can be a **function**. CL++ lambdas `func []() { return ...; }` become that function. Vide re-runs it when `count()` changes.
+Vide `Text` can be a **function**. CL++ lambdas `func () { return ...; }` become that function. Vide re-runs it when `count()` changes.
 
 ## Vide + CL++ Once
 
 If a Roblox event should update UI **once** (tutorial toast):
 
 ```clpp
-workspace.ChildAdded~>Once(func [](Instance* child) {
+workspace.ChildAdded~>Once(func (Instance* child) {
     match (child) {
-        BasePart* p => count(count() + 1),
+        BasePart p => count(count() + 1),
         _ => warn("ignored")
     };
 });

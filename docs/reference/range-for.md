@@ -31,12 +31,12 @@ for (T x : list) {
 
 Prefer `in` — it reads as “each `x` from `list`”. The C++-style `:` still works. Parentheses and braces are required.
 
-This is not a table key. Table `:` stays in expressions (`DataService:Server`).
+This is not a protected call and not a C-style `for` header. Prefer `in`. The C++-style `:` in `for (T x : xs)` is the same loop.
 
 ## Example
 
 ```clpp
-for (Player* player in players::GetPlayers()) {
+for (Player* player in players.GetPlayers()) {
     post("Player connected: " .: player.Name);
 }
 ```

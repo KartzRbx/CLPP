@@ -68,6 +68,13 @@ pub enum Expr {
         parts: Vec<InterpPart>,
     },
     Ident(String),
+    This {
+        line: usize,
+    },
+    AtField {
+        name: String,
+        line: usize,
+    },
     Unary {
         op: String,
         argument: Box<Expr>,

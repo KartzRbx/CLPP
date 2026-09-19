@@ -15,9 +15,9 @@ The study reference is real leaderstats code (`LeaderstatsServer`, `PlayerData`)
 
 CL++ is **not** a full C++ compiler and **not** the Roblox API connector. There is no `std::`, pointer arithmetic, `delete`, overloading, generic templates (beyond the mapped ones), `continue`, ternary, `do/while`, `try/catch`, or `goto`.
 
-`Player*` is not a heap address: it is a Roblox Instance of class `Player`. Access is `player.Name` / `player::FindFirstChild(...)`, not `->`.
+`Player*` is not a heap address: it is a Roblox Instance of class `Player`. Access is `player.Name` / `player.FindFirstChild(...)`, not `->`.
 
-Range-for uses `:` between the name and the collection: `for (Player* player : players::GetPlayers())`. Table `:` (`DataService:Server`) lives in expressions, not in a C-style `for` header (`for (int i = 0; ...)`).
+Range-for uses `in` between the name and the collection: `for (Player* player in players.GetPlayers())`. The C++-style `:` in `for (T x : xs)` is the same loop, not a protected call.
 
 ## Study files
 

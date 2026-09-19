@@ -62,3 +62,7 @@ let luau = art.luau;
 ```
 
 `rojoClass` is ready for Rojo (`Script` / `LocalScript` / `ModuleScript`).
+
+## Source Cluaupp generates
+
+Anonymous callbacks in `.clpp` / `.clp` must be `func (params) { }`. `func [](…)` and `[]() { }` are a compile error. Full handoff: [Cluaupp — anonymous callbacks](cluaupp-callbacks).

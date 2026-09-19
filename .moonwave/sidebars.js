@@ -211,6 +211,7 @@ module.exports = {
         "cheatsheet",
         "unsupported",
         "cluaupp",
+        "cluaupp-callbacks",
         "spec/syntax",
         "spec/emit",
         "spec/types",

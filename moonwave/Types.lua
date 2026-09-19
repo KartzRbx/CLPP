@@ -84,9 +84,9 @@ function Types.string() end
 function Types.void() end
 
 --[=[
-	Function type and optional lambda prefix.
+	Function type and anonymous callback prefix.
 
-	**Syntax:** `func cb = [](int n) { };`
+	**Syntax:** `func cb = func (int n) { };`
 
 	**Emit:** `(...any) -> any`
 
@@ -122,11 +122,19 @@ function Types.auto() end
 --[=[
 	`Player*` means an Instance of class Player — not a heap pointer.
 
-	**Syntax:** `Player* player = null;`
+	**Syntax:** `Player* player = null;` · `player.FindFirstChild("x")`
 
 	**Emit:** star stripped (`Player`)
 
-	Properties use `.`. Methods use `::`. No `delete`, `*p`, `&p`, `int&`, or `->`.
+	Properties and instance methods use `.` (`player.FindFirstChild`, `player.Kick`). Protected calls use `:`. Static names use `::` (`task::wait`, `Vector3::new`). No `delete`, `*p`, `&p`, `int&`, or `->`.
+
+	```clpp
+	Player* player = null;
+	player.Name = "Kartz";
+	player.FindFirstChild("leaderstats");
+	```
+
+	`match` arms are the class name (`Part p`), not a pointer (`Part* p`).
 
 	@function T*
 	@within Types

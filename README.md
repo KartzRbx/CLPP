@@ -35,7 +35,7 @@ CL++ is the **language**. You write C++-looking source; `clpp` emits one Luau fi
 
 void init() {
     Players* players = GetService<Players>();
-    players::PlayerAdded~>Connect(func [](Player* player) {
+    players.PlayerAdded~>Connect(func (Player* player) {
         post("hello, " .: player.Name);
     });
 }
@@ -60,9 +60,9 @@ CL++ does **not** use `->`.
 
 | Write | Meaning | Luau |
 | --- | --- | --- |
-| `player.Name` | property | `.` |
-| `player::FindFirstChild("x")` | method | `:` |
-| `DataService:Server` | table key | `.` |
+| `player.Name` / `player.Kick()` | property / instance method | `.` / `:` |
+| `age: int` / `player:Kick()` | type / protected call | `: ` / `pcall` |
+| `task::wait` / `signal::Connect` | static / manual Connect | `.` / `:` |
 | `"hi " .: name` | concat | `..` |
 | `signal~>Connect(fn)` | janitor Connect | `janitor:Add(..., "Disconnect")` |
 
@@ -106,7 +106,8 @@ docs/             course, spec, per-utility reference
 moonwave/         API stubs for the docs site
 examples/         leaderstats, Fusion, Vide, combat
 stdlib/           IntelliSense headers
-editors/vscode    language pack
+editors/vscode    language pack (IntelliSense + LSP server)
+tools/lsp         language server launcher (`node tools/lsp/server.js`)
 support/          Cluaupp TypeScript contract
 ```
 

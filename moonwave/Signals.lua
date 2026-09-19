@@ -6,11 +6,11 @@ local Signals = {}
 
 	| CL++ | Meaning | Page |
 	| --- | --- | --- |
-	| `name::Fire(...)` | send | [Fire](/CLPP/docs/reference/Fire) |
+	| `name.Fire(...)` | send | [Fire](/CLPP/docs/reference/Fire) |
 	| `name~>Connect(fn)` | listen (Janitor) | [Connect](/CLPP/docs/reference/Connect) |
 	| `name~>Once(fn)` | listen once (Janitor) | [Once](/CLPP/docs/reference/Once) |
-	| `name::Wait()` | yield until the next fire | [Wait](/CLPP/docs/reference/Wait) |
-	| `obj::GetPropertyChangedSignal("X")` | Instance property changes | [GetPropertyChangedSignal](/CLPP/docs/reference/GetPropertyChangedSignal) |
+	| `name.Wait()` | yield until the next fire | [Wait](/CLPP/docs/reference/Wait) |
+	| `obj.GetPropertyChangedSignal("X")` | Instance property changes | [GetPropertyChangedSignal](/CLPP/docs/reference/GetPropertyChangedSignal) |
 ]=]
 
 --[=[
@@ -28,13 +28,13 @@ local Signals = {}
 --[=[
 	Emits to every current listener.
 
-	**Syntax:** `name::Fire(...);`
+	**Syntax:** `name.Fire(...);`
 
 	**Emit:** `name:Fire(...)`
 
 	```clpp
 	signal<Player*, int> OnCoinsUpdated;
-	OnCoinsUpdated::Fire(player, 500);
+	OnCoinsUpdated.Fire(player, 500);
 	```
 
 	@param ... any -- Payload matching `signal<T...>`
@@ -72,7 +72,7 @@ function Signals.Once(handler) end
 --[=[
 	Yields until the next `Fire`.
 
-	**Syntax:** `name::Wait();`
+	**Syntax:** `name.Wait();`
 
 	**Emit:** `name:Wait()`
 
@@ -84,7 +84,7 @@ function Signals.Wait() end
 --[=[
 	Engine signal for one Instance property.
 
-	**Syntax:** `obj::GetPropertyChangedSignal("Name")~>Connect(fn);`
+	**Syntax:** `obj.GetPropertyChangedSignal("Name")~>Connect(fn);`
 
 	**Emit:** `obj:GetPropertyChangedSignal("Name")`
 

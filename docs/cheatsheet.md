@@ -10,7 +10,7 @@ title: Language cheat sheet
 
 ## Access
 
-`.` property · `::` method · `:` table · `.:` concat · `~>` cleanup Connect/Once
+`.` property / instance method · `:` type / protected call · `::` static / manual Connect · `[]` index · `.:` concat · `~>` Janitor Connect/Once
 
 ## Text
 
@@ -26,7 +26,7 @@ title: Language cheat sheet
 
 ## Control
 
-`if` `else if` `else` · `while` · C-for · range-for `for (T x in xs)` · `switch` · `guard` · `match` · `break` · `return`
+`if` `else if` `else` · `while` · C-for · range-for `for (T x in xs)` · `switch` · `guard` · `match { Type t => }` · `break` · `return`
 
 ## Concurrency
 
@@ -34,11 +34,11 @@ title: Language cheat sheet
 
 ## Events
 
-`::Fire` `::Wait` `~>Connect` `~>Once` · `.OnChange` on observables · `GetPropertyChangedSignal`
+`.Fire` `::Connect` (manual) `~>Connect` `~>Once` · `.OnChange` on observables · `GetPropertyChangedSignal`
 
 ## OOP
 
-`struct` in `.clh` · `Class::Method` in `.clpp` · `void init()` · `new Class(parent)` · `GetService<T>()`
+`struct` in `.clh` · `Class::Method` in `.clpp` · `@this` / `@field` → `self` · `void init()` · `new Class(parent)` · `GetService<T>()`
 
 ## Attributes
 
@@ -50,7 +50,7 @@ title: Language cheat sheet
 
 ## Forbidden (by design)
 
-`->` · `continue` · ternary · `do/while` · `try/catch` · `goto` · pointer arithmetic · C++ captures · generic templates · `std::`
+`->` · `continue` · ternary · `do/while` · `try/catch` · `goto` · pointer arithmetic · C++ captures · `func []` · generic templates · `std::`
 
 Generated API: [Builtins](/CLPP/api/Builtins) · [Operators](/CLPP/api/Operators) · [Signals](/CLPP/api/Signals)
 

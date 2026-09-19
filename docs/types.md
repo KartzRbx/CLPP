@@ -15,7 +15,7 @@ string name = "Kartz";
 string title = 'Player';
 string line = `hello {name}`;
 bool isActive = true;
-func callback = []() {};
+func callback = func () {};
 Player* playerRef = null;
 ```
 
@@ -32,14 +32,16 @@ Player* playerRef = null;
 
 Always initialize: `int coins;` emits `nil`. Prefer `int coins = 0;`.
 
-## Instances
+## Instances (`T*` is not a pointer)
+
+`Player*` is a **type suffix** for an Instance of class Player. The star is stripped in Luau. There is no address, no `delete`, and no `->`. Properties and instance methods use `.`. Protected calls use `:`. Static names use `::`.
+
+[`match`](guard-match) arms are the class name only: `Part p =>`, not `Part* p`.
 
 ```clpp
 player.Name = "Kartz";
-player::FindFirstChild("leaderstats");
+player.FindFirstChild("leaderstats");
 ```
-
-`Player*` is an Instance. No `delete`, `*part`, `&part`, `int&`, or `->`.
 
 ## Datatypes
 

@@ -8,18 +8,18 @@ void init() {
         return;
     }
 
-    Instance* playerGui = localPlayer::WaitForChild("PlayerGui");
-    auto scope = Fusion:scoped();
-    auto Children = Fusion:Children;
+    Instance* playerGui = localPlayer.WaitForChild("PlayerGui");
+    auto scope = Fusion.scoped();
+    auto Children = Fusion.Children;
 
-    auto coins = Fusion:Value(scope, 0);
-    auto title = Fusion:Computed(scope, func []() {
+    auto coins = Fusion.Value(scope, 0);
+    auto title = Fusion.Computed(scope, func () {
         return "Coins: " .: coins();
     });
 
-    auto newScreenGui = Fusion:New(scope, "ScreenGui");
-    auto newFrame = Fusion:New(scope, "Frame");
-    auto newLabel = Fusion:New(scope, "TextLabel");
+    auto newScreenGui = Fusion.New(scope, "ScreenGui");
+    auto newFrame = Fusion.New(scope, "Frame");
+    auto newLabel = Fusion.New(scope, "TextLabel");
 
     auto label = newLabel({
         {"Name", "Amount"},

@@ -4,7 +4,7 @@ title: Install CL++
 
 # Install CL++
 
-Download the installer, run it, and CL++ is on your machine: the `clpp` compiler, editor highlighting, and IntelliSense.
+Download the installer, run it, and CL++ is on your machine: the `clpp` compiler, editor highlighting, IntelliSense, and a language server.
 
 <div className="clpp-download">
 

@@ -37,7 +37,7 @@ Used for option bags (`DataServiceOptions`). Not an Instance property write — 
 ## Example
 
 ```clpp
-DataService:Server::Init(DataServiceOptions {
+DataService.Server.Init(DataServiceOptions {
     .Template = playerData,
     .StoreName = "PlayerData",
     .UseMock = true

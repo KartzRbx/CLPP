@@ -38,7 +38,7 @@ None.
 
 ```clpp
 async Data* FetchData(Player* player) {
-    Data* data = await DataService:Server::WaitFor(player);
+    Data* data = await DataService.Server.WaitFor(player);
     return data;
 }
 ```

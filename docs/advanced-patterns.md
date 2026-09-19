@@ -20,17 +20,17 @@ struct CombatServer {
 void CombatServer::BindPart(BasePart* part) {
     guard (part != null) else { return; }
 
-    part.Touched~>Once(func [](BasePart* other) {
+    part.Touched~>Once(func (BasePart* other) {
         Instance* character = other.Parent;
         guard (character != null) else { return; }
 
-        match (character::FindFirstChild("Humanoid")) {
-            Humanoid* humanoid => {
+        match (character.FindFirstChild("Humanoid")) {
+            Humanoid humanoid => {
                 guard (humanoid.Health > 0) else { return; }
-                Player* player = GetService<Players>()::GetPlayerFromCharacter(character);
+                Player* player = GetService<Players>().GetPlayerFromCharacter(character);
                 guard (player != null) else { return; }
-                OnHit::Fire(player, 10);
-                part::Destroy();
+                OnHit.Fire(player, 10);
+                part.Destroy();
             },
             _ => warn("touch without humanoid")
         };
@@ -41,7 +41,7 @@ void CombatServer::PlayerEntered(Player* player) {
     guard (player != null) else { return; }
     observable int combo = 0;
 
-    OnHit~>Connect(func [](Player* victim, int amount) {
+    OnHit~>Connect(func (Player* victim, int amount) {
         guard (victim == player) else { return; }
         combo = combo + 1;
         post(player.Name .: " combo " .: combo .: " dmg " .: amount);
@@ -50,10 +50,10 @@ void CombatServer::PlayerEntered(Player* player) {
 
 [[server]]
 void CombatServer::WatchWorkspace() {
-    workspace.ChildAdded~>Connect(func [](Instance* child) {
+    workspace.ChildAdded~>Connect(func (Instance* child) {
         match (child) {
-            BasePart* p => BindPart(p),
-            Model* m => post("model spawned " .: m.Name),
+            BasePart p => BindPart(p),
+            Model m => post("model spawned " .: m.Name),
             _ => {}
         };
     });
@@ -69,13 +69,13 @@ void init() {
     };
 
     Players* players = GetService<Players>();
-    for (Player* player : players::GetPlayers()) {
-        combat::PlayerEntered(player);
+    for (Player* player : players.GetPlayers()) {
+        combat.PlayerEntered(player);
     }
-    players::PlayerAdded~>Connect(func [](Player* p) {
-        combat::PlayerEntered(p);
+    players.PlayerAdded~>Connect(func (Player* p) {
+        combat.PlayerEntered(p);
     });
-    combat::WatchWorkspace();
+    combat.WatchWorkspace();
 }
 ```
 
@@ -85,7 +85,7 @@ void init() {
 - **match** is the Instance type switch you would write with a pile of `IsA` in Luau.
 - **Once** on `Touched` so a pickup cannot fire twice.
 - **observable** combo is HUD-ready (`combo.OnChange` on the client).
-- **signal::Fire** decouples damage from UI.
+- **signal.Fire** decouples damage from UI.
 - **[[server]]** documents that workspace watching is not a LocalScript concern.
 - **~>** means you do not leak connections when the janitor cleans up.
 

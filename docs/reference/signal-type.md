@@ -7,7 +7,7 @@ sidebar_label: "signal"
 
 <div class="clpp-ref-meta">Type</div>
 
-Typed BindableEvent. Declaration emits `__signal()`. Fire with `::Fire`; listen with `~>` or `::Connect`.
+Typed BindableEvent. Declaration emits `__signal()`. Fire with `.Fire`; listen with `~>` or `::Connect`.
 
 ## Syntax
 
@@ -37,7 +37,7 @@ See the operations: [`Fire`](Fire), [`Connect`](Connect), [`Once`](Once), [`Wait
 
 ```clpp
 signal<Player*, int> OnCoinsUpdated;
-OnCoinsUpdated::Fire(player, 500);
+OnCoinsUpdated.Fire(player, 500);
 ```
 
 Emits:

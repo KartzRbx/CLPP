@@ -1,9 +1,11 @@
 const vscode = require("vscode");
 const path = require("path");
 const fs = require("fs");
-const cp = require("child_process");
 const { loadEngine, lintDocument } = require("./intellisense");
 const { createLens, applyLensToOpenEditors } = require("./lens");
+const { buildCompletionItems, hoverText } = require("./complete");
+const { compileDiagnostics, mergeIssues } = require("./compile-api");
+const { startLspClient } = require("./lsp-client");
 
 function loadCompletions() {
   const file = path.join(__dirname, "data", "completions.json");
@@ -50,9 +52,23 @@ function memberItem(member) {
         ? "Method"
         : member.kind === "tableKeys"
           ? "Field"
-          : "Property";
+          : member.kind === "Keyword"
+            ? "Keyword"
+            : member.kind === "Function"
+              ? "Function"
+              : member.kind === "Class"
+                ? "Class"
+                : member.kind === "Operator"
+                  ? "Operator"
+                  : member.kind === "Variable"
+                    ? "Variable"
+                    : member.kind === "Method"
+                      ? "Method"
+                      : member.kind === "Property"
+                        ? "Property"
+                        : "Property";
   const sort =
-    member.kind === "tableKeys" || member.kind === "properties"
+    member.kind === "tableKeys" || member.kind === "properties" || member.kind === "Variable"
       ? "0_"
       : member.kind === "events"
         ? "1_"
@@ -60,28 +76,13 @@ function memberItem(member) {
   return item(member.label, kind, member.detail, sort);
 }
 
-const HOVER_WORDS = {
-  post: "Write a line to output.",
-  warn: "Write a warning.",
-  report: "Stop the script with an error.",
-  observable:
-    "Reactive value. Assign to update (`coins = 50`); listen with `.OnChange`.",
-  signal:
-    "`signal<T...>` — `::Fire(...)` sends, `~>Connect` / `~>Once` listen (Once runs once).",
-  Fire: "`signal::Fire(...)` — send the signal.",
-  Connect: "Subscribe until Disconnect. Prefer `~>Connect` for automatic cleanup.",
-  Once: "Subscribe for a single emission, then disconnect. `~>Once` is cleaned up for you.",
-  Wait: "Pause until the next emission.",
-  OnChange: "Run a function whenever an observable changes.",
-  GetPropertyChangedSignal:
-    '`instance::GetPropertyChangedSignal("Name")` — signal for one property.',
-  guard: "Continue only when the condition is true; otherwise run the else block.",
-  in: "Range-for: each value comes from the collection after `in`.",
-  await: "Wait until an async value is ready.",
-  to_string: "Convert a value to text. Emits Luau tostring.",
-  to_number: "Parse a number from text. Emits Luau tonumber. Fails → null.",
-  to_bool: "Coerce to true/false.",
-};
+function workspaceFolders() {
+  return (vscode.workspace.workspaceFolders || []).map((folder) => folder.uri.fsPath);
+}
+
+function filePathOf(document) {
+  return document.uri.scheme === "file" ? document.uri.fsPath : null;
+}
 
 function includeSearchRoots() {
   const roots = [];
@@ -305,85 +306,30 @@ function codeMask(text) {
   return ok;
 }
 
-function activate(context) {
-  const data = loadCompletions();
-  const engine = loadEngine(data);
-  const selector = [
-    { language: "clpp", scheme: "file" },
-    { language: "clpp", scheme: "untitled" },
-  ];
+const WORD_RE = /@[A-Za-z_][A-Za-z0-9_]*|[A-Za-z_][A-Za-z0-9_]*/;
 
-  const completion = vscode.languages.registerCompletionItemProvider(
-    selector,
-    {
-      provideCompletionItems(document, position) {
-        const line = document.lineAt(position).text.slice(0, position.character);
-        const symbols = symbolsFor(engine, document);
-        const items = [];
-
-        if (/GetService\s*<\s*[A-Za-z_]*$/.test(line)) {
-          for (const ty of data.services || data.types || []) {
-            items.push(item(ty, "Class", `GetService<${ty}>()`, "0_"));
-          }
-          return items;
-        }
-
-        const resolved = engine.resolve(line, symbols);
-        if (resolved.mode !== "global" && resolved.mode !== "concat") {
-          for (const member of resolved.members) {
-            items.push(memberItem(member));
-          }
-          return items;
-        }
-
-        for (const word of data.keywords || []) {
-          items.push(item(word, "Keyword", "CL++ keyword", "2_"));
-        }
-        for (const fn of data.builtins || []) {
-          items.push(item(fn.label, fn.kind || "Function", fn.detail, "1_"));
-        }
-        for (const ty of data.types || []) {
-          items.push(item(ty, "Class", "CL++ / Roblox type", "3_"));
-        }
-        for (const op of data.operators || []) {
-          items.push(item(op.label, "Operator", op.detail, "4_"));
-        }
-        for (const [name, info] of symbols.vars) {
-          items.push(item(name, "Variable", info.detail, "0_"));
-        }
-        return items;
-      },
-    },
-    ".",
-    ":",
-    ">"
+function wireLens(context, lens, collection) {
+  context.subscriptions.push(
+    lens.error,
+    vscode.window.onDidChangeActiveTextEditor(() => applyLensToOpenEditors(vscode, lens, collection)),
+    vscode.workspace.onDidChangeConfiguration((ev) => {
+      if (ev.affectsConfiguration("clpp.lens")) {
+        applyLensToOpenEditors(vscode, lens, collection);
+      }
+    }),
+    vscode.languages.onDidChangeDiagnostics(() => applyLensToOpenEditors(vscode, lens, collection))
   );
+  applyLensToOpenEditors(vscode, lens, collection);
+}
 
-  const hover = vscode.languages.registerHoverProvider(selector, {
-    provideHover(document, position) {
-      const range = document.getWordRangeAtPosition(position);
-      if (!range) {
-        return null;
-      }
-      const word = document.getText(range);
-      if (HOVER_WORDS[word]) {
-        return new vscode.Hover(HOVER_WORDS[word]);
-      }
-      const symbols = symbolsFor(engine, document);
-      const detail = engine.hoverFor(word, symbols);
-      if (detail) {
-        return new vscode.Hover(detail);
-      }
-      return null;
-    },
-  });
-
+function registerChrome(context, engine, selector) {
   const legend = new vscode.SemanticTokensLegend(["type", "property"], []);
   const semantic = vscode.languages.registerDocumentSemanticTokensProvider(
     selector,
     {
       provideDocumentSemanticTokens(document) {
         const builder = new vscode.SemanticTokensBuilder(legend);
+        const data = loadCompletions();
         const symbols = symbolsFor(engine, document);
         const text = document.getText();
         const mask = codeMask(text);
@@ -414,7 +360,6 @@ function activate(context) {
     },
     legend
   );
-
   const links = vscode.languages.registerDocumentLinkProvider(selector, {
     provideDocumentLinks(document) {
       const items = [];
@@ -425,6 +370,54 @@ function activate(context) {
         items.push(new vscode.DocumentLink(inc.specRange, vscode.Uri.file(inc.resolved)));
       }
       return items;
+    },
+  });
+  const outline = vscode.languages.registerDocumentSymbolProvider(selector, {
+    provideDocumentSymbols(document) {
+      return [...includeOutline(engine, document), ...localOutline(engine, document)];
+    },
+  });
+  context.subscriptions.push(semantic, links, outline);
+}
+
+function registerInProcessIntelligence(context, engine, data, selector, lens) {
+  const completion = vscode.languages.registerCompletionItemProvider(
+    selector,
+    {
+      provideCompletionItems(document, position) {
+        const line = document.lineAt(position).text.slice(0, position.character);
+        const raw = buildCompletionItems(
+          engine,
+          data,
+          document.getText(),
+          filePathOf(document),
+          line,
+          document.offsetAt(position),
+          workspaceFolders()
+        );
+        return raw.map(memberItem);
+      },
+    },
+    ".",
+    ":",
+    ">",
+    "@"
+  );
+
+  const hover = vscode.languages.registerHoverProvider(selector, {
+    provideHover(document, position) {
+      const range = document.getWordRangeAtPosition(position, WORD_RE);
+      if (!range) {
+        return null;
+      }
+      const detail = hoverText(
+        engine,
+        document.getText(),
+        filePathOf(document),
+        document.getText(range),
+        workspaceFolders()
+      );
+      return detail ? new vscode.Hover(detail) : null;
     },
   });
 
@@ -439,20 +432,13 @@ function activate(context) {
     },
   });
 
-  const outline = vscode.languages.registerDocumentSymbolProvider(selector, {
-    provideDocumentSymbols(document) {
-      return [...includeOutline(engine, document), ...localOutline(engine, document)];
-    },
-  });
-
   const collection = vscode.languages.createDiagnosticCollection("clpp");
-  const lens = createLens(vscode);
   let timer;
   function refresh(document) {
     if (!document || document.languageId !== "clpp") {
       return;
     }
-    const fromCompiler = clppDiagnostics(document);
+    const fromCompiler = compileDiagnostics(document.getText(), document.fileName, workspaceFolders());
     const lint = lintDocument(document.getText());
     const issues = mergeIssues(fromCompiler, lint);
     const diagnostics = issues.map((issue) => {
@@ -480,99 +466,117 @@ function activate(context) {
   });
   context.subscriptions.push(
     collection,
-    lens.error,
+    completion,
+    hover,
+    definitions,
+    diagnostics,
     vscode.workspace.onDidOpenTextDocument(refresh),
-    vscode.workspace.onDidCloseTextDocument((doc) => collection.delete(doc.uri)),
-    vscode.window.onDidChangeActiveTextEditor(() => applyLensToOpenEditors(vscode, lens, collection)),
-    vscode.workspace.onDidChangeConfiguration((ev) => {
-      if (ev.affectsConfiguration("clpp.lens")) {
-        applyLensToOpenEditors(vscode, lens, collection);
-      }
-    })
+    vscode.workspace.onDidCloseTextDocument((doc) => collection.delete(doc.uri))
   );
-
-  context.subscriptions.push(completion, hover, semantic, links, definitions, outline, diagnostics);
+  wireLens(context, lens, collection);
   refreshAll();
 }
 
-function mergeIssues(compiler, lint) {
-  const items = compiler ? [...compiler] : [];
-  const seen = new Set(items.map((i) => `${i.line}:${i.message}`));
-  for (const issue of lint) {
-    const key = `${issue.line}:${issue.message}`;
-    if (seen.has(key)) {
-      continue;
-    }
-    seen.add(key);
-    items.push(issue);
-  }
-  return items;
+function lspKindName(kind) {
+  const map = {
+    2: "Method",
+    3: "Function",
+    5: "Field",
+    6: "Variable",
+    7: "Class",
+    10: "Property",
+    14: "Keyword",
+    23: "Event",
+    24: "Operator",
+  };
+  return map[kind] || "Text";
 }
 
-function findClpp() {
-  const folders = (vscode.workspace.workspaceFolders || []).map((f) => f.uri.fsPath);
-  const local = process.env.LOCALAPPDATA || "";
-  const names = process.platform === "win32" ? ["clpp.exe"] : ["clpp"];
-  const extra = [
-    path.join(local, "Programs", "CLPP", "clpp.exe"),
-  ];
-  for (const root of folders) {
-    extra.push(path.join(root, "target", "release", names[0]));
-    extra.push(path.join(root, "target", "debug", names[0]));
-  }
-  for (const candidate of extra) {
-    if (candidate && fs.existsSync(candidate)) {
-      return candidate;
-    }
-  }
-  return names[0];
-}
-
-function clppDiagnostics(document) {
-  const exe = findClpp();
-  const payload = JSON.stringify({
-    source: document.getText(),
-    fileName: document.fileName,
+function registerLspIntelligence(context, client, selector, lens) {
+  const completion = vscode.languages.registerCompletionItemProvider(
+    selector,
+    {
+      provideCompletionItems(document, position) {
+        return client.completion(document, position).then((result) =>
+          (result || []).map((entry) => item(entry.label, lspKindName(entry.kind), entry.detail))
+        );
+      },
+    },
+    ".",
+    ":",
+    ">",
+    "@"
+  );
+  const hover = vscode.languages.registerHoverProvider(selector, {
+    provideHover(document, position) {
+      return client.hover(document, position).then((result) => {
+        if (!result || !result.contents) {
+          return null;
+        }
+        const value =
+          typeof result.contents === "string"
+            ? result.contents
+            : result.contents.value || result.contents;
+        return value ? new vscode.Hover(String(value)) : null;
+      });
+    },
   });
-  try {
-    const result = cp.spawnSync(exe, ["api", "compile"], {
-      input: payload,
-      encoding: "utf8",
-      timeout: 8000,
-      windowsHide: true,
-    });
-    if (result.error) {
-      return null;
-    }
-    const out = (result.stdout || "").trim();
-    if (!out) {
-      return null;
-    }
-    const art = JSON.parse(out);
-    const items = [];
-    for (const d of art.diagnostics || []) {
-      items.push({
-        line: Math.max(0, (d.line || 1) - 1),
-        column: Math.max(0, (d.column || 1) - 1),
-        message: d.message,
+  const definitions = vscode.languages.registerDefinitionProvider(selector, {
+    provideDefinition(document, position) {
+      return client.definition(document, position).then((result) => {
+        const list = Array.isArray(result) ? result : result ? [result] : [];
+        return list.map(
+          (loc) =>
+            new vscode.Location(
+              vscode.Uri.parse(loc.uri),
+              new vscode.Range(
+                loc.range.start.line,
+                loc.range.start.character,
+                loc.range.end.line,
+                loc.range.end.character
+              )
+            )
+        );
       });
-    }
-    if (!items.length && art.ok === false && art.error) {
-      const match = String(art.error).match(/[:\[](\d+)[:.](\d+)/);
-      items.push({
-        line: match ? Math.max(0, Number(match[1]) - 1) : 0,
-        column: match ? Math.max(0, Number(match[2]) - 1) : 0,
-        message: String(art.error)
-          .split("\n")
-          .map((l) => l.trim())
-          .find((l) => l && !l.startsWith("╭") && !l.startsWith("│") && !l.startsWith("╰") && !l.startsWith("→"))
-          || "CL++ error",
-      });
-    }
-    return items;
-  } catch {
-    return null;
+    },
+  });
+  context.subscriptions.push(
+    completion,
+    hover,
+    definitions,
+    vscode.workspace.onDidOpenTextDocument((doc) => client.open(doc)),
+    vscode.workspace.onDidChangeTextDocument((ev) => client.change(ev.document)),
+    vscode.workspace.onDidCloseTextDocument((doc) => client.close(doc))
+  );
+  for (const doc of vscode.workspace.textDocuments) {
+    client.open(doc);
   }
+  wireLens(context, lens, client.collection);
+}
+
+function activate(context) {
+  const data = loadCompletions();
+  const engine = loadEngine(data);
+  const selector = [
+    { language: "clpp", scheme: "file" },
+    { language: "clpp", scheme: "untitled" },
+  ];
+  const lens = createLens(vscode);
+  registerChrome(context, engine, selector);
+
+  const useLsp = vscode.workspace.getConfiguration("clpp").get("lsp.enabled", true);
+  if (useLsp) {
+    const client = startLspClient(context, vscode);
+    client.ready.then((ok) => {
+      if (ok && client.isAlive()) {
+        registerLspIntelligence(context, client, selector, lens);
+      } else {
+        registerInProcessIntelligence(context, engine, data, selector, lens);
+      }
+    });
+    return;
+  }
+  registerInProcessIntelligence(context, engine, data, selector, lens);
 }
 
 function deactivate() {}

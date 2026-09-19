@@ -36,7 +36,7 @@ Not JS `await` in the event loop sense beyond what Luau Promises provide. Use [`
 ## Example
 
 ```clpp
-Data* data = await DataService:Server::WaitFor(player);
+Data* data = await DataService.Server.WaitFor(player);
 ```
 
 Emits:

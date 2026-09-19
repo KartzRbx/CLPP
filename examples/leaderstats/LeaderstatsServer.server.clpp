@@ -20,7 +20,7 @@ void LeaderstatsServer::UpdateLeaderstatsWithValues(IntValue* currentValue, int 
 }
 
 Folder* LeaderstatsServer::EnsurePlayerLeaderstatsFolder(Player* player) {
-    Instance* existingFolder = player::FindFirstChild("leaderstats");
+    Instance* existingFolder = player.FindFirstChild("leaderstats");
     if (existingFolder) {
         return static_cast<Folder*>(existingFolder);
     }
@@ -42,12 +42,12 @@ void LeaderstatsServer::PlayerEntered(Player* player) {
     }
 
     Folder* leaderstatsFolder = EnsurePlayerLeaderstatsFolder(player);
-    Data* playerData = DataService:Server::WaitFor(player);
-    PlayerData Paths = DataService:Paths;
+    Data* playerData = DataService.Server.WaitFor(player);
+    PlayerData Paths = DataService.Paths;
 
-    IntValue* coinsValue = static_cast<IntValue*>(leaderstatsFolder::FindFirstChild("Coins"));
+    IntValue* coinsValue = static_cast<IntValue*>(leaderstatsFolder.FindFirstChild("Coins"));
     if (coinsValue) {
-        playerData::GetChangedSignal(Paths.Currencies.Coins)~>Connect(func [](int newValue) {
+        playerData.GetChangedSignal(Paths.Currencies.Coins)~>Connect(func (int newValue) {
             if (coinsValue.Value != newValue) {
                 coinsValue.Value = newValue;
                 post("Coins for " .: player.Name .: ": " .: newValue);
@@ -55,8 +55,8 @@ void LeaderstatsServer::PlayerEntered(Player* player) {
         });
     }
 
-    janitor::Add(leaderstatsFolder, "Destroy", GetPlayerJanitorKey(player));
-    janitor::Add(playerData, "Destroy", GetPlayerJanitorKey(player));
+    janitor.Add(leaderstatsFolder, "Destroy", GetPlayerJanitorKey(player));
+    janitor.Add(playerData, "Destroy", GetPlayerJanitorKey(player));
 }
 
 void init() {
@@ -64,16 +64,16 @@ void init() {
     LeaderstatsServer leaderstatsServer;
     Janitor* janitor = leaderstatsServer.janitor;
 
-    for (Player* player in players::GetPlayers()) {
-        leaderstatsServer::PlayerEntered(player);
+    for (Player* player in players.GetPlayers()) {
+        leaderstatsServer.PlayerEntered(player);
     }
 
-    players::PlayerAdded~>Once(func [](Player* playerEntered) {
-        leaderstatsServer::PlayerEntered(playerEntered);
+    players.PlayerAdded~>Once(func (Player* playerEntered) {
+        leaderstatsServer.PlayerEntered(playerEntered);
     });
 
-    game::BindToClose(func []() {
-        janitor::Cleanup();
-        janitor::Destroy();
+    game.BindToClose(func () {
+        janitor.Cleanup();
+        janitor.Destroy();
     });
 }

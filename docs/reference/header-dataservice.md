@@ -29,12 +29,12 @@ None.
 
 ## Description
 
-Access the singleton with [`:`](operator-table): `DataService:Server::WaitFor(player)`.
+Access the singleton with [`.`](operator-property): `DataService.Server.WaitFor(player)`.
 
 ## Example
 
 ```clpp
-DataService:Server::Init(DataServiceOptions {
+DataService.Server.Init(DataServiceOptions {
     .Template = playerData,
     .StoreName = "PlayerData",
     .UseMock = true

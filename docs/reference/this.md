@@ -1,19 +1,21 @@
 ---
-title: "this"
-sidebar_label: "this"
+title: "@this"
+sidebar_label: "@this"
 ---
 
-# this
+# @this
 
 <div class="clpp-ref-meta">OOP</div>
 
-The current object inside `Class::Method`. Emits Luau `self`.
+The current object inside `Class::Method`. Emits Luau `self`. `@field` is that object's member. `this` (no `@`) is the same alias.
 
 ## Syntax
 
 ```clpp
 void Service::Tick() {
-    this.janitor::Cleanup();
+    @janitor.Cleanup();
+    @this;
+    this.janitor.Add(conn);
     coins = coins + 1; // bare field → self.coins
 }
 ```
@@ -24,31 +26,35 @@ None.
 
 ## Return value
 
-The receiver.
+The receiver table.
 
 ## Luau emit
 
-`self`
+`self` · `self.field`
 
 ## Description
 
-Bare field names become `self.field`. Calls to other methods become `self:Method(...)`. Parameters and locals shadow fields.
+Only valid inside [`Class::Method`](class-method). A free function or `void init()` that uses `@this` / `@field` is an error.
 
-There is no `this->`. Use `this.field` or a bare name.
+`@this` is a value: pass it to other functions (`other.Register(@this)` → `other:Register(self)`). There is no `this->` and no `@this` parameter on the signature — `::` already injects the receiver.
+
+`[]` still indexes. `[[server]]` is still an attribute. `@` here is only the receiver sigil.
 
 ## Example
 
 ```clpp
-void LeaderstatsServer::OnPlayer(Player* player) {
-    this.janitor::Add(conn);
+void CombatServer::BindPart(BasePart* part) {
+    @janitor.Add(part, "Destroy");
+    other.Register(@this);
 }
 ```
 
 Emits:
 
 ```luau
-function LeaderstatsServer:OnPlayer(player: Player)
-	self.janitor:Add(conn)
+function CombatServer:BindPart(part: BasePart)
+	self.janitor:Add(part, "Destroy")
+	other:Register(self)
 end
 ```
 

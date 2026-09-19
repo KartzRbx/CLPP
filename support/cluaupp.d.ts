@@ -1,4 +1,7 @@
-/** Stable CL++ ↔ Cluaupp contract. Cluaupp invokes the `clpp` binary. */
+/** Stable CL++ ↔ Cluaupp contract. Cluaupp invokes the `clpp` binary.
+ *  Anonymous callbacks in generated CL++ must be `func (params) { }`.
+ *  See docs/cluaupp-callbacks.md — `func [](…)` / `[]() { }` do not compile.
+ */
 
 export interface CompileRequest {
   source: string;

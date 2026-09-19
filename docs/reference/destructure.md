@@ -34,8 +34,8 @@ Not structured bindings for structs. Not `auto [x, y]` on a table field unpack u
 ## Example
 
 ```clpp
-auto [success, result] = pcall(func []() {
-    return DataStore::GetAsync("PlayerData");
+auto [success, result] = pcall(func () {
+    return DataStore.GetAsync("PlayerData");
 });
 ```
 

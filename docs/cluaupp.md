@@ -21,3 +21,5 @@ clpp api manifest
 ```
 
 TypeScript types: `support/cluaupp.d.ts`. Details: [Cluaupp support](cluaupp-support).
+
+Anonymous callbacks Cluaupp must generate: [Cluaupp — anonymous callbacks](cluaupp-callbacks). Write `func (params) { }`. `func [](…)` and `[]() { }` do not compile.

@@ -7,10 +7,10 @@ void init() {
         return;
     }
 
-    Instance* playerGui = localPlayer::WaitForChild("PlayerGui");
-    auto create = Vide:create;
-    auto source = Vide:source;
-    auto apply = Vide:apply;
+    Instance* playerGui = localPlayer.WaitForChild("PlayerGui");
+    auto create = Vide.create;
+    auto source = Vide.source;
+    auto apply = Vide.apply;
     auto count = source(0);
 
     auto makeGui = create("ScreenGui");
@@ -21,7 +21,7 @@ void init() {
         {"BackgroundTransparency", 1},
         {"Size", UDim2.fromScale(1, 0.5)},
         {"TextColor3", Color3.fromRGB(240, 240, 255)},
-        {"Text", func []() {
+        {"Text", func () {
             return "Clicks: " .: count();
         }}
     });
@@ -30,7 +30,7 @@ void init() {
         {"Size", UDim2.fromScale(1, 0.5)},
         {"Position", UDim2.fromScale(0, 0.5)},
         {"Text", "Click"},
-        {"Activated", func []() {
+        {"Activated", func () {
             count(count() + 1);
         }}
     });

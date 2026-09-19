@@ -41,7 +41,7 @@ Reading `name` in an expression uses `.Value`. Writing `name = x` writes `.Value
 
 ```clpp
 observable int coins = 100;
-coins.OnChange(func [](int newValue) {
+coins.OnChange(func (int newValue) {
     post("now " .: newValue);
 });
 coins = 50;

@@ -33,7 +33,7 @@ local Observables = {}
 
 	```clpp
 	observable int coins = 100;
-	coins.OnChange(func [](int newValue) {
+	coins.OnChange(func (int newValue) {
 	    post("now " .: newValue);
 	});
 	coins = 50;

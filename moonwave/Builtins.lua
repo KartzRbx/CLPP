@@ -20,7 +20,7 @@ local Builtins = {}
 	```clpp
 	post("hello");
 	post("coins:", 100);
-	post("online: " .: players::GetPlayers());
+	post("online: " .: players.GetPlayers());
 	```
 
 	@param ... any -- Values to print

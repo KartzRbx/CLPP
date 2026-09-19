@@ -35,7 +35,7 @@ None (statement).
 
 ## Description
 
-Arms bind a name (`Part* p`) for the narrowed value. `_` is required if the match is not exhaustive in practice — always provide it.
+Arms are a class or primitive name plus a binding (`Part p`, `string s`) — not a C++ pointer. Instance arms emit `IsA("Part")`. `_` is required if the match is not exhaustive in practice — always provide it.
 
 This is not C++ `std::variant` visit and not Luau `if-then-else` expressions.
 
@@ -43,8 +43,8 @@ This is not C++ `std::variant` visit and not Luau `if-then-else` expressions.
 
 ```clpp
 match (instance) {
-    Part* p => p.BrickColor = BrickColor::Red(),
-    Model* m => m.PrimaryPart.BrickColor = BrickColor::Blue(),
+    Part p => p.BrickColor = BrickColor::Red(),
+    Model m => m.PrimaryPart.BrickColor = BrickColor::Blue(),
     _ => warn("Instance not supported")
 };
 ```

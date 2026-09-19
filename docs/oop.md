@@ -30,7 +30,7 @@ void LeaderstatsServer::PlayerEntered(Player* player) {
 }
 ```
 
-`Class::Method` emits `function Class:Method(...)`. Inside, `this` is `self`.
+`Class::Method` emits `function Class:Method(...)`. Inside, [`@this`](reference/this) is `self`. `@janitor` is `self.janitor`. Bare fields still become `self.field`. `this` without `@` is the same alias.
 
 ## init singleton
 
@@ -39,11 +39,11 @@ void init() {
     Players* players = GetService<Players>();
     LeaderstatsServer leaderstatsServer;
 
-    for (Player* player : players::GetPlayers()) {
+    for (Player* player : players.GetPlayers()) {
         leaderstatsServer::PlayerEntered(player);
     }
 
-    players::PlayerAdded~>Connect(func [](Player* playerEntered) {
+    players.PlayerAdded~>Connect(func (Player* playerEntered) {
         leaderstatsServer::PlayerEntered(playerEntered);
     });
 }

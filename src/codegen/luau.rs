@@ -968,6 +968,8 @@ impl<'a> Emitter<'a> {
                     base
                 }
             }
+            Expr::This { .. } => "self".into(),
+            Expr::AtField { name, .. } => format!("self.{name}"),
             Expr::Await { argument } => format!("__await({})", self.emit_expr(argument)),
             Expr::InitList { fields } => {
                 if fields.is_empty() {
@@ -1168,7 +1170,7 @@ impl<'a> Emitter<'a> {
             if access == "~>" {
                 return format!("{}:Add({conn}, \"Disconnect\")", self.janitor_expr());
             }
-            return conn;
+            return self.protect_call(conn, access);
         }
         if access == "~>" {
             return format!(
@@ -1177,7 +1179,7 @@ impl<'a> Emitter<'a> {
             );
         }
         if self.class_methods.contains(name) && !self.local_names.contains(name) {
-            return format!("{obj}:{name}({args_s})");
+            return self.protect_call(format!("{obj}:{name}({args_s})"), access);
         }
         if let Expr::Ident(n) = obj_expr {
             if n == "cout" {
@@ -1189,23 +1191,47 @@ impl<'a> Emitter<'a> {
                 return format!("{mapped}({args_s})");
             }
             if is_datatype(n) || is_luau_lib(n) {
-                return format!("{obj}.{name}({args_s})");
+                return self.protect_call(format!("{obj}.{name}({args_s})"), access);
             }
         }
-        let colon = match access {
-            "::" => true,
-            "." => is_method(name),
-            _ => false,
-        };
-        format!(
+        let colon = self.call_uses_colon(obj_expr, name, access);
+        let call = format!(
             "{obj}{}{name}({args_s})",
             if colon { ":" } else { "." }
+        );
+        self.protect_call(call, access)
+    }
+
+    fn call_uses_colon(&self, obj_expr: &Expr, name: &str, access: &str) -> bool {
+        if let Expr::Ident(n) = obj_expr {
+            if is_datatype(n) || is_luau_lib(n) {
+                return false;
+            }
+            if is_library_type(n) && !is_method(name) {
+                return false;
+            }
+        }
+        match access {
+            "::" | ":" => true,
+            "." => is_method(name) || self.class_methods.contains(name),
+            _ => false,
+        }
+    }
+
+    fn protect_call(&self, call: String, access: &str) -> String {
+        if access != ":" {
+            return call;
+        }
+        format!(
+            "(function() local _ok, _r = pcall(function() return {call} end); return if _ok then _r else nil end)()"
         )
     }
 
     fn emit_object(&self, expr: &Expr) -> String {
         match expr {
             Expr::Ident(name) => self.emit_self_ident(name),
+            Expr::This { .. } => "self".into(),
+            Expr::AtField { name, .. } => format!("self.{name}"),
             Expr::Member { object, name, .. } => {
                 format!("{}.{name}", self.emit_object(object))
             }

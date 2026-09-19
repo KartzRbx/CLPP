@@ -36,7 +36,7 @@ bool to_bool(value);
 ## Example
 
 ```clpp
-Instance* child = folder::FindFirstChild("x");
+Instance* child = folder.FindFirstChild("x");
 bool exists = to_bool(child);
 ```
 

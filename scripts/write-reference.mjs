@@ -119,7 +119,7 @@ add({
 Prefer \`post\` over legacy [\`cout\`](cout).`,
   exampleClpp: `post("hello");
 post("coins:", 100);
-post("online: " .: players::GetPlayers());`,
+post("online: " .: players.GetPlayers());`,
   exampleLuau: `print("hello")
 print("coins:", 100)
 print("online: " .. players:GetPlayers())`,
@@ -207,7 +207,7 @@ There is no \`game:GetService\` in CL++ source — always this form.`,
 
 void init() {
     Players* players = GetService<Players>();
-    post("online: " .: players::GetPlayers());
+    post("online: " .: players.GetPlayers());
 }`,
   exampleLuau: `local players: Players = game:GetService("Players")
 print("online: " .. players:GetPlayers())`,
@@ -221,12 +221,12 @@ add({
   summary:
     "Protected call. CL++ has no `try/catch`; this is how you catch [`report`](report) / Luau `error`.",
   syntax: "auto [ok, result] = pcall(fn);",
-  params: [{ name: "fn", type: "func", desc: "Callback to run. Usually a lambda." }],
+  params: [{ name: "fn", type: "func", desc: "Callback to run. Usually `func (…) { }`." }],
   returns: "Multiple values: success flag, then the result or the error message.",
   emit: "pcall(fn)",
   description: `Pair with [destructuring](destructure). If \`ok\` is false, \`result\` is the error string. There is also Luau \`xpcall\` if you include it as a global — the compiler treats it as a call.`,
-  exampleClpp: `auto [success, result] = pcall(func []() {
-    return DataStore::GetAsync("PlayerData");
+  exampleClpp: `auto [success, result] = pcall(func () {
+    return DataStore.GetAsync("PlayerData");
 });`,
   exampleLuau: `local success, result = pcall(function()
 	return DataStore:GetAsync("PlayerData")
@@ -359,25 +359,30 @@ init()`,
 
 add({
   id: "this",
-  title: "this",
+  title: "@this",
+  sidebar: "@this",
   header: "OOP",
   summary:
-    "The current object inside `Class::Method`. Emits Luau `self`.",
+    "The current object inside `Class::Method`. Emits Luau `self`. `@field` is that object's member. `this` (no `@`) is the same alias.",
   syntax: `void Service::Tick() {
-    this.janitor::Cleanup();
+    @janitor.Cleanup();
+    @this;
+    this.janitor.Add(conn);
     coins = coins + 1; // bare field → self.coins
 }`,
   params: [],
-  returns: "The receiver.",
-  emit: "self",
-  description: `Bare field names become \`self.field\`. Calls to other methods become \`self:Method(...)\`. Parameters and locals shadow fields.
+  returns: "The receiver table.",
+  emit: "self · self.field",
+  description: `Only valid inside [\`Class::Method\`](class-method). A free function or \`void init()\` that uses \`@this\` / \`@field\` is an error.
 
-There is no \`this->\`. Use \`this.field\` or a bare name.`,
-  exampleClpp: `void LeaderstatsServer::OnPlayer(Player* player) {
-    this.janitor::Add(conn);
+\`@this\` is a value: pass it to other functions (\`other.Register(@this)\` → \`other:Register(self)\`). There is no \`this->\` and no \`@this\` parameter on the signature — \`::\` already injects the receiver.`,
+  exampleClpp: `void CombatServer::BindPart(BasePart* part) {
+    @janitor.Add(part, "Destroy");
+    other.Register(@this);
 }`,
-  exampleLuau: `function LeaderstatsServer:OnPlayer(player: Player)
-	self.janitor:Add(conn)
+  exampleLuau: `function CombatServer:BindPart(part: BasePart)
+	self.janitor:Add(part, "Destroy")
+	other:Register(self)
 end`,
   see: ["struct", "class-method"],
 });
@@ -492,9 +497,9 @@ typePage(
   "func",
   "func",
   "(...any) -> any",
-  "Function type and optional lambda prefix. Callbacks, listeners, `pcall` bodies.",
-  `Lambdas: empty \`[]\` (no C++ captures). You may write \`func [](int n) { }\` or assign \`func cb = []() {};\`.`,
-  `func onCoinsChanged = [](int newValue) {
+  "Function type and anonymous callback prefix. Callbacks, listeners, `pcall` bodies.",
+  `There are no C++ captures. Write \`func (int n) { }\` or assign \`func cb = func() {};\`.`,
+  `func onCoinsChanged = func (int newValue) {
     post("New value: " .: newValue);
 };`,
   `local onCoinsChanged: (...any) -> any = function(newValue: number)
@@ -620,15 +625,17 @@ add({
     "`Player*` means an Instance of class Player — not a heap pointer. There is no `delete`, `*p`, `&p`, `int&`, or `->`.",
   syntax: `Player* player = null;
 player.Name = "Kartz";
-player::FindFirstChild("leaderstats");`,
+player.FindFirstChild("leaderstats");`,
   params: [],
   returns: "The Instance.",
   emit: "Player  (star stripped)",
-  description: `Properties use [\`.\`](operator-property). Methods use [\`::\`](operator-method). Lifetime is Roblox's: \`Destroy\` or Janitor.
+  description: `Properties and instance methods use [\`.\`](operator-property). Protected calls use [\`:\`](operator-table). Static names use [\`::\`](operator-method). Lifetime is Roblox's: \`Destroy\` or Janitor.
+
+[\`match\`](match) arms write the class name (\`Part p\`), not a pointer (\`Part* p\`).
 
 [\`observable\`](observable) of a non-primitive becomes \`ObjectValue\`.`,
   exampleClpp: `player.Name = "Kartz";
-player::FindFirstChild("leaderstats");`,
+player.FindFirstChild("leaderstats");`,
   exampleLuau: `player.Name = "Kartz"
 player:FindFirstChild("leaderstats")`,
   see: ["new", "operator-method", "operator-property", "null"],
@@ -663,14 +670,14 @@ add({
   sidebar: "signal",
   header: "Type",
   summary:
-    "Typed BindableEvent. Declaration emits `__signal()`. Fire with `::Fire`; listen with `~>` or `::Connect`.",
+    "Typed BindableEvent. Declaration emits `__signal()`. Fire with `.Fire`; listen with `~>` or `::Connect`.",
   syntax: "signal<Player*, int> OnCoinsUpdated;",
   params: [{ name: "T...", type: "types", desc: "Payload types, comma-separated." }],
   returns: "A signal object (`RBXScriptSignal`-like).",
   emit: "__signal()",
   description: `See the operations: [\`Fire\`](Fire), [\`Connect\`](Connect), [\`Once\`](Once), [\`Wait\`](Wait). Prefer [\`~>\`](operator-janitor) so Janitor owns the connection.`,
   exampleClpp: `signal<Player*, int> OnCoinsUpdated;
-OnCoinsUpdated::Fire(player, 500);`,
+OnCoinsUpdated.Fire(player, 500);`,
   exampleLuau: `local OnCoinsUpdated = __signal()
 OnCoinsUpdated:Fire(player, 500)`,
   see: ["Fire", "Connect", "Once", "Wait", "operator-janitor"],
@@ -693,7 +700,7 @@ name = next;`,
 
 [\`.OnChange(fn)\`](OnChange) is \`Changed:Connect(fn)\`.`,
   exampleClpp: `observable int coins = 100;
-coins.OnChange(func [](int newValue) {
+coins.OnChange(func (int newValue) {
     post("now " .: newValue);
 });
 coins = 50;
@@ -711,73 +718,96 @@ print(coins.Value)`,
 /* ───────── operators ───────── */
 add({
   id: "operator-method",
-  title: ":: (method / scope)",
+  title: ":: (static / manual Connect)",
   sidebar: "::",
   header: "Operator",
   summary:
-    "CL++ does **not** use `->`. `::` is method call and nested name. On a call it emits `:`; without a call it emits `.`.",
-  syntax: `obj::Method(args);
-obj::Child::Connect(fn);
-Class::Method(...) { }`,
+    "CL++ does **not** use `->`. `::` is static scope, datatype/library names, class method definitions, and **manual** signal connections (you Disconnect; Janitor does not).",
+  syntax: `Vector3::new(1, 0, 1);
+task::wait(1);
+players.PlayerAdded::Connect(fn);
+void Class::Method(...) { }`,
   params: [],
   returns: "The call result, or the nested name.",
-  emit: "obj:Method(args)  /  obj.Child",
-  description: `**Call:** \`player::FindFirstChild("x")\` → \`player:FindFirstChild("x")\`.
+  emit: "Vector3.new(...) · task.wait(1) · players.PlayerAdded:Connect(fn) · function Class:Method",
+  description: `**Static / modules:** \`task::wait\`, \`Vector3::new\`, \`BrickColor::Red()\`.
 
-**No call:** \`players::PlayerAdded\` → \`players.PlayerAdded\` (then \`::Connect\` becomes \`:Connect\`).
+**Manual connections:** \`players.PlayerAdded::Connect(fn)\` emits \`players.PlayerAdded:Connect(fn)\` with **no** Janitor. You own \`Disconnect\`. Prefer [\`~>\`](operator-janitor) when a janitor is in scope.
 
-**Datatype / task:** \`Vector3::new\` / \`task::wait\` emit \`.\` (they are not Instance methods).
+**Definitions:** \`Class::Method\` in a \`.clpp\` is the method body (\`function Class:Method\`).
 
-**Definition:** \`Class::Method\` in a \`.clpp\` is a method implementation (\`function Class:Method\`).`,
-  exampleClpp: `players::PlayerAdded::Connect(fn);
-player::FindFirstChild("x");
-DataService:Server::WaitFor(p);`,
-  exampleLuau: `players.PlayerAdded:Connect(fn)
+Instance methods on a value use [\`.\`](operator-property): \`player.Kick()\`, \`workspace.FindFirstChild("x")\`. Protected calls use [\`:\`](operator-table).`,
+  exampleClpp: `task::wait(1);
+players.PlayerAdded::Connect(fn);
+player.FindFirstChild("x");
+DataService.Server.WaitFor(p);`,
+  exampleLuau: `task.wait(1)
+players.PlayerAdded:Connect(fn)
 player:FindFirstChild("x")
 DataService.Server:WaitFor(p)`,
-  notes: "Table keys use [`:`](operator-table). Properties use [`.`](operator-property).",
-  see: ["operator-table", "operator-property", "class-method", "Connect"],
+  see: ["operator-property", "operator-table", "operator-janitor", "class-method", "Connect"],
 });
 
 add({
   id: "operator-table",
-  title: ": (table key)",
+  title: ": (type / protected call)",
   sidebar: ":",
   header: "Operator",
   summary:
-    "Dictionary / module table key. Emits `.`. Not a method call — that is `::`.",
-  syntax: "Table:Key\nTable:Key::Method()",
+    "Two jobs: **types** on names, and **Safe Mode** calls that cannot crash the script.",
+  syntax: `age: int = 10;
+player:Kick();
+auto child = workspace:FindFirstChild("x");`,
   params: [],
-  returns: "The field.",
-  emit: "Table.Key",
-  description: `\`DataService:Server\` → \`DataService.Server\`. Combine with [\`::\`](operator-method): \`DataService:Server::WaitFor(p)\`.
+  returns: "For a call: the result on success, `nil` on error.",
+  emit: "local age: number = 10  /  pcall of the method",
+  description: `**Types.** Prefix C++ types still work (\`int age = 10\`). \`:\` is the other spelling: \`age: int = 10\`.
 
-Range-for uses \`:\` in a different position: [\`for (T x : list)\`](range-for). The compiler distinguishes them.`,
-  exampleClpp: `DataService:Server::Init(opts);
-post(stats:Coins);`,
-  exampleLuau: `DataService.Server:Init(opts)
-print(stats.Coins)`,
-  see: ["operator-method", "dictionary", "range-for"],
+**Protected calls.** \`player:Kick()\` is Luau-style \`:\` **and** a \`pcall\`. Prefer [\`.\`](operator-property) when the call should throw (\`player.Kick()\`).
+
+Bare \`Table:Key\` without \`()\` still emits \`Table.Key\` (old table-key spelling). New code uses \`.\`: \`DataService.Server\`.`,
+  exampleClpp: `age: int = 10;
+Instance* child = workspace:FindFirstChild("Missing");
+guard (child != null) else {
+    return;
+}`,
+  exampleLuau: `local age: number = 10
+local child: Instance = (function()
+	local _ok, _r = pcall(function()
+		return workspace:FindFirstChild("Missing")
+	end)
+	return if _ok then _r else nil
+end)()`,
+  see: ["pcall", "operator-property", "operator-method", "int"],
 });
 
 add({
   id: "operator-property",
-  title: ". (property)",
+  title: ". (property / instance method)",
   sidebar: ".",
   header: "Operator",
-  summary: "Instance or value property. Stays `.` in Luau.",
-  syntax: "instance.Property\ninstance.Property = value;",
+  summary:
+    "The default accessor. Properties stay `.` in Luau. Instance method calls emit Luau `:`.",
+  syntax: `instance.Property
+instance.Property = value;
+instance.Method(args);`,
   params: [],
-  returns: "The property value.",
-  emit: "instance.Property",
-  description: `Use \`.\` for \`Name\`, \`Parent\`, \`Value\`, \`Size\`, \`CFrame\`, … Methods are [\`::\`](operator-method). Dictionary keys are [\`:\`](operator-table).
+  returns: "The property value, or the method result.",
+  emit: "instance.Property · instance:Method(args)",
+  description: `Use \`.\` for **everything standard**: \`Name\`, \`Parent\`, \`Value\`, dictionary keys, and instance methods (\`Kick\`, \`FindFirstChild\`, \`WaitForChild\`, …).
+
+Protected (non-throwing) calls use [\`:\`](operator-table). Static names and manual \`Connect\` use [\`::\`](operator-method). Janitor connections use [\`~>\`](operator-janitor).
 
 Designated initializers also start with \`.\`: [\`.Field = value\`](operator-designated).`,
   exampleClpp: `player.Name = "Kartz";
-part.Size = Vector3(8, 1, 8);`,
+player.Kick();
+workspace.FindFirstChild("Baseplate");
+DataService.Server.WaitFor(player);`,
   exampleLuau: `player.Name = "Kartz"
-part.Size = Vector3.new(8, 1, 8)`,
-  see: ["operator-method", "operator-designated", "GetPropertyChangedSignal"],
+player:Kick()
+workspace:FindFirstChild("Baseplate")
+DataService.Server:WaitFor(player)`,
+  see: ["operator-table", "operator-method", "operator-janitor", "operator-designated"],
 });
 
 add({
@@ -820,10 +850,10 @@ signal~>Once(fn);`,
 Bare \`::Connect\` does **not** register with Janitor. Prefer \`~>\` in production.
 
 \`Once\` disconnects after the first emission.`,
-  exampleClpp: `players::PlayerAdded~>Connect(func [](Player* player) {
+  exampleClpp: `players.PlayerAdded~>Connect(func (Player* player) {
     post("Connected and managed automatically!");
 });
-players::PlayerAdded~>Once(func [](Player* player) {
+players.PlayerAdded~>Once(func (Player* player) {
     post("First player only");
 });`,
   exampleLuau: `janitor:Add(players.PlayerAdded:Connect(function(player: Player)
@@ -945,7 +975,7 @@ add({
   returns: "A table.",
   emit: "{ Field = value, Other = value2 }",
   description: `Used for option bags (\`DataServiceOptions\`). Not an Instance property write — that is [\`obj.Prop =\`](operator-property).`,
-  exampleClpp: `DataService:Server::Init(DataServiceOptions {
+  exampleClpp: `DataService.Server.Init(DataServiceOptions {
     .Template = playerData,
     .StoreName = "PlayerData",
     .UseMock = true
@@ -1054,7 +1084,7 @@ add({
   description: `The index is discarded (\`_\`). To get keys, iterate a dictionary in Luau style via a helper, or use C-for on numeric arrays.
 
 Parentheses and braces are required.`,
-  exampleClpp: `for (Player* player : players::GetPlayers()) {
+  exampleClpp: `for (Player* player : players.GetPlayers()) {
     post("Player connected: " .: player.Name);
 }`,
   exampleLuau: `for _, player in players:GetPlayers() do
@@ -1135,12 +1165,12 @@ add({
   params: [{ name: "value", type: "any", desc: "Scrutinee. Evaluated once." }],
   returns: "None (statement).",
   emit: 'if x:IsA("Type") then … elseif typeof(x) == "…" then …',
-  description: `Arms bind a name (\`Part* p\`) for the narrowed value. \`_\` is required if the match is not exhaustive in practice — always provide it.
+  description: `Arms are a class or primitive name plus a binding (\`Part p\`, \`string s\`) — not a C++ pointer. Instance arms emit \`IsA("Part")\`. \`_\` is required if the match is not exhaustive in practice — always provide it.
 
 This is not C++ \`std::variant\` visit and not Luau \`if-then-else\` expressions.`,
   exampleClpp: `match (instance) {
-    Part* p => p.BrickColor = BrickColor::Red(),
-    Model* m => m.PrimaryPart.BrickColor = BrickColor::Blue(),
+    Part p => p.BrickColor = BrickColor::Red(),
+    Model m => m.PrimaryPart.BrickColor = BrickColor::Blue(),
     _ => warn("Instance not supported")
 };`,
   exampleLuau: `if instance:IsA("Part") then
@@ -1228,26 +1258,26 @@ end`,
 
 add({
   id: "lambda",
-  title: "lambda []",
-  sidebar: "[]",
+  title: "func (...)",
+  sidebar: "func (...)",
   header: "Functions",
   summary:
-    "Closure. Empty `[]` only — no C++ captures `[x]` / `[&]`. Luau still closes over outer locals.",
-  syntax: `func [](T arg) { }
-[]() { }
-func cb = []() {};`,
+    "Anonymous callback. There is no C++ capture list — CL++ has no pointers to capture. Luau still closes over outer locals.",
+  syntax: `func (T arg) { }
+func () { }
+func cb = func () {};`,
   params: [],
   returns: "A function value.",
   emit: "function(arg: T) … end",
-  description: `Prefix with [\`func\`](func) when you want the type on the lambda. Passing a method by name from inside \`Class::\` binds \`self\`: \`function(...) self:OnPlayer(...) end\`.
+  description: `[\`func\`](func) is both the type and the keyword that starts an inline callback. Passing a method by name from inside \`Class::\` binds \`self\`: \`function(...) self:OnPlayer(...) end\`.
 
-Keep Instances alive with Janitor; closures do not own Roblox lifetime.`,
-  exampleClpp: `players::PlayerAdded::Connect(func [](Player* playerEntered) {
+Keep Instances alive with Janitor; closures do not own Roblox lifetime. Do **not** write \`func [](…)\` or \`[]() { }\`.`,
+  exampleClpp: `players.PlayerAdded~>Connect(func (Player* playerEntered) {
     post("New player: " .: playerEntered.Name);
 });`,
-  exampleLuau: `players.PlayerAdded:Connect(function(playerEntered: Player)
+  exampleLuau: `janitor:Add(players.PlayerAdded:Connect(function(playerEntered: Player)
 	print("New player: " .. playerEntered.Name)
-end)`,
+end), "Disconnect")`,
   see: ["func", "Connect", "function", "this"],
 });
 
@@ -1265,7 +1295,7 @@ add({
   emit: "const function  (body uses __await)",
   description: `[\`await expr\`](await) calls \`__await\`: if the value has \`:expect()\` (Promise), wait; otherwise return it (already yielded).`,
   exampleClpp: `async Data* FetchData(Player* player) {
-    Data* data = await DataService:Server::WaitFor(player);
+    Data* data = await DataService.Server.WaitFor(player);
     return data;
 }`,
   exampleLuau: `const function FetchData(player: Player): Data
@@ -1285,7 +1315,7 @@ add({
   returns: "The resolved value.",
   emit: "__await(expr)",
   description: `Not JS \`await\` in the event loop sense beyond what Luau Promises provide. Use [\`spawn\`](spawn) to run a block without blocking the caller.`,
-  exampleClpp: `Data* data = await DataService:Server::WaitFor(player);`,
+  exampleClpp: `Data* data = await DataService.Server.WaitFor(player);`,
   exampleLuau: `local data: Data = __await(DataService.Server:WaitFor(player))`,
   see: ["async", "spawn", "pcall"],
 });
@@ -1346,8 +1376,8 @@ add({
   returns: "Each name is a local.",
   emit: "local a, b = expr",
   description: `Not structured bindings for structs. Not \`auto [x, y]\` on a table field unpack unless \`expr\` returns multiple values.`,
-  exampleClpp: `auto [success, result] = pcall(func []() {
-    return DataStore::GetAsync("PlayerData");
+  exampleClpp: `auto [success, result] = pcall(func () {
+    return DataStore.GetAsync("PlayerData");
 });`,
   exampleLuau: `local success, result = pcall(function()
 	return DataStore:GetAsync("PlayerData")
@@ -1390,12 +1420,12 @@ add({
   header: "OOP",
   summary: "Method implementation. Emits `function Class:Method(...)`.",
   syntax: `void Class::Method(T arg) {
-    this.field = arg;
+    @field = arg;
 }`,
   params: [],
   returns: "Per signature.",
   emit: "function Class:Method(arg: T)",
-  description: `[\`this\`](this) is \`self\`. Bare fields become \`self.field\`. Untagged files with only \`Class::\` \`return\` the table (ModuleScript).
+  description: `[\`this\`](this) / [\`@this\`](this) is \`self\`. Bare fields become \`self.field\`. \`@janitor\` is \`self.janitor\`. Untagged files with only \`Class::\` \`return\` the table (ModuleScript).
 
 Construct **one** service in [\`init()\`](init) and use it from lambdas.`,
   exampleClpp: `void LeaderstatsServer::OnPlayer(Player* player) {
@@ -1437,13 +1467,13 @@ add({
   title: "Fire",
   header: "Signals",
   summary: "Send a payload to every current listener of a `signal`.",
-  syntax: "name::Fire(...);",
+  syntax: "name.Fire(...);",
   params: [{ name: "...", type: "T...", desc: "Must match `signal<T...>`." }],
   returns: "`void`.",
   emit: "name:Fire(...)",
   description: `This is **send**. Listening is [\`Connect\`](Connect) / [\`Once\`](Once) / [\`~>\`](operator-janitor).`,
   exampleClpp: `signal<Player*, int> OnCoinsUpdated;
-OnCoinsUpdated::Fire(player, 500);`,
+OnCoinsUpdated.Fire(player, 500);`,
   exampleLuau: `local OnCoinsUpdated = __signal()
 OnCoinsUpdated:Fire(player, 500)`,
   see: ["signal-type", "Connect", "Once", "Wait"],
@@ -1460,7 +1490,7 @@ name~>Connect(fn);`,
   returns: "A connection with `:Disconnect()`.",
   emit: "name:Connect(fn)  — or janitor:Add(..., \"Disconnect\")",
   description: `Works on \`signal<T>\`, RBXScriptSignals (\`PlayerAdded\`), and anything with \`:Connect\`.`,
-  exampleClpp: `players::PlayerAdded::Connect(func [](Player* player) {
+  exampleClpp: `players.PlayerAdded::Connect(func (Player* player) {
     post(player.Name);
 });`,
   exampleLuau: `players.PlayerAdded:Connect(function(player: Player)
@@ -1480,7 +1510,7 @@ name~>Once(fn);`,
   returns: "A connection.",
   emit: "name:Once(fn)",
   description: `Use for “first player only”, one-shot setup, or handshake events.`,
-  exampleClpp: `players::PlayerAdded~>Once(func [](Player* player) {
+  exampleClpp: `players.PlayerAdded~>Once(func (Player* player) {
     post("First player only");
 });`,
   exampleLuau: `janitor:Add(players.PlayerAdded:Once(function(player: Player)
@@ -1494,12 +1524,12 @@ add({
   title: "Wait",
   header: "Signals",
   summary: "Yield until the next `Fire` (or next RBXScriptSignal fire).",
-  syntax: "auto payload = name::Wait();",
+  syntax: "auto payload = name.Wait();",
   params: [],
   returns: "The next payload (possibly multiple values).",
   emit: "name:Wait()",
   description: `Blocks the current thread. Prefer [\`Connect\`](Connect) for ongoing work. Combine with [\`await\`](await) only if \`Wait\` is Promise-like — engine signals yield directly.`,
-  exampleClpp: `OnCoinsUpdated::Wait();`,
+  exampleClpp: `OnCoinsUpdated.Wait();`,
   exampleLuau: `OnCoinsUpdated:Wait()`,
   see: ["Fire", "Connect", "async"],
 });
@@ -1509,12 +1539,12 @@ add({
   title: "GetPropertyChangedSignal",
   header: "Signals · Instance",
   summary: "Engine signal for one Instance property. Listen with `~>` or `::Connect`.",
-  syntax: `obj::GetPropertyChangedSignal("Name")~>Connect(fn);`,
+  syntax: `obj.GetPropertyChangedSignal("Name")~>Connect(fn);`,
   params: [{ name: "name", type: "string", desc: "Property name, e.g. `\"Transparency\"`." }],
   returns: "An RBXScriptSignal.",
   emit: "obj:GetPropertyChangedSignal(\"Name\")",
   description: `The callback receives no property value on some engine signals — read \`obj.Property\` inside the listener.`,
-  exampleClpp: `part::GetPropertyChangedSignal("Transparency")~>Connect(func []() {
+  exampleClpp: `part.GetPropertyChangedSignal("Transparency")~>Connect(func () {
     post(part.Transparency);
 });`,
   exampleLuau: `part:GetPropertyChangedSignal("Transparency"):Connect(function()
@@ -1529,12 +1559,12 @@ add({
   header: "Observables",
   summary: "Listen to an `observable`'s `Changed`. Argument is the new `.Value`.",
   syntax: "name.OnChange(fn);",
-  params: [{ name: "fn", type: "func", desc: "`[](T newValue) { }`." }],
+  params: [{ name: "fn", type: "func", desc: "`func (T newValue) { }`." }],
   returns: "A connection.",
   emit: "name.Changed:Connect(fn)",
   description: `Only for [\`observable T\`](observable). For arbitrary Instance properties use [\`GetPropertyChangedSignal\`](GetPropertyChangedSignal).`,
   exampleClpp: `observable int coins = 100;
-coins.OnChange(func [](int newValue) {
+coins.OnChange(func (int newValue) {
     post("now " .: newValue);
 });`,
   exampleLuau: `coins.Changed:Connect(function(newValue: number)
@@ -1739,8 +1769,8 @@ add({
   params: [],
   returns: "None.",
   emit: "require(DataService)",
-  description: `Access the singleton with [\`:\`](operator-table): \`DataService:Server::WaitFor(player)\`.`,
-  exampleClpp: `DataService:Server::Init(DataServiceOptions {
+  description: `Access the singleton with [\`.\`](operator-property): \`DataService.Server.WaitFor(player)\`.`,
+  exampleClpp: `DataService.Server.Init(DataServiceOptions {
     .Template = playerData,
     .StoreName = "PlayerData",
     .UseMock = true
@@ -1877,7 +1907,7 @@ The generated **API** tab ([Builtins](/CLPP/api/Builtins), [Operators](/CLPP/api
 <h3>Functions &amp; OOP</h3>
 <ul>
 <li><a href="/CLPP/docs/reference/function">function</a></li>
-<li><a href="/CLPP/docs/reference/lambda">lambda []</a></li>
+<li><a href="/CLPP/docs/reference/lambda">func (...)</a></li>
 <li><a href="/CLPP/docs/reference/struct">struct / class</a></li>
 <li><a href="/CLPP/docs/reference/class-method">Class::Method</a></li>
 <li><a href="/CLPP/docs/reference/access-labels">public / private</a></li>

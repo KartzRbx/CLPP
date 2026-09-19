@@ -20,6 +20,7 @@ struct-decl = ( "struct" | "class" ) ident "{" { struct-member } "}" ";" ;
 struct-member =
     access-label
   | "static" "constexpr" type ident "=" expr ";"
+  | ident ":" type [ "=" expr ] ";"
   | type ident [ "=" expr ] ";"
   | type ident "(" [ param-list ] ")" ";"
   ;
@@ -28,7 +29,7 @@ function-def = type ident "(" [ param-list ] ")" block ;
 method-def   = type ident "::" ident "(" [ param-list ] ")" block ;
 
 param-list = param { "," param } ;
-param      = type ident ;
+param      = type ident | ident ":" type ;
 
 type =
     "void" | "int" | "float" | "double" | "bool" | "string" | "func" | "auto"
@@ -82,6 +83,7 @@ expr =
   | expr ":" ident [ "(" arg-list ")" ]
   | expr "." ident [ "(" arg-list ")" ]
   | ident "(" arg-list ")"
+  | "@this" | "@" ident
   | "new" ident "(" [ arg-list ] ")"
   | "GetService" "<" ident ">" "(" ")"
   | "static_cast" "<" type ">" "(" expr ")"
@@ -92,9 +94,9 @@ expr =
   | "(" expr ")"
   ;
 
-lambda = [ "func" ] "[]" [ "(" [ param-list ] ")" ] block ;
+lambda = "func" "(" [ param-list ] ")" block ;
 ```
 
-Concatenation uses `.:` (not `..`). `::` is method/scope; `:` is table; `.` is property.
+Concatenation uses `.:` (not `..`). `.` is property / instance method; `:` is type / protected call; `::` is static / manual Connect. `@this` / `@ident` is the receiver inside `Class::Method` (not an attribute; `[[server]]` is unchanged).
 
 Extra mapped tokens, not pure grammar: `string_concat`, `to_string`, `to_number`, `to_bool`, `cout`, `cerr`, `endl`, `post`, `warn`, `report`.

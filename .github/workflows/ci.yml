@@ -15,4 +15,5 @@ jobs:
         with:
           node-version: "20"
       - run: node editors/vscode/intellisense.test.js
+      - run: node editors/vscode/lsp-server.test.js
       - run: cargo test

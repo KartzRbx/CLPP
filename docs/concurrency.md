@@ -8,7 +8,7 @@ title: Async, spawn, parallel
 
 ```clpp
 async Data* FetchData(Player* player) {
-    Data* data = await DataService:Server::WaitFor(player);
+    Data* data = await DataService.Server.WaitFor(player);
     return data;
 }
 ```
@@ -39,8 +39,8 @@ Emits `task.desynchronize()` / `task.synchronize()` for Parallel Luau actors. Ke
 ## pcall + destructure
 
 ```clpp
-auto [ok, result] = pcall(func []() {
-    return DataStore::GetAsync("PlayerData");
+auto [ok, result] = pcall(func () {
+    return DataStore.GetAsync("PlayerData");
 });
 guard (ok) else {
     warn("store failed");

@@ -40,7 +40,7 @@ Prefer `post` over legacy [`cout`](cout).
 ```clpp
 post("hello");
 post("coins:", 100);
-post("online: " .: players::GetPlayers());
+post("online: " .: players.GetPlayers());
 ```
 
 Emits:

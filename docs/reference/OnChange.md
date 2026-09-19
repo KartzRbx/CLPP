@@ -19,7 +19,7 @@ name.OnChange(fn);
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `fn` | `func` | `[](T newValue) { }`. |
+| `fn` | `func` | `func (T newValue) { }`. |
 
 ## Return value
 
@@ -37,7 +37,7 @@ Only for [`observable T`](observable). For arbitrary Instance properties use [`G
 
 ```clpp
 observable int coins = 100;
-coins.OnChange(func [](int newValue) {
+coins.OnChange(func (int newValue) {
     post("now " .: newValue);
 });
 ```
