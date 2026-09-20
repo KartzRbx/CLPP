@@ -4,10 +4,12 @@ const Janitor = require(ClppLibs.Janitor)
 
 local HelloServer = {}
 
+-- hello.server.clpp:7
 function HelloServer:Greet(player: Player)
 	print("Player name: " .. player.Name)
 end
 
+-- hello.server.clpp:11
 const function init()
 	local __janitor = Janitor.new()
 	local hello: HelloServer = HelloServer

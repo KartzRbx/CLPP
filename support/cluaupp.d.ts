@@ -1,4 +1,4 @@
-/** Stable CL++ ↔ Cluaupp contract (CL++ 0.3.3). Cluaupp invokes the `clpp` binary.
+/** Stable CL++ ↔ Cluaupp contract (CL++ 0.4.0). Cluaupp invokes the `clpp` binary.
  *  Full CLI handoff: docs/cluaupp-032.md
  *  Anonymous callbacks in generated CL++ must be `func (params) { }`.
  *  See docs/cluaupp-callbacks.md — `func [](…)` / `[]() { }` do not compile.
@@ -51,11 +51,13 @@ export interface LanguageManifest {
 /**
  * CLI
  *
- *   clpp --version                  // must be 0.3.3
+ *   clpp --version                  // must be 0.4.0
  *   clpp api compile --file path.server.clpp
  *   echo '{"source":"...","fileName":"x.server.clpp"}' | clpp api compile
  *   clpp api manifest
+ *   clpp api complete | hover | symbols | definition
  *   clpp compile file.clpp --json
+ *   clpp fmt file.clpp
  *   clpp install
  */
 export {};

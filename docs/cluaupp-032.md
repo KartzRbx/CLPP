@@ -1,17 +1,17 @@
 ---
-title: Update Cluaupp for CL++ 0.3.2
+title: Update Cluaupp for CL++ 0.4
 description: Full CLI, JSON, and language contract so Cluaupp can target the current compiler.
 ---
 
-# Update Cluaupp for CL++ 0.3.2
+# Update Cluaupp for CL++ 0.4
 
-This page is the **handoff for the Cluaupp CLI**. Pin **CL++ 0.3.3** (same JSON contract as 0.3.2). Call the `clpp` binary. Do not reimplement the compiler, do not embed a VM, and do not generate C++-looking source that 0.3.3 rejects.
+This page is the **handoff for the Cluaupp CLI**. Pin **CL++ 0.4.0** (compile JSON is the same shape as 0.3.2 / 0.3.3). Call the `clpp` binary. Do not reimplement the compiler, do not embed a VM, and do not generate C++-looking source that 0.4.0 rejects.
 
-CL++ is the **language** (parse → check → Luau). Cluaupp owns **Roblox wiring**: generated Instance headers, Rojo, project `init`, package install.
+CL++ is the **language** (parse → analysis → Luau). Cluaupp owns **Roblox wiring**: generated Instance headers, Rojo, project `init`, package install.
 
 ```mermaid
 flowchart LR
-  cluaupp["Cluaupp CLI"] -->|"JSON stdin"| clpp["clpp 0.3.3"]
+  cluaupp["Cluaupp CLI"] -->|"JSON stdin"| clpp["clpp 0.4.0"]
   clpp -->|"CompileArtifact JSON"| cluaupp
   cluaupp -->|"luau + rojoClass"| rojo["Rojo / Studio"]
 ```
@@ -22,13 +22,13 @@ Canonical types: [`support/cluaupp.d.ts`](https://github.com/KartzRbx/CLPP/blob/
 
 | Check | Command | Expect |
 | --- | --- | --- |
-| Version | `clpp --version` | `clpp 0.3.3` |
-| Manifest | `clpp api manifest` | `"version": "0.3.3"`, `"id": "clpp"` |
+| Version | `clpp --version` | `clpp 0.4.0` |
+| Manifest | `clpp api manifest` | `"version": "0.4.0"`, `"id": "clpp"` |
 
 Install (Windows):
 
-- [clpp-setup.exe](https://github.com/KartzRbx/CLPP/releases/download/v0.3.3/clpp-setup.exe)
-- Or `clpp setup` from a 0.3.3 binary
+- [clpp-setup.exe](https://github.com/KartzRbx/CLPP/releases/download/v0.4.0/clpp-setup.exe)
+- Or `clpp setup` from a 0.4.0 binary
 
 Locate the exe (in this order):
 
@@ -36,9 +36,9 @@ Locate the exe (in this order):
 2. `clpp` on `PATH`
 3. `%LOCALAPPDATA%\Programs\CLPP\clpp.exe`
 
-Refuse to compile if `clpp --version` is older than **0.3.3**. A 0.1.0 / 0.2.x / 0.3.2 binary will miss return checks, `#include` from `src/`, and header type emit that Cluaupp must ship.
+Refuse to compile if `clpp --version` is older than **0.4.0**. A 0.1.0 / 0.2.x / 0.3.x binary will miss analysis-backed IDE APIs (`complete` / `hover` / `symbols`), `clpp fmt`, and `clpp watch`.
 
-Release: [v0.3.3](https://github.com/KartzRbx/CLPP/releases/tag/v0.3.3).
+Release: [v0.4.0](https://github.com/KartzRbx/CLPP/releases/tag/v0.4.0).
 
 ## 2. Commands Cluaupp should call
 
@@ -46,8 +46,13 @@ Release: [v0.3.3](https://github.com/KartzRbx/CLPP/releases/tag/v0.3.3).
 clpp api compile                 # JSON CompileRequest on stdin → CompileArtifact on stdout
 clpp api compile --file path     # same artifact, source read from disk
 clpp api manifest                # language metadata
+clpp api complete                # IDE: { source, fileName, line, column } 1-based
+clpp api hover
+clpp api symbols
 clpp compile path.clpp --json    # same CompileArtifact as api compile --file
 clpp build src -o out --json     # { ok, count, output, files }
+clpp fmt path.clpp               # indent (optional)
+clpp watch src -o out            # recompile on change (optional)
 ```
 
 **Default compile path for Cluaupp is `clpp api compile` with JSON on stdin.** That is the stable contract. `clpp compile` without `--json` writes Luau text only — use it for humans, not for Rojo mapping.
@@ -194,7 +199,7 @@ Show `diagnostics` in the Cluaupp UI. `error` is the first message plus miette w
 
 ### LanguageManifest (`clpp api manifest`)
 
-Confirm `version` is `0.3.2`. Use `tags` for Rojo scaffolding if you generate files:
+Confirm `version` is `0.4.0`. Use `tags` for Rojo scaffolding if you generate files:
 
 | pattern | scriptKind | rojoClass |
 | --- | --- | --- |
@@ -322,7 +327,7 @@ Do not generate `continue`, ternary `? :`, `do/while`, `try/catch`, `goto`.
 
 ## 5. Stop generating this
 
-| Old Cluaupp / C++ habit | 0.3.2 |
+| Old Cluaupp / C++ habit | 0.4.0 |
 | --- | --- |
 | `Player* player` | `Player player` |
 | `player->Name` | `player.Name` |
@@ -332,13 +337,13 @@ Do not generate `continue`, ternary `? :`, `do/while`, `try/catch`, `goto`.
 | `players.PlayerAdded:Connect` as the default | `~>Connect` (Janitor) or `::Connect` (manual) |
 | `int main()` | `void init()` |
 | `std::` / `new int` / `delete` | not in the language |
-| `clpp` 0.1.0 on PATH | replace with 0.3.2 (`clpp setup`) |
+| `clpp` 0.1.0 on PATH | replace with 0.4.0 (`clpp setup`) |
 
 If a Cluaupp test still asserts that `func []` compiles, invert it: `ok` must be `false` and the diagnostic must mention `func (params)`.
 
 ## 6. Golden scaffolds
 
-Copy these shapes. They compile on 0.3.2.
+Copy these shapes. They compile on 0.4.0.
 
 ### Hello Script (`hello.server.clpp`)
 
@@ -391,7 +396,7 @@ CL++ will not:
 
 Cluaupp should:
 
-1. Ensure `clpp` 0.3.2 is on the machine (or ship / download that exact release).
+1. Ensure `clpp` 0.4.0 is on the machine (or ship / download that exact release).
 2. Generate headers from the API dump into the include path `clpp` searches.
 3. Create `.server.clpp` / `.client.clpp` / `.clh` using the language above.
 4. Call `clpp api compile` per file (or `clpp build` for a tree).
@@ -399,24 +404,24 @@ Cluaupp should:
 6. Vendor or `require` each name in `artifact.libraries`.
 7. After shipping a new `clpp`, tell users to `clpp setup` (or `clpp install`) and **reload** the editor so `@this` highlighting and the `func (` lint match the compiler.
 
-The editor LSP (`editors/vscode`, `clpp.lsp.enabled`) is **not** a Cluaupp API. Do not speak JSON-RPC to it. Completions and diagnostics in Cursor/VS Code come from the language pack; Cluaupp only needs `clpp api compile`.
+The editor LSP (`editors/vscode`, `clpp.lsp.enabled`) is **not** a Cluaupp API. Do not speak JSON-RPC to it. Completions in Cursor/VS Code come from `clpp api complete` (analysis). Cluaupp only **needs** `clpp api compile` for Rojo.
 
 ## 8. Cluaupp repo checklist
 
-1. **Dependency** — document / download CL++ **0.3.2**; fail fast on older `clpp --version`.
+1. **Dependency** — document / download CL++ **0.4.0**; fail fast on older `clpp --version`.
 2. **Spawn** — `clpp api compile` with JSON stdin; parse stdout; surface `diagnostics`.
 3. **`init` templates** — hello world, leaderstats, Fusion/Vide, DataService: `func (`, `.:`, `.` methods, `~>Connect`, `Player player`, `@this` only in `Class::Method`.
 4. **Snippets / codegen** — delete string templates containing `func []`, `[](`, `->`, `Player*`.
-5. **Golden `.clpp` fixtures** — rewrite and recompile with 0.3.2; commit the new Luau if you snapshot emit.
+5. **Golden `.clpp` fixtures** — rewrite and recompile with 0.4.0; commit the new Luau if you snapshot emit.
 6. **Docs / UI copy** — language id `clpp`; fences on sites Cluaupp controls should not be `cpp`.
-7. **Tests** — `func []` fails; `Player*` is not produced; `clpp api manifest` version is `0.3.2`.
+7. **Tests** — `func []` fails; `Player*` is not produced; `clpp api manifest` version is `0.4.0`.
 8. **Headers** — keep generating `clpp/generated/instances.clh`; do not expect CL++ to ship a live dump.
 
 ## 9. Quick verification
 
 ```bash
 clpp --version
-# clpp 0.3.2
+# clpp 0.4.0
 
 echo '{"source":"void init() { post(\"ok\"); }","fileName":"init.server.clpp"}' | clpp api compile
 # ok true, rojoClass Script, luau contains print("ok")

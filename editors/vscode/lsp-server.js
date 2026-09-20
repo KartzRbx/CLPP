@@ -7,6 +7,7 @@ const { createFramer, writeMessage } = require("./jsonrpc");
 const { loadEngine, lintDocument } = require("./intellisense");
 const { compileDiagnostics, compileDiagnosticsAsync, mergeIssues } = require("./compile-api");
 const { buildCompletionItems, hoverText } = require("./complete");
+const rustApi = require("./rust-api");
 const { extrasFor, scheduleLoad } = require("./include-cache");
 const {
   findDefinitions,
@@ -83,8 +84,7 @@ function createSession() {
 
   function collectDiagnosticsSync(doc) {
     const compiler = compileDiagnostics(doc.text, doc.filePath || "untitled.clpp", folders);
-    const lint = lintDocument(doc.text);
-    return mergeIssues(compiler, lint);
+    return mergeIssues(compiler, compiler && compiler.length ? [] : lintDocument(doc.text));
   }
 
   function publishDiagnostics(uri, issues, send) {
@@ -127,9 +127,22 @@ function createSession() {
         result: {
           capabilities: {
             textDocumentSync: 1,
-            completionProvider: { triggerCharacters: [".", ":", ">", "@", "\"", "/"] },
+            completionProvider: {
+              triggerCharacters: [".", ":", ">", "@", "\"", "/", "<"],
+              resolveProvider: false,
+            },
             hoverProvider: true,
             definitionProvider: true,
+            referencesProvider: true,
+            renameProvider: true,
+            signatureHelpProvider: { triggerCharacters: ["(", ","] },
+            documentSymbolProvider: true,
+            foldingRangeProvider: true,
+            documentHighlightProvider: true,
+            inlayHintProvider: true,
+            codeActionProvider: true,
+            documentFormattingProvider: true,
+            workspaceSymbolProvider: true,
             workspace: { workspaceFolders: { supported: true, changeNotifications: true } },
           },
         },
@@ -206,26 +219,45 @@ function createSession() {
         send({ jsonrpc: "2.0", id, result: [] });
         return;
       }
-      const lineText = lineAt(doc.text, params.position);
-      const offset = positionToOffset(doc.text, params.position);
-      const items = buildCompletionItems(
-        engine,
-        data,
-        doc.text,
-        doc.filePath,
-        lineText,
-        offset,
-        folders,
-        extrasFor(doc.filePath)
-      );
-      send({
-        jsonrpc: "2.0",
-        id,
-        result: items.map((item) => ({
-          label: item.label,
-          detail: item.detail || "",
-          kind: lspCompletionKind(item.kind),
-        })),
+      rustApi.apiComplete(doc.text, doc.filePath, params.position, folders, (result) => {
+        const rustItems = (result && result.items) || [];
+        if (rustItems.length) {
+          send({
+            jsonrpc: "2.0",
+            id,
+            result: rustItems.map((item) => ({
+              label: item.label,
+              detail: item.detail || "",
+              kind: lspCompletionKind(item.kind),
+              insertText: item.insertText || item.label,
+              insertTextFormat: item.insertText && item.insertText.includes("$") ? 2 : 1,
+            })),
+          });
+          return;
+        }
+        const lineText = lineAt(doc.text, params.position);
+        const offset = positionToOffset(doc.text, params.position);
+        const items = buildCompletionItems(
+          engine,
+          data,
+          doc.text,
+          doc.filePath,
+          lineText,
+          offset,
+          folders,
+          extrasFor(doc.filePath)
+        );
+        send({
+          jsonrpc: "2.0",
+          id,
+          result: items.map((item) => ({
+            label: item.label,
+            detail: item.detail || "",
+            kind: lspCompletionKind(item.kind),
+            insertText: item.kind === "Function" || item.kind === "Method" ? `${item.label}($1)` : item.label,
+            insertTextFormat: item.kind === "Function" || item.kind === "Method" ? 2 : 1,
+          })),
+        });
       });
       return;
     }
@@ -235,21 +267,29 @@ function createSession() {
         send({ jsonrpc: "2.0", id, result: null });
         return;
       }
-      const hit = wordAt(doc.text, params.position);
-      const detail = hoverText(
-        engine,
-        doc.text,
-        doc.filePath,
-        hit && hit.word,
-        folders,
-        extrasFor(doc.filePath)
-      );
-      send({
-        jsonrpc: "2.0",
-        id,
-        result: detail
-          ? { contents: { kind: "markdown", value: detail } }
-          : null,
+      rustApi.apiHover(doc.text, doc.filePath, params.position, folders, (result) => {
+        if (result && result.hover && result.hover.contents) {
+          send({
+            jsonrpc: "2.0",
+            id,
+            result: { contents: { kind: "markdown", value: result.hover.contents } },
+          });
+          return;
+        }
+        const hit = wordAt(doc.text, params.position);
+        const detail = hoverText(
+          engine,
+          doc.text,
+          doc.filePath,
+          hit && hit.word,
+          folders,
+          extrasFor(doc.filePath)
+        );
+        send({
+          jsonrpc: "2.0",
+          id,
+          result: detail ? { contents: { kind: "markdown", value: detail } } : null,
+        });
       });
       return;
     }
@@ -259,10 +299,250 @@ function createSession() {
         send({ jsonrpc: "2.0", id, result: [] });
         return;
       }
-      send({
-        jsonrpc: "2.0",
-        id,
-        result: findDefinitions(doc.text, doc.filePath, params.position, folders, methods),
+      rustApi.apiDefinition(doc.text, doc.filePath, params.position, folders, (result) => {
+        const locs = (result && result.locations) || [];
+        if (locs.length) {
+          send({
+            jsonrpc: "2.0",
+            id,
+            result: locs.map((loc) => locationOf(doc.uri, loc)),
+          });
+          return;
+        }
+        send({
+          jsonrpc: "2.0",
+          id,
+          result: findDefinitions(doc.text, doc.filePath, params.position, folders, methods),
+        });
+      });
+      return;
+    }
+    if (method === "textDocument/references" || method === "textDocument/documentHighlight") {
+      const doc = getDoc(params.textDocument.uri);
+      if (!doc) {
+        send({ jsonrpc: "2.0", id, result: [] });
+        return;
+      }
+      rustApi.apiReferences(doc.text, doc.filePath, params.position, folders, (result) => {
+        const locs = (result && result.locations) || [];
+        send({
+          jsonrpc: "2.0",
+          id,
+          result: locs.map((loc) =>
+            method === "textDocument/documentHighlight"
+              ? { range: rangeOf(loc), kind: 1 }
+              : locationOf(doc.uri, loc)
+          ),
+        });
+      });
+      return;
+    }
+    if (method === "textDocument/rename") {
+      const doc = getDoc(params.textDocument.uri);
+      if (!doc) {
+        send({ jsonrpc: "2.0", id, result: null });
+        return;
+      }
+      const newName = params.newName || "";
+      rustApi.apiReferences(doc.text, doc.filePath, params.position, folders, (result) => {
+        const locs = (result && result.locations) || [];
+        send({
+          jsonrpc: "2.0",
+          id,
+          result: {
+            changes: {
+              [doc.uri]: locs.map((loc) => ({
+                range: rangeOf(loc),
+                newText: newName,
+              })),
+            },
+          },
+        });
+      });
+      return;
+    }
+    if (method === "textDocument/signatureHelp") {
+      const doc = getDoc(params.textDocument.uri);
+      if (!doc) {
+        send({ jsonrpc: "2.0", id, result: null });
+        return;
+      }
+      rustApi.apiSignature(doc.text, doc.filePath, params.position, folders, (result) => {
+        const sig = result && result.signature;
+        send({
+          jsonrpc: "2.0",
+          id,
+          result: sig
+            ? {
+                signatures: [
+                  {
+                    label: sig.label,
+                    parameters: (sig.parameters || []).map((p) => ({ label: p })),
+                  },
+                ],
+                activeParameter: sig.activeParameter || 0,
+              }
+            : null,
+        });
+      });
+      return;
+    }
+    if (method === "textDocument/documentSymbol") {
+      const doc = getDoc(params.textDocument.uri);
+      if (!doc) {
+        send({ jsonrpc: "2.0", id, result: [] });
+        return;
+      }
+      rustApi.apiSymbols(doc.text, doc.filePath, folders, (result) => {
+        const symbols = (result && result.symbols) || [];
+        send({
+          jsonrpc: "2.0",
+          id,
+          result: symbols.map((sym) => ({
+            name: sym.name,
+            kind: lspSymbolKind(sym.kind),
+            detail: sym.detail || "",
+            range: {
+              start: { line: sym.line || 0, character: sym.column || 0 },
+              end: { line: Math.max(sym.end_line || sym.line || 0, sym.line || 0), character: 0 },
+            },
+            selectionRange: {
+              start: { line: sym.line || 0, character: sym.column || 0 },
+              end: { line: sym.line || 0, character: (sym.column || 0) + (sym.name || "").length },
+            },
+          })),
+        });
+      });
+      return;
+    }
+    if (method === "textDocument/foldingRange") {
+      const doc = getDoc(params.textDocument.uri);
+      if (!doc) {
+        send({ jsonrpc: "2.0", id, result: [] });
+        return;
+      }
+      rustApi.apiFolding(doc.text, doc.filePath, folders, (result) => {
+        const ranges = Array.isArray(result) ? result : [];
+        send({
+          jsonrpc: "2.0",
+          id,
+          result: ranges.map((r) => ({
+            startLine: r.startLine || 0,
+            endLine: r.endLine || 0,
+            kind: r.kind || "region",
+          })),
+        });
+      });
+      return;
+    }
+    if (method === "textDocument/inlayHint") {
+      const doc = getDoc(params.textDocument.uri);
+      if (!doc) {
+        send({ jsonrpc: "2.0", id, result: [] });
+        return;
+      }
+      rustApi.apiInlay(doc.text, doc.filePath, folders, (result) => {
+        const hints = Array.isArray(result) ? result : [];
+        send({
+          jsonrpc: "2.0",
+          id,
+          result: hints.map((h) => ({
+            position: { line: h.line || 0, character: h.column || 0 },
+            label: h.label || "",
+            kind: h.kind === "Parameter" ? 2 : 1,
+          })),
+        });
+      });
+      return;
+    }
+    if (method === "textDocument/formatting") {
+      const doc = getDoc(params.textDocument.uri);
+      if (!doc) {
+        send({ jsonrpc: "2.0", id, result: [] });
+        return;
+      }
+      rustApi.apiFormat(doc.text, doc.filePath, folders, (result) => {
+        const text = result && result.text;
+        if (!text || text === doc.text) {
+          send({ jsonrpc: "2.0", id, result: [] });
+          return;
+        }
+        const lines = doc.text.split(/\r?\n/);
+        send({
+          jsonrpc: "2.0",
+          id,
+          result: [
+            {
+              range: {
+                start: { line: 0, character: 0 },
+                end: { line: Math.max(0, lines.length - 1), character: (lines[lines.length - 1] || "").length },
+              },
+              newText: text,
+            },
+          ],
+        });
+      });
+      return;
+    }
+    if (method === "textDocument/codeAction") {
+      const doc = getDoc(params.textDocument.uri);
+      if (!doc) {
+        send({ jsonrpc: "2.0", id, result: [] });
+        return;
+      }
+      const pos = (params.range && params.range.start) || { line: 0, character: 0 };
+      rustApi.apiActions(doc.text, doc.filePath, pos, folders, (result) => {
+        const actions = Array.isArray(result) ? result : [];
+        send({
+          jsonrpc: "2.0",
+          id,
+          result: actions.map((a) => ({
+            title: a.title,
+            kind: a.kind || "quickfix",
+            edit: {
+              changes: {
+                [doc.uri]: [
+                  {
+                    range: {
+                      start: { line: a.line || 0, character: a.column || 0 },
+                      end: { line: a.end_line || 0, character: a.end_column || 0 },
+                    },
+                    newText: a.new_text || "",
+                  },
+                ],
+              },
+            },
+          })),
+        });
+      });
+      return;
+    }
+    if (method === "workspace/symbol") {
+      const first = documents.values().next().value;
+      if (!first) {
+        send({ jsonrpc: "2.0", id, result: [] });
+        return;
+      }
+      rustApi.apiSymbols(first.text, first.filePath, folders, (result) => {
+        const query = ((params && params.query) || "").toLowerCase();
+        const symbols = ((result && result.symbols) || []).filter(
+          (s) => !query || s.name.toLowerCase().includes(query)
+        );
+        send({
+          jsonrpc: "2.0",
+          id,
+          result: symbols.map((sym) => ({
+            name: sym.name,
+            kind: lspSymbolKind(sym.kind),
+            location: {
+              uri: first.uri,
+              range: {
+                start: { line: sym.line || 0, character: 0 },
+                end: { line: sym.line || 0, character: 1 },
+              },
+            },
+          })),
+        });
       });
       return;
     }
@@ -283,7 +563,7 @@ function createSession() {
         if (!doc) {
           return;
         }
-        const lint = lintDocument(doc.text);
+        const lint = [];
         compileDiagnosticsAsync(doc.text, doc.filePath || "untitled.clpp", folders, (compiler) => {
           if (!documents.has(uri)) {
             return;
@@ -313,6 +593,35 @@ function createSession() {
       return issues;
     },
   };
+}
+
+function locationOf(uri, loc) {
+  const line = Math.max(0, (loc.line || 1) - 1);
+  const character = Math.max(0, (loc.column || 1) - 1);
+  const nameLen = Math.max(1, (loc.name || "x").length);
+  return {
+    uri,
+    range: {
+      start: { line, character },
+      end: { line, character: character + nameLen },
+    },
+  };
+}
+
+function rangeOf(loc) {
+  return locationOf("", loc).range;
+}
+
+function lspSymbolKind(kind) {
+  const map = {
+    Function: 12,
+    Method: 6,
+    Class: 5,
+    Field: 8,
+    Variable: 13,
+    File: 1,
+  };
+  return map[kind] || 13;
 }
 
 function lspCompletionKind(kind) {

@@ -3,17 +3,20 @@ title: Compiler pipeline
 description: How CL++ source becomes Luau. There is no bytecode VM.
 ---
 
-CL++ is a **source-to-source** compiler. Pest parses `.clpp` / `.clh` / `.clp`. Semantic check runs on that AST. Codegen writes Luau. There is no CL++ virtual machine, no opcode table, and no C++ embedding API — host tools call `clpp compile` or `clpp api compile`.
+CL++ is a **source-to-source** compiler. Pest parses `.clpp` / `.clh` / `.clp`. **Analysis** builds scopes and feeds the editor. Codegen writes Luau. There is no CL++ virtual machine, no opcode table, and no C++ embedding API — host tools call `clpp compile` or `clpp api compile`.
+
+How this maps to the [Luau](https://github.com/luau-lang/luau) repo: [Luau engineering map](../architecture/luau-mapping).
 
 ```mermaid
 flowchart TD
   src["Source .clpp / .clh / .clp"] --> pp["Preprocessor includes and pragma"]
   pp --> pest["Pest grammar"]
-  pest --> ast["AST"]
-  ast --> check["Semantic check"]
-  check --> emit["Luau codegen"]
+  pest --> ast["AST plus spans"]
+  ast --> analysis["Analysis: check, symbols, complete_at"]
+  analysis --> emit["Luau codegen"]
   emit --> out[".luau file"]
-  src --> lsp["editors/vscode + tools/lsp"]
+  analysis --> api["clpp api complete / hover / symbols"]
+  api --> lsp["editors/vscode LSP"]
   out --> rojo["Rojo / Cluaupp"]
 ```
 
@@ -21,23 +24,26 @@ flowchart TD
 
 | Stage | Where | Output |
 | --- | --- | --- |
-| Include / pragma | `src/preprocess` | One translation unit |
-| Parse | `src/parser/grammar.pest` | AST |
-| Check | `src/semantic/check.rs` | Diagnostics; `@this` only in `Class::Method` |
-| Emit | `src/codegen/luau.rs` | Luau (`function Class:Method`, `self`, `game:GetService`) |
-| Editor | `editors/vscode` | Highlight, completion, hover, LSP |
-
-## Grammar
-
-The formal syntax is the [EBNF subset](grammar) plus the Pest file in the repo. That is the parser. It is not Tree-sitter and not ISO C++.
+| Include / pragma | `src/preprocess` | One translation unit; comments keep source lines |
+| Parse | `src/parser/grammar.pest` | AST (recovery for the IDE after the first Pest error) |
+| Analysis | `src/analysis` + `src/semantic/check.rs` | Diagnostics, scopes, completions, hover, outline |
+| Builtins | `src/builtins` | One table for emit, manifest, and IDE |
+| Emit | `src/codegen/emit` | Luau (`function Class:Method`, `self`, `game:GetService`) |
+| Editor | `editors/vscode` | LSP calls `clpp api complete` |
 
 ## Host tools
 
 Cluaupp (and anything else) should use:
 
 ```bash
-clpp api compile    # JSON stdin/stdout
-clpp manifest       # extensions, tags, operators
+clpp api compile      # JSON stdin/stdout
+clpp api complete     # { source, fileName, line, column } 1-based
+clpp api hover
+clpp api symbols
+clpp api definition
+clpp manifest         # extensions, tags, operators, builtins
+clpp fmt              # indent
+clpp watch            # recompile on change
 ```
 
-See [Update Cluaupp for CL++ 0.3.2](../cluaupp-032) and [Cluaupp support](../cluaupp-support). Current compiler: **0.3.3**.
+See [Update Cluaupp for CL++ 0.4](../cluaupp-032), [CL++ + luau-lsp](../architecture/luau-lsp), and [Cluaupp support](../cluaupp-support). Current compiler: **0.4.0**.

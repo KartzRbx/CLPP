@@ -49,6 +49,8 @@ clpp setup
 ```bash
 clpp compile examples/hello/hello.server.clpp
 clpp build examples -o out
+clpp fmt examples/hello/hello.server.clpp
+clpp watch examples -o out
 ```
 
 Next: [Your first script](hello-world).

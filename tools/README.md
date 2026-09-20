@@ -1,7 +1,7 @@
 # tools/
 
-Tooling around the language.
+Tooling around the language. The compiler binary owns the real commands.
 
-- `fmt/` — code formatter
-- `lsp/` — language server (autocomplete, editor diagnostics)
-- `repl/` — interactive loop
+- `fmt/` — `clpp fmt` / `clpp api format`
+- `lsp/` — thin stdio wrapper around `editors/vscode/lsp-server.js` (`clpp api complete`)
+- `repl/` — no VM; compile and run Luau instead

@@ -20,7 +20,7 @@ clpp api compile --file src/server/Leaderstats.server.clpp
 clpp api manifest
 ```
 
-**Updating the Cluaupp CLI to this compiler:** [Update Cluaupp for CL++ 0.3.2](cluaupp-032) — pin **0.3.3**.
+**Updating the Cluaupp CLI to this compiler:** [Update Cluaupp for CL++ 0.4](cluaupp-032) — pin **0.4.0**.
 
 TypeScript types: `support/cluaupp.d.ts`. Details: [Cluaupp support](cluaupp-support).
 

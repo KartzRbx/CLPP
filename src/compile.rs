@@ -1,7 +1,7 @@
 use crate::ast::Program;
 use crate::codegen::luau::emit;
 use crate::error::ClppError;
-use crate::parser::parse;
+use crate::parser::{parse, parse_with_diagnostics};
 use crate::preprocess::{is_header, preprocess, remap_line, script_kind, to_luau_path};
 use crate::support::{CompileArtifact, CompileDiagnostic, CompileRequest};
 use miette::{IntoDiagnostic, Result};
@@ -54,19 +54,26 @@ pub fn compile_artifact_source(
         ctx.strict = strict;
         ctx.nonstrict = !strict;
     }
-    let program: Program = match parse(&expanded, &file_name) {
-        Ok(program) => program,
+    let (program, parse_diags): (Program, Vec<CompileDiagnostic>) =
+        match parse_with_diagnostics(&expanded, &file_name) {
+            Ok(pair) => pair,
+            Err(err) => return Ok(fail_report(&file_name, err, &ctx.line_map)),
+        };
+    let mut diagnostics = parse_diags
+        .into_iter()
+        .map(|d| remap_diagnostic(d, &ctx.line_map))
+        .collect::<Vec<_>>();
+    match crate::semantic::check::check_program(&program, &expanded) {
+        Ok(items) => diagnostics.extend(items.into_iter().map(|d| remap_diagnostic(d, &ctx.line_map))),
         Err(err) => return Ok(fail_report(&file_name, err, &ctx.line_map)),
     };
-    let diagnostics = match crate::semantic::check::check_program(&program, &expanded) {
-        Ok(items) => items
-            .into_iter()
-            .map(|d| remap_diagnostic(d, &ctx.line_map))
-            .collect::<Vec<_>>(),
-        Err(err) => return Ok(fail_report(&file_name, err, &ctx.line_map)),
-    };
-    if !diagnostics.is_empty() {
-        let message = diagnostics
+    let errors: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.severity != "warning")
+        .cloned()
+        .collect();
+    if !errors.is_empty() {
+        let message = errors
             .first()
             .map(|d| d.message.clone())
             .unwrap_or_else(|| "compile failed".into());
@@ -92,7 +99,7 @@ pub fn compile_artifact_source(
         rojo_class: rojo_class(ctx.is_header, kind.as_deref()),
         libraries: ctx.libraries,
         error: None,
-        diagnostics: Vec::new(),
+        diagnostics,
     })
 }
 

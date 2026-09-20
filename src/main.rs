@@ -1,7 +1,14 @@
 use clap::{Parser, Subcommand};
+use clpp::analysis::{
+    code_actions_request, complete_request, definition_request, folding_request, format_request,
+    highlight_request, hover_request, inlay_request, references_request, signature_request,
+    symbols_request, workspace_symbols, PositionRequest,
+};
 use clpp::compile::{build_dir, compile_artifact, compile_file, compile_request};
+use clpp::fmt::format_source;
 use clpp::install::{install_language, setup_machine};
 use clpp::support::{language_manifest, CompileArtifact, CompileRequest};
+use clpp::watch::watch_dir;
 use miette::{IntoDiagnostic, Result};
 use std::fs;
 use std::io::{self, Read, Write};
@@ -53,6 +60,19 @@ enum Commands {
     Setup,
     /// Language manifest (extensions, tags, operators)
     Manifest,
+    /// Format a .clpp / .clp / .clh file (indent)
+    Fmt {
+        file: PathBuf,
+        #[arg(long)]
+        write: bool,
+    },
+    /// Recompile a directory when sources change
+    Watch {
+        #[arg(default_value = ".")]
+        root: PathBuf,
+        #[arg(short, long, default_value = "out")]
+        output: PathBuf,
+    },
 }
 
 #[derive(Subcommand)]
@@ -64,6 +84,30 @@ enum ApiCommand {
     },
     /// Language metadata
     Manifest,
+    /// Completions at a 1-based line/column. JSON stdin: PositionRequest
+    Complete,
+    /// Hover at a position
+    Hover,
+    /// Document symbols / outline
+    Symbols,
+    /// Go to definition
+    Definition,
+    /// Find references
+    References,
+    /// Signature help
+    Signature,
+    /// Format source (JSON { source } or raw)
+    Format,
+    /// Inlay hints
+    Inlay,
+    /// Folding ranges
+    Folding,
+    /// Document highlight
+    Highlight,
+    /// Workspace symbols
+    WorkspaceSymbols,
+    /// Code actions / quickfix
+    Actions,
 }
 
 fn main() -> Result<()> {
@@ -158,6 +202,54 @@ fn main() -> Result<()> {
                 }
             }
             ApiCommand::Manifest => print_json(&language_manifest())?,
+            ApiCommand::Complete => {
+                let req = read_position()?;
+                print_json(&complete_request(&req))?;
+            }
+            ApiCommand::Hover => {
+                let req = read_position()?;
+                print_json(&hover_request(&req))?;
+            }
+            ApiCommand::Symbols => {
+                let req = read_position()?;
+                print_json(&symbols_request(&req))?;
+            }
+            ApiCommand::Definition => {
+                let req = read_position()?;
+                print_json(&definition_request(&req))?;
+            }
+            ApiCommand::References => {
+                let req = read_position()?;
+                print_json(&references_request(&req))?;
+            }
+            ApiCommand::Signature => {
+                let req = read_position()?;
+                print_json(&signature_request(&req))?;
+            }
+            ApiCommand::Format => {
+                let req = read_position_or_source()?;
+                print_json(&format_request(&req.source))?;
+            }
+            ApiCommand::Inlay => {
+                let req = read_position()?;
+                print_json(&inlay_request(&req))?;
+            }
+            ApiCommand::Folding => {
+                let req = read_position()?;
+                print_json(&folding_request(&req))?;
+            }
+            ApiCommand::Highlight => {
+                let req = read_position()?;
+                print_json(&highlight_request(&req))?;
+            }
+            ApiCommand::WorkspaceSymbols => {
+                let req = read_position()?;
+                print_json(&workspace_symbols(&req))?;
+            }
+            ApiCommand::Actions => {
+                let req = read_position()?;
+                print_json(&code_actions_request(&req))?;
+            }
         },
         Commands::Install { editor } => {
             let dests = install_language(editor.as_deref())?;
@@ -169,8 +261,38 @@ fn main() -> Result<()> {
         }
         Commands::Setup => run_setup(false)?,
         Commands::Manifest => print_json(&language_manifest())?,
+        Commands::Fmt { file, write } => {
+            let source = fs::read_to_string(&file).into_diagnostic()?;
+            let formatted = format_source(&source);
+            if write {
+                fs::write(&file, formatted).into_diagnostic()?;
+            } else {
+                io::stdout().write_all(formatted.as_bytes()).into_diagnostic()?;
+            }
+        }
+        Commands::Watch { root, output } => watch_dir(&root, &output)?,
     }
     Ok(())
+}
+
+fn read_position() -> Result<PositionRequest> {
+    let mut buf = String::new();
+    io::stdin().read_to_string(&mut buf).into_diagnostic()?;
+    serde_json::from_str(&buf).into_diagnostic()
+}
+
+fn read_position_or_source() -> Result<PositionRequest> {
+    let mut buf = String::new();
+    io::stdin().read_to_string(&mut buf).into_diagnostic()?;
+    if let Ok(req) = serde_json::from_str::<PositionRequest>(&buf) {
+        return Ok(req);
+    }
+    Ok(PositionRequest {
+        source: buf,
+        file_name: "input.clpp".into(),
+        line: 1,
+        column: 1,
+    })
 }
 
 fn run_setup(pause: bool) -> Result<()> {

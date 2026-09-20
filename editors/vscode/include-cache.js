@@ -84,6 +84,8 @@ function candidatePaths(spec, angled, fromPath, folders) {
       add(path.join(walk, "src"), specNorm);
       add(path.join(walk, "src"), stripped);
       add(path.join(walk, "src"), fromSrc);
+      add(path.join(walk, "include"), specNorm);
+      add(path.join(walk, "include"), stripped);
       const parent = path.dirname(walk);
       if (parent === walk) {
         break;
@@ -97,6 +99,8 @@ function candidatePaths(spec, angled, fromPath, folders) {
     add(path.join(folder, "src"), specNorm);
     add(path.join(folder, "src"), stripped);
     add(path.join(folder, "src"), fromSrc);
+    add(path.join(folder, "include"), specNorm);
+    add(path.join(folder, "include"), stripped);
     add(path.join(folder, "stdlib"), specNorm);
   }
   const local = process.env.LOCALAPPDATA || "";
@@ -222,11 +226,11 @@ function projectSrcRoots(fromPath, folders) {
 }
 
 function includePathCompletions(line, fromPath, folders) {
-  const match = line.match(/#include\s+"([^"]*)$/);
+  const match = line.match(/#include\s+(?:"([^"]*)|<([^>]*))$/);
   if (!match) {
     return [];
   }
-  const typed = match[1].replace(/\\/g, "/");
+  const typed = (match[1] || match[2] || "").replace(/\\/g, "/");
   const dir = fromPath ? path.dirname(fromPath) : (folders && folders[0]) || "";
   const items = [];
   const seen = new Set();

@@ -83,6 +83,8 @@ clpp setup
 clpp compile hello.server.clpp
 clpp build
 clpp api compile          # JSON stdin/stdout — Cluaupp contract
+clpp api complete         # IDE completions from the AST
+clpp fmt hello.server.clpp
 ```
 
 ## Docs
@@ -101,14 +103,14 @@ Code fences on the docs site use the language id **clpp** (not `cpp`).
 ## Layout
 
 ```
-src/              compiler (pest + AST + Luau codegen)
+src/              compiler (parse, analysis, builtins, Luau emit)
 docs/             user guide, spec, per-utility reference
 www/              Starlight / Astro docs site
 moonwave/         legacy API stubs (redirected to the reference)
 examples/         leaderstats, Fusion, Vide, combat
 stdlib/           IntelliSense headers
-editors/vscode    language pack (IntelliSense + LSP server)
-tools/lsp         language server launcher (`node tools/lsp/server.js`)
+editors/vscode    language pack (LSP calls `clpp api complete`)
+tools/lsp         launcher (`node tools/lsp/server.js` → editors/vscode)
 support/          Cluaupp TypeScript contract
 ```
 

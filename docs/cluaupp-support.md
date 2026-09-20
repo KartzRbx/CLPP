@@ -2,7 +2,7 @@
 
 [Cluaupp](https://github.com/KartzRbx/Cluaupp) connects the language to Roblox (Rojo, engine API, project `init`). CL++ is **language-only**. This contract lets Cluaupp swap the compile backend without rewriting the transpiler.
 
-**Current compiler: 0.3.3.** Full CLI upgrade guide: [Update Cluaupp for CL++ 0.3.2](cluaupp-032) (same contract; pin **0.3.3**).
+**Current compiler: 0.4.0.** Full CLI upgrade guide: [Update Cluaupp for CL++ 0.4](cluaupp-032) (compile JSON unchanged; pin **0.4.0**).
 
 ## CLI
 

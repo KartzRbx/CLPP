@@ -23,6 +23,7 @@ function includeSearchRoots(folders) {
   const roots = [];
   for (const folder of folders || []) {
     roots.push(folder);
+    roots.push(path.join(folder, "include"));
     roots.push(path.join(folder, "stdlib"));
   }
   roots.push(path.join(__dirname, "..", ".."));

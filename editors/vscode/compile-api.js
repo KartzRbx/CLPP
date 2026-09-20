@@ -68,6 +68,25 @@ function parseCompileOutput(out) {
   return items;
 }
 
+function spawnClppJsonSync(cmd, args, payload, workspaceFolders, timeoutMs) {
+  const exe = findClpp(workspaceFolders);
+  try {
+    const result = cp.spawnSync(exe, [cmd, ...args], {
+      input: JSON.stringify(payload),
+      encoding: "utf8",
+      timeout: timeoutMs || 2000,
+      windowsHide: true,
+    });
+    const out = (result.stdout || "").trim();
+    if (!out) {
+      return null;
+    }
+    return JSON.parse(out);
+  } catch {
+    return null;
+  }
+}
+
 function compileDiagnostics(source, fileName, workspaceFolders) {
   const exe = findClpp(workspaceFolders);
   const payload = JSON.stringify({
@@ -94,73 +113,118 @@ function compileDiagnostics(source, fileName, workspaceFolders) {
   }
 }
 
-function compileDiagnosticsAsync(source, fileName, workspaceFolders, done) {
+function spawnClppJson(cmd, args, payload, workspaceFolders, done) {
   const exe = findClpp(workspaceFolders);
-  const payload = JSON.stringify({
-    source,
-    fileName: fileName || "untitled.clpp",
-  });
+  const body = JSON.stringify(payload);
   let settled = false;
-  const finish = (items) => {
+  const finish = (value, error) => {
     if (settled) {
       return;
     }
     settled = true;
-    done(items);
+    done(value, error);
   };
   try {
-    const child = cp.spawn(exe, ["api", "compile"], {
-      windowsHide: true,
-    });
+    const child = cp.spawn(exe, [cmd, ...args], { windowsHide: true });
     let out = "";
+    let err = "";
     const timer = setTimeout(() => {
       try {
         child.kill();
       } catch {
         // ignore
       }
-      finish(null);
+      finish(null, {
+        message: "CL++ compiler timed out (4s). Check that clpp is on PATH or set CLPP_DEV_COMPILER=1.",
+      });
     }, 4000);
     child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
     child.stdout.on("data", (chunk) => {
       out += chunk;
     });
-    child.on("error", () => {
+    child.stderr.on("data", (chunk) => {
+      err += chunk;
+    });
+    child.on("error", (error) => {
       clearTimeout(timer);
-      finish(null);
+      finish(null, {
+        message: `CL++ compiler not found (${exe}). Run clpp setup or clpp install.`,
+        error: String(error && error.message ? error.message : error),
+      });
     });
     child.on("close", () => {
       clearTimeout(timer);
       const text = out.trim();
       if (!text) {
-        finish(null);
+        finish(null, {
+          message: err.trim() || "CL++ compiler returned no JSON.",
+        });
         return;
       }
       try {
-        finish(parseCompileOutput(text));
-      } catch {
-        finish(null);
+        finish(JSON.parse(text), null);
+      } catch (parseErr) {
+        finish(null, { message: "CL++ compiler returned invalid JSON." });
       }
     });
-    child.stdin.write(payload);
+    child.stdin.write(body);
     child.stdin.end();
-  } catch {
-    finish(null);
+  } catch (error) {
+    finish(null, {
+      message: `CL++ compiler spawn failed: ${error && error.message ? error.message : error}`,
+    });
   }
+}
+
+function compileDiagnosticsAsync(source, fileName, workspaceFolders, done) {
+  spawnClppJson("api", ["compile"], { source, fileName: fileName || "untitled.clpp" }, workspaceFolders, (art, error) => {
+    if (error) {
+      done([
+        {
+          line: 0,
+          column: 0,
+          message: error.message,
+        },
+      ]);
+      return;
+    }
+    if (!art) {
+      done([
+        {
+          line: 0,
+          column: 0,
+          message: "CL++ compiler returned no result.",
+        },
+      ]);
+      return;
+    }
+    try {
+      done(parseCompileOutput(JSON.stringify(art)));
+    } catch {
+      done([
+        {
+          line: 0,
+          column: 0,
+          message: "CL++ compiler returned invalid diagnostics.",
+        },
+      ]);
+    }
+  });
 }
 
 function mergeIssues(compiler, lint) {
-  const items = compiler ? [...compiler] : [];
-  const seen = new Set(items.map((i) => `${i.line}:${i.message}`));
-  for (const issue of lint || []) {
-    const key = `${issue.line}:${issue.message}`;
-    if (seen.has(key)) {
-      continue;
-    }
-    seen.add(key);
-    items.push(issue);
+  if (compiler && compiler.length) {
+    return compiler;
   }
-  return items;
+  return lint || [];
 }
 
-module.exports = { findClpp, compileDiagnostics, compileDiagnosticsAsync, mergeIssues };
+module.exports = {
+  findClpp,
+  compileDiagnostics,
+  compileDiagnosticsAsync,
+  mergeIssues,
+  spawnClppJson,
+  spawnClppJsonSync,
+};

@@ -1,18 +1,22 @@
 # tools/lsp
 
-JSON-RPC language server for CL++. Reuses the editor pack in `editors/vscode` (`intellisense.js` + `clpp api compile`). No Tree-sitter; Pest in the compiler is the grammar.
+JSON-RPC language server for CL++. The **single entrypoint** is [`editors/vscode/lsp-server.js`](../../editors/vscode/lsp-server.js). This folder’s `server.js` only forwards to that file.
+
+Completions, hover, definition, symbols, format, inlay, and folding call the compiler:
+
+```bash
+clpp api complete
+clpp api hover
+clpp api symbols
+clpp api definition
+```
+
+The JavaScript catalog (`completions.json`) is fallback for Roblox/Cluaupp types until generated headers fill analysis via `#include`. Do not treat regex `indexDocument` as the type checker.
 
 ```bash
 node tools/lsp/server.js
 ```
 
-stdio, LSP 3.x subset:
+`clpp install` starts the same server from the editor pack when `clpp.lsp.enabled` is true.
 
-- `initialize` returns capabilities only (`@` is a completion trigger). Workspace walk and `clpp api compile` do not run here.
-- `initialized` starts a worker thread (`index-worker.js`) to index `.clpp` / `.clp` / `.clh`. Skips `node_modules`, `target`, `.git`, `build`, `dist`, `www`, `.odr`, and other cache dirs.
-- `textDocument/completion` — keywords, `@this` / `@janitor`, and the current buffer. Include types come from an in-memory cache filled in the background. Completions never `existsSync` / `readFileSync`.
-- `textDocument/hover`
-- `textDocument/definition` — `#include` paths and `Class::Method` from the worker index
-- `textDocument/publishDiagnostics` — pack lint plus async `clpp api compile` (`spawn`, 250ms debounce)
-
-The VS Code / Cursor pack (`clpp install`) starts this server from `editors/vscode/lsp-server.js` when `clpp.lsp.enabled` is true. Completions register in-process on activate and do not wait for the handshake. If the server fails to start, diagnostics fall back in-process (also async).
+Emitted `.luau` is a different language: install [luau-lsp](https://marketplace.visualstudio.com/items?itemName=JohnnyMorganz.luau-lsp). Guide: [CL++ + luau-lsp](../../docs/architecture/luau-lsp.md).

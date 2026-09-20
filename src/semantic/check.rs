@@ -1,4 +1,6 @@
 use crate::ast::{Decl, Expr, Function, Item, Program, Stmt};
+use crate::builtins;
+use crate::semantic::is_bare_global;
 use crate::support::CompileDiagnostic;
 use miette::Result;
 use std::collections::{HashMap, HashSet};
@@ -36,6 +38,14 @@ impl Ty {
 struct Binding {
     ty: Ty,
     is_const: bool,
+    used: bool,
+    line: usize,
+}
+
+struct FuncSig {
+    params: usize,
+    #[allow(dead_code)]
+    line: usize,
 }
 
 pub fn check_program(program: &Program, source: &str) -> Result<Vec<CompileDiagnostic>> {
@@ -59,20 +69,86 @@ pub fn check_program(program: &Program, source: &str) -> Result<Vec<CompileDiagn
                         .insert(func.name.clone());
                 }
             }
-            Item::Destructure { .. } => {}
+            Item::Destructure { .. } | Item::Unsupported { .. } => {}
         }
     }
     let mut checker = Checker {
         source,
         file_name: &program.file_name,
         env: HashMap::new(),
+        functions: HashMap::new(),
         diagnostics: Vec::new(),
         in_method: false,
         method_fields: HashSet::new(),
         method_methods: HashSet::new(),
         owner_fields,
         owner_methods,
+        current_line: 1,
     };
+    let mut seen_fn: HashSet<String> = HashSet::new();
+    let mut seen_decl: HashSet<String> = HashSet::new();
+    for item in &program.items {
+        match item {
+            Item::Function(func) => {
+                let key = match &func.owner {
+                    Some(owner) => format!("{owner}::{}", func.name),
+                    None => func.name.clone(),
+                };
+                if !seen_fn.insert(key.clone()) {
+                    checker.error(
+                        func.line,
+                        1,
+                        format!("duplicate function `{key}`"),
+                    );
+                }
+                checker.functions.insert(
+                    key,
+                    FuncSig {
+                        params: func.params.len(),
+                        line: func.line,
+                    },
+                );
+                if func.owner.is_none() {
+                    checker.functions.insert(
+                        func.name.clone(),
+                        FuncSig {
+                            params: func.params.len(),
+                            line: func.line,
+                        },
+                    );
+                }
+            }
+            Item::Proto(func) => {
+                let key = match &func.owner {
+                    Some(owner) => format!("{owner}::{}", func.name),
+                    None => func.name.clone(),
+                };
+                checker.functions.entry(key).or_insert(FuncSig {
+                    params: func.params.len(),
+                    line: func.line,
+                });
+                if func.owner.is_none() {
+                    checker.functions.entry(func.name.clone()).or_insert(FuncSig {
+                        params: func.params.len(),
+                        line: func.line,
+                    });
+                }
+            }
+            Item::Decl(decl) if decl.owner.is_none() => {
+                if !seen_decl.insert(decl.name.clone()) {
+                    checker.error(
+                        decl.line,
+                        1,
+                        format!("duplicate name `{}`", decl.name),
+                    );
+                }
+            }
+            Item::Unsupported { line, message, .. } => {
+                checker.error(*line, 1, message.clone());
+            }
+            _ => {}
+        }
+    }
     for item in &program.items {
         checker.item(item);
     }
@@ -83,12 +159,14 @@ struct Checker<'a> {
     source: &'a str,
     file_name: &'a str,
     env: HashMap<String, Binding>,
+    functions: HashMap<String, FuncSig>,
     diagnostics: Vec<CompileDiagnostic>,
     in_method: bool,
     method_fields: HashSet<String>,
     method_methods: HashSet<String>,
     owner_fields: HashMap<String, HashSet<String>>,
     owner_methods: HashMap<String, HashSet<String>>,
+    current_line: usize,
 }
 
 impl<'a> Checker<'a> {
@@ -100,15 +178,10 @@ impl<'a> Checker<'a> {
             Item::Destructure { names, value } => {
                 let _ = self.expr_ty(value);
                 for name in names {
-                    self.env.insert(
-                        name.clone(),
-                        Binding {
-                            ty: Ty::Auto,
-                            is_const: false,
-                        },
-                    );
+                    self.bind(name, Ty::Auto, false, 1, false);
                 }
             }
+            Item::Unsupported { .. } => {}
         }
     }
 
@@ -139,16 +212,12 @@ impl<'a> Checker<'a> {
                 .as_deref()
                 .map(parse_ty)
                 .unwrap_or(Ty::Auto);
-            self.env.insert(
-                param.name.clone(),
-                Binding {
-                    ty,
-                    is_const: false,
-                },
-            );
+            self.bind(&param.name, ty, false, func.line, true);
         }
+        self.current_line = func.line;
         self.stmts(&func.body);
         self.check_returns(func);
+        self.warn_unused_new(&saved);
         self.env = saved;
         self.in_method = saved_method;
         self.method_fields = saved_fields;
@@ -257,13 +326,7 @@ impl<'a> Checker<'a> {
             Stmt::Destructure { names, value } => {
                 let _ = self.expr_ty(value);
                 for name in names {
-                    self.env.insert(
-                        name.clone(),
-                        Binding {
-                            ty: Ty::Auto,
-                            is_const: false,
-                        },
-                    );
+                    self.bind(name, Ty::Auto, false, self.current_line, false);
                 }
             }
             Stmt::Expr(expr) => {
@@ -288,15 +351,17 @@ impl<'a> Checker<'a> {
                 let _ = self.expr_ty(test);
                 self.stmts(body);
             }
-            Stmt::ForEach { name, iter, body } => {
+            Stmt::ForEach {
+                name,
+                elem_type,
+                iter,
+                body,
+                span,
+            } => {
+                self.current_line = span.start_line;
                 let _ = self.expr_ty(iter);
-                self.env.insert(
-                    name.clone(),
-                    Binding {
-                        ty: Ty::Auto,
-                        is_const: false,
-                    },
-                );
+                let ty = elem_type.as_deref().map(parse_ty).unwrap_or(Ty::Auto);
+                self.bind(name, ty, false, span.start_line, false);
                 self.stmts(body);
             }
             Stmt::CFor {
@@ -340,6 +405,8 @@ impl<'a> Checker<'a> {
                             Binding {
                                 ty: parse_ty(class),
                                 is_const: false,
+                                used: false,
+                                line: 1,
                             },
                         );
                     }
@@ -373,8 +440,50 @@ impl<'a> Checker<'a> {
             Binding {
                 ty: declared,
                 is_const: decl.is_const,
+                used: false,
+                line: decl.line,
             },
         );
+    }
+
+    fn bind(&mut self, name: &str, ty: Ty, is_const: bool, line: usize, is_param: bool) {
+        if let Some(prev) = self.env.get(name) {
+            if prev.line != line {
+                self.warn(
+                    line,
+                    1,
+                    format!("`{name}` shadows a previous binding"),
+                );
+            }
+        }
+        let _ = is_param;
+        self.env.insert(
+            name.to_string(),
+            Binding {
+                ty,
+                is_const,
+                used: false,
+                line,
+            },
+        );
+    }
+
+    fn warn_unused_new(&mut self, saved: &HashMap<String, Binding>) {
+        let unused: Vec<(String, usize)> = self
+            .env
+            .iter()
+            .filter(|(name, b)| {
+                !saved.contains_key(*name)
+                    && !b.used
+                    && *name != "_"
+                    && !name.starts_with('_')
+                    && !name.eq_ignore_ascii_case("janitor")
+            })
+            .map(|(n, b)| (n.clone(), b.line))
+            .collect();
+        for (name, line) in unused {
+            self.warn(line, 1, format!("unused `{name}`"));
+        }
     }
 
     fn check_assign(&mut self, expr: &Expr) {
@@ -418,11 +527,30 @@ impl<'a> Checker<'a> {
                 }
             }
             Expr::String(_) | Expr::Interp { .. } => Ty::String,
-            Expr::Ident(name) => self
-                .env
-                .get(name)
-                .map(|b| b.ty.clone())
-                .unwrap_or(Ty::Unknown),
+            Expr::Ident(name) => {
+                if let Some(binding) = self.env.get_mut(name) {
+                    binding.used = true;
+                    binding.ty.clone()
+                } else if name == "this" || name == "self" {
+                    if !self.in_method {
+                        self.error(
+                            self.current_line,
+                            1,
+                            "`this` is only valid inside Class::Method".into(),
+                        );
+                    }
+                    Ty::Auto
+                } else if is_bare_global(name) || builtins::find(name).is_some() {
+                    Ty::Unknown
+                } else {
+                    self.error(
+                        self.current_line,
+                        1,
+                        format!("unknown identifier `{name}`"),
+                    );
+                    Ty::Unknown
+                }
+            }
             Expr::Tuple(values) => values
                 .last()
                 .map(|v| self.expr_ty(v))
@@ -493,6 +621,36 @@ impl<'a> Checker<'a> {
             Expr::Call { object, name, args, .. } => {
                 if let Some(obj) = object {
                     let _ = self.expr_ty(obj);
+                } else if let Some(binding) = self.env.get_mut(name) {
+                    binding.used = true;
+                } else if let Some(sig) = self.functions.get(name) {
+                    if args.len() != sig.params {
+                        self.error(
+                            self.current_line,
+                            1,
+                            format!(
+                                "`{name}` takes {} argument(s), got {}",
+                                sig.params,
+                                args.len()
+                            ),
+                        );
+                    }
+                } else if builtins::find(name).is_some() && !builtins::arity_ok(name, args.len()) {
+                    self.error(
+                        self.current_line,
+                        1,
+                        format!("wrong number of arguments to `{name}`"),
+                    );
+                } else if !is_bare_global(name)
+                    && builtins::find(name).is_none()
+                    && !self.method_methods.contains(name)
+                    && !crate::semantic::is_datatype(name)
+                {
+                    self.error(
+                        self.current_line,
+                        1,
+                        format!("unknown identifier `{name}`"),
+                    );
                 }
                 for arg in args {
                     let _ = self.expr_ty(arg);
@@ -522,14 +680,34 @@ impl<'a> Checker<'a> {
                 }
                 Ty::Named(class_name.clone())
             }
-            Expr::Lambda { body, .. } => {
+            Expr::Lambda { params, body } => {
+                let saved = self.env.clone();
+                for param in params {
+                    let ty = param
+                        .value_type
+                        .as_deref()
+                        .map(parse_ty)
+                        .unwrap_or(Ty::Auto);
+                    self.bind(&param.name, ty, false, self.current_line, true);
+                }
                 self.stmts(body);
+                self.env = saved;
                 Ty::Func
             }
             Expr::InitList { .. } | Expr::ArrayLit { .. } => Ty::Named("array".into()),
             Expr::DictLit { .. } => Ty::Named("dictionary".into()),
             Expr::Update { target, .. } => self.expr_ty(target),
         }
+    }
+
+    fn warn(&mut self, line: usize, column: usize, message: String) {
+        let line = if line == 0 { 1 } else { line };
+        self.diagnostics.push(CompileDiagnostic {
+            message,
+            line,
+            column,
+            severity: "warning".into(),
+        });
     }
 
     fn error(&mut self, line: usize, column: usize, message: String) {

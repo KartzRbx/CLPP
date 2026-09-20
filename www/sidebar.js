@@ -196,6 +196,8 @@ export const sidebar = [
     label: "Specification",
     items: [
       { label: "Compiler pipeline", slug: "docs/spec/compiler" },
+      { label: "Luau engineering map", slug: "docs/architecture/luau-mapping" },
+      { label: "CL++ + luau-lsp", slug: "docs/architecture/luau-lsp" },
       { label: "Grammar (EBNF)", slug: "docs/spec/grammar" },
       { label: "Syntax → Luau", slug: "docs/spec/syntax" },
       { label: "Type table", slug: "docs/spec/types" },
@@ -208,7 +210,7 @@ export const sidebar = [
     label: "Cluaupp",
     collapsed: true,
     items: [
-      { label: "Update Cluaupp for 0.3.2", slug: "docs/cluaupp-032" },
+      { label: "Update Cluaupp for 0.4", slug: "docs/cluaupp-032" },
       { slug: "docs/cluaupp" },
       { slug: "docs/cluaupp-callbacks" },
       { slug: "docs/cluaupp-support" },

@@ -93,7 +93,7 @@ pub struct LanguageManifest {
     pub version: &'static str,
     pub extensions: &'static [&'static str],
     pub tags: &'static [FileTag],
-    pub builtins: &'static [&'static str],
+    pub builtins: Vec<&'static str>,
     pub operators: &'static [OperatorMap],
     pub io: &'static [IoMap],
 }
@@ -153,10 +153,7 @@ pub fn language_manifest() -> LanguageManifest {
                 rojo_class: "ModuleScript",
             },
         ],
-        builtins: &[
-            "post", "warn", "report", "null", "func", "observable", "signal", "guard", "match",
-            "spawn", "parallel", "async", "await", "auto", "to_string", "to_number", "to_bool",
-        ],
+        builtins: crate::builtins::names(),
         operators: &[
             OperatorMap {
                 clpp: ".",

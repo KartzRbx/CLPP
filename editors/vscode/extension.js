@@ -7,6 +7,7 @@ const { buildCompletionItems, hoverText } = require("./complete");
 const { compileDiagnosticsAsync, mergeIssues } = require("./compile-api");
 const { extrasFor, cachedText, resolveCached, scheduleLoad } = require("./include-cache");
 const { startLspClient } = require("./lsp-client");
+const { findClpp, spawnClppJson } = require("./compile-api");
 
 function loadCompletions() {
   const file = path.join(__dirname, "data", "completions.json");
@@ -471,6 +472,72 @@ function registerLspIntelligence(context, client, selector, lens) {
   wireLens(context, lens, client.collection);
 }
 
+function registerCommands(context, output, status) {
+  context.subscriptions.push(
+    vscode.commands.registerCommand("clpp.compileFile", async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor || editor.document.languageId !== "clpp") {
+        vscode.window.showWarningMessage("Open a CL++ file first.");
+        return;
+      }
+      const folders = workspaceFolders();
+      spawnClppJson(
+        "api",
+        ["compile"],
+        { source: editor.document.getText(), fileName: editor.document.fileName },
+        folders,
+        (art, error) => {
+          if (error) {
+            output.appendLine(error.message);
+            output.show(true);
+            vscode.window.showErrorMessage(error.message);
+            return;
+          }
+          if (!art || art.ok === false) {
+            const msg = (art && art.error) || "compile failed";
+            output.appendLine(msg);
+            output.show(true);
+            vscode.window.showErrorMessage(msg);
+            return;
+          }
+          output.appendLine(`compiled ${art.fileName} → ${art.outputHint}`);
+          vscode.window.showInformationMessage("CL++ compiled.");
+        }
+      );
+    }),
+    vscode.commands.registerCommand("clpp.showLuau", async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor || editor.document.languageId !== "clpp") {
+        vscode.window.showWarningMessage("Open a CL++ file first.");
+        return;
+      }
+      spawnClppJson(
+        "api",
+        ["compile"],
+        { source: editor.document.getText(), fileName: editor.document.fileName },
+        workspaceFolders(),
+        async (art, error) => {
+          if (error || !art || !art.luau) {
+            const msg = (error && error.message) || (art && art.error) || "compile failed";
+            vscode.window.showErrorMessage(msg);
+            return;
+          }
+          const doc = await vscode.workspace.openTextDocument({ language: "lua", content: art.luau });
+          await vscode.window.showTextDocument(doc, { preview: true, viewColumn: vscode.ViewColumn.Beside });
+        }
+      );
+    }),
+    vscode.commands.registerCommand("clpp.restartLsp", () => {
+      vscode.window.showInformationMessage("Reload the window to restart the CL++ language server.");
+      vscode.commands.executeCommand("workbench.action.reloadWindow");
+    })
+  );
+  const exe = findClpp(workspaceFolders());
+  status.text = `CL++ ${exe ? require("path").basename(exe) : "missing"}`;
+  status.tooltip = exe || "clpp not found";
+  status.show();
+}
+
 function activate(context) {
   const data = loadCompletions();
   const engine = loadEngine(data);
@@ -479,8 +546,11 @@ function activate(context) {
     { language: "clpp", scheme: "untitled" },
   ];
   const lens = createLens(vscode);
+  const output = vscode.window.createOutputChannel("CL++");
+  const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+  context.subscriptions.push(output, status);
   registerChrome(context, engine, selector, data);
-  registerLocalCompletions(context, engine, data, selector);
+  registerCommands(context, output, status);
   context.subscriptions.push(
     vscode.workspace.onDidOpenTextDocument(noteDocument),
     vscode.workspace.onDidChangeTextDocument((ev) => noteDocument(ev.document))
@@ -496,11 +566,13 @@ function activate(context) {
       if (ok && client.isAlive()) {
         registerLspIntelligence(context, client, selector, lens);
       } else {
+        registerLocalCompletions(context, engine, data, selector);
         registerInProcessDiagnostics(context, selector, lens);
       }
     });
     return;
   }
+  registerLocalCompletions(context, engine, data, selector);
   registerInProcessDiagnostics(context, selector, lens);
 }
 

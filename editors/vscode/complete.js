@@ -72,7 +72,11 @@ function designatedInitCompletions(text, offset, lineText, data, symbols) {
 }
 
 function buildCompletionItems(engine, data, text, filePath, lineText, offset, folders, extraTexts) {
-  if (/^\s*#include\s+"[^"]*$/.test(lineText) || /^\s*#include\s+"[^"]*\/[^"]*$/.test(lineText)) {
+  if (
+    /^\s*#include\s+"[^"]*$/.test(lineText) ||
+    /^\s*#include\s+"[^"]*\/[^"]*$/.test(lineText) ||
+    /^\s*#include\s+<[^>]*$/.test(lineText)
+  ) {
     return includePathCompletions(lineText, filePath, folders);
   }
   const designated = designatedInitCompletions(text, offset, lineText, data, symbolsFor(engine, text, extraTexts));

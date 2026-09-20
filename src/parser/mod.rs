@@ -1,5 +1,6 @@
 use crate::ast::*;
 use crate::error::ClppError;
+use crate::support::CompileDiagnostic;
 use miette::Result;
 use pest::error::ErrorVariant;
 use pest::iterators::Pair;
@@ -10,7 +11,55 @@ use pest_derive::Parser;
 #[grammar = "src/parser/grammar.pest"]
 pub struct ClppParser;
 
+pub fn parse_with_diagnostics(
+    source: &str,
+    file_name: &str,
+) -> Result<(Program, Vec<CompileDiagnostic>)> {
+    parse_tree(source, file_name)
+}
+
 pub fn parse(source: &str, file_name: &str) -> Result<Program> {
+    parse_with_diagnostics(source, file_name).map(|(program, _)| program)
+}
+
+/// Parse for the IDE: recover after the first Pest error so later symbols remain.
+pub fn parse_for_ide(source: &str, file_name: &str) -> (Program, Vec<CompileDiagnostic>) {
+    match parse_tree(source, file_name) {
+        Ok((program, diags)) => (program, diags),
+        Err(err) => {
+            let mut diagnostics = Vec::new();
+            let (line, column, message) = if let Some(clpp) = err.downcast_ref::<ClppError>() {
+                let (line, column) = clpp.line_col();
+                (line, column, clpp.message.clone())
+            } else {
+                (1, 1, format!("{err:#}"))
+            };
+            diagnostics.push(CompileDiagnostic {
+                message: message.clone(),
+                line,
+                column,
+                severity: "error".into(),
+            });
+            let recovered = recover_source(source, line);
+            if recovered != source {
+                if let Ok((mut program, extra)) = parse_tree(&recovered, file_name) {
+                    diagnostics.extend(extra);
+                    program.file_name = file_name.to_string();
+                    return (program, diagnostics);
+                }
+            }
+            (
+                Program {
+                    items: Vec::new(),
+                    file_name: file_name.to_string(),
+                },
+                diagnostics,
+            )
+        }
+    }
+}
+
+fn parse_tree(source: &str, file_name: &str) -> Result<(Program, Vec<CompileDiagnostic>)> {
     let mut pairs = ClppParser::parse(Rule::file, source).map_err(|err| {
         let (line, col) = match err.line_col {
             pest::error::LineColLocation::Pos((l, c)) => (l, c),
@@ -20,15 +69,39 @@ pub fn parse(source: &str, file_name: &str) -> Result<Program> {
     })?;
     let file = pairs.next().expect("file pair");
     let mut items = Vec::new();
+    let mut diagnostics = Vec::new();
     for pair in file.into_inner() {
         if pair.as_rule() == Rule::item {
-            items.extend(parse_item(pair));
+            items.extend(parse_item(pair, &mut diagnostics));
         }
     }
-    Ok(Program {
-        items,
-        file_name: file_name.to_string(),
-    })
+    Ok((
+        Program {
+            items,
+            file_name: file_name.to_string(),
+        },
+        diagnostics,
+    ))
+}
+
+fn recover_source(source: &str, err_line: usize) -> String {
+    let mut lines: Vec<String> = source.lines().map(|l| l.to_string()).collect();
+    if err_line > 0 && err_line <= lines.len() {
+        lines[err_line - 1] = String::new();
+    }
+    let mut text = lines.join("\n");
+    let opens = text.matches('{').count();
+    let closes = text.matches('}').count();
+    for _ in 0..opens.saturating_sub(closes) {
+        text.push_str("\n}");
+    }
+    text
+}
+
+fn pair_span(pair: &Pair<Rule>) -> Span {
+    let (start_line, start_col) = pair.line_col();
+    let (end_line, end_col) = pair.as_span().end_pos().line_col();
+    Span::new(start_line, start_col, end_line, end_col)
 }
 
 fn format_parse_error(err: &pest::error::Error<Rule>) -> String {
@@ -65,32 +138,85 @@ fn format_parse_error(err: &pest::error::Error<Rule>) -> String {
         .unwrap_or(raw)
 }
 
-fn parse_item(pair: Pair<Rule>) -> Vec<Item> {
+fn parse_item(pair: Pair<Rule>, diagnostics: &mut Vec<CompileDiagnostic>) -> Vec<Item> {
     let inner = pair.into_inner().next().expect("item inner");
     match inner.as_rule() {
-        Rule::struct_decl => parse_struct(inner, None),
+        Rule::struct_decl => parse_struct(inner, None, diagnostics),
         Rule::function_item => vec![parse_function(inner)],
         Rule::destructure => {
             let (names, value) = parse_destructure_parts(inner);
             vec![Item::Destructure { names, value }]
         }
         Rule::var_decl => vec![Item::Decl(parse_var_decl(inner, None))],
-        Rule::namespace_item => inner
-            .into_inner()
-            .filter(|p| p.as_rule() == Rule::item)
-            .flat_map(parse_item)
-            .collect(),
+        Rule::using_stmt => {
+            let line = inner.line_col().0;
+            diagnostics.push(CompileDiagnostic {
+                message: "`using` is not in CL++ — write a CL++ type or drop the alias".into(),
+                line,
+                column: 1,
+                severity: "error".into(),
+            });
+            vec![Item::Unsupported {
+                kind: "using".into(),
+                line,
+                message: "`using` is not in CL++".into(),
+            }]
+        }
+        Rule::namespace_item => {
+            let line = inner.line_col().0;
+            diagnostics.push(CompileDiagnostic {
+                message: "`namespace` is not in CL++ — use a struct or a module file".into(),
+                line,
+                column: 1,
+                severity: "error".into(),
+            });
+            let mut items = vec![Item::Unsupported {
+                kind: "namespace".into(),
+                line,
+                message: "`namespace` is not in CL++".into(),
+            }];
+            items.extend(
+                inner
+                    .into_inner()
+                    .filter(|p| p.as_rule() == Rule::item)
+                    .flat_map(|p| parse_item(p, diagnostics)),
+            );
+            items
+        }
+        Rule::skip_decl => {
+            let line = inner.line_col().0;
+            let kind = if inner.as_str().trim_start().starts_with("enum") {
+                "enum"
+            } else if inner.as_str().trim_start().starts_with("template") {
+                "template"
+            } else if inner.as_str().trim_start().starts_with("typedef") {
+                "typedef"
+            } else {
+                "extern"
+            };
+            diagnostics.push(CompileDiagnostic {
+                message: format!("`{kind}` is not in CL++"),
+                line,
+                column: 1,
+                severity: "error".into(),
+            });
+            vec![Item::Unsupported {
+                kind: kind.into(),
+                line,
+                message: format!("`{kind}` is not in CL++"),
+            }]
+        }
         _ => Vec::new(),
     }
 }
 
-fn parse_struct(pair: Pair<Rule>, parent: Option<&str>) -> Vec<Item> {
+fn parse_struct(pair: Pair<Rule>, parent: Option<&str>, diagnostics: &mut Vec<CompileDiagnostic>) -> Vec<Item> {
     let mut items = Vec::new();
     let mut name = "_anon".to_string();
     for inner in pair.into_inner() {
         match inner.as_rule() {
             Rule::ident => name = inner.as_str().to_string(),
-            Rule::struct_member => items.extend(parse_struct_member(inner, &name)),
+            Rule::struct_member => items.extend(parse_struct_member(inner, &name, diagnostics)),
             _ => {}
         }
     }
@@ -98,7 +224,11 @@ fn parse_struct(pair: Pair<Rule>, parent: Option<&str>) -> Vec<Item> {
     items
 }
 
-fn parse_struct_member(pair: Pair<Rule>, owner: &str) -> Vec<Item> {
+fn parse_struct_member(
+    pair: Pair<Rule>,
+    owner: &str,
+    diagnostics: &mut Vec<CompileDiagnostic>,
+) -> Vec<Item> {
     let inner = pair.into_inner().next().expect("member");
     match inner.as_rule() {
         Rule::nested_struct => {
@@ -106,8 +236,9 @@ fn parse_struct_member(pair: Pair<Rule>, owner: &str) -> Vec<Item> {
             let Some(decl) = nested.next() else {
                 return Vec::new();
             };
-            let mut items = parse_struct(decl, Some(owner));
+            let mut items = parse_struct(decl, Some(owner), diagnostics);
             if let Some(instance) = nested.find(|p| p.as_rule() == Rule::ident) {
+                let line = instance.line_col().0;
                 items.push(Item::Decl(Decl {
                     name: instance.as_str().to_string(),
                     value_type: Some(owner.to_string()),
@@ -115,7 +246,9 @@ fn parse_struct_member(pair: Pair<Rule>, owner: &str) -> Vec<Item> {
                     is_const: false,
                     is_observable: false,
                     owner: Some(owner.to_string()),
-                    line: instance.line_col().0,
+                    line,
+                    span: Span::point(line, 1),
+                    doc: None,
                 }));
             }
             items
@@ -134,7 +267,8 @@ fn parse_struct_member(pair: Pair<Rule>, owner: &str) -> Vec<Item> {
 }
 
 fn parse_function(pair: Pair<Rule>) -> Item {
-    let line = pair.line_col().0;
+    let span = pair_span(&pair);
+    let line = span.start_line;
     let mut is_const = false;
     let mut is_async = false;
     let mut target = None;
@@ -176,6 +310,8 @@ fn parse_function(pair: Pair<Rule>) -> Item {
         is_async,
         target,
         line,
+        span,
+        doc: None,
     };
     if body.is_some() {
         Item::Function(func)
@@ -185,7 +321,8 @@ fn parse_function(pair: Pair<Rule>) -> Item {
 }
 
 fn parse_var_decl(pair: Pair<Rule>, owner: Option<&str>) -> Decl {
-    let line = pair.line_col().0;
+    let span = pair_span(&pair);
+    let line = span.start_line;
     let mut is_const = false;
     let mut is_observable = false;
     let mut value_type = None;
@@ -212,6 +349,8 @@ fn parse_var_decl(pair: Pair<Rule>, owner: Option<&str>) -> Decl {
         is_observable,
         owner: owner.map(str::to_string),
         line,
+        span,
+        doc: None,
     }
 }
 
@@ -436,18 +575,27 @@ fn parse_for(pair: Pair<Rule>) -> Stmt {
 }
 
 fn parse_range_for(pair: Pair<Rule>) -> Stmt {
+    let span = pair_span(&pair);
     let mut name = "it".to_string();
+    let mut elem_type = None;
     let mut iter = Expr::Null;
     let mut body = Vec::new();
     for inner in pair.into_inner() {
         match inner.as_rule() {
+            Rule::type_spec => elem_type = Some(parse_type(inner)),
             Rule::ident => name = inner.as_str().to_string(),
             Rule::expr => iter = parse_expr(inner),
             Rule::stmt => body = stmt_as_list(parse_stmt(inner)),
             _ => {}
         }
     }
-    Stmt::ForEach { name, iter, body }
+    Stmt::ForEach {
+        name,
+        elem_type,
+        iter,
+        body,
+        span,
+    }
 }
 
 fn parse_c_for(pair: Pair<Rule>) -> Stmt {

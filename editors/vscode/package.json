@@ -2,7 +2,7 @@
   "name": "clpp-language",
   "displayName": "CL++",
   "description": "CL++ language support for VS Code, Cursor, and compatible editors: highlighting, icon, and IntelliSense (.clpp / .clp / .clh)",
-  "version": "0.3.3",
+  "version": "0.4.0",
   "publisher": "clpp",
   "repository": {
     "type": "git",
@@ -38,6 +38,20 @@
         "path": "./syntaxes/clpp.tmLanguage.json"
       }
     ],
+    "commands": [
+      {
+        "command": "clpp.compileFile",
+        "title": "CL++: Compile this file"
+      },
+      {
+        "command": "clpp.showLuau",
+        "title": "CL++: Show emitted Luau"
+      },
+      {
+        "command": "clpp.restartLsp",
+        "title": "CL++: Restart language server"
+      }
+    ],
     "snippets": [
       {
         "language": "clpp",
@@ -49,13 +63,13 @@
       "properties": {
         "clpp.lens.enabled": {
           "type": "boolean",
-          "default": true,
-          "description": "Show CL++ errors inline at the end of the line (Error Lens style)."
+          "default": false,
+          "description": "Show CL++ errors as after-text decorations. Prefer the Problems panel or the Error Lens extension."
         },
         "clpp.lsp.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Use the CL++ language server for definition and diagnostics. Completions stay in-process so @this / @janitor do not wait on the compiler."
+          "description": "Use the CL++ language server (completions, hover, diagnostics from clpp api)."
         }
       }
     },

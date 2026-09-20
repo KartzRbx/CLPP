@@ -68,9 +68,12 @@ assert.deepStrictEqual(replies[0].result.capabilities.completionProvider.trigger
   "@",
   "\"",
   "/",
+  "<",
 ]);
 assert.ok(replies[0].result.capabilities.hoverProvider);
 assert.ok(replies[0].result.capabilities.definitionProvider);
+assert.ok(replies[0].result.capabilities.signatureHelpProvider);
+assert.ok(replies[0].result.capabilities.renameProvider);
 
 const emptyAt = atCompletions("    @", { types: {} }, null);
 assert.ok(emptyAt.some((item) => item.label === "@this"));

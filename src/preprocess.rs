@@ -1,4 +1,4 @@
-use crate::ast::{CompileContext, ModuleRequire};
+use crate::ast::{CompileContext, ModuleRequire, SourceComment};
 use crate::error::ClppError;
 use crate::semantic::lib_from_include;
 use miette::Result;
@@ -39,7 +39,17 @@ fn expand(
         let (code, comment) = split_line_comment(line);
         if let Some(text) = comment {
             if !text.is_empty() {
-                ctx.comments.push(format!("-- {text}"));
+                let is_doc = text.starts_with('/') || text.starts_with('!');
+                let body = text
+                    .trim_start_matches('/')
+                    .trim_start_matches('!')
+                    .trim()
+                    .to_string();
+                ctx.comments.push(SourceComment {
+                    line: mapped,
+                    text: if body.is_empty() { text } else { body },
+                    is_doc,
+                });
             }
         }
         let trimmed = code.trim().trim_start_matches('\u{feff}');

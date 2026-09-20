@@ -10,10 +10,12 @@ LeaderstatsServer.STARTING_COINS = 0
 
 LeaderstatsServer.janitor = nil
 
+-- LeaderstatsServer.server.clpp:9
 function LeaderstatsServer:GetPlayerJanitorKey(player: Player): string
 	return player.Name .. "_LeaderstatsJanitor"
 end
 
+-- LeaderstatsServer.server.clpp:13
 function LeaderstatsServer:UpdateLeaderstatsWithValues(currentValue: IntValue, newValue: number)
 	if not (currentValue ~= nil) then
 		return
@@ -23,6 +25,7 @@ function LeaderstatsServer:UpdateLeaderstatsWithValues(currentValue: IntValue, n
 	end
 end
 
+-- LeaderstatsServer.server.clpp:22
 function LeaderstatsServer:EnsurePlayerLeaderstatsFolder(player: Player): Folder
 	local existingFolder: Instance = player:FindFirstChild("leaderstats")
 	if existingFolder then
@@ -34,10 +37,11 @@ function LeaderstatsServer:EnsurePlayerLeaderstatsFolder(player: Player): Folder
 	local coinsValue: IntValue = Instance.new("IntValue")
 	coinsValue.Parent = newFolder
 	coinsValue.Name = "Coins"
-	coinsValue.Value = self.STARTING_COINS
+	coinsValue.Value = self.STARTING_COINS -- initial value; not a Changed event
 	return newFolder
 end
 
+-- LeaderstatsServer.server.clpp:38
 function LeaderstatsServer:PlayerEntered(player: Player)
 	if not (player ~= nil) then
 		warn("Invalid player")
@@ -58,6 +62,7 @@ end), "Disconnect")
 	self.janitor:Add(playerData, "Destroy", key)
 end
 
+-- LeaderstatsServer.server.clpp:61
 const function init()
 	local players: Players = game:GetService("Players")
 	local leaderstatsServer: LeaderstatsServer = LeaderstatsServer
