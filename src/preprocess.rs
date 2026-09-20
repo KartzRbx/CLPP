@@ -3,7 +3,6 @@ use crate::error::ClppError;
 use crate::semantic::lib_from_include;
 use miette::Result;
 use std::collections::HashSet;
-use std::fs;
 use std::path::{Path, PathBuf};
 
 pub fn preprocess(source: &str, file_path: &Path) -> Result<(String, CompileContext)> {
@@ -33,6 +32,8 @@ fn expand(
     let stem = file_stem_name(file_path);
     let mut out = String::new();
     let mut orig_line = 0usize;
+    let mut skip = 0i32;
+    let mut saw_true = Vec::new();
     for line in source.lines() {
         orig_line += 1;
         let mapped = map_to.unwrap_or(orig_line);
@@ -53,6 +54,87 @@ fn expand(
             }
         }
         let trimmed = code.trim().trim_start_matches('\u{feff}');
+        if trimmed.starts_with('#') {
+            let dir = trimmed.trim_start_matches('#').trim_start();
+            if let Some(rest) = strip_prefix_ignore_ascii_case(dir, "if") {
+                if rest.chars().next().map(|c| c.is_whitespace() || c == '(').unwrap_or(false)
+                    || rest.is_empty()
+                {
+                    let ok = eval_if(rest.trim(), ctx, file_path);
+                    saw_true.push(ok);
+                    if skip > 0 || !ok {
+                        skip += 1;
+                    }
+                    push_mapped_line(ctx, &mut out, "", mapped);
+                    continue;
+                }
+            }
+            if let Some(rest) = strip_prefix_ignore_ascii_case(dir, "ifdef") {
+                let name = rest.trim();
+                let ok = ctx.defines.iter().any(|d| d == name) || builtin_defined(name, ctx, file_path);
+                saw_true.push(ok);
+                if skip > 0 || !ok {
+                    skip += 1;
+                }
+                push_mapped_line(ctx, &mut out, "", mapped);
+                continue;
+            }
+            if let Some(rest) = strip_prefix_ignore_ascii_case(dir, "ifndef") {
+                let name = rest.trim();
+                let ok = !(ctx.defines.iter().any(|d| d == name) || builtin_defined(name, ctx, file_path));
+                saw_true.push(ok);
+                if skip > 0 || !ok {
+                    skip += 1;
+                }
+                push_mapped_line(ctx, &mut out, "", mapped);
+                continue;
+            }
+            if dir == "else" || dir.starts_with("else ") {
+                if let Some(was) = saw_true.last_mut() {
+                    if skip == 1 && !*was {
+                        skip = 0;
+                        *was = true;
+                    } else if skip == 0 {
+                        skip = 1;
+                    }
+                }
+                push_mapped_line(ctx, &mut out, "", mapped);
+                continue;
+            }
+            if dir.starts_with("elif") {
+                let rest = dir["elif".len()..].trim();
+                if let Some(was) = saw_true.last_mut() {
+                    if skip == 1 && !*was && eval_if(rest, ctx, file_path) {
+                        skip = 0;
+                        *was = true;
+                    } else if skip == 0 {
+                        skip = 1;
+                    }
+                }
+                push_mapped_line(ctx, &mut out, "", mapped);
+                continue;
+            }
+            if dir == "endif" || dir.starts_with("endif ") {
+                if skip > 0 {
+                    skip -= 1;
+                }
+                saw_true.pop();
+                push_mapped_line(ctx, &mut out, "", mapped);
+                continue;
+            }
+            if let Some(rest) = strip_prefix_ignore_ascii_case(dir, "define") {
+                let name = rest.trim().split_whitespace().next().unwrap_or("");
+                if !name.is_empty() && !ctx.defines.iter().any(|d| d == name) {
+                    ctx.defines.push(name.to_string());
+                }
+                push_mapped_line(ctx, &mut out, "", mapped);
+                continue;
+            }
+        }
+        if skip > 0 {
+            push_mapped_line(ctx, &mut out, "", mapped);
+            continue;
+        }
         if trimmed.is_empty() {
             push_mapped_line(ctx, &mut out, "", mapped);
             continue;
@@ -78,7 +160,7 @@ fn expand(
                     };
                     let included_stem = file_stem_name(&resolved);
                     if included_stem == stem {
-                        let inner = fs::read_to_string(&resolved).map_err(|err| {
+                        let inner = crate::doctor::cached_read(&resolved).map_err(|err| {
                             ClppError::at_line(source, orig_line, 1, format!("read {path}: {err}"))
                         })?;
                         let inner = expand(&inner, &resolved, ctx, seen, Some(mapped))?;
@@ -292,6 +374,19 @@ fn apply_pragma(rest: &str, ctx: &mut CompileContext) {
         "native" => {
             ctx.native = true;
         }
+        "strict_receiver" => {
+            ctx.strict_receiver = true;
+        }
+        "nolint" => {
+            let names: Vec<String> = parts.map(|s| s.to_string()).collect();
+            if let Some(line) = crate::lint::luau_nolint(&names) {
+                ctx.comments.push(SourceComment {
+                    line: ctx.line_map.len().saturating_add(1),
+                    text: line.trim_start_matches("-- ").into(),
+                    is_doc: false,
+                });
+            }
+        }
         "optimize" | "optimise" => {
             let level = parts
                 .next()
@@ -387,4 +482,42 @@ pub fn to_luau_path(rel: &Path) -> PathBuf {
 
 fn canonicalize_or(path: &Path) -> PathBuf {
     path.canonicalize().unwrap_or_else(|_| path.to_path_buf())
+}
+
+fn builtin_defined(name: &str, ctx: &CompileContext, file_path: &Path) -> bool {
+    let kind = ctx
+        .script_kind
+        .clone()
+        .or_else(|| script_kind(file_path));
+    match name {
+        "SERVER" => kind.as_deref() == Some("server"),
+        "CLIENT" => kind.as_deref() == Some("client"),
+        "PLUGIN" => kind.as_deref() == Some("plugin"),
+        "DEBUG" => !ctx.release,
+        "RELEASE" => ctx.release,
+        "CLPP_VERSION" => true,
+        _ => false,
+    }
+}
+
+fn eval_if(expr: &str, ctx: &CompileContext, file_path: &Path) -> bool {
+    let e = expr.trim();
+    if e.is_empty() {
+        return false;
+    }
+    if let Some((left, right)) = e.split_once("||") {
+        return eval_if(left, ctx, file_path) || eval_if(right, ctx, file_path);
+    }
+    if let Some((left, right)) = e.split_once("&&") {
+        return eval_if(left, ctx, file_path) && eval_if(right, ctx, file_path);
+    }
+    if let Some(rest) = e.strip_prefix('!') {
+        return !eval_if(rest, ctx, file_path);
+    }
+    if let Some(rest) = e.strip_prefix("defined") {
+        let name = rest.trim().trim_matches(|c| c == '(' || c == ')').trim();
+        return ctx.defines.iter().any(|d| d == name) || builtin_defined(name, ctx, file_path);
+    }
+    let name = e.trim_matches(|c| c == '(' || c == ')').trim();
+    ctx.defines.iter().any(|d| d == name) || builtin_defined(name, ctx, file_path)
 }

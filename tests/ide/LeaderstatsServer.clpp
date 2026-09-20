@@ -1,0 +1,12 @@
+#include <clpp/roblox.clh>
+#include <clpp/libs/janitor.clh>
+
+struct LeaderstatsServer {
+    Janitor janitor;
+    void PlayerEntered(Player player);
+    void UpdateLeaderstatsWithValues(IntValue currentValue, int newValue);
+};
+
+void LeaderstatsServer::PlayerEntered(Player player) {
+    @$0
+}

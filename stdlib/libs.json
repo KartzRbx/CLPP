@@ -1,0 +1,18 @@
+{
+  "janitor": {
+    "runtime": "Janitor",
+    "header": "stdlib/clpp/libs/janitor.clh",
+    "symbols": ["new", "Add", "Cleanup", "Destroy", "Remove"]
+  },
+  "dataservice": {
+    "runtime": "DataService",
+    "header": "stdlib/clpp/libs/dataservice.clh",
+    "symbols": ["Server", "WaitFor", "GetChangedSignal", "Paths"]
+  },
+  "spark": {
+    "runtime": "Spark",
+    "header": "stdlib/clpp/libs/spark.clh",
+    "map": { "Signal": "Spark.Signal" },
+    "symbols": ["Signal"]
+  }
+}

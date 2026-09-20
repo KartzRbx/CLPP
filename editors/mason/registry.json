@@ -1,0 +1,28 @@
+{
+  "name": "clpp",
+  "description": "CL++ compiler — C++-inspired language that compiles to Luau",
+  "homepage": "https://github.com/KartzRbx/CLPP",
+  "licenses": ["MIT"],
+  "languages": ["CL++"],
+  "categories": ["Compiler", "LSP"],
+  "source": {
+    "id": "pkg:github/KartzRbx/CLPP@v0.7.0"
+  },
+  "bin": {
+    "clpp": {
+      "win32-x64": "clpp.exe",
+      "linux-x64": "clpp",
+      "darwin-x64": "clpp",
+      "darwin-arm64": "clpp"
+    }
+  },
+  "release": {
+    "tag": "v0.7.0",
+    "assets": {
+      "win32-x64": "clpp.exe",
+      "linux-x64": "clpp",
+      "darwin-x64": "clpp",
+      "darwin-arm64": "clpp"
+    }
+  }
+}

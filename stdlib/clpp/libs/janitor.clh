@@ -1,1 +1,9 @@
 #pragma once
+
+struct Janitor {
+    static Janitor new();
+    void Add(any object, string method, string key);
+    void Remove(string key);
+    void Cleanup();
+    void Destroy();
+};

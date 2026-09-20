@@ -2,7 +2,9 @@ use serde::{Deserialize, Serialize};
 
 pub const LANGUAGE_ID: &str = "clpp";
 pub const LANGUAGE_NAME: &str = "CL++";
-pub const EXTENSIONS: &[&str] = &[".clpp", ".clp", ".clh"];
+pub const EXTENSIONS: &[&str] = &[
+    ".clpp", ".clp", ".clh", ".flare", ".mint", ".bloom", ".helm", ".shift", ".hive", ".axiom",
+];
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompileDiagnostic {
@@ -10,6 +12,10 @@ pub struct CompileDiagnostic {
     pub line: usize,
     pub column: usize,
     pub severity: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub code: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub help: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -46,6 +52,17 @@ pub struct CompileArtifact {
     pub error: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub diagnostics: Vec<CompileDiagnostic>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "sourceMap")]
+    pub source_map: Vec<SourceMapLine>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SourceMapLine {
+    #[serde(rename = "luauLine")]
+    pub luau_line: usize,
+    #[serde(rename = "clppLine")]
+    pub clpp_line: usize,
+    pub file: String,
 }
 
 impl CompileArtifact {
@@ -62,6 +79,7 @@ impl CompileArtifact {
             libraries: Vec::new(),
             error: Some(error.into()),
             diagnostics: Vec::new(),
+            source_map: Vec::new(),
         }
     }
 
@@ -82,6 +100,20 @@ impl CompileArtifact {
             libraries: Vec::new(),
             error: Some(error.into()),
             diagnostics,
+            source_map: Vec::new(),
+        }
+    }
+}
+
+impl Default for CompileDiagnostic {
+    fn default() -> Self {
+        Self {
+            message: String::new(),
+            line: 1,
+            column: 1,
+            severity: "error".into(),
+            code: None,
+            help: None,
         }
     }
 }
@@ -179,6 +211,31 @@ pub fn language_manifest() -> LanguageManifest {
                 clpp: "~>",
                 luau: "janitor:Add(Connect)",
                 meaning: "auto-cleanup connection",
+            },
+            OperatorMap {
+                clpp: "%",
+                luau: "%",
+                meaning: "modulo",
+            },
+            OperatorMap {
+                clpp: "**",
+                luau: "^",
+                meaning: "power",
+            },
+            OperatorMap {
+                clpp: "?.",
+                luau: "if _t then",
+                meaning: "optional chain",
+            },
+            OperatorMap {
+                clpp: "??",
+                luau: "if _t ~= nil",
+                meaning: "null coalesce",
+            },
+            OperatorMap {
+                clpp: "?",
+                luau: "if-expr",
+                meaning: "ternary",
             },
         ],
         io: &[

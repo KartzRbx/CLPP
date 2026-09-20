@@ -30,7 +30,7 @@ fn visit_item(item: &Item, f: &mut impl FnMut(NodeRef<'_>) -> bool) -> bool {
             }
         }
         Item::Destructure { value, .. } => visit_expr(value, f),
-        Item::Unsupported { .. } => true,
+        Item::Unsupported { .. } | Item::Enum { .. } | Item::TypeAlias { .. } | Item::Class { .. } => true,
     }
 }
 
@@ -95,8 +95,14 @@ fn visit_stmt(stmt: &Stmt, f: &mut impl FnMut(NodeRef<'_>) -> bool) -> bool {
             visit_expr(discriminant, f)
                 && arms.iter().all(|arm| visit_stmts(&arm.body, f))
         }
-        Stmt::Spawn { body, .. } | Stmt::Block(body) => visit_stmts(body, f),
-        Stmt::Return(None) | Stmt::Break => true,
+        Stmt::Spawn { body, .. }
+        | Stmt::Block(body)
+        | Stmt::DoWhile { body, .. }
+        | Stmt::Delay { body, .. }
+        | Stmt::Defer { body, .. } => visit_stmts(body, f),
+        Stmt::Try { body, catch, .. } => visit_stmts(body, f) && visit_stmts(catch, f),
+        Stmt::FieldDestructure { value, .. } => visit_expr(value, f),
+        Stmt::Return(None) | Stmt::Break | Stmt::Continue => true,
     }
 }
 
@@ -109,10 +115,17 @@ fn visit_expr(expr: &Expr, f: &mut impl FnMut(NodeRef<'_>) -> bool) -> bool {
         | Expr::Await { argument }
         | Expr::Cast { argument, .. }
         | Expr::Update { target: argument, .. } => visit_expr(argument, f),
-        Expr::Binary { left, right, .. } | Expr::Assign { left, right, .. } => {
+        Expr::Member { object, .. } | Expr::Index { object, .. } | Expr::OptionalChain { object, .. } => {
+            visit_expr(object, f)
+        }
+        Expr::Coalesce { left, right, .. } | Expr::Binary { left, right, .. } | Expr::Assign { left, right, .. } => {
             visit_expr(left, f) && visit_expr(right, f)
         }
-        Expr::Member { object, .. } => visit_expr(object, f),
+        Expr::Ternary {
+            cond,
+            then_expr,
+            else_expr,
+        } => visit_expr(cond, f) && visit_expr(then_expr, f) && visit_expr(else_expr, f),
         Expr::Call { object, args, .. } => {
             object
                 .as_ref()
@@ -172,7 +185,14 @@ fn walk_stmts<'a>(stmts: &'a [Stmt], line: usize, col: usize, found: &mut Option
             | Stmt::ForEach { body, .. }
             | Stmt::Spawn { body, .. }
             | Stmt::Block(body)
-            | Stmt::CFor { body, .. } => walk_stmts(body, line, col, found),
+            | Stmt::CFor { body, .. }
+            | Stmt::DoWhile { body, .. }
+            | Stmt::Delay { body, .. }
+            | Stmt::Defer { body, .. } => walk_stmts(body, line, col, found),
+            Stmt::Try { body, catch, .. } => {
+                walk_stmts(body, line, col, found);
+                walk_stmts(catch, line, col, found);
+            }
             Stmt::Switch { cases, .. } => {
                 for case in cases {
                     walk_stmts(&case.body, line, col, found);

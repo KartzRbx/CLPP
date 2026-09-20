@@ -1,0 +1,313 @@
+---
+title: Grammar (generated)
+description: Copy of src/parser/grammar.pest converted for the 0.7 spec.
+---
+
+# Grammar (generated)
+
+This is the Pest grammar shipped in CL++ 0.7.0 (`src/parser/grammar.pest`). Productions: `@ident`, `continue`, `do/while`, `try/catch`, `?.`, `??`, ranges, `enum`, `using`, `[[attr]]`, `signal`, template strings, `~>`.
+
+```pest
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+COMMENT = _{ "//" ~ (!NEWLINE ~ ANY)* | "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
+NEWLINE = _{ "\n" | "\r\n" }
+ident_char = _{ ASCII_ALPHANUMERIC | "_" }
+
+KW_CONSTEXPR = @{ "constexpr" ~ !ident_char }
+KW_NAMESPACE = @{ "namespace" ~ !ident_char }
+KW_OBSERVABLE = @{ "observable" ~ !ident_char }
+KW_PROTECTED = @{ "protected" ~ !ident_char }
+KW_PARALLEL = @{ "parallel" ~ !ident_char }
+KW_NULLPTR = @{ "nullptr" ~ !ident_char }
+KW_PRIVATE = @{ "private" ~ !ident_char }
+KW_PUBLIC = @{ "public" ~ !ident_char }
+KW_TEMPLATE = @{ "template" ~ !ident_char }
+KW_TYPENAME = @{ "typename" ~ !ident_char }
+KW_TYPEDEF = @{ "typedef" ~ !ident_char }
+KW_DEFAULT = @{ "default" ~ !ident_char }
+KW_STATIC = @{ "static" ~ !ident_char }
+KW_STRUCT = @{ "struct" ~ !ident_char }
+KW_SWITCH = @{ "switch" ~ !ident_char }
+KW_RETURN = @{ "return" ~ !ident_char }
+KW_SIGNAL = @{ "signal" ~ !ident_char }
+KW_BREAK = @{ "break" ~ !ident_char }
+KW_CONTINUE = @{ "continue" ~ !ident_char }
+KW_CLASS = @{ "class" ~ !ident_char }
+KW_CONST = @{ "const" ~ !ident_char }
+KW_FALSE = @{ "false" ~ !ident_char }
+KW_FLOAT = @{ "float" ~ !ident_char }
+KW_WHILE = @{ "while" ~ !ident_char }
+KW_ASYNC = @{ "async" ~ !ident_char }
+KW_AWAIT = @{ "await" ~ !ident_char }
+KW_GUARD = @{ "guard" ~ !ident_char }
+KW_MATCH = @{ "match" ~ !ident_char }
+KW_SPAWN = @{ "spawn" ~ !ident_char }
+KW_DELAY = @{ "delay" ~ !ident_char }
+KW_DEFER = @{ "defer" ~ !ident_char }
+KW_CATCH = @{ "catch" ~ !ident_char }
+KW_OVERRIDE = @{ "override" ~ !ident_char }
+KW_TRY = @{ "try" ~ !ident_char }
+KW_DO = @{ "do" ~ !ident_char }
+KW_AUTO = @{ "auto" ~ !ident_char }
+KW_BOOL = @{ "bool" ~ !ident_char }
+KW_CASE = @{ "case" ~ !ident_char }
+KW_ELSE = @{ "else" ~ !ident_char }
+KW_ENUM = @{ "enum" ~ !ident_char }
+KW_TRUE = @{ "true" ~ !ident_char }
+KW_VOID = @{ "void" ~ !ident_char }
+KW_FOR = @{ "for" ~ !ident_char }
+KW_INT = @{ "int" ~ !ident_char }
+KW_IN = @{ "in" ~ !ident_char }
+KW_NEW = @{ "new" ~ !ident_char }
+KW_USING = @{ "using" ~ !ident_char }
+KW_EXTERN = @{ "extern" ~ !ident_char }
+KW_INLINE = @{ "inline" ~ !ident_char }
+KW_DOUBLE = @{ "double" ~ !ident_char }
+KW_STRING = @{ "string" ~ !ident_char }
+KW_FUNC = @{ "func" ~ !ident_char }
+KW_NULL = @{ "null" ~ !ident_char }
+KW_IF = @{ "if" ~ !ident_char }
+KW_BY = @{ "by" ~ !ident_char }
+KW_TUPLE = @{ "tuple" ~ !ident_char }
+KW_VARIANT = @{ "variant" ~ !ident_char }
+
+kw = _{
+    KW_CONSTEXPR | KW_NAMESPACE | KW_OBSERVABLE | KW_PROTECTED | KW_PARALLEL |
+    KW_NULLPTR | KW_PRIVATE | KW_PUBLIC |
+    KW_TEMPLATE | KW_TYPENAME | KW_TYPEDEF | KW_DEFAULT | KW_STATIC |
+    KW_STRUCT | KW_SWITCH | KW_RETURN | KW_SIGNAL | KW_BREAK | KW_CONTINUE | KW_CLASS | KW_CONST |
+    KW_FALSE | KW_FLOAT | KW_WHILE | KW_ASYNC | KW_AWAIT | KW_GUARD | KW_MATCH | KW_SPAWN |
+    KW_DELAY | KW_DEFER | KW_CATCH | KW_OVERRIDE | KW_TRY | KW_DO |
+    KW_AUTO | KW_BOOL | KW_CASE | KW_ELSE |
+    KW_ENUM | KW_TRUE | KW_VOID | KW_FOR | KW_INT | KW_NEW | KW_USING |
+    KW_EXTERN | KW_INLINE | KW_DOUBLE | KW_STRING | KW_FUNC | KW_NULL | KW_IF | KW_IN | KW_BY |
+    KW_TUPLE | KW_VARIANT
+}
+
+ident = @{ !kw ~ (ASCII_ALPHA | "_") ~ ident_char* }
+number = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
+string = @{ "\"" ~ ("\\" ~ ANY | !"\"" ~ ANY)* ~ "\"" }
+char_string = @{ "'" ~ ("\\" ~ ANY | !"'" ~ ANY)* ~ "'" }
+raw_string = @{ "R\"(" ~ (!")\"" ~ ANY)* ~ ")\"" }
+template_string = { "`" ~ template_chunk* ~ "`" }
+template_chunk = { template_interp | template_escaped | template_text }
+template_interp = { "{" ~ expr ~ "}" }
+template_escaped = @{ "\\`" | "\\{" | "\\}" | "\\\\" }
+template_text = @{ (!("`" | "{" | "\\") ~ ANY)+ }
+string_join = { template_string ~ ("," ~ expr)+ }
+
+file = { SOI ~ item* ~ EOI }
+
+item = {
+    struct_decl
+    | enum_decl
+    | function_item
+    | field_destructure
+    | destructure
+    | var_decl
+    | using_namespace
+    | using_stmt
+    | namespace_item
+    | skip_decl
+    | hash_line
+}
+
+hash_line = { "#" ~ (!NEWLINE ~ ANY)* }
+
+using_namespace = { KW_USING ~ KW_NAMESPACE ~ ident? ~ ";" }
+using_stmt = { KW_USING ~ ident ~ "=" ~ type_spec ~ ";" }
+namespace_item = { KW_NAMESPACE ~ ident? ~ "{" ~ item* ~ "}" }
+skip_decl = { (KW_TYPEDEF | KW_EXTERN) ~ skip_balanced }
+
+skip_balanced = {
+    (!("{" | ";") ~ ANY)* ~ (
+        "{" ~ skip_nested ~ "}" ~ ";"?
+        | ";"
+    )
+}
+skip_nested = _{ (!("{" | "}") ~ ANY)* ~ ("{" ~ skip_nested ~ "}" ~ (!("{" | "}") ~ ANY)*)* }
+
+specifiers = { (KW_STATIC | KW_CONSTEXPR | KW_INLINE | KW_CONST | KW_OBSERVABLE | KW_ASYNC | KW_OVERRIDE)+ }
+
+attr = { "[[" ~ ident ~ ("(" ~ string ~ ")")? ~ "]]" }
+
+template_head = { KW_TEMPLATE ~ "<" ~ template_param ~ ("," ~ template_param)* ~ ">" }
+template_param = { (KW_TYPENAME | KW_CLASS) ~ ident ~ ("=" ~ type_spec)? }
+
+type_name = {
+    KW_VOID | KW_DOUBLE | KW_FLOAT | KW_AUTO | KW_BOOL | KW_INT | KW_STRING | KW_FUNC | KW_SIGNAL | KW_TUPLE | KW_VARIANT
+    | ident ~ ("::" ~ ident)*
+}
+type_generic = { "<" ~ type_spec ~ ("," ~ type_spec)* ~ ">" }
+function_type = { "function" ~ "<" ~ type_spec ~ "(" ~ type_spec? ~ ("," ~ type_spec)* ~ ")" ~ ">" }
+type_atom = { specifiers? ~ (function_type | type_name ~ type_generic?) ~ "*"* }
+type_spec = { type_atom ~ (("|" | "&") ~ type_atom)* }
+
+param = { type_spec ~ ident | ident ~ ":" ~ type_spec }
+param_list = { param ~ ("," ~ param)* }
+
+function_item = {
+    template_head? ~ attr* ~ specifiers? ~ type_spec ~ ident ~ ("::" ~ ident)? ~ "(" ~ param_list? ~ ")" ~ (block | ";")
+}
+
+var_decl = { specifiers? ~ (type_spec ~ ident | ident ~ ":" ~ type_spec) ~ ("=" ~ expr)? ~ ";" }
+destructure = { KW_AUTO ~ "[" ~ ident ~ ("," ~ ident)* ~ "]" ~ "=" ~ expr ~ ";" }
+field_destructure = { KW_AUTO ~ "{" ~ ident ~ ("," ~ ident)* ~ "}" ~ "=" ~ expr ~ ";" }
+
+enum_decl = {
+    KW_ENUM ~ KW_CLASS? ~ ident ~ (":" ~ type_spec)? ~ "{" ~ enum_variant? ~ ("," ~ enum_variant)* ~ ","? ~ "}" ~ ";"
+}
+enum_variant = { ident ~ ("=" ~ number)? }
+
+struct_decl = {
+    template_head? ~ (KW_STRUCT | KW_CLASS) ~ ident ~ type_generic? ~ (":" ~ ident)? ~ "{" ~ struct_member* ~ "}" ~ ";"
+}
+
+struct_member = {
+    access_label
+    | nested_struct
+    | ctor_proto
+    | method_proto
+    | field_decl
+}
+
+access_label = { (KW_PUBLIC | KW_PRIVATE | KW_PROTECTED) ~ ":" }
+nested_struct = { struct_decl ~ ident? ~ ("=" ~ expr)? ~ ";"? }
+ctor_proto = { ident ~ "(" ~ param_list? ~ ")" ~ ";" }
+method_proto = { specifiers? ~ type_spec ~ ident ~ "(" ~ param_list? ~ ")" ~ ";" }
+field_decl = { specifiers? ~ (type_spec ~ ident | ident ~ ":" ~ type_spec) ~ ("=" ~ expr)? ~ ";" }
+
+block = { "{" ~ stmt* ~ "}" }
+
+stmt = {
+    if_stmt
+    | guard_stmt
+    | match_stmt
+    | switch_stmt
+    | try_stmt
+    | for_stmt
+    | do_while_stmt
+    | while_stmt
+    | spawn_stmt
+    | parallel_stmt
+    | delay_stmt
+    | defer_stmt
+    | return_stmt
+    | break_stmt
+    | continue_stmt
+    | field_destructure
+    | destructure
+    | var_decl
+    | expr_stmt
+    | empty_stmt
+    | block
+}
+
+empty_stmt = { ";" }
+
+if_stmt = { KW_IF ~ "(" ~ expr ~ ")" ~ stmt ~ (KW_ELSE ~ stmt)? }
+guard_stmt = { KW_GUARD ~ "(" ~ expr ~ ")" ~ KW_ELSE ~ stmt }
+while_stmt = { KW_WHILE ~ "(" ~ expr ~ ")" ~ stmt }
+do_while_stmt = { KW_DO ~ stmt ~ KW_WHILE ~ "(" ~ expr ~ ")" ~ ";" }
+for_stmt = { c_for_stmt | range_for_stmt }
+c_for_stmt = { KW_FOR ~ "(" ~ c_for_init? ~ ";" ~ expr? ~ ";" ~ expr? ~ ")" ~ stmt }
+c_for_init = { specifiers? ~ (type_spec ~ ident | ident ~ ":" ~ type_spec) ~ ("=" ~ expr)? }
+range_for_stmt = { KW_FOR ~ "(" ~ type_spec ~ ident ~ (KW_IN | ":") ~ range_src ~ ")" ~ stmt }
+range_src = { expr ~ (range_dots ~ expr ~ (KW_BY ~ expr)?)? }
+range_dots = { "..<" | ".." }
+return_stmt = { KW_RETURN ~ (expr ~ ("," ~ expr)*)? ~ ";" }
+break_stmt = { KW_BREAK ~ ";" }
+continue_stmt = { KW_CONTINUE ~ ";" }
+expr_stmt = { expr ~ ";" }
+spawn_stmt = { KW_SPAWN ~ block ~ ";"? }
+parallel_stmt = { KW_PARALLEL ~ block ~ ";"? }
+delay_stmt = { KW_DELAY ~ "(" ~ expr ~ ")" ~ block ~ ";"? }
+defer_stmt = { KW_DEFER ~ block ~ ";"? }
+try_stmt = { KW_TRY ~ block ~ KW_CATCH ~ "(" ~ (KW_AUTO | type_spec) ~ ident ~ ")" ~ block }
+
+switch_stmt = { KW_SWITCH ~ "(" ~ expr ~ ")" ~ "{" ~ switch_clause* ~ "}" }
+switch_clause = { (case_clause | default_clause) ~ stmt* }
+case_clause = { KW_CASE ~ expr ~ ":" }
+default_clause = { KW_DEFAULT ~ ":" }
+
+match_stmt = { KW_MATCH ~ "(" ~ expr ~ ")" ~ "{" ~ match_arm* ~ "}" ~ ";"? }
+match_arm = { match_pat ~ "=>" ~ match_body ~ ","? }
+match_pat = { "_" | type_spec ~ ident | ident }
+match_body = { block | expr }
+
+expr = { assign }
+
+assign_op = { "+=" | "-=" | "*=" | "/=" | "//=" | "^=" | "%=" | ".:=" | "=" }
+assign = { ternary ~ (assign_op ~ assign)? }
+ternary = { coalesce ~ ("?" ~ ternary ~ ":" ~ ternary)? }
+coalesce = { shift ~ ("??" ~ shift)* }
+shift = { or_expr ~ ("<<" ~ or_expr)* }
+or_expr = { and_expr ~ ("||" ~ and_expr)* }
+and_expr = { cmp ~ ("&&" ~ cmp)* }
+cmp = { concat ~ (cmp_op ~ concat)* }
+cmp_op = { "==" | "!=" | "<=" | ">=" | "<" | ">" }
+concat = { add ~ (".:" ~ add)* }
+add = { mul ~ (add_op ~ mul)* }
+add_op = { "+" | "-" }
+mul = { unary ~ (mul_op ~ unary)* }
+mul_op = { "*" | "/" | "%" }
+pow_op = { "**" }
+unary = { KW_AWAIT ~ unary | unary_op ~ unary | pow }
+pow = { primary ~ (pow_op ~ unary)? }
+unary_op = { "!" | "-" }
+
+primary = { atom ~ postfix* }
+
+atom = {
+    lambda
+    | new_expr
+    | get_service
+    | named_cast
+    | boolean
+    | null_lit
+    | number
+    | raw_string
+    | string_join
+    | template_string
+    | char_string
+    | string
+    | init_list
+    | at_sigil
+    | ident
+    | "(" ~ expr ~ ")"
+}
+
+at_sigil = { "@" ~ ident }
+
+boolean = { KW_TRUE | KW_FALSE }
+null_lit = { KW_NULL | KW_NULLPTR }
+
+postfix = { qmark_dot_suf | cleanup_suf | scope_suf | colon_suf | dot_suf | index_suf | inc_suf | call_args | init_suf }
+
+qmark_dot_suf = { "?." ~ ident ~ call_args? }
+cleanup_suf = { "~>" ~ ident ~ call_args? }
+scope_suf = { "::" ~ ident ~ call_args? }
+colon_suf = { ":" ~ !":" ~ ident ~ call_args? }
+dot_suf = { "." ~ !":" ~ ident ~ call_args? }
+index_suf = { "[" ~ expr ~ "]" }
+inc_suf = { "++" | "--" }
+call_args = { "(" ~ args? ~ ")" }
+init_suf = { init_list }
+
+args = { expr ~ ("," ~ expr)* }
+
+init_list = { "{" ~ init_body? ~ "}" }
+init_body = { designated_fields | dict_pairs | expr_list }
+designated_fields = { designated_field ~ ("," ~ designated_field)* ~ ","? }
+designated_field = { "." ~ ident ~ "=" ~ expr }
+dict_pairs = { dict_pair ~ ("," ~ dict_pair)* ~ ","? }
+dict_pair = { "{" ~ expr ~ "," ~ expr ~ "}" }
+expr_list = { expr ~ ("," ~ expr)* ~ ","? }
+
+new_expr = { KW_NEW ~ ident ~ call_args? }
+get_service = { "GetService" ~ "<" ~ ident ~ ">" ~ "(" ~ ")" }
+named_cast_kw = { "static_cast" | "const_cast" | "reinterpret_cast" | "dynamic_cast" }
+named_cast = { named_cast_kw ~ "<" ~ type_spec ~ ">" ~ "(" ~ expr ~ ")" }
+
+lambda = { KW_FUNC ~ "(" ~ param_list? ~ ")" ~ block }
+```

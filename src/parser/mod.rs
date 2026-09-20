@@ -39,7 +39,17 @@ pub fn parse_for_ide(source: &str, file_name: &str) -> (Program, Vec<CompileDiag
                 line,
                 column,
                 severity: "error".into(),
+                code: None,
+                help: None,
             });
+            let ghosted = inject_ghost(source, line, column);
+            if ghosted != source {
+                if let Ok((mut program, extra)) = parse_tree(&ghosted, file_name) {
+                    diagnostics.extend(extra);
+                    program.file_name = file_name.to_string();
+                    return (program, diagnostics);
+                }
+            }
             let recovered = recover_source(source, line);
             if recovered != source {
                 if let Ok((mut program, extra)) = parse_tree(&recovered, file_name) {
@@ -82,6 +92,21 @@ fn parse_tree(source: &str, file_name: &str) -> Result<(Program, Vec<CompileDiag
         },
         diagnostics,
     ))
+}
+
+fn inject_ghost(source: &str, err_line: usize, err_col: usize) -> String {
+    let mut lines: Vec<String> = source.lines().map(|l| l.to_string()).collect();
+    if err_line == 0 || err_line > lines.len() {
+        return source.to_string();
+    }
+    let row = &mut lines[err_line - 1];
+    let idx = err_col.saturating_sub(1).min(row.len());
+    row.insert_str(idx, "__clpp_complete");
+    let trimmed = row.trim_end();
+    if !trimmed.ends_with(';') && !trimmed.ends_with('{') && !trimmed.ends_with('}') {
+        row.push(';');
+    }
+    lines.join("\n")
 }
 
 fn recover_source(source: &str, err_line: usize) -> String {
@@ -142,33 +167,43 @@ fn parse_item(pair: Pair<Rule>, diagnostics: &mut Vec<CompileDiagnostic>) -> Vec
     let inner = pair.into_inner().next().expect("item inner");
     match inner.as_rule() {
         Rule::struct_decl => parse_struct(inner, None, diagnostics),
+        Rule::enum_decl => vec![parse_enum(inner)],
         Rule::function_item => vec![parse_function(inner)],
+        Rule::field_destructure => {
+            let (names, value) = parse_field_destructure_parts(inner);
+            vec![Item::Destructure { names, value }]
+        }
         Rule::destructure => {
             let (names, value) = parse_destructure_parts(inner);
             vec![Item::Destructure { names, value }]
         }
         Rule::var_decl => vec![Item::Decl(parse_var_decl(inner, None))],
-        Rule::using_stmt => {
+        Rule::using_namespace => {
             let line = inner.line_col().0;
             diagnostics.push(CompileDiagnostic {
-                message: "`using` is not in CL++ — write a CL++ type or drop the alias".into(),
+                message: crate::diag::message(crate::diag::CLPP0301, "`using namespace` is not in CL++"),
                 line,
                 column: 1,
                 severity: "error".into(),
+                code: Some("CLPP0301".into()),
+                help: Some(crate::diag::CLPP0301.help.into()),
             });
             vec![Item::Unsupported {
-                kind: "using".into(),
+                kind: "using namespace".into(),
                 line,
-                message: "`using` is not in CL++".into(),
+                message: "`using namespace` is not in CL++".into(),
             }]
         }
+        Rule::using_stmt => vec![parse_using(inner)],
         Rule::namespace_item => {
             let line = inner.line_col().0;
             diagnostics.push(CompileDiagnostic {
-                message: "`namespace` is not in CL++ — use a struct or a module file".into(),
+                message: crate::diag::message(crate::diag::CLPP0301, "`namespace` is not in CL++ — use a struct or a module file"),
                 line,
                 column: 1,
                 severity: "error".into(),
+                code: Some("CLPP0301".into()),
+                help: Some(crate::diag::CLPP0301.help.into()),
             });
             let mut items = vec![Item::Unsupported {
                 kind: "namespace".into(),
@@ -183,6 +218,7 @@ fn parse_item(pair: Pair<Rule>, diagnostics: &mut Vec<CompileDiagnostic>) -> Vec
             );
             items
         }
+        Rule::hash_line => Vec::new(),
         Rule::skip_decl => {
             let line = inner.line_col().0;
             let kind = if inner.as_str().trim_start().starts_with("enum") {
@@ -195,10 +231,12 @@ fn parse_item(pair: Pair<Rule>, diagnostics: &mut Vec<CompileDiagnostic>) -> Vec
                 "extern"
             };
             diagnostics.push(CompileDiagnostic {
-                message: format!("`{kind}` is not in CL++"),
+                message: crate::diag::message(crate::diag::CLPP0301, format!("`{kind}` is not in CL++")),
                 line,
                 column: 1,
                 severity: "error".into(),
+                code: Some("CLPP0301".into()),
+                help: Some(crate::diag::CLPP0301.help.into()),
             });
             vec![Item::Unsupported {
                 kind: kind.into(),
@@ -210,27 +248,140 @@ fn parse_item(pair: Pair<Rule>, diagnostics: &mut Vec<CompileDiagnostic>) -> Vec
     }
 }
 
-fn parse_struct(pair: Pair<Rule>, parent: Option<&str>, diagnostics: &mut Vec<CompileDiagnostic>) -> Vec<Item> {
-    let mut items = Vec::new();
-    let mut name = "_anon".to_string();
+fn parse_using(pair: Pair<Rule>) -> Item {
+    let span = pair_span(&pair);
+    let mut name = "Alias".into();
+    let mut ty = "any".into();
     for inner in pair.into_inner() {
         match inner.as_rule() {
             Rule::ident => name = inner.as_str().to_string(),
-            Rule::struct_member => items.extend(parse_struct_member(inner, &name, diagnostics)),
+            Rule::type_spec => ty = parse_type(inner),
             _ => {}
         }
     }
-    let _ = parent;
+    Item::TypeAlias {
+        name,
+        ty,
+        line: span.start_line,
+        span,
+        doc: None,
+    }
+}
+
+fn parse_enum(pair: Pair<Rule>) -> Item {
+    let span = pair_span(&pair);
+    let mut name = "Enum".into();
+    let mut numeric = false;
+    let mut variants = Vec::new();
+    for inner in pair.into_inner() {
+        match inner.as_rule() {
+            Rule::ident => name = inner.as_str().to_string(),
+            Rule::type_spec => numeric = true,
+            Rule::enum_variant => {
+                let mut vname = String::new();
+                let mut val = None;
+                for p in inner.into_inner() {
+                    match p.as_rule() {
+                        Rule::ident => vname = p.as_str().to_string(),
+                        Rule::number => val = Some(p.as_str().to_string()),
+                        _ => {}
+                    }
+                }
+                if !vname.is_empty() {
+                    variants.push((vname, val));
+                }
+            }
+            _ => {}
+        }
+    }
+    Item::Enum {
+        name,
+        numeric,
+        variants,
+        line: span.start_line,
+        span,
+        doc: None,
+    }
+}
+
+fn parse_field_destructure_parts(pair: Pair<Rule>) -> (Vec<String>, Expr) {
+    let mut names = Vec::new();
+    let mut value = Expr::Null;
+    for inner in pair.into_inner() {
+        match inner.as_rule() {
+            Rule::ident => names.push(inner.as_str().to_string()),
+            Rule::expr => value = parse_expr(inner),
+            _ => {}
+        }
+    }
+    (names, value)
+}
+
+fn parse_struct(pair: Pair<Rule>, nested_owner: Option<&str>, diagnostics: &mut Vec<CompileDiagnostic>) -> Vec<Item> {
+    let span = pair_span(&pair);
+    let mut items = Vec::new();
+    let mut name = "_anon".to_string();
+    let mut parent = None;
+    let _ = nested_owner;
+    let mut type_params = Vec::new();
+    let mut saw_name = false;
+    let mut vis = "public".to_string();
+    for inner in pair.into_inner() {
+        match inner.as_rule() {
+            Rule::template_head => {
+                for p in inner.into_inner() {
+                    if p.as_rule() == Rule::template_param {
+                        if let Some(id) = p.into_inner().find(|x| x.as_rule() == Rule::ident) {
+                            type_params.push(id.as_str().to_string());
+                        }
+                    }
+                }
+            }
+            Rule::ident => {
+                if !saw_name {
+                    name = inner.as_str().to_string();
+                    saw_name = true;
+                } else {
+                    parent = Some(inner.as_str().to_string());
+                }
+            }
+            Rule::struct_member => items.extend(parse_struct_member(inner, &name, &mut vis, diagnostics)),
+            _ => {}
+        }
+    }
+    items.insert(
+        0,
+        Item::Class {
+            name: name.clone(),
+            parent: parent.clone(),
+            type_params,
+            line: span.start_line,
+            span,
+            doc: None,
+        },
+    );
     items
 }
 
 fn parse_struct_member(
     pair: Pair<Rule>,
     owner: &str,
+    vis: &mut String,
     diagnostics: &mut Vec<CompileDiagnostic>,
 ) -> Vec<Item> {
     let inner = pair.into_inner().next().expect("member");
     match inner.as_rule() {
+        Rule::access_label => {
+            let text = inner.as_str();
+            *vis = if text.contains("private") {
+                "private".into()
+            } else if text.contains("protected") {
+                "protected".into()
+            } else {
+                "public".into()
+            };
+            Vec::new()
+        }
         Rule::nested_struct => {
             let mut nested = inner.into_inner();
             let Some(decl) = nested.next() else {
@@ -249,21 +400,61 @@ fn parse_struct_member(
                     line,
                     span: Span::point(line, 1),
                     doc: None,
+                    visibility: Some(vis.clone()),
                 }));
             }
             items
         }
+        Rule::ctor_proto => vec![parse_ctor_proto(inner, owner, vis)],
         Rule::method_proto => {
             let mut func = match parse_function(inner) {
                 Item::Function(f) | Item::Proto(f) => f,
                 _ => return Vec::new(),
             };
             func.owner = Some(owner.to_string());
+            func.visibility = Some(vis.clone());
             vec![Item::Proto(func)]
         }
-        Rule::field_decl => vec![Item::Decl(parse_var_decl(inner, Some(owner)))],
+        Rule::field_decl => {
+            let mut decl = parse_var_decl(inner, Some(owner));
+            decl.visibility = Some(vis.clone());
+            vec![Item::Decl(decl)]
+        }
         _ => Vec::new(),
     }
+}
+
+fn parse_ctor_proto(pair: Pair<Rule>, owner: &str, vis: &str) -> Item {
+    let span = pair_span(&pair);
+    let line = span.start_line;
+    let mut name = owner.to_string();
+    let mut params = Vec::new();
+    for inner in pair.into_inner() {
+        match inner.as_rule() {
+            Rule::ident => name = inner.as_str().to_string(),
+            Rule::param_list => params = parse_params(inner),
+            _ => {}
+        }
+    }
+    Item::Proto(Function {
+        name,
+        owner: Some(owner.to_string()),
+        return_type: None,
+        params,
+        body: Vec::new(),
+        is_const: false,
+        is_async: false,
+        target: None,
+        span,
+        doc: None,
+        is_static: false,
+        is_override: false,
+        visibility: Some(vis.to_string()),
+        type_params: Vec::new(),
+        attrs: Vec::new(),
+        parent: Some(owner.to_string()),
+        line,
+    })
 }
 
 fn parse_function(pair: Pair<Rule>) -> Item {
@@ -276,17 +467,42 @@ fn parse_function(pair: Pair<Rule>) -> Item {
     let mut names = Vec::new();
     let mut params = Vec::new();
     let mut body = None;
+    let mut is_static = false;
+    let mut is_override = false;
+    let mut attrs = Vec::new();
+    let mut type_params = Vec::new();
     for inner in pair.into_inner() {
         match inner.as_rule() {
-            Rule::attr => {
-                if let Some(ident) = inner.into_inner().find(|p| p.as_rule() == Rule::ident) {
-                    target = Some(ident.as_str().to_string());
+            Rule::template_head => {
+                for p in inner.into_inner() {
+                    if p.as_rule() == Rule::template_param {
+                        if let Some(id) = p.into_inner().find(|x| x.as_rule() == Rule::ident) {
+                            type_params.push(id.as_str().to_string());
+                        }
+                    }
                 }
+            }
+            Rule::attr => {
+                let mut name = String::new();
+                let mut arg = None;
+                for p in inner.into_inner() {
+                    match p.as_rule() {
+                        Rule::ident => name = p.as_str().to_string(),
+                        Rule::string => arg = Some(unquote(p.as_str())),
+                        _ => {}
+                    }
+                }
+                if name == "server" || name == "client" || name == "plugin" {
+                    target = Some(name.clone());
+                }
+                attrs.push(crate::ast::Attr { name, arg });
             }
             Rule::specifiers => {
                 let text = inner.as_str();
                 is_const = text.contains("const") || text.contains("constexpr");
                 is_async = text.contains("async");
+                is_static = text.contains("static");
+                is_override = text.contains("override");
             }
             Rule::type_spec => return_type = Some(parse_type(inner)),
             Rule::ident => names.push(inner.as_str().to_string()),
@@ -302,16 +518,22 @@ fn parse_function(pair: Pair<Rule>) -> Item {
     };
     let func = Function {
         name,
-        owner,
+        owner: owner.clone(),
         return_type,
         params,
         body: body.clone().unwrap_or_default(),
         is_const,
         is_async,
         target,
-        line,
         span,
         doc: None,
+        is_static,
+        is_override,
+        visibility: None,
+        type_params,
+        attrs,
+        parent: owner,
+        line,
     };
     if body.is_some() {
         Item::Function(func)
@@ -351,6 +573,7 @@ fn parse_var_decl(pair: Pair<Rule>, owner: Option<&str>) -> Decl {
         line,
         span,
         doc: None,
+        visibility: None,
     }
 }
 
@@ -368,24 +591,7 @@ fn parse_destructure_parts(pair: Pair<Rule>) -> (Vec<String>, Expr) {
 }
 
 fn parse_type(pair: Pair<Rule>) -> String {
-    let mut name = String::new();
-    for inner in pair.into_inner() {
-        match inner.as_rule() {
-            Rule::specifiers => {}
-            Rule::type_name => {
-                name = inner
-                    .as_str()
-                    .split_whitespace()
-                    .collect::<Vec<_>>()
-                    .join("");
-            }
-            Rule::type_generic => {
-                name.push_str(&inner.as_str().split_whitespace().collect::<String>());
-            }
-            _ => {}
-        }
-    }
-    name.trim_end_matches('*').to_string()
+    pair.as_str().split_whitespace().collect::<String>().trim_end_matches('*').to_string()
 }
 
 fn parse_params(pair: Pair<Rule>) -> Vec<Param> {
@@ -447,6 +653,15 @@ fn parse_stmt(pair: Pair<Rule>) -> Stmt {
         }
         Rule::empty_stmt => Stmt::Block(Vec::new()),
         Rule::break_stmt => Stmt::Break,
+        Rule::continue_stmt => Stmt::Continue,
+        Rule::do_while_stmt => parse_do_while(inner),
+        Rule::try_stmt => parse_try(inner),
+        Rule::delay_stmt => parse_delay(inner),
+        Rule::defer_stmt => parse_defer(inner),
+        Rule::field_destructure => {
+            let (names, value) = parse_field_destructure_parts(inner);
+            Stmt::FieldDestructure { names, value }
+        }
         Rule::destructure => {
             let (names, value) = parse_destructure_parts(inner);
             Stmt::Destructure { names, value }
@@ -526,7 +741,12 @@ fn parse_match_arm(pair: Pair<Rule>) -> crate::ast::MatchArm {
                     binding = None;
                     continue;
                 }
-                for part in inner.into_inner() {
+                let parts: Vec<_> = inner.into_inner().collect();
+                if parts.len() == 1 && parts[0].as_rule() == Rule::ident {
+                    class_name = Some(parts[0].as_str().to_string());
+                    continue;
+                }
+                for part in parts {
                     match part.as_rule() {
                         Rule::type_spec => class_name = Some(parse_type(part)),
                         Rule::ident => binding = Some(part.as_str().to_string()),
@@ -551,6 +771,60 @@ fn parse_match_arm(pair: Pair<Rule>) -> crate::ast::MatchArm {
         binding,
         body,
     }
+}
+
+fn parse_do_while(pair: Pair<Rule>) -> Stmt {
+    let mut test = Expr::Null;
+    let mut body = Vec::new();
+    for inner in pair.into_inner() {
+        match inner.as_rule() {
+            Rule::stmt => body = stmt_as_list(parse_stmt(inner)),
+            Rule::expr => test = parse_expr(inner),
+            _ => {}
+        }
+    }
+    Stmt::DoWhile { body, test }
+}
+
+fn parse_try(pair: Pair<Rule>) -> Stmt {
+    let mut blocks = Vec::new();
+    let mut err_name = "err".into();
+    for inner in pair.into_inner() {
+        match inner.as_rule() {
+            Rule::block => blocks.push(parse_block(inner)),
+            Rule::ident => err_name = inner.as_str().to_string(),
+            _ => {}
+        }
+    }
+    let body = blocks.first().cloned().unwrap_or_default();
+    let catch = blocks.get(1).cloned().unwrap_or_default();
+    Stmt::Try {
+        body,
+        err_name,
+        catch,
+    }
+}
+
+fn parse_delay(pair: Pair<Rule>) -> Stmt {
+    let mut time = Expr::Number("0".into());
+    let mut body = Vec::new();
+    for inner in pair.into_inner() {
+        match inner.as_rule() {
+            Rule::expr => time = parse_expr(inner),
+            Rule::block => body = parse_block(inner),
+            _ => {}
+        }
+    }
+    Stmt::Delay { time, body }
+}
+
+fn parse_defer(pair: Pair<Rule>) -> Stmt {
+    let body = pair
+        .into_inner()
+        .find(|p| p.as_rule() == Rule::block)
+        .map(parse_block)
+        .unwrap_or_default();
+    Stmt::Defer { body }
 }
 
 fn parse_while(pair: Pair<Rule>) -> Stmt {
@@ -578,17 +852,50 @@ fn parse_range_for(pair: Pair<Rule>) -> Stmt {
     let span = pair_span(&pair);
     let mut name = "it".to_string();
     let mut elem_type = None;
-    let mut iter = Expr::Null;
     let mut body = Vec::new();
+    let mut exprs = Vec::new();
+    let mut dots = "..".to_string();
     for inner in pair.into_inner() {
         match inner.as_rule() {
             Rule::type_spec => elem_type = Some(parse_type(inner)),
             Rule::ident => name = inner.as_str().to_string(),
-            Rule::expr => iter = parse_expr(inner),
+            Rule::range_src => {
+                for p in inner.into_inner() {
+                    match p.as_rule() {
+                        Rule::expr => exprs.push(parse_expr(p)),
+                        Rule::range_dots => dots = p.as_str().to_string(),
+                        _ => {}
+                    }
+                }
+            }
+            Rule::expr => exprs.push(parse_expr(inner)),
             Rule::stmt => body = stmt_as_list(parse_stmt(inner)),
             _ => {}
         }
     }
+    let iter = match exprs.len() {
+        0 => Expr::Null,
+        1 => exprs.remove(0),
+        2 => Expr::Binary {
+            op: dots,
+            left: Box::new(exprs.remove(0)),
+            right: Box::new(exprs.remove(0)),
+        },
+        _ => {
+            let start = exprs.remove(0);
+            let end = exprs.remove(0);
+            let step = exprs.remove(0);
+            Expr::Binary {
+                op: "by".into(),
+                left: Box::new(Expr::Binary {
+                    op: dots,
+                    left: Box::new(start),
+                    right: Box::new(end),
+                }),
+                right: Box::new(step),
+            }
+        }
+    };
     Stmt::ForEach {
         name,
         elem_type,
@@ -712,16 +1019,73 @@ fn stmt_as_list(stmt: Stmt) -> Vec<Stmt> {
 fn parse_expr(pair: Pair<Rule>) -> Expr {
     match pair.as_rule() {
         Rule::expr | Rule::assign => parse_assign(pair),
+        Rule::ternary => parse_ternary(pair),
+        Rule::coalesce => parse_coalesce(pair),
         Rule::shift => fold_silent(pair, "<<"),
         Rule::or_expr => fold_silent(pair, "||"),
         Rule::and_expr => fold_silent(pair, "&&"),
         Rule::cmp => fold_named_op(pair),
         Rule::concat => fold_silent(pair, ".:"),
         Rule::add | Rule::mul => fold_named_op(pair),
+        Rule::pow => parse_pow(pair),
         Rule::unary => parse_unary(pair),
         Rule::primary => parse_primary(pair),
         Rule::atom => parse_atom(pair),
         _ => parse_atom_or_inner(pair),
+    }
+}
+
+fn parse_ternary(pair: Pair<Rule>) -> Expr {
+    let mut inner = pair.into_inner();
+    let Some(first) = inner.next() else {
+        return Expr::Null;
+    };
+    let cond = parse_expr(first);
+    let Some(then_p) = inner.next() else {
+        return cond;
+    };
+    let then_expr = parse_expr(then_p);
+    let else_expr = inner.next().map(parse_expr).unwrap_or(Expr::Null);
+    Expr::Ternary {
+        cond: Box::new(cond),
+        then_expr: Box::new(then_expr),
+        else_expr: Box::new(else_expr),
+    }
+}
+
+fn parse_coalesce(pair: Pair<Rule>) -> Expr {
+    let mut inner = pair.into_inner();
+    let Some(first) = inner.next() else {
+        return Expr::Null;
+    };
+    let mut node = parse_expr(first);
+    for next in inner {
+        node = Expr::Coalesce {
+            left: Box::new(node),
+            right: Box::new(parse_expr(next)),
+        };
+    }
+    node
+}
+
+fn parse_pow(pair: Pair<Rule>) -> Expr {
+    let mut inner = pair.into_inner();
+    let Some(first) = inner.next() else {
+        return Expr::Null;
+    };
+    let left = parse_expr(first);
+    let Some(op_or_right) = inner.next() else {
+        return left;
+    };
+    let right = if op_or_right.as_rule() == Rule::pow_op {
+        inner.next().map(parse_expr).unwrap_or(Expr::Null)
+    } else {
+        parse_expr(op_or_right)
+    };
+    Expr::Binary {
+        op: "**".into(),
+        left: Box::new(left),
+        right: Box::new(right),
     }
 }
 
@@ -862,6 +1226,7 @@ fn parse_atom(pair: Pair<Rule>) -> Expr {
             name => Expr::Ident(name.to_string()),
         },
         Rule::number => Expr::Number(pair.as_str().to_string()),
+        Rule::raw_string => Expr::String(unraw(pair.as_str())),
         Rule::string | Rule::char_string => Expr::String(unquote(pair.as_str())),
         Rule::template_string => parse_template(pair),
         Rule::string_join => parse_string_join(pair),
@@ -895,8 +1260,10 @@ fn parse_at_sigil(pair: Pair<Rule>) -> Expr {
 fn parse_named_cast(pair: Pair<Rule>) -> Expr {
     let mut value_type = "any".to_string();
     let mut argument = Expr::Null;
+    let mut kind = "static_cast".to_string();
     for inner in pair.into_inner() {
         match inner.as_rule() {
+            Rule::named_cast_kw => kind = inner.as_str().to_string(),
             Rule::type_spec => value_type = parse_type(inner),
             Rule::expr => argument = parse_expr(inner),
             _ => {}
@@ -905,6 +1272,7 @@ fn parse_named_cast(pair: Pair<Rule>) -> Expr {
     Expr::Cast {
         value_type,
         argument: Box::new(argument),
+        kind,
     }
 }
 
@@ -926,6 +1294,33 @@ fn apply_postfix(node: Expr, suffix: Pair<Rule>) -> Expr {
         Rule::dot_suf => apply_named_suffix(node, suffix, "."),
         Rule::scope_suf => apply_named_suffix(node, suffix, "::"),
         Rule::cleanup_suf => apply_named_suffix(node, suffix, "~>"),
+        Rule::index_suf => {
+            let index = suffix
+                .into_inner()
+                .find(|p| p.as_rule() == Rule::expr)
+                .map(parse_expr)
+                .unwrap_or(Expr::Null);
+            Expr::Index {
+                object: Box::new(node),
+                index: Box::new(index),
+            }
+        }
+        Rule::qmark_dot_suf => {
+            let mut name = String::new();
+            let mut args = None;
+            for inner in suffix.into_inner() {
+                match inner.as_rule() {
+                    Rule::ident => name = inner.as_str().to_string(),
+                    Rule::call_args => args = Some(parse_call_args(inner)),
+                    _ => {}
+                }
+            }
+            Expr::OptionalChain {
+                object: Box::new(node),
+                name,
+                args,
+            }
+        }
         Rule::inc_suf => Expr::Update {
             op: suffix.as_str().to_string(),
             target: Box::new(node),
@@ -944,7 +1339,7 @@ fn apply_postfix(node: Expr, suffix: Pair<Rule>) -> Expr {
                     object: Some(Box::new(Expr::This { line: 0 })),
                     name,
                     args,
-                    access: ".".to_string(),
+                    access: ":".to_string(),
                 },
                 other => Expr::Call {
                     object: Some(Box::new(other)),
@@ -1116,6 +1511,15 @@ fn parse_string_join(pair: Pair<Rule>) -> Expr {
         }
     }
     Expr::Interp { parts }
+}
+
+fn unraw(raw: &str) -> String {
+    let s = raw.trim();
+    if let Some(rest) = s.strip_prefix("R\"(").and_then(|r| r.strip_suffix(")\"")) {
+        rest.to_string()
+    } else {
+        unquote(s)
+    }
 }
 
 fn unquote(raw: &str) -> String {

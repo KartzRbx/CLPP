@@ -1,0 +1,7 @@
+// $0 Class::
+struct Box {
+    static void Make();
+};
+void F() {
+    Box::$0
+}

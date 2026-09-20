@@ -1,0 +1,8 @@
+// $0 after @
+struct Ens {
+    Janitor janitor;
+    void Tick();
+};
+void Ens::Tick() {
+    @$0
+}

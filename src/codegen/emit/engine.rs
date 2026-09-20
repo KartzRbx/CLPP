@@ -30,6 +30,7 @@ struct Emitter<'a> {
     match_id: usize,
     pending_comments: Vec<SourceComment>,
     comment_idx: usize,
+    in_try: bool,
 }
 
 impl<'a> Emitter<'a> {
@@ -55,7 +56,11 @@ impl<'a> Emitter<'a> {
                         class_methods.insert(func.name.clone());
                     }
                 }
-                Item::Destructure { .. } | Item::Unsupported { .. } => {}
+                Item::Destructure { .. }
+                | Item::Unsupported { .. }
+                | Item::Enum { .. }
+                | Item::TypeAlias { .. }
+                | Item::Class { .. } => {}
             }
         }
         let mut nested_types = HashSet::new();
@@ -85,6 +90,7 @@ impl<'a> Emitter<'a> {
             match_id: 0,
             pending_comments: Vec::new(),
             comment_idx: 0,
+            in_try: false,
         }
     }
 
@@ -100,7 +106,9 @@ impl<'a> Emitter<'a> {
         if let Some(level) = self.ctx.optimize {
             self.lines.push(format!("--!optimize {level}"));
         }
-        self.lines.push("-- Compiled by CL++ — C++ × Luau".into());
+        if !self.ctx.no_banner {
+            self.lines.push("-- Compiled by CL++ — C++ × Luau".into());
+        }
         self.lines.push(String::new());
         self.pending_comments = self.ctx.comments.clone();
         self.comment_idx = 0;
@@ -137,7 +145,17 @@ impl<'a> Emitter<'a> {
                 .program
                 .items
                 .iter()
-                .all(|item| matches!(item, Item::Decl(_) | Item::Proto(_)));
+                .all(|item| {
+                    matches!(
+                        item,
+                        Item::Decl(_)
+                            | Item::Proto(_)
+                            | Item::Class { .. }
+                            | Item::Enum { .. }
+                            | Item::TypeAlias { .. }
+                            | Item::Unsupported { .. }
+                    )
+                });
 
         if self.ctx.is_header {
             self.emit_header_type(&struct_roots);
@@ -178,7 +196,13 @@ impl<'a> Emitter<'a> {
 
         if has_owned_functions {
             for owner in self.sorted_owners() {
-                self.lines.push(format!("local {owner} = {{}}"));
+                if let Some(parent) = self.class_parent(&owner) {
+                    self.lines.push(format!(
+                        "local {owner} = setmetatable({{}}, {{ __index = {parent} }})"
+                    ));
+                } else {
+                    self.lines.push(format!("local {owner} = {{}}"));
+                }
                 self.lines.push(String::new());
             }
         }
@@ -188,7 +212,11 @@ impl<'a> Emitter<'a> {
                 .program
                 .items
                 .iter()
-                .all(|item| matches!(item, Item::Decl(d) if d.owner.is_none()));
+                .all(|item| match item {
+                    Item::Decl(d) => d.owner.is_none(),
+                    Item::Class { .. } | Item::Enum { .. } | Item::TypeAlias { .. } | Item::Unsupported { .. } => true,
+                    _ => false,
+                });
 
         for item in &self.program.items {
             match item {
@@ -207,7 +235,22 @@ impl<'a> Emitter<'a> {
                         self.emit_function(func);
                     }
                 }
-                Item::Proto(_) | Item::Unsupported { .. } => {}
+                Item::Proto(_)
+                | Item::Unsupported { .. }
+                | Item::Class { .. } => {}
+                Item::Enum {
+                    name,
+                    numeric,
+                    variants,
+                    ..
+                } => {
+                    self.emit_enum(name, *numeric, variants);
+                }
+                Item::TypeAlias { name, ty, .. } => {
+                    let mapped = luau_type(Some(ty)).unwrap_or_else(|| ty.clone());
+                    self.lines.push(format!("type {name} = {mapped}"));
+                    self.lines.push(String::new());
+                }
             }
         }
 
@@ -240,8 +283,9 @@ impl<'a> Emitter<'a> {
             if comment.line > until_line {
                 break;
             }
+            let dashes = if comment.is_doc { "---" } else { "--" };
             self.lines
-                .push(format!("{prefix}-- {}", comment.text));
+                .push(format!("{prefix}{dashes} {}", comment.text));
             self.comment_idx += 1;
         }
     }
@@ -263,6 +307,72 @@ impl<'a> Emitter<'a> {
         let mut owners: Vec<_> = self.class_owners.iter().cloned().collect();
         owners.sort();
         owners
+    }
+
+    fn class_parent(&self, name: &str) -> Option<String> {
+        self.program.items.iter().find_map(|item| match item {
+            Item::Class {
+                name: n, parent, ..
+            } if n == name => parent.clone(),
+            _ => None,
+        })
+    }
+
+    fn emit_enum(&mut self, name: &str, numeric: bool, variants: &[(String, Option<String>)]) {
+        let mut fields = Vec::new();
+        let mut types = Vec::new();
+        for (i, (vname, val)) in variants.iter().enumerate() {
+            if numeric {
+                let n = val.clone().unwrap_or_else(|| i.to_string());
+                fields.push(format!("{vname} = {n}"));
+            } else {
+                fields.push(format!("{vname} = \"{vname}\""));
+                types.push(format!("\"{vname}\""));
+            }
+        }
+        self.lines.push(format!(
+            "local {name} = table.freeze({{ {} }})",
+            fields.join(", ")
+        ));
+        if !numeric && !types.is_empty() {
+            self.lines
+                .push(format!("type {name} = {}", types.join(" | ")));
+        }
+        self.lines.push(String::new());
+    }
+
+    fn emit_foreach_header(&self, name: &str, iter: &Expr) -> String {
+        match iter {
+            Expr::Binary { op, left, right } if op == "by" => {
+                if let Expr::Binary {
+                    op: dots,
+                    left: start,
+                    right: end,
+                } = left.as_ref()
+                {
+                    let end_s = if dots == "..<" {
+                        format!("({}) - 1", self.emit_expr(end))
+                    } else {
+                        self.emit_expr(end)
+                    };
+                    return format!(
+                        "for {name} = {}, {end_s}, {} do",
+                        self.emit_expr(start),
+                        self.emit_expr(right)
+                    );
+                }
+                format!("for _, {name} in {} do", self.emit_expr(iter))
+            }
+            Expr::Binary { op, left, right } if op == ".." || op == "..<" => {
+                let end_s = if op == "..<" {
+                    format!("({}) - 1", self.emit_expr(right))
+                } else {
+                    self.emit_expr(right)
+                };
+                format!("for {name} = {}, {end_s} do", self.emit_expr(left))
+            }
+            _ => format!("for _, {name} in {} do", self.emit_expr(iter)),
+        }
     }
 
     fn emit_requires(&mut self) {
@@ -449,7 +559,7 @@ impl<'a> Emitter<'a> {
                 func.body.iter().any(|s| walk_stmt(s, name))
             }
             Item::Destructure { value, .. } => walk_expr(value, name),
-            Item::Unsupported { .. } => false,
+            _ => false,
         })
     }
 
@@ -547,12 +657,35 @@ impl<'a> Emitter<'a> {
         }
         let params = self.param_list(func);
         let ret = return_ann(func);
+        if let Some(doc) = &func.doc {
+            for line in doc.lines() {
+                self.lines.push(format!("--- {line}"));
+            }
+        }
         if let Some(owner) = &func.owner {
-            self.lines
-                .push(format!("function {owner}:{}({params}){ret}", func.name));
+            if func.attrs.iter().any(|a| a.name == "native") {
+                self.lines.push("@native".into());
+            }
+            if func.is_static {
+                self.lines
+                    .push(format!("function {owner}.{}({params}){ret}", func.name));
+            } else if func.name == *owner {
+                self.lines
+                    .push(format!("function {owner}.new({params}){ret}"));
+            } else {
+                self.lines
+                    .push(format!("function {owner}:{}({params}){ret}", func.name));
+            }
         } else {
+            if func.attrs.iter().any(|a| a.name == "native") {
+                self.lines.push("@native".into());
+            }
             self.lines
                 .push(format!("const function {}({params}){ret}", func.name));
+        }
+        if func.name == func.owner.as_deref().unwrap_or("") {
+            self.lines
+                .push(format!("\tlocal self = setmetatable({{}}, {})", func.owner.as_deref().unwrap_or("self")));
         }
         if let Some(target) = &func.target {
             if self.ctx.script_kind.is_none() {
@@ -583,6 +716,9 @@ impl<'a> Emitter<'a> {
             self.lines.push("\t\t__janitor:Cleanup()".into());
             self.lines.push("\t\t__janitor:Destroy()".into());
             self.lines.push("\tend)".into());
+        }
+        if func.name == func.owner.as_deref().unwrap_or("") {
+            self.lines.push("\treturn self".into());
         }
         self.lines.push("end".into());
         self.lines.push(String::new());
@@ -810,9 +946,37 @@ impl<'a> Emitter<'a> {
                 }
                 vec![format!("{prefix}{}", self.emit_expr(expr))]
             }
-            Stmt::Return(None) => vec![format!("{prefix}return")],
-            Stmt::Return(Some(value)) => vec![format!("{prefix}return {}", self.emit_expr(value))],
-            Stmt::Break => vec![format!("{prefix}break")],
+            Stmt::Return(None) => {
+                if self.in_try {
+                    vec![format!("{prefix}return {{ __clpp = \"return\" }}")]
+                } else {
+                    vec![format!("{prefix}return")]
+                }
+            }
+            Stmt::Return(Some(value)) => {
+                if self.in_try {
+                    vec![format!(
+                        "{prefix}return {{ __clpp = \"return\", v = {} }}",
+                        self.emit_expr(value)
+                    )]
+                } else {
+                    vec![format!("{prefix}return {}", self.emit_expr(value))]
+                }
+            }
+            Stmt::Break => {
+                if self.in_try {
+                    vec![format!("{prefix}return {{ __clpp = \"break\" }}")]
+                } else {
+                    vec![format!("{prefix}break")]
+                }
+            }
+            Stmt::Continue => {
+                if self.in_try {
+                    vec![format!("{prefix}return {{ __clpp = \"continue\" }}")]
+                } else {
+                    vec![format!("{prefix}continue")]
+                }
+            }
             Stmt::If {
                 test,
                 consequent,
@@ -839,10 +1003,8 @@ impl<'a> Emitter<'a> {
             }
             Stmt::ForEach { name, iter, body, .. } => {
                 self.local_names.insert(name.clone());
-                let mut out = vec![format!(
-                    "{prefix}for _, {name} in {} do",
-                    self.emit_expr(iter)
-                )];
+                let header = self.emit_foreach_header(name, iter);
+                let mut out = vec![format!("{prefix}{header}")];
                 for s in body {
                     out.extend(self.emit_stmt(s, indent + 1));
                 }
@@ -855,6 +1017,15 @@ impl<'a> Emitter<'a> {
                 incr,
                 body,
             } => {
+                if let Some((name, start, end, step)) = numeric_c_for(init.as_deref(), test.as_ref(), incr.as_ref()) {
+                    self.local_names.insert(name.clone());
+                    let mut out = vec![format!("{prefix}for {name} = {start}, {end}, {step} do")];
+                    for s in body {
+                        out.extend(self.emit_stmt(s, indent + 1));
+                    }
+                    out.push(format!("{prefix}end"));
+                    return out;
+                }
                 let mut out = Vec::new();
                 if let Some(init_stmt) = init {
                     out.extend(self.emit_stmt(init_stmt, indent));
@@ -901,6 +1072,70 @@ impl<'a> Emitter<'a> {
                     out.extend(self.emit_stmt(s, indent));
                 }
                 out
+            }
+            Stmt::DoWhile { body, test } => {
+                let mut out = vec![format!("{prefix}repeat")];
+                for s in body {
+                    out.extend(self.emit_stmt(s, indent + 1));
+                }
+                out.push(format!("{prefix}until not ({})", self.emit_expr(test)));
+                out
+            }
+            Stmt::Try {
+                body,
+                err_name,
+                catch,
+            } => {
+                let saved = self.in_try;
+                self.in_try = true;
+                let mut out = vec![format!("{prefix}local _ok, _r = pcall(function()")];
+                for s in body {
+                    out.extend(self.emit_stmt(s, indent + 1));
+                }
+                out.push(format!("{prefix}end)"));
+                self.in_try = saved;
+                out.push(format!("{prefix}if not _ok then"));
+                out.push(format!("{prefix}\tlocal {err_name} = _r"));
+                for s in catch {
+                    out.extend(self.emit_stmt(s, indent + 1));
+                }
+                out.push(format!("{prefix}elseif type(_r) == \"table\" and _r.__clpp == \"return\" then"));
+                out.push(format!("{prefix}\treturn _r.v"));
+                out.push(format!("{prefix}elseif type(_r) == \"table\" and _r.__clpp == \"break\" then"));
+                out.push(format!("{prefix}\tbreak"));
+                out.push(format!("{prefix}elseif type(_r) == \"table\" and _r.__clpp == \"continue\" then"));
+                out.push(format!("{prefix}\tcontinue"));
+                out.push(format!("{prefix}end"));
+                out
+            }
+            Stmt::Delay { time, body } => {
+                let mut out = vec![format!(
+                    "{prefix}task.delay({}, function()",
+                    self.emit_expr(time)
+                )];
+                for s in body {
+                    out.extend(self.emit_stmt(s, indent + 1));
+                }
+                out.push(format!("{prefix}end)"));
+                out
+            }
+            Stmt::Defer { body } => {
+                let mut out = vec![format!("{prefix}task.defer(function()")];
+                for s in body {
+                    out.extend(self.emit_stmt(s, indent + 1));
+                }
+                out.push(format!("{prefix}end)"));
+                out
+            }
+            Stmt::FieldDestructure { names, value } => {
+                let obj = self.emit_expr(value);
+                let lhs = names.join(", ");
+                let rhs = names
+                    .iter()
+                    .map(|n| format!("{obj}.{n}"))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                vec![format!("{prefix}local {lhs} = {rhs}")]
             }
         }
     }
@@ -1075,6 +1310,7 @@ impl<'a> Emitter<'a> {
                 .collect::<Vec<_>>()
                 .join(", "),
             Expr::This { .. } => "self".into(),
+            Expr::AtField { name, .. } if name == "super" => "getmetatable(self)".into(),
             Expr::AtField { name, .. } => format!("self.{name}"),
             Expr::Await { argument } => format!("__await({})", self.emit_expr(argument)),
             Expr::InitList { fields } => {
@@ -1126,7 +1362,15 @@ impl<'a> Emitter<'a> {
                     format!("{dest} -= 1")
                 }
             }
-            Expr::Cast { argument, .. } => self.emit_expr(argument),
+            Expr::Cast { value_type, argument, kind } => {
+                let ty = luau_type(Some(value_type)).unwrap_or_else(|| value_type.clone());
+                let arg = self.emit_expr(argument);
+                if kind == "dynamic_cast" {
+                    format!("(if {arg}:IsA(\"{ty}\") then {arg} :: {ty} else nil)")
+                } else {
+                    format!("({arg} :: {ty})")
+                }
+            }
             Expr::Lambda { params, body } => {
                 let params = params
                     .iter()
@@ -1154,6 +1398,7 @@ impl<'a> Emitter<'a> {
                     match_id: self.match_id,
                     pending_comments: self.pending_comments.clone(),
                     comment_idx: self.comment_idx,
+                    in_try: self.in_try,
                 };
                 for p in params.split(", ") {
                     if let Some(name) = p.split(':').next() {
@@ -1196,7 +1441,11 @@ impl<'a> Emitter<'a> {
                 access,
             } => self.emit_call(object.as_deref(), name, args, access),
             Expr::Assign { op, left, right, .. } => {
-                format!("{} {op} {}", self.emit_expr(left), self.emit_expr(right))
+                let mapped = match op.as_str() {
+                    ".:" | ".:=" => "..=",
+                    other => other,
+                };
+                format!("{} {mapped} {}", self.emit_expr(left), self.emit_expr(right))
             }
             Expr::Binary { op, left, right } => {
                 if op == "<<" {
@@ -1207,6 +1456,12 @@ impl<'a> Emitter<'a> {
                 if op == ".:" {
                     return format!("{} .. {}", self.emit_expr(left), self.emit_expr(right));
                 }
+                if op == "**" {
+                    return format!("{} ^ {}", self.emit_expr(left), self.emit_expr(right));
+                }
+                if op == ".." || op == "..<" || op == "by" {
+                    return self.emit_expr(left);
+                }
                 let mapped = match op.as_str() {
                     "!=" => "~=",
                     "&&" => "and",
@@ -1215,6 +1470,44 @@ impl<'a> Emitter<'a> {
                 };
                 format!("{} {mapped} {}", self.emit_expr(left), self.emit_expr(right))
             }
+            Expr::Index { object, index } => {
+                let idx = match index.as_ref() {
+                    Expr::Number(n) if n == "0" => "1".into(),
+                    _ => self.emit_expr(index),
+                };
+                format!("{}[{}]", self.emit_expr(object), idx)
+            }
+            Expr::OptionalChain { object, name, args } => {
+                let obj = self.emit_expr(object);
+                match args {
+                    Some(args) => {
+                        let args_s = args.iter().map(|a| self.emit_expr(a)).collect::<Vec<_>>().join(", ");
+                        format!(
+                            "(function() local _t = {obj}; return if _t then _t:{name}({args_s}) else nil end)()"
+                        )
+                    }
+                    None => format!(
+                        "(function() local _t = {obj}; return if _t then _t.{name} else nil end)()"
+                    ),
+                }
+            }
+            Expr::Coalesce { left, right } => {
+                format!(
+                    "(function() local _t = {}; return if _t ~= nil then _t else {} end)()",
+                    self.emit_expr(left),
+                    self.emit_expr(right)
+                )
+            }
+            Expr::Ternary {
+                cond,
+                then_expr,
+                else_expr,
+            } => format!(
+                "(if {} then {} else {})",
+                self.emit_expr(cond),
+                self.emit_expr(then_expr),
+                self.emit_expr(else_expr)
+            ),
         }
     }
 
@@ -1232,6 +1525,20 @@ impl<'a> Emitter<'a> {
                 1 => parts[0].clone(),
                 _ => format!("({})", parts.join(" .. ")),
             };
+        }
+        if object.is_none() && name == "unreachable" {
+            return "error(\"unreachable\")".into();
+        }
+        if object.is_none() && name == "debug_assert" {
+            if self.ctx.release {
+                return "nil".into();
+            }
+            let inner = args.iter().map(|a| self.emit_expr(a)).collect::<Vec<_>>().join(", ");
+            return format!("assert({inner})");
+        }
+        if object.is_none() && name == "assert" {
+            let inner = args.iter().map(|a| self.emit_expr(a)).collect::<Vec<_>>().join(", ");
+            return format!("assert({inner})");
         }
         if object.is_none() && (name == "to_string" || name == "tostring") {
             let inner = args
@@ -1261,6 +1568,19 @@ impl<'a> Emitter<'a> {
             .collect::<Vec<_>>()
             .join(", ");
         let name = map_builtin(name);
+        if object.is_none() && name == "size" {
+            let inner = args.first().map(|a| self.emit_expr(a)).unwrap_or_else(|| "nil".into());
+            return format!("#{inner}");
+        }
+        if object.is_none() && name == "div" && args.len() == 2 {
+            return format!("{} // {}", self.emit_expr(&args[0]), self.emit_expr(&args[1]));
+        }
+        if object.is_none() && name == "pow" && args.len() == 2 {
+            return format!("{} ^ {}", self.emit_expr(&args[0]), self.emit_expr(&args[1]));
+        }
+        if object.is_some() && name == "size" && args.is_empty() {
+            return format!("#{}", self.emit_object(object.unwrap()));
+        }
         if object.is_none() {
             if is_datatype(name) {
                 return format!("{name}.new({args_s})");
@@ -1348,6 +1668,7 @@ impl<'a> Emitter<'a> {
         match expr {
             Expr::Ident(name) => self.emit_self_ident(name),
             Expr::This { .. } => "self".into(),
+            Expr::AtField { name, .. } if name == "super" => "getmetatable(self)".into(),
             Expr::AtField { name, .. } => format!("self.{name}"),
             Expr::Member { object, name, .. } => {
                 format!("{}.{name}", self.emit_object(object))
@@ -1457,7 +1778,7 @@ fn program_uses_cleanup(program: &Program) -> bool {
         Item::Function(f) | Item::Proto(f) => stmt_has_cleanup_list(&f.body),
         Item::Decl(d) => d.value.as_ref().is_some_and(expr_has_cleanup),
         Item::Destructure { value, .. } => expr_has_cleanup(value),
-        Item::Unsupported { .. } => false,
+        _ => false,
     })
 }
 
@@ -1466,7 +1787,7 @@ fn program_uses_await(program: &Program) -> bool {
         Item::Function(f) | Item::Proto(f) => f.is_async || stmt_has_await_list(&f.body),
         Item::Decl(d) => d.value.as_ref().is_some_and(expr_has_await),
         Item::Destructure { value, .. } => expr_has_await(value),
-        Item::Unsupported { .. } => false,
+        _ => false,
     })
 }
 
@@ -1664,26 +1985,98 @@ fn expr_has_await(expr: &Expr) -> bool {
     }
 }
 
+fn numeric_c_for(
+    init: Option<&Stmt>,
+    test: Option<&Expr>,
+    incr: Option<&Expr>,
+) -> Option<(String, String, String, String)> {
+    let Stmt::Decl(decl) = init? else {
+        return None;
+    };
+    let ty = decl.value_type.as_deref().unwrap_or("");
+    if !ty.is_empty() && ty != "int" && ty != "auto" {
+        return None;
+    }
+    let start = match &decl.value {
+        Some(Expr::Number(n) | Expr::Ident(n)) => n.clone(),
+        _ => return None,
+    };
+    let name = decl.name.clone();
+    let (end_raw, cmp) = match test? {
+        Expr::Binary { op, left, right }
+            if matches!(left.as_ref(), Expr::Ident(n) if n == &name) =>
+        {
+            let end = match right.as_ref() {
+                Expr::Number(n) | Expr::Ident(n) => n.clone(),
+                _ => return None,
+            };
+            (end, op.as_str())
+        }
+        _ => return None,
+    };
+    let step = match incr? {
+        Expr::Update { op, target } if matches!(target.as_ref(), Expr::Ident(n) if n == &name) => {
+            if op == "++" {
+                "1".into()
+            } else {
+                "-1".into()
+            }
+        }
+        Expr::Assign {
+            op,
+            left,
+            right,
+            ..
+        } if matches!(left.as_ref(), Expr::Ident(n) if n == &name) => {
+            let n = match right.as_ref() {
+                Expr::Number(n) => n.clone(),
+                _ => return None,
+            };
+            if op == "+=" {
+                n
+            } else if op == "-=" {
+                format!("-{n}")
+            } else {
+                return None;
+            }
+        }
+        _ => return None,
+    };
+    let end = match cmp {
+        "<=" | ">=" => end_raw,
+        "<" => format!("({end_raw}) - 1"),
+        ">" => format!("({end_raw}) + 1"),
+        _ => return None,
+    };
+    Some((name, start, end, step))
+}
+
 fn emit_interp(emitter: &Emitter, parts: &[crate::ast::InterpPart]) -> String {
     if parts.is_empty() {
         return "\"\"".into();
     }
-    let bits: Vec<String> = parts
-        .iter()
-        .map(|part| match part {
+    let mut out = String::from("`");
+    for part in parts {
+        match part {
             crate::ast::InterpPart::Text(text) => {
-                format!("\"{}\"", escape_lua_string(text))
+                for ch in text.chars() {
+                    match ch {
+                        '`' => out.push_str("\\`"),
+                        '{' => out.push_str("\\{"),
+                        '\\' => out.push_str("\\\\"),
+                        other => out.push(other),
+                    }
+                }
             }
             crate::ast::InterpPart::Value(expr) => {
-                format!("tostring({})", emitter.emit_expr(expr))
+                out.push('{');
+                out.push_str(&emitter.emit_expr(expr));
+                out.push('}');
             }
-        })
-        .collect();
-    if bits.len() == 1 {
-        bits[0].clone()
-    } else {
-        bits.join(" .. ")
+        }
     }
+    out.push('`');
+    out
 }
 
 fn escape_lua_string(text: &str) -> String {

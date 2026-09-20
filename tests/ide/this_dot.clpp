@@ -1,0 +1,8 @@
+// $0 @this.
+struct Ens {
+    Janitor janitor;
+    void Tick();
+};
+void Ens::Tick() {
+    @this.$0
+}

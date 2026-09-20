@@ -91,6 +91,10 @@ void init() {
         combat.PlayerEntered(player);
     }
 
+    
+
+    
+
     players.PlayerAdded~>Connect(func (Player p) {
         combat.PlayerEntered(p);
     });

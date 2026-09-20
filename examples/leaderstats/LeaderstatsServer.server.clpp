@@ -20,7 +20,7 @@ void LeaderstatsServer::UpdateLeaderstatsWithValues(IntValue currentValue, int n
 }
 
 Folder LeaderstatsServer::EnsurePlayerLeaderstatsFolder(Player player) {
-    Instance existingFolder = player.FindFirstChild("leaderstats");
+    optional<Instance> existingFolder = player.FindFirstChild("leaderstats");
     if (existingFolder) {
         return static_cast<Folder>(existingFolder);
     }
@@ -30,7 +30,7 @@ Folder LeaderstatsServer::EnsurePlayerLeaderstatsFolder(Player player) {
 
     IntValue coinsValue = new IntValue(newFolder);
     coinsValue.Name = "Coins";
-    coinsValue.Value = STARTING_COINS;
+    coinsValue.Value = @STARTING_COINS;
 
     return newFolder;
 }
@@ -41,14 +41,14 @@ void LeaderstatsServer::PlayerEntered(Player player) {
         return;
     }
 
-    Folder leaderstatsFolder = EnsurePlayerLeaderstatsFolder(player);
+    Folder leaderstatsFolder = @EnsurePlayerLeaderstatsFolder(player);
     Data playerData = DataService.Server.WaitFor(player);
     PlayerData Paths = DataService.Paths;
 
     IntValue coinsValue = static_cast<IntValue>(leaderstatsFolder.FindFirstChild("Coins"));
     if (coinsValue) {
         playerData.GetChangedSignal(Paths.Currencies.Coins)~>Connect(func (int newValue) {
-            UpdateLeaderstatsWithValues(coinsValue, newValue);
+            @UpdateLeaderstatsWithValues(coinsValue, newValue);
             post("Coins for " .: player.Name .: ": " .: newValue);
         });
     }

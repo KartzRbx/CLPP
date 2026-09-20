@@ -1,6 +1,6 @@
 [package]
 name = "clpp"
-version = "0.4.0"
+version = "0.7.0"
 edition = "2021"
 description = "CL++ compiler — a C++-inspired language that compiles to Luau"
 license = "MIT"
@@ -25,3 +25,14 @@ include_dir = "0.7"
 
 [dev-dependencies]
 pretty_assertions = "1"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = true
+# panic = "unwind" (miette backtraces; do not abort)
+
+[workspace]
+members = ["."]
+exclude = ["fuzz"]

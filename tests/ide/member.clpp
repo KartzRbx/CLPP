@@ -1,0 +1,4 @@
+// $0 x.
+void F(Player x) {
+    x.$0
+}

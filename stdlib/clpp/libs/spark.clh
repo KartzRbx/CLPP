@@ -1,0 +1,6 @@
+#pragma once
+
+/// Pure Luau signal (Spark / Cluaupp). Prefer this over copying BindableEvent.
+struct Spark {
+    any Signal;
+};

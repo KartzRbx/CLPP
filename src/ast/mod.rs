@@ -23,6 +23,29 @@ pub enum Item {
         line: usize,
         message: String,
     },
+    Enum {
+        name: String,
+        numeric: bool,
+        variants: Vec<(String, Option<String>)>,
+        line: usize,
+        span: Span,
+        doc: Option<String>,
+    },
+    TypeAlias {
+        name: String,
+        ty: String,
+        line: usize,
+        span: Span,
+        doc: Option<String>,
+    },
+    Class {
+        name: String,
+        parent: Option<String>,
+        type_params: Vec<String>,
+        line: usize,
+        span: Span,
+        doc: Option<String>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -35,9 +58,21 @@ pub struct Function {
     pub is_const: bool,
     pub is_async: bool,
     pub target: Option<String>,
-    pub line: usize,
     pub span: Span,
     pub doc: Option<String>,
+    pub is_static: bool,
+    pub is_override: bool,
+    pub visibility: Option<String>,
+    pub type_params: Vec<String>,
+    pub attrs: Vec<Attr>,
+    pub parent: Option<String>,
+    pub line: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct Attr {
+    pub name: String,
+    pub arg: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -57,6 +92,7 @@ pub struct Decl {
     pub line: usize,
     pub span: Span,
     pub doc: Option<String>,
+    pub visibility: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -130,6 +166,7 @@ pub enum Expr {
     Cast {
         value_type: String,
         argument: Box<Expr>,
+        kind: String,
     },
     Lambda {
         params: Vec<Param>,
@@ -147,6 +184,24 @@ pub enum Expr {
     Update {
         op: String,
         target: Box<Expr>,
+    },
+    Index {
+        object: Box<Expr>,
+        index: Box<Expr>,
+    },
+    OptionalChain {
+        object: Box<Expr>,
+        name: String,
+        args: Option<Vec<Expr>>,
+    },
+    Coalesce {
+        left: Box<Expr>,
+        right: Box<Expr>,
+    },
+    Ternary {
+        cond: Box<Expr>,
+        then_expr: Box<Expr>,
+        else_expr: Box<Expr>,
     },
 }
 
@@ -166,6 +221,7 @@ pub enum Stmt {
     Expr(Expr),
     Return(Option<Expr>),
     Break,
+    Continue,
     If {
         test: Expr,
         consequent: Vec<Stmt>,
@@ -204,6 +260,26 @@ pub enum Stmt {
         body: Vec<Stmt>,
         parallel: bool,
     },
+    DoWhile {
+        body: Vec<Stmt>,
+        test: Expr,
+    },
+    Try {
+        body: Vec<Stmt>,
+        err_name: String,
+        catch: Vec<Stmt>,
+    },
+    Delay {
+        time: Expr,
+        body: Vec<Stmt>,
+    },
+    Defer {
+        body: Vec<Stmt>,
+    },
+    FieldDestructure {
+        names: Vec<String>,
+        value: Expr,
+    },
     Block(Vec<Stmt>),
 }
 
@@ -228,6 +304,10 @@ pub struct CompileContext {
     /// Expanded line (1-based index into this vec as 0-based) → original source line.
     pub line_map: Vec<usize>,
     pub comments: Vec<SourceComment>,
+    pub no_banner: bool,
+    pub strict_receiver: bool,
+    pub release: bool,
+    pub defines: Vec<String>,
 }
 
 impl Function {

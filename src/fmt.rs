@@ -38,8 +38,29 @@ pub fn format_source(source: &str) -> String {
         indent = (indent + trail).max(0);
         update_string_state(line, &mut in_string, &mut quote);
     }
+    out = rewrite_receiver_style(&out);
     if !source.ends_with('\n') && !out.ends_with('\n') {
         out.push('\n');
+    }
+    out
+}
+
+fn rewrite_receiver_style(source: &str) -> String {
+    let s = source.replace("@this::", "@");
+    let mut out = String::with_capacity(s.len());
+    let chars: Vec<char> = s.chars().collect();
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i] == 't'
+            && chars.get(i..i + 5) == Some(&['t', 'h', 'i', 's', '.'])
+            && (i == 0 || !(chars[i - 1].is_ascii_alphanumeric() || chars[i - 1] == '_' || chars[i - 1] == '@'))
+        {
+            out.push_str("@this.");
+            i += 5;
+            continue;
+        }
+        out.push(chars[i]);
+        i += 1;
     }
     out
 }

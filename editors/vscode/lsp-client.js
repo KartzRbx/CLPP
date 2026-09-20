@@ -1,12 +1,56 @@
 "use strict";
 
-const path = require("path");
 const cp = require("child_process");
 const { createFramer, writeMessage } = require("./jsonrpc");
 
 function startLspClient(context, vscode) {
-  const serverPath = path.join(__dirname, "lsp-server.js");
-  const child = cp.spawn(process.execPath, [serverPath], {
+  try {
+    const { LanguageClient } = require("vscode-languageclient/node");
+    const { findClpp } = require("./compile-api");
+    const command = findClpp() || "clpp";
+    const client = new LanguageClient(
+      "clpp",
+      "CL++",
+      { command, args: ["lsp"] },
+      {
+        documentSelector: [{ language: "clpp" }],
+        synchronize: {
+          fileEvents: vscode.workspace.createFileSystemWatcher("**/*.{clpp,clp,clh}"),
+        },
+      }
+    );
+    const started = client.start();
+    context.subscriptions.push({
+      dispose() {
+        client.stop();
+      },
+    });
+    return {
+      ready: Promise.resolve(started).then(() => true).catch(() => false),
+      isAlive: () => true,
+      collection: vscode.languages.createDiagnosticCollection("clpp"),
+      open() {},
+      change() {},
+      close() {},
+      completion() {
+        return Promise.resolve({ items: [] });
+      },
+      hover() {
+        return Promise.resolve(null);
+      },
+      definition() {
+        return Promise.resolve(null);
+      },
+    };
+  } catch {
+    return startStdioFallback(context, vscode);
+  }
+}
+
+function startStdioFallback(context, vscode) {
+  const { findClpp } = require("./compile-api");
+  const clpp = findClpp();
+  const child = cp.spawn(clpp || "clpp", ["lsp"], {
     stdio: ["pipe", "pipe", "pipe"],
     windowsHide: true,
   });

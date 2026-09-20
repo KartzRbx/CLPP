@@ -1,0 +1,4 @@
+// $0 statement start
+void init() {
+    $0
+}

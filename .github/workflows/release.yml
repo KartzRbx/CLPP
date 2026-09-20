@@ -10,24 +10,40 @@ permissions:
   contents: write
 
 jobs:
-  windows:
-    runs-on: windows-latest
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: clpp.exe
+            setup: clpp-setup.exe
+          - os: ubuntu-latest
+            artifact: clpp
+            setup: clpp-setup
+          - os: macos-latest
+            artifact: clpp
+            setup: clpp-setup
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - name: Build installer
+      - name: Build
         run: cargo build --release
       - name: Stage artifacts
-        shell: pwsh
+        shell: bash
         run: |
-          New-Item -ItemType Directory -Force dist | Out-Null
-          Copy-Item target/release/clpp.exe dist/clpp.exe
-          Copy-Item target/release/clpp.exe dist/clpp-setup.exe
+          mkdir -p dist
+          if [ -f target/release/clpp.exe ]; then
+            cp target/release/clpp.exe dist/clpp.exe
+            cp target/release/clpp.exe dist/clpp-setup.exe
+          else
+            cp target/release/clpp dist/clpp
+            cp target/release/clpp dist/clpp-setup
+          fi
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            dist/clpp.exe
-            dist/clpp-setup.exe
+          files: dist/*
           generate_release_notes: true
           fail_on_unmatched_files: true

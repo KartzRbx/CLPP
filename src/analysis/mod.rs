@@ -8,7 +8,7 @@ use crate::builtins;
 use crate::parser::{parse_for_ide, parse_with_diagnostics};
 use crate::preprocess::preprocess;
 use crate::semantic::{is_bare_global, is_instance_type, luau_type};
-use crate::semantic::check::check_program;
+use crate::semantic::check::check_program_ex;
 use crate::support::CompileDiagnostic;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -237,7 +237,9 @@ pub fn inlay_request(req: &PositionRequest) -> Vec<InlayHint> {
 
 pub fn folding_request(req: &PositionRequest) -> Vec<FoldingRange> {
     let (index, _) = index_at(req);
-    folding_from(&index)
+    let mut ranges = folding_from(&index);
+    ranges.extend(region_folds(&req.source));
+    ranges
 }
 
 pub fn highlight_request(req: &PositionRequest) -> DefinitionResponse {
@@ -273,7 +275,7 @@ fn index_at(req: &PositionRequest) -> (Index, String) {
             diagnostics.extend(d);
         }
     }
-    if let Ok(check) = check_program(&program, &expanded) {
+    if let Ok(check) = check_program_ex(&program, &expanded, &ctx.libraries) {
         diagnostics.extend(check);
     }
     attach_docs(&program, &ctx.comments);
@@ -591,11 +593,18 @@ enum Access {
     Member(String, String),
     Static(String, String),
     Cleanup(String, String),
+    Service(String),
     Ident(String),
 }
 
 fn parse_access(prefix: &str) -> Access {
     let trimmed = prefix.trim_end();
+    if let Some(idx) = trimmed.rfind("GetService<") {
+        let partial = trimmed[idx + "GetService<".len()..]
+            .trim_end_matches('>')
+            .to_string();
+        return Access::Service(partial);
+    }
     if let Some(rest) = trimmed.strip_prefix("#include") {
         let rest = rest.trim_start();
         if let Some(body) = rest.strip_prefix('<') {
@@ -683,6 +692,7 @@ fn complete_from(index: &Index, req: &PositionRequest, prefix: &str) -> Vec<Comp
             filter_partial(member_items(index, req.line, &obj, true), &partial)
         }
         Access::Cleanup(_, partial) => filter_partial(cleanup_items(), &partial),
+        Access::Service(partial) => filter_partial(service_items(), &partial),
         Access::Ident(partial) => filter_partial(ident_items(index, req.line), &partial),
     }
 }
@@ -898,6 +908,37 @@ fn cleanup_items() -> Vec<CompletionItem> {
         .collect()
 }
 
+fn service_items() -> Vec<CompletionItem> {
+    [
+        "Players",
+        "RunService",
+        "ReplicatedStorage",
+        "ServerStorage",
+        "Workspace",
+        "Lighting",
+        "TweenService",
+        "UserInputService",
+        "HttpService",
+        "DataStoreService",
+        "TeleportService",
+        "CollectionService",
+        "SoundService",
+        "StarterGui",
+        "StarterPlayer",
+        "Teams",
+        "Chat",
+        "MarketplaceService",
+    ]
+    .into_iter()
+    .map(|name| CompletionItem {
+        label: name.into(),
+        kind: "Class".into(),
+        detail: "GetService".into(),
+        insert_text: Some(format!("{name}>()")),
+    })
+    .collect()
+}
+
 fn include_items(angled: bool) -> Vec<CompletionItem> {
     let libs = [
         "clpp/libs/janitor.clh",
@@ -1074,6 +1115,25 @@ fn folding_from(index: &Index) -> Vec<FoldingRange> {
         .collect()
 }
 
+fn region_folds(source: &str) -> Vec<FoldingRange> {
+    let mut stack = Vec::new();
+    let mut out = Vec::new();
+    for (i, line) in source.lines().enumerate() {
+        let t = line.trim();
+        if t.contains("#region") || t.contains("// #region") {
+            stack.push(i);
+        } else if (t.contains("#endregion") || t.contains("// #endregion")) && !stack.is_empty() {
+            let start = stack.pop().unwrap();
+            out.push(FoldingRange {
+                start_line: start,
+                end_line: i,
+                kind: "region".into(),
+            });
+        }
+    }
+    out
+}
+
 fn actions_from(index: &Index, req: &PositionRequest) -> Vec<CodeAction> {
     let word = word_at(&req.source, req.line, req.column);
     let mut actions = Vec::new();
@@ -1097,6 +1157,22 @@ fn actions_from(index: &Index, req: &PositionRequest) -> Vec<CodeAction> {
         }
     }
     let _ = index;
+    for diag in &index.diagnostics {
+        if diag.code.as_deref() == Some("CLPP0101") || diag.code.as_deref() == Some("CLPP0102") {
+            let row = req.source.lines().nth(diag.line.saturating_sub(1)).unwrap_or("");
+            if let Some(start) = row.find(|c: char| c.is_ascii_alphabetic() || c == '_') {
+                actions.push(CodeAction {
+                    title: "Prefix with @".into(),
+                    kind: "quickfix".into(),
+                    line: diag.line.saturating_sub(1),
+                    column: start,
+                    end_line: diag.line.saturating_sub(1),
+                    end_column: start,
+                    new_text: "@".into(),
+                });
+            }
+        }
+    }
     actions
 }
 

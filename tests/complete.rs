@@ -148,7 +148,7 @@ fn using_is_error() {
     .expect("artifact");
     assert!(!art.ok);
     assert!(
-        art.diagnostics.iter().any(|d| d.message.contains("using")),
+        art.diagnostics.iter().any(|d| d.message.contains("using") || d.code.as_deref() == Some("CLPP0301")),
         "{:?}",
         art.diagnostics
     );

@@ -107,13 +107,142 @@ pub const BUILTINS: &[Builtin] = &[
         max_arity: 2,
         detail: "Luau tonumber. Prefer to_number.",
     },
+    Builtin {
+        clpp: "div",
+        luau: "//",
+        kind: "Function",
+        min_arity: 2,
+        max_arity: 2,
+        detail: "Integer division (Luau //).",
+    },
+    Builtin {
+        clpp: "pow",
+        luau: "^",
+        kind: "Function",
+        min_arity: 2,
+        max_arity: 2,
+        detail: "Power (Luau ^).",
+    },
+    Builtin {
+        clpp: "size",
+        luau: "#",
+        kind: "Function",
+        min_arity: 1,
+        max_arity: 1,
+        detail: "Length (Luau #).",
+    },
+    Builtin {
+        clpp: "band",
+        luau: "bit32.band",
+        kind: "Function",
+        min_arity: 2,
+        max_arity: usize::MAX,
+        detail: "Bitwise and.",
+    },
+    Builtin {
+        clpp: "bor",
+        luau: "bit32.bor",
+        kind: "Function",
+        min_arity: 2,
+        max_arity: usize::MAX,
+        detail: "Bitwise or.",
+    },
+    Builtin {
+        clpp: "bxor",
+        luau: "bit32.bxor",
+        kind: "Function",
+        min_arity: 2,
+        max_arity: usize::MAX,
+        detail: "Bitwise xor.",
+    },
+    Builtin {
+        clpp: "bnot",
+        luau: "bit32.bnot",
+        kind: "Function",
+        min_arity: 1,
+        max_arity: 1,
+        detail: "Bitwise not.",
+    },
+    Builtin {
+        clpp: "lshift",
+        luau: "bit32.lshift",
+        kind: "Function",
+        min_arity: 2,
+        max_arity: 2,
+        detail: "Bitwise left shift.",
+    },
+    Builtin {
+        clpp: "rshift",
+        luau: "bit32.rshift",
+        kind: "Function",
+        min_arity: 2,
+        max_arity: 2,
+        detail: "Bitwise right shift.",
+    },
+    Builtin {
+        clpp: "delay",
+        luau: "task.delay",
+        kind: "Function",
+        min_arity: 1,
+        max_arity: 2,
+        detail: "Run a callback after t seconds.",
+    },
+    Builtin {
+        clpp: "defer",
+        luau: "task.defer",
+        kind: "Function",
+        min_arity: 0,
+        max_arity: 1,
+        detail: "Run a callback on the next resumption.",
+    },
+    Builtin {
+        clpp: "cancel",
+        luau: "task.cancel",
+        kind: "Function",
+        min_arity: 1,
+        max_arity: 1,
+        detail: "Cancel a delay/defer thread.",
+    },
+    Builtin {
+        clpp: "assert",
+        luau: "assert",
+        kind: "Function",
+        min_arity: 1,
+        max_arity: 2,
+        detail: "Runtime assert; narrows truthy values.",
+    },
+    Builtin {
+        clpp: "debug_assert",
+        luau: "assert",
+        kind: "Function",
+        min_arity: 1,
+        max_arity: 2,
+        detail: "Stripped in RELEASE; assert in DEBUG.",
+    },
+    Builtin {
+        clpp: "static_assert",
+        luau: "assert",
+        kind: "Function",
+        min_arity: 1,
+        max_arity: 2,
+        detail: "Compile-time constant assertion.",
+    },
+    Builtin {
+        clpp: "unreachable",
+        luau: "error",
+        kind: "Function",
+        min_arity: 0,
+        max_arity: 1,
+        detail: "Marks a path that must not run.",
+    },
 ];
 
 pub const KEYWORDS: &[&str] = &[
     "void", "int", "float", "double", "bool", "string", "auto", "func", "const", "observable",
     "signal", "struct", "return", "if", "else", "while", "for", "in", "switch", "case", "default",
-    "break", "guard", "match", "spawn", "parallel", "async", "await", "new", "null", "true", "false",
-    "this",
+    "break", "continue", "guard", "match", "spawn", "parallel", "async", "await", "new", "null",
+    "true", "false", "this", "enum", "using", "try", "catch", "do", "delay", "defer", "template",
+    "typename", "override", "static", "private", "public", "class",
 ];
 
 pub const INSTANCE_PROPS: &[&str] = &[
@@ -136,7 +265,7 @@ pub fn find(name: &str) -> Option<&'static Builtin> {
 pub fn map_name(name: &str) -> &str {
     find(name)
         .map(|b| b.luau)
-        .filter(|luau| *luau != ".." && *luau != "not not" && !luau.contains(':'))
+        .filter(|luau| *luau != ".." && *luau != "not not" && *luau != "//" && *luau != "^" && *luau != "#" && !luau.contains(':'))
         .unwrap_or(name)
 }
 

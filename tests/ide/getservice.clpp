@@ -1,0 +1,4 @@
+// $0 GetService
+void init() {
+    GetService<$0
+}

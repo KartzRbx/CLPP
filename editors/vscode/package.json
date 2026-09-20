@@ -2,7 +2,7 @@
   "name": "clpp-language",
   "displayName": "CL++",
   "description": "CL++ language support for VS Code, Cursor, and compatible editors: highlighting, icon, and IntelliSense (.clpp / .clp / .clh)",
-  "version": "0.4.0",
+  "version": "0.7.0",
   "publisher": "clpp",
   "repository": {
     "type": "git",
@@ -17,12 +17,15 @@
   "activationEvents": ["onLanguage:clpp"],
   "main": "./extension.js",
   "extensionKind": ["workspace", "ui"],
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
   "contributes": {
     "languages": [
       {
         "id": "clpp",
         "aliases": ["CL++", "clpp", "CLPP"],
-        "extensions": [".clpp", ".clp", ".clh"],
+        "extensions": [".clpp", ".clp", ".clh", ".flare", ".mint", ".bloom", ".helm", ".shift", ".hive", ".axiom"],
         "filenamePatterns": ["*.server.clpp", "*.client.clpp", "*.plugin.clpp"],
         "icon": {
           "light": "./icons/clpp.png",
@@ -77,7 +80,14 @@
       "files.associations": {
         "*.clpp": "clpp",
         "*.clp": "clpp",
-        "*.clh": "clpp"
+        "*.clh": "clpp",
+        "*.flare": "clpp",
+        "*.mint": "clpp",
+        "*.bloom": "clpp",
+        "*.helm": "clpp",
+        "*.shift": "clpp",
+        "*.hive": "clpp",
+        "*.axiom": "clpp"
       },
       "[clpp]": {
         "editor.tabSize": 4,

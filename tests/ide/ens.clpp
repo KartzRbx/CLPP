@@ -1,0 +1,8 @@
+// $0 nua Ens
+struct Ens {
+    Janitor janitor;
+    void Tick();
+};
+void Ens::Tick() {
+    Ens$0
+}

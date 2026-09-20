@@ -1,1 +1,43 @@
 #pragma once
+
+struct Instance {
+    string Name;
+    string ClassName;
+    Instance Parent;
+    optional<Instance> FindFirstChild(string name);
+    optional<Instance> FindFirstChildOfClass(string className);
+    optional<Instance> FindFirstChildWhichIsA(string className);
+    Instance WaitForChild(string name);
+    array<Instance> GetChildren();
+    array<Instance> GetDescendants();
+    bool IsA(string className);
+    Instance Clone();
+    void Destroy();
+    void ClearAllChildren();
+};
+
+struct Player : Instance {
+    string DisplayName;
+    int UserId;
+    int AccountAge;
+    Model Character;
+    void Kick(string reason);
+    void LoadCharacter();
+};
+
+struct Players : Instance {
+    array<Player> GetPlayers();
+    optional<Player> GetPlayerFromCharacter(Model character);
+    signal<Player> PlayerAdded;
+};
+
+struct Folder : Instance {};
+struct IntValue : Instance {
+    int Value;
+    signal<int> Changed;
+};
+struct BasePart : Instance {};
+struct Model : Instance {};
+struct Humanoid : Instance {
+    float Health;
+};

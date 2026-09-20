@@ -188,7 +188,7 @@ void F(Player* player) {
     Players* players = GetService<Players>();
     player.Name = "Kartz";
     player.Kick();
-    Instance* child = player:FindFirstChild("x");
+    Instance* child = static_cast<Instance>(player:FindFirstChild("x"));
     players.PlayerAdded::Connect(func (Player* p) {
         post(p.Name);
     });
@@ -295,7 +295,7 @@ struct Service {
 
 void Service::Tick() {
     this;
-    coins = 1;
+    @coins = 1;
 }
 "#,
     )

@@ -4,15 +4,19 @@ use clpp::analysis::{
     highlight_request, hover_request, inlay_request, references_request, signature_request,
     symbols_request, workspace_symbols, PositionRequest,
 };
-use clpp::compile::{build_dir, compile_artifact, compile_file, compile_request};
+use clpp::compile::{build_dir, compile_artifact, compile_request};
+use clpp::diag;
+use clpp::doctor;
 use clpp::fmt::format_source;
 use clpp::install::{install_language, setup_machine};
+use clpp::lsp;
 use clpp::support::{language_manifest, CompileArtifact, CompileRequest};
 use clpp::watch::watch_dir;
 use miette::{IntoDiagnostic, Result};
 use std::fs;
 use std::io::{self, Read, Write};
 use std::path::PathBuf;
+use std::process::Command;
 
 #[derive(Parser)]
 #[command(
@@ -35,6 +39,30 @@ enum Commands {
         /// Emit CompileArtifact JSON (Cluaupp contract)
         #[arg(long)]
         json: bool,
+        /// Hide the compiled-by banner
+        #[arg(long)]
+        no_banner: bool,
+        /// Run luau-analyze / luau-lsp on the emit when present
+        #[arg(long)]
+        check: bool,
+    },
+    /// Emit Luau (alias of compile) with optional --check / --no-banner
+    Emit {
+        file: PathBuf,
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+        #[arg(long)]
+        no_banner: bool,
+        #[arg(long)]
+        check: bool,
+    },
+    /// Persistent JSON-RPC language server (stdio)
+    Lsp,
+    /// Environment report (include roots, luau-lsp, Rojo)
+    Doctor,
+    /// Explain a CLPP#### diagnostic
+    Explain {
+        code: String,
     },
     /// Compile every CL++ source under a directory
     Build {
@@ -128,29 +156,29 @@ fn main() -> Result<()> {
             file,
             output,
             json,
-        } => {
-            if json {
-                match compile_artifact(&file) {
-                    Ok(art) => {
-                        print_json(&art)?;
-                        if !art.ok {
-                            std::process::exit(1);
-                        }
-                    }
-                    Err(err) => {
-                        print_json(&CompileArtifact::fail(file.display().to_string(), format!("{err:#}")))?;
-                        std::process::exit(1);
-                    }
+            no_banner,
+            check,
+        } => run_compile(file, output, json, no_banner, check)?,
+        Commands::Emit {
+            file,
+            output,
+            no_banner,
+            check,
+        } => run_compile(file, output, false, no_banner, check)?,
+        Commands::Lsp => lsp::run().into_diagnostic()?,
+        Commands::Doctor => {
+            let report = doctor::report();
+            print_json(&report)?;
+        }
+        Commands::Explain { code } => {
+            match diag::explain(&code) {
+                Some(c) => {
+                    println!("{}: {}", c.id, c.title);
+                    println!("{}", c.help);
                 }
-            } else {
-                let luau = compile_file(&file)?;
-                if let Some(path) = output {
-                    if let Some(parent) = path.parent() {
-                        fs::create_dir_all(parent).into_diagnostic()?;
-                    }
-                    fs::write(path, luau).into_diagnostic()?;
-                } else {
-                    io::stdout().write_all(luau.as_bytes()).into_diagnostic()?;
+                None => {
+                    eprintln!("unknown code {code}");
+                    std::process::exit(1);
                 }
             }
         }
@@ -293,6 +321,77 @@ fn read_position_or_source() -> Result<PositionRequest> {
         line: 1,
         column: 1,
     })
+}
+
+fn run_compile(
+    file: PathBuf,
+    output: Option<PathBuf>,
+    json: bool,
+    no_banner: bool,
+    check: bool,
+) -> Result<()> {
+    match compile_artifact(&file) {
+        Ok(mut art) => {
+            if no_banner {
+                art.luau = art
+                    .luau
+                    .replace("-- Compiled by CL++ — C++ × Luau\n\n", "")
+                    .replace("-- Compiled by CL++ — C++ × Luau\n", "");
+            }
+            let map_json = serde_json::to_string_pretty(&art.source_map).into_diagnostic()?;
+            if json {
+                print_json(&art)?;
+                if !art.ok {
+                    std::process::exit(1);
+                }
+            } else if !art.ok {
+                miette::bail!("{}", art.error.unwrap_or_else(|| "compile failed".into()));
+            } else if let Some(path) = output {
+                if let Some(parent) = path.parent() {
+                    fs::create_dir_all(parent).into_diagnostic()?;
+                }
+                fs::write(&path, &art.luau).into_diagnostic()?;
+                let mut map_path = path.clone();
+                let name = map_path
+                    .file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| "out.luau".into());
+                map_path.set_file_name(format!("{name}.map"));
+                fs::write(map_path, map_json).into_diagnostic()?;
+            } else {
+                io::stdout().write_all(art.luau.as_bytes()).into_diagnostic()?;
+            }
+            if check && art.ok {
+                run_luau_check(&art.luau)?;
+            }
+            Ok(())
+        }
+        Err(err) => {
+            if json {
+                print_json(&CompileArtifact::fail(file.display().to_string(), format!("{err:#}")))?;
+                std::process::exit(1);
+            }
+            Err(err)
+        }
+    }
+}
+
+fn run_luau_check(luau: &str) -> Result<()> {
+    let tmp = std::env::temp_dir().join("clpp-check.luau");
+    fs::write(&tmp, luau).into_diagnostic()?;
+    for tool in ["luau-analyze", "luau-lsp"] {
+        let status = Command::new(tool).arg(&tmp).status();
+        if let Ok(st) = status {
+            if !st.success() {
+                eprintln!("{tool} reported issues (mapped back as backend warnings)");
+            }
+            let _ = fs::remove_file(&tmp);
+            return Ok(());
+        }
+    }
+    eprintln!("luau-analyze / luau-lsp not on PATH; skipped --check");
+    let _ = fs::remove_file(&tmp);
+    Ok(())
 }
 
 fn run_setup(pause: bool) -> Result<()> {

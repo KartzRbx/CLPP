@@ -63,10 +63,16 @@ pub fn compile_artifact_source(
         .into_iter()
         .map(|d| remap_diagnostic(d, &ctx.line_map))
         .collect::<Vec<_>>();
-    match crate::semantic::check::check_program(&program, &expanded) {
+    match crate::semantic::check::check_program_ex(&program, &expanded, &ctx.libraries) {
         Ok(items) => diagnostics.extend(items.into_iter().map(|d| remap_diagnostic(d, &ctx.line_map))),
         Err(err) => return Ok(fail_report(&file_name, err, &ctx.line_map)),
     };
+    diagnostics.retain(|d| {
+        !source
+            .lines()
+            .nth(d.line.saturating_sub(1))
+            .is_some_and(|l| l.contains("clpp-ignore"))
+    });
     let errors: Vec<_> = diagnostics
         .iter()
         .filter(|d| d.severity != "warning")
@@ -80,6 +86,7 @@ pub fn compile_artifact_source(
         return Ok(CompileArtifact::fail_with(file_name, message, diagnostics));
     }
     let luau = emit(&program, &ctx);
+    let source_map = build_source_map(&luau, &file_name);
     let kind = script_kind(path);
     Ok(CompileArtifact {
         ok: true,
@@ -100,7 +107,39 @@ pub fn compile_artifact_source(
         libraries: ctx.libraries,
         error: None,
         diagnostics,
+        source_map,
     })
+}
+
+fn build_source_map(luau: &str, file_name: &str) -> Vec<crate::support::SourceMapLine> {
+    let file = Path::new(file_name)
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| file_name.to_string());
+    let mut current = 1usize;
+    let mut out = Vec::new();
+    for (i, line) in luau.lines().enumerate() {
+        let luau_line = i + 1;
+        let trimmed = line.trim_start();
+        if let Some(rest) = trimmed.strip_prefix("-- ") {
+            if let Some((name, num)) = rest.rsplit_once(':') {
+                if Path::new(name).file_name().map(|n| n.to_string_lossy()) == Path::new(&file).file_name().map(|n| n.to_string_lossy())
+                    || name == file
+                    || name.ends_with(&file)
+                {
+                    if let Ok(n) = num.parse::<usize>() {
+                        current = n;
+                    }
+                }
+            }
+        }
+        out.push(crate::support::SourceMapLine {
+            luau_line,
+            clpp_line: current,
+            file: file.clone(),
+        });
+    }
+    out
 }
 
 fn remap_diagnostic(mut diag: CompileDiagnostic, map: &[usize]) -> CompileDiagnostic {
@@ -117,6 +156,8 @@ fn fail_report(file_name: &str, err: miette::Report, map: &[usize]) -> CompileAr
             line: remap_line(map, line),
             column,
             severity: "error".into(),
+            code: None,
+            help: None,
         });
     }
     CompileArtifact::fail_with(file_name, format!("{err:#}"), diagnostics)

@@ -4,7 +4,7 @@ struct Wallet {
 };
 
 void Wallet::Add(int n) {
-    @coins = coins + n;
+    @coins = @coins + n;
     post("wallet " .: @coins);
 }
 
