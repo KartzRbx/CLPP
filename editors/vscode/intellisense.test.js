@@ -119,6 +119,33 @@ assert.ok(engine.hoverFor("@this", combatSymbols).includes("`@`"));
 assert.ok(engine.hoverFor("@janitor", combatSymbols).includes("self.janitor"));
 assert.ok(engine.hoverFor("@janitor", combatSymbols).includes("receiver field"));
 
+const thisDot = engine.resolve("    @this.", combatSymbols, "CombatServer");
+assert.ok(labels(thisDot.members).includes("janitor") || labels(thisDot.members).includes("Add"), labels(thisDot.members).join(","));
+
+const thisScope = engine.resolve("    @this::", combatSymbols, "CombatServer");
+assert.ok(
+  labels(thisScope.members).includes("BindPart") || labels(thisScope.members).includes("janitor"),
+  labels(thisScope.members).join(",")
+);
+
+const classScope = engine.resolve("    CombatServer::", combatSymbols);
+assert.ok(labels(classScope.members).includes("BindPart"), labels(classScope.members).join(","));
+
+const fieldDot = engine.resolve("    @janitor.", combatSymbols, "CombatServer");
+assert.ok(labels(fieldDot.members).includes("Add") || labels(fieldDot.members).includes("Cleanup"), labels(fieldDot.members).join(","));
+
+const namespaceHdr = `
+namespace HudMath {
+	double Lerp(double from, double to, double alpha);
+	Vector2 LerpVector2(Vector2 from, Vector2 to, double alpha);
+}
+`;
+const namespaceSymbols = engine.indexDocument('#include "HudMath.clh"\nvoid init() { HudMath. }', [namespaceHdr]);
+assert.ok(namespaceSymbols.types.HudMath, "indexes namespace like struct");
+assert.deepStrictEqual(labels(namespaceSymbols.types.HudMath.methods), ["Lerp", "LerpVector2"]);
+const namespaceDot = engine.resolve("    HudMath.", namespaceSymbols);
+assert.deepStrictEqual(labels(namespaceDot.members), ["Lerp", "LerpVector2"]);
+
 const grammar = JSON.parse(
   fs.readFileSync(path.join(__dirname, "syntaxes", "clpp.tmLanguage.json"), "utf8")
 );

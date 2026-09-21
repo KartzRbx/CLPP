@@ -248,7 +248,7 @@ function loadEngine(data) {
 
   function parseStructs(src) {
     const types = {};
-    const re = /\bstruct\s+([A-Za-z_]\w*)\s*(?::[^{]*)?\{/g;
+    const re = /\b(?:struct|namespace|class)\s+([A-Za-z_]\w*)\s*(?::[^{]*)?\{/g;
     let match;
     while ((match = re.exec(src))) {
       const name = match[1];
@@ -264,7 +264,7 @@ function loadEngine(data) {
         );
         if (method) {
           const ret = method[1].replace(/\b(?:static|virtual|inline|constexpr|const)\b/g, "").trim();
-          if (ret && ret !== "struct") {
+          if (ret && ret !== "struct" && ret !== "namespace" && ret !== "class") {
             node.methods.push({
               label: method[2],
               returns: ret,
@@ -281,7 +281,7 @@ function loadEngine(data) {
           continue;
         }
         const ty = field[1].replace(/\b(?:static|constexpr|const|mutable)\b/g, "").trim();
-        if (!ty || ty === "struct") {
+        if (!ty || ty === "struct" || ty === "namespace" || ty === "class") {
           continue;
         }
         node.properties.push({
@@ -367,6 +367,26 @@ function loadEngine(data) {
     const types = parseStructs(stripLiterals(raw));
     for (const extra of extraTexts || []) {
       Object.assign(types, parseStructs(stripLiterals(extra)));
+    }
+    const implRe =
+      /\b(?:(?:const|static|constexpr|async)\s+)*([A-Za-z_]\w*(?:<[^>]+>)?)\s+([A-Z][A-Za-z0-9_]*)::([A-Za-z_]\w*)\s*\(/g;
+    const implSrc = [raw, ...(extraTexts || [])].join("\n");
+    let implMatch;
+    while ((implMatch = implRe.exec(implSrc))) {
+      const ret = implMatch[1];
+      const ownerName = implMatch[2];
+      const methodName = implMatch[3];
+      if (!types[ownerName]) {
+        types[ownerName] = { properties: [], methods: [] };
+      }
+      if (!types[ownerName].methods.some((method) => method.label === methodName)) {
+        types[ownerName].methods.push({
+          label: methodName,
+          returns: ret,
+          detail: `${ownerName}::${methodName}()`,
+          kind: "methods",
+        });
+      }
     }
     const overlay = withPathTree(types);
 
@@ -458,11 +478,12 @@ function loadEngine(data) {
 
   function parseAccess(line) {
     const ident = "[A-Za-z_][A-Za-z0-9_]*";
+    const rootIdent = `(?:@this|@${ident}|${ident})`;
     const acc = "(?:~>|::|\\.:|:|\\.)";
     const generic = "(?:<[^;<>]*>)?";
     const call = "(?:\\([^;]*\\))?";
     const re = new RegExp(
-      `(${ident})(${generic})(${call})((?:${acc}${ident}${generic}${call})*)(${acc})(${ident})?$`
+      `(${rootIdent})(${generic})(${call})((?:${acc}${ident}${generic}${call})*)(${acc})(${ident})?$`
     );
     const m = line.match(re);
     if (!m) {
@@ -502,7 +523,29 @@ function loadEngine(data) {
     };
   }
 
-  function typeOfRoot(root, generic, call, symbols) {
+  function typeOfRoot(root, generic, call, symbols, owner) {
+    if (root === "this" || root === "@this") {
+      return owner || null;
+    }
+    if (root && root.startsWith("@") && root.length > 1) {
+      const field = root.slice(1);
+      if (field === "this") {
+        return owner || null;
+      }
+      const overlay = symbols && symbols.types;
+      if (owner) {
+        const member = findMember(owner, field, overlay);
+        if (member) {
+          return normalizeType(member.returns || member.type);
+        }
+      }
+      for (const typeName of Object.keys(overlay || {})) {
+        const member = findMember(typeName, field, overlay);
+        if (member && (member.kind === "properties" || member.type)) {
+          return normalizeType(member.returns || member.type);
+        }
+      }
+    }
     if (root === "GetService" && generic) {
       return generic;
     }
@@ -614,13 +657,13 @@ function loadEngine(data) {
     return [];
   }
 
-  function resolve(line, symbols) {
+  function resolve(line, symbols, owner) {
     const access = parseAccess(line);
     if (!access || access.mode === "concat") {
       return { mode: access ? "concat" : "global", members: [], access };
     }
     const overlay = symbols && symbols.types;
-    const rootType = typeOfRoot(access.root, access.generic, access.call, symbols);
+    const rootType = typeOfRoot(access.root, access.generic, access.call, symbols, owner);
     const type = walkType(rootType, access.steps, overlay);
     const members = membersFor(type, access.mode, symbols, access.root);
     return { mode: access.mode, type, members, access, rootType };

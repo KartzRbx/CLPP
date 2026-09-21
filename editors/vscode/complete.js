@@ -91,11 +91,12 @@ function buildCompletionItems(engine, data, text, filePath, lineText, offset, fo
     }));
   }
   const symbols = symbolsFor(engine, text, extraTexts);
-  const at = atCompletions(lineText, symbols, enclosingOwner(text, offset));
+  const owner = enclosingOwner(text, offset);
+  const at = atCompletions(lineText, symbols, owner);
   if (at) {
     return at;
   }
-  const resolved = engine.resolve(lineText, symbols);
+  const resolved = engine.resolve(lineText, symbols, owner);
   if (resolved.mode !== "global" && resolved.mode !== "concat") {
     return resolved.members.map((member) => ({
       label: member.label,
@@ -116,6 +117,9 @@ function buildCompletionItems(engine, data, text, filePath, lineText, offset, fo
   }
   for (const ty of data.types || []) {
     items.push({ label: ty, kind: "Class", detail: "CL++ / Roblox type" });
+  }
+  for (const name of Object.keys(symbols.types || {})) {
+    items.push({ label: name, kind: "Class", detail: "included type / namespace" });
   }
   for (const op of data.operators || []) {
     items.push({ label: op.label, kind: "Operator", detail: op.detail });
