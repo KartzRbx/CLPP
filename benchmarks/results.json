@@ -1,0 +1,92 @@
+{
+  "generated_at": "2026-09-22",
+  "note": "Compile-time rows are from host cargo benches. Studio A–F (P50/P95/P99, GC, memory) require Roblox Studio runs — values below are deliberately null until measured.",
+  "rustc_opt": "debug",
+  "rows": [
+    {
+      "name": "syntax/features.clp",
+      "iters": 25,
+      "median_ms": 83.9328,
+      "p95_ms": 98.11880000000001,
+      "loc": 92,
+      "loc_per_sec": 1096.1149872278775
+    },
+    {
+      "name": "shared/config.clp",
+      "iters": 25,
+      "median_ms": 3.1468999999999996,
+      "p95_ms": 4.5589,
+      "loc": 4,
+      "loc_per_sec": 1271.092185960787
+    },
+    {
+      "name": "checked_generics_ok",
+      "iters": 25,
+      "median_ms": 8.8487,
+      "p95_ms": 11.0577,
+      "loc": 5,
+      "loc_per_sec": 565.0547538056438
+    },
+    {
+      "name": "synthetic_200_stmts",
+      "iters": 25,
+      "median_ms": 347.1683,
+      "p95_ms": 424.1404,
+      "loc": 402,
+      "loc_per_sec": 1157.9398234228183
+    }
+  ],
+  "studio_suites": {
+    "status": "pending_studio_measurement",
+    "baselines": [
+      "idiomatic_luau",
+      "hand_tuned_luau",
+      "roblox_ts",
+      "clpp_no_opt",
+      "clpp_opt",
+      "clpp_opt_native"
+    ],
+    "suites": {
+      "A_numeric": { "p50_ms": null, "p95_ms": null, "p99_ms": null, "gc_ms": null, "memory_mb": null },
+      "B_data": { "p50_ms": null, "p95_ms": null, "p99_ms": null, "gc_ms": null, "memory_mb": null },
+      "C_realistic": { "p50_ms": null, "p95_ms": null, "p99_ms": null, "gc_ms": null, "memory_mb": null },
+      "D_memory": { "p50_ms": null, "p95_ms": null, "p99_ms": null, "gc_ms": null, "memory_mb": null },
+      "E_opt_compare": { "p50_ms": null, "p95_ms": null, "p99_ms": null, "gc_ms": null, "memory_mb": null },
+      "F_native_hints": { "p50_ms": null, "p95_ms": null, "p99_ms": null, "gc_ms": null, "memory_mb": null }
+    },
+    "fixtures": ["benches/numeric.clpp", "benches/data.clpp", "benches/realistic.clpp"]
+  },
+  "catches": [
+    {
+      "name": "optional → plain (CLPP0201)",
+      "code": "CLPP0201",
+      "caught": true
+    },
+    {
+      "name": "private member (CLPP0401)",
+      "code": "CLPP0401",
+      "caught": true
+    },
+    {
+      "name": "generic bound (CLPP0901)",
+      "code": "CLPP0901",
+      "caught": true
+    },
+    {
+      "name": "static_assert (CLPP0701)",
+      "code": "CLPP0701",
+      "caught": true
+    },
+    {
+      "name": "bare method (CLPP0101)",
+      "code": "CLPP0101",
+      "caught": true
+    },
+    {
+      "name": "Result → plain (CLPP0202)",
+      "code": "CLPP0202",
+      "caught": true
+    }
+  ],
+  "session_repeat_ms": 0.0253
+}
