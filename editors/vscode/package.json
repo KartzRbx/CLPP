@@ -8,7 +8,7 @@
     "type": "git",
     "url": "https://github.com/KartzRbx/CLPP"
   },
-  "icon": "icons/clpp.svg",
+  "icon": "icons/clpp.png",
   "engines": {
     "vscode": "^1.74.0"
   },
@@ -28,8 +28,8 @@
         "extensions": [".clpp", ".clp", ".flare", ".mint", ".bloom", ".helm", ".shift", ".hive", ".axiom"],
         "filenamePatterns": ["*.server.clpp", "*.client.clpp", "*.plugin.clpp"],
         "icon": {
-          "light": "./icons/clpp.svg",
-          "dark": "./icons/clpp.svg"
+          "light": "./icons/clpp.png",
+          "dark": "./icons/clpp.png"
         },
         "configuration": "./language-configuration.json"
       },
