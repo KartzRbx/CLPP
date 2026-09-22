@@ -175,6 +175,23 @@ pub fn eval_number(expr: &Expr, env: &ConstEnv) -> Option<f64> {
 }
 
 fn fold_binary(op: &str, left: &Expr, right: &Expr) -> Option<Expr> {
+    // Strength reduction: ident*2 → ident+ident (keeps induction-friendly form).
+    if op == "*" {
+        if matches!(left, Expr::Ident(_)) && matches!(right, Expr::Number(n) if n == "2") {
+            return Some(Expr::Binary {
+                op: "+".into(),
+                left: Box::new(left.clone()),
+                right: Box::new(left.clone()),
+            });
+        }
+        if matches!(right, Expr::Ident(_)) && matches!(left, Expr::Number(n) if n == "2") {
+            return Some(Expr::Binary {
+                op: "+".into(),
+                left: Box::new(right.clone()),
+                right: Box::new(right.clone()),
+            });
+        }
+    }
     match op {
         "+" | "-" | "*" | "/" | "%" => {
             let a = match left {

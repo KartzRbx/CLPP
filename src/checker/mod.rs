@@ -6,12 +6,54 @@ mod typed;
 pub use pass::{check_program, check_program_ex};
 pub use typed::check_typed;
 
-/// Name-table pass (`pass`) + TypeId validation (`typed`). Compile/session run both.
+/// Name-table pass (`pass`) + TypeId validation (`typed`). Prefer typed; dedupe overlaps.
 
 use crate::ast::{Expr, Function, Item, Program, Stmt};
 use crate::binder::BoundFile;
+use crate::support::CompileDiagnostic;
 use crate::symbols::{SymbolDatabase, SymbolId, SymbolKind};
 use crate::types::{parse_type_str, MemberKind, StructMember, TypeDatabase, TypeId};
+
+/// Unified diagnostics: typed is authoritative; pass fills gaps not already covered by code/line.
+pub fn check_unified(
+    program: &Program,
+    source: &str,
+    libraries: &[String],
+    bound: &BoundFile,
+    types: &mut TypeDatabase,
+) -> Vec<CompileDiagnostic> {
+    let mut typed = check_typed(program, bound, types, source);
+    let pass = match check_program_ex(program, source, libraries) {
+        Ok(d) => d,
+        Err(_) => Vec::new(),
+    };
+    let typed_keys: std::collections::HashSet<(usize, Option<String>)> = typed
+        .iter()
+        .map(|d| (d.line, d.code.clone()))
+        .collect();
+    for d in pass {
+        let key = (d.line, d.code.clone());
+        // Skip pass type-assign noise when typed already spoke on that line with a code.
+        if typed.iter().any(|t| t.line == d.line && t.code.is_some()) {
+            continue;
+        }
+        if typed_keys.contains(&key) {
+            continue;
+        }
+        // Prefer typed messages that already mention optional/Result on this line.
+        if typed.iter().any(|t| {
+            t.line == d.line
+                && (t.message.contains("optional")
+                    || t.message.contains("Result")
+                    || t.message.contains("CLPP0201")
+                    || t.message.contains("CLPP0202"))
+        }) {
+            continue;
+        }
+        typed.push(d);
+    }
+    typed
+}
 
 pub fn resolve(program: &Program, bound: &mut BoundFile, types: &mut TypeDatabase) {
     // 1. Register structs / enums / aliases by name.
@@ -288,7 +330,12 @@ impl<'a> Engine<'a> {
                 }
             }
             Expr::String(_) | Expr::Interp { .. } => self.types.string,
-            Expr::Ident(name) => self.type_of_name(line, name),
+            Expr::Ident(name) => {
+                if name == "None" {
+                    return self.types.nil;
+                }
+                self.type_of_name(line, name)
+            }
             Expr::This { line: l } => self.type_of_name(*l, "self"),
             Expr::AtField { name, line: l } => {
                 let recv = self.type_of_name(*l, "self");
@@ -315,6 +362,36 @@ impl<'a> Engine<'a> {
                     if let Some(Expr::String(s)) = args.first() {
                         return self.types.nominal(s);
                     }
+                }
+                // RFC 0012 constructors
+                if object.is_none() {
+                    match name.as_str() {
+                        "Some" => {
+                            let inner = args
+                                .first()
+                                .map(|a| self.type_of_expr(a, line))
+                                .unwrap_or(self.types.any);
+                            return self.types.optional(inner);
+                        }
+                        "Ok" => {
+                            let ok = args
+                                .first()
+                                .map(|a| self.type_of_expr(a, line))
+                                .unwrap_or(self.types.any);
+                            return self.types.result(ok, self.types.any);
+                        }
+                        "Err" => {
+                            let err = args
+                                .first()
+                                .map(|a| self.type_of_expr(a, line))
+                                .unwrap_or(self.types.any);
+                            return self.types.result(self.types.any, err);
+                        }
+                        _ => {}
+                    }
+                }
+                if object.is_none() && name == "None" {
+                    return self.types.nil;
                 }
                 if let Some(targ) = type_args.first() {
                     if name == "FindFirstChild"
@@ -368,6 +445,13 @@ impl<'a> Engine<'a> {
             }
             Expr::Unary { argument, .. } | Expr::Await { argument } | Expr::Update { target: argument, .. } => {
                 self.type_of_expr(argument, line)
+            }
+            Expr::Try { argument } => {
+                let inner = self.type_of_expr(argument, line);
+                if let Some((ok, _)) = self.types.unwrap_result_labels(inner) {
+                    return parse_type_str(self.types, &ok);
+                }
+                inner
             }
             Expr::Binary { op, left, right } => {
                 if op == ".:" {

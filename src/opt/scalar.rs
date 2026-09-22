@@ -171,6 +171,7 @@ fn expr_uses_whole(name: &str, expr: &Expr) -> bool {
         Expr::Unary { argument, .. }
         | Expr::Await { argument }
         | Expr::Cast { argument, .. }
+        | Expr::Try { argument }
         | Expr::Update { target: argument, .. } => expr_uses_whole(name, argument),
         Expr::Binary { left, right, .. }
         | Expr::Assign { left, right, .. }

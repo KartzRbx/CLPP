@@ -13,6 +13,7 @@ pub mod driver;
 pub mod emitter;
 pub mod error;
 pub mod fmt;
+pub mod ice;
 pub mod install;
 pub mod intent;
 pub mod lint;

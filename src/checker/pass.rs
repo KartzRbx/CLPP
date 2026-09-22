@@ -760,7 +760,10 @@ impl<'a> Checker<'a> {
                 // `@field` validity: `checker::typed::check_at_receiver`.
                 Ty::Unknown
             }
-            Expr::Unary { argument, .. } | Expr::Await { argument } | Expr::Cast { argument, .. } => {
+            Expr::Unary { argument, .. }
+            | Expr::Await { argument }
+            | Expr::Cast { argument, .. }
+            | Expr::Try { argument } => {
                 if let Expr::Cast { value_type, .. } = expr {
                     return parse_ty(value_type);
                 }

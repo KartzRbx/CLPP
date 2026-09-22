@@ -1,5 +1,6 @@
 {
-  "generated_at": "unix_ms=1790080714271",
+  "generated_at": "2026-09-22",
+  "note": "Compile-time rows are from host cargo benches. Studio A–F (P50/P95/P99, GC, memory) require Roblox Studio runs — values below are deliberately null until measured.",
   "rustc_opt": "debug",
   "rows": [
     {
@@ -35,6 +36,26 @@
       "loc_per_sec": 1157.9398234228183
     }
   ],
+  "studio_suites": {
+    "status": "pending_studio_measurement",
+    "baselines": [
+      "idiomatic_luau",
+      "hand_tuned_luau",
+      "roblox_ts",
+      "clpp_no_opt",
+      "clpp_opt",
+      "clpp_opt_native"
+    ],
+    "suites": {
+      "A_numeric": { "p50_ms": null, "p95_ms": null, "p99_ms": null, "gc_ms": null, "memory_mb": null },
+      "B_data": { "p50_ms": null, "p95_ms": null, "p99_ms": null, "gc_ms": null, "memory_mb": null },
+      "C_realistic": { "p50_ms": null, "p95_ms": null, "p99_ms": null, "gc_ms": null, "memory_mb": null },
+      "D_memory": { "p50_ms": null, "p95_ms": null, "p99_ms": null, "gc_ms": null, "memory_mb": null },
+      "E_opt_compare": { "p50_ms": null, "p95_ms": null, "p99_ms": null, "gc_ms": null, "memory_mb": null },
+      "F_native_hints": { "p50_ms": null, "p95_ms": null, "p99_ms": null, "gc_ms": null, "memory_mb": null }
+    },
+    "fixtures": ["benches/numeric.clpp", "benches/data.clpp", "benches/realistic.clpp"]
+  },
   "catches": [
     {
       "name": "optional → plain (CLPP0201)",
@@ -59,6 +80,11 @@
     {
       "name": "bare method (CLPP0101)",
       "code": "CLPP0101",
+      "caught": true
+    },
+    {
+      "name": "Result → plain (CLPP0202)",
+      "code": "CLPP0202",
       "caught": true
     }
   ],

@@ -1122,6 +1122,7 @@ fn stmt_as_list(stmt: Stmt) -> Vec<Stmt> {
 fn parse_expr(pair: Pair<Rule>) -> Expr {
     match pair.as_rule() {
         Rule::expr | Rule::assign => parse_assign(pair),
+        Rule::try_expr => parse_try_expr(pair),
         Rule::ternary => parse_ternary(pair),
         Rule::coalesce => parse_coalesce(pair),
         Rule::shift => fold_silent(pair, "<<"),
@@ -1132,10 +1133,26 @@ fn parse_expr(pair: Pair<Rule>) -> Expr {
         Rule::add | Rule::mul => fold_named_op(pair),
         Rule::pow => parse_pow(pair),
         Rule::unary => parse_unary(pair),
+        Rule::colon_expr => parse_colon_expr(pair),
         Rule::primary => parse_primary(pair),
         Rule::atom => parse_atom(pair),
         _ => parse_atom_or_inner(pair),
     }
+}
+
+/// `ternary` then optional Result-try (`?`), so ternary always wins for `? … : …`.
+fn parse_try_expr(pair: Pair<Rule>) -> Expr {
+    let mut inner = pair.into_inner();
+    let Some(first) = inner.next() else {
+        return Expr::Null;
+    };
+    let mut node = parse_expr(first);
+    if inner.any(|p| p.as_rule() == Rule::try_op) {
+        node = Expr::Try {
+            argument: Box::new(node),
+        };
+    }
+    node
 }
 
 fn parse_ternary(pair: Pair<Rule>) -> Expr {
@@ -1275,6 +1292,18 @@ fn parse_unary(pair: Pair<Rule>) -> Expr {
     }
 }
 
+fn parse_colon_expr(pair: Pair<Rule>) -> Expr {
+    let mut inner = pair.into_inner();
+    let Some(first) = inner.next() else {
+        return Expr::Null;
+    };
+    let mut node = parse_expr(first);
+    for suffix in inner {
+        node = apply_postfix(node, suffix);
+    }
+    node
+}
+
 fn parse_primary(pair: Pair<Rule>) -> Expr {
     let mut inner = pair.into_inner();
     let Some(atom) = inner.next() else {
@@ -1308,21 +1337,6 @@ fn parse_atom(pair: Pair<Rule>) -> Expr {
                 }
             }
             Expr::New { class_name, args }
-        }
-        Rule::get_service => {
-            // Surface syntax `GetService<T>()` — typed as a normal call; platform fills T.
-            let service = pair
-                .into_inner()
-                .find(|p| p.as_rule() == Rule::ident)
-                .map(|p| p.as_str().to_string())
-                .unwrap_or_default();
-            Expr::Call {
-                object: None,
-                name: "GetService".into(),
-                args: Vec::new(),
-                access: ".".into(),
-                type_args: vec![service],
-            }
         }
         Rule::generic_call => {
             let mut name = String::new();

@@ -474,7 +474,8 @@ impl<'a> Emitter<'a> {
                 Expr::Tuple(values) => values.iter().any(|v| walk_expr(v, name)),
                 Expr::Unary { argument, .. }
                 | Expr::Cast { argument, .. }
-                | Expr::Await { argument } => walk_expr(argument, name),
+                | Expr::Await { argument }
+                | Expr::Try { argument } => walk_expr(argument, name),
                 Expr::Binary { left, right, .. } | Expr::Assign { left, right, .. } => {
                     walk_expr(left, name) || walk_expr(right, name)
                 }
@@ -907,6 +908,25 @@ impl<'a> Emitter<'a> {
             .as_ref()
             .map(|v| self.emit_expr(v))
             .unwrap_or_else(|| "nil".into());
+        // Buffer specialization emit (Dense+Numeric+Hot): numeric array ≥8 → buffer.create.
+        if let Some(Expr::ArrayLit { elements }) = &decl.value {
+            if elements.len() >= 8 && elements.iter().all(|e| matches!(e, Expr::Number(_))) {
+                let mut out = vec![format!(
+                    "{prefix}{kind} {}{typed} = buffer.create({}) -- BufferSpecialize",
+                    decl.name,
+                    elements.len() * 8
+                )];
+                for (i, e) in elements.iter().enumerate() {
+                    out.push(format!(
+                        "{prefix}buffer.writef64({}, {}, {})",
+                        decl.name,
+                        i * 8,
+                        self.emit_expr(e)
+                    ));
+                }
+                return out;
+            }
+        }
         vec![format!("{prefix}{kind} {}{typed} = {value}", decl.name)]
     }
 
@@ -1241,18 +1261,31 @@ impl<'a> Emitter<'a> {
         let mut first = true;
         for arm in arms {
             if let Some(class_name) = &arm.class_name {
-                let test = if is_instance_type(class_name) {
-                    format!("{id}:IsA(\"{class_name}\")")
-                } else {
-                    let mapped = luau_type(Some(class_name.as_str())).unwrap_or_else(|| class_name.clone());
-                    format!("typeof({id}) == \"{mapped}\"")
+                let test = match class_name.as_str() {
+                    "Ok" => format!("typeof({id}) == \"table\" and {id}.ok ~= nil"),
+                    "Err" => format!("typeof({id}) == \"table\" and {id}.err ~= nil"),
+                    "Some" => format!("{id} ~= nil"),
+                    "None" => format!("{id} == nil"),
+                    _ if is_instance_type(class_name) => {
+                        format!("{id}:IsA(\"{class_name}\")")
+                    }
+                    _ => {
+                        let mapped =
+                            luau_type(Some(class_name.as_str())).unwrap_or_else(|| class_name.clone());
+                        format!("typeof({id}) == \"{mapped}\"")
+                    }
                 };
                 let kw = if first { "if" } else { "elseif" };
                 first = false;
                 out.push(format!("{inner}{kw} {test} then"));
                 if let Some(binding) = &arm.binding {
                     self.local_names.insert(binding.clone());
-                    out.push(format!("{inner}\tlocal {binding} = {id}"));
+                    let bind_rhs = match class_name.as_str() {
+                        "Ok" => format!("{id}.ok"),
+                        "Err" => format!("{id}.err"),
+                        _ => id.clone(),
+                    };
+                    out.push(format!("{inner}\tlocal {binding} = {bind_rhs}"));
                 }
             } else {
                 out.push(format!("{inner}else"));
@@ -1549,6 +1582,13 @@ impl<'a> Emitter<'a> {
                     "(function() local _t = {}; return if _t ~= nil then _t else {} end)()",
                     self.emit_expr(left),
                     self.emit_expr(right)
+                )
+            }
+            Expr::Try { argument } => {
+                // Early-return Err; unwrap Ok value.
+                format!(
+                    "(function() local _r = {}; if _r.err ~= nil then return {{ err = _r.err }} end; return _r.ok end)()",
+                    self.emit_expr(argument)
                 )
             }
             Expr::Ternary {
@@ -1982,6 +2022,7 @@ fn expr_has_cleanup(expr: &Expr) -> bool {
         Expr::Unary { argument, .. }
         | Expr::Cast { argument, .. }
         | Expr::Await { argument }
+        | Expr::Try { argument }
         | Expr::Update { target: argument, .. } => expr_has_cleanup(argument),
         Expr::Binary { left, right, .. } | Expr::Assign { left, right, .. } => {
             expr_has_cleanup(left) || expr_has_cleanup(right)
@@ -2225,7 +2266,23 @@ fn inferred_type(decl: &Decl) -> Option<String> {
             ..
         }) if name == "GetService" => type_args.first().cloned(),
         Some(Expr::Call { object: None, name, .. }) if is_datatype(name) => Some(name.clone()),
-        _ => luau_type(decl.value_type.as_deref()).filter(|t| t != "auto"),
+        _ => {
+            // Preserve CL++ annotations that help Luau native (Result/Option/numeric).
+            if let Some(ty) = &decl.value_type {
+                if ty.starts_with("Result<") {
+                    return Some("any".into()); // tagged table; keep `: any` for native shape
+                }
+                if ty.starts_with("Option<") || ty.starts_with("optional<") {
+                    let inner = ty
+                        .find('<')
+                        .and_then(|i| ty.get(i + 1..ty.len().saturating_sub(1)))
+                        .unwrap_or("any");
+                    let mapped = luau_type(Some(inner)).unwrap_or_else(|| inner.to_string());
+                    return Some(format!("{mapped}?"));
+                }
+            }
+            luau_type(decl.value_type.as_deref()).filter(|t| t != "auto")
+        }
     }
 }
 

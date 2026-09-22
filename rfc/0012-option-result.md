@@ -30,10 +30,14 @@ Parent: [RFC 0008](0008-intent-system-roadmap.md) Phase A
 
 ## Explicitly later
 
-- Exhaustive `match` on Result tags
-- `?` operator / try sugar
+- Nested patterns / ADTs beyond Option/Result tags (see RFC 0013 shipping subset)
 - Effect integration (`throws E`)
+
+## Shipping
+
+- Exhaustive `match` on Result/Option tags (`CLPP1102`)
+- `?` operator / try sugar (`CLPP1101`)
 
 ## Tests
 
-`tests/opt_fold.rs` / `tests/v07.rs` — Option/Result compile + emit smoke.
+`tests/option_result.rs` — assign / `?` / exhaustive match. Smoke also in `tests/v07.rs`.

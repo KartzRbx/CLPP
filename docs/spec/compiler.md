@@ -50,4 +50,4 @@ clpp fmt              # indent
 clpp watch            # recompile on change
 ```
 
-See [Cluaupp 0.7.0](../cluaupp-070), [Update Cluaupp](../cluaupp-032), [CL++ + luau-lsp](../architecture/luau-lsp), and [Cluaupp support](../cluaupp-support). Current compiler: **0.7.0**.
+See [Cluaupp 0.8.0](../cluaupp-080), [Cluaupp 0.7.0](../cluaupp-070), [Update Cluaupp](../cluaupp-032), [CL++ + luau-lsp](../architecture/luau-lsp), and [Cluaupp support](../cluaupp-support). Current compiler: **0.8.0**.

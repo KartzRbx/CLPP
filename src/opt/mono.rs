@@ -94,6 +94,29 @@ fn mangled(base: &str, targs: &[String]) -> String {
     format!("{base}__{}", safe.join("_"))
 }
 
+/// Infer concrete type args from call arguments (New / Cast / typed literals).
+fn infer_type_args(generic: &Function, args: &[Expr]) -> Option<Vec<String>> {
+    if generic.type_params.len() != 1 || args.is_empty() {
+        return None;
+    }
+    let tp = &generic.type_params[0].name;
+    // Find first param whose type is exactly the type param name.
+    let idx = generic
+        .params
+        .iter()
+        .position(|p| p.value_type.as_deref() == Some(tp.as_str()))?;
+    let arg = args.get(idx)?;
+    match arg {
+        Expr::New { class_name, .. } => Some(vec![class_name.clone()]),
+        Expr::Cast { value_type, .. } => Some(vec![value_type.clone()]),
+        Expr::Number(n) if n.contains('.') => Some(vec!["float".into()]),
+        Expr::Number(_) => Some(vec!["int".into()]),
+        Expr::Bool(_) => Some(vec!["bool".into()]),
+        Expr::String(_) => Some(vec!["string".into()]),
+        _ => None,
+    }
+}
+
 fn collect_instantiations(
     stmts: &[Stmt],
     generics: &HashMap<String, Function>,
@@ -172,8 +195,12 @@ fn walk_expr(
             type_args,
             ..
         } => {
-            if generics.contains_key(name) && !type_args.is_empty() {
-                out.insert((name.clone(), type_args.clone()), ());
+            if generics.contains_key(name) {
+                if !type_args.is_empty() {
+                    out.insert((name.clone(), type_args.clone()), ());
+                } else if let Some(inferred) = infer_type_args(generics.get(name).unwrap(), args) {
+                    out.insert((name.clone(), inferred), ());
+                }
             }
             for a in args {
                 walk_expr(a, generics, out);
@@ -194,6 +221,7 @@ fn walk_expr(
         Expr::Unary { argument, .. }
         | Expr::Cast { argument, .. }
         | Expr::Await { argument }
+        | Expr::Try { argument }
         | Expr::Member { object: argument, .. }
         | Expr::Update { target: argument, .. } => walk_expr(argument, generics, out),
         Expr::Binary { left, right, .. }
@@ -319,16 +347,36 @@ fn rewrite_call_expr(expr: Expr, generics: &HashMap<String, Function>) -> Expr {
             args,
             access,
             type_args,
-        } if generics.contains_key(&name) && !type_args.is_empty() => Expr::Call {
-            object: None,
-            name: mangled(&name, &type_args),
-            args: args
+        } if generics.contains_key(&name) => {
+            let args: Vec<Expr> = args
                 .into_iter()
                 .map(|a| rewrite_call_expr(a, generics))
-                .collect(),
-            access,
-            type_args: Vec::new(),
-        },
+                .collect();
+            let targs = if !type_args.is_empty() {
+                type_args
+            } else if let Some(g) = generics.get(&name) {
+                infer_type_args(g, &args).unwrap_or_default()
+            } else {
+                Vec::new()
+            };
+            if targs.is_empty() {
+                Expr::Call {
+                    object: None,
+                    name,
+                    args,
+                    access,
+                    type_args: Vec::new(),
+                }
+            } else {
+                Expr::Call {
+                    object: None,
+                    name: mangled(&name, &targs),
+                    args,
+                    access,
+                    type_args: Vec::new(),
+                }
+            }
+        }
         Expr::Call {
             object,
             name,

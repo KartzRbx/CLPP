@@ -16,6 +16,8 @@ import { Wallet, PlayerData } from "./PlayerData.clh";
 
 Prefer this in all new CL++ sources.
 
+There is **no `export` keyword**. Every top-level struct / function / type alias / enum in a module file is importable (see `merge_exports` in `src/modules`). Marking privacy is `private:` inside structs, not file-level `export`.
+
 ### Legacy / host
 
 ```clpp
@@ -43,6 +45,7 @@ Child `checker::resolve` registers nominal types in the session type database so
 ## Diagnostics
 
 Missing named import path: `CLPP0801`.
+Import cycle: `CLPP1001`.
 
 ## LSP
 

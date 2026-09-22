@@ -31,7 +31,7 @@ Missing module path → diagnostic **CLPP0801**.
 
 ## Cycles
 
-The module graph keeps a `seen` set. A cycle is cut so the compiler does not recurse forever; treat circular type dependencies as a design smell and break them with a shared `.clh` of types only.
+The module graph keeps a `seen` set and runs **`detect_cycles`**. A real cycle produces diagnostic **CLPP1001** (break it with a shared types-only `.clh` or by removing the back-edge). The `seen` set also prevents infinite recursion while loading.
 
 ## Type-only / star / package (status)
 

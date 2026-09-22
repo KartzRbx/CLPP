@@ -66,7 +66,7 @@ KW_TUPLE = @{ "tuple" ~ !ident_char }
 KW_VARIANT = @{ "variant" ~ !ident_char }
 KW_IMPORT = @{ "import" ~ !ident_char }
 KW_FROM = @{ "from" ~ !ident_char }
-KW_EXPORT = @{ "export" ~ !ident_char }
+// No export keyword (RFC 0003): every top-level symbol in a module file is importable.
 
 kw = _{
     KW_CONSTEXPR | KW_NAMESPACE | KW_OBSERVABLE | KW_PROTECTED | KW_PARALLEL |
@@ -79,7 +79,7 @@ kw = _{
     KW_AUTO | KW_BOOL | KW_CASE | KW_ELSE |
     KW_ENUM | KW_TRUE | KW_VOID | KW_FOR | KW_INT | KW_NEW | KW_USING | KW_TYPE | KW_INTERFACE | KW_AS |
     KW_EXTERN | KW_INLINE | KW_DOUBLE | KW_STRING | KW_FUNC | KW_NULL | KW_IF | KW_IN | KW_BY |
-    KW_TUPLE | KW_VARIANT | KW_IMPORT | KW_FROM | KW_EXPORT
+    KW_TUPLE | KW_VARIANT | KW_IMPORT | KW_FROM
 }
 
 ident = @{ !kw ~ (ASCII_ALPHA | "_") ~ ident_char* }
@@ -148,7 +148,12 @@ type_name = {
     | ident ~ ("::" ~ ident)*
 }
 type_generic = { "<" ~ type_spec ~ ("," ~ type_spec)* ~ ">" }
-function_type = { "function" ~ "<" ~ type_spec ~ "(" ~ type_spec? ~ ("," ~ type_spec)* ~ ")" ~ ">" }
+// function<Ret(Arg0, Arg1)> — first param list has no leading comma.
+function_type = {
+    "function" ~ "<" ~ type_spec ~ "(" ~
+        (type_spec ~ ("," ~ type_spec)*)? ~
+    ")" ~ ">"
+}
 type_atom = { specifiers? ~ (function_type | type_name ~ type_generic?) ~ "*"* }
 type_spec = { type_atom ~ (("|" | "&") ~ type_atom)* }
 
@@ -252,7 +257,12 @@ match_body = { block | expr }
 expr = { assign }
 
 assign_op = { "+=" | "-=" | "*=" | "/=" | "//=" | "^=" | "%=" | ".:=" | "=" }
-assign = { ternary ~ (assign_op ~ assign)? }
+// Precedence (low to high binding): assign < try < colon-call < ternary < coalesce < ...
+// Colon-call sits *above* ternary so `cond ? a : b` never becomes `a:b`.
+assign = { try_expr ~ (assign_op ~ assign)? }
+try_expr = { colon_expr ~ try_op? }
+try_op = { "?" ~ !"." ~ !"?" }
+colon_expr = { ternary ~ colon_suf* }
 ternary = { coalesce ~ ("?" ~ ternary ~ ":" ~ ternary)? }
 coalesce = { shift ~ ("??" ~ shift)* }
 shift = { or_expr ~ ("<<" ~ or_expr)* }
@@ -275,7 +285,6 @@ primary = { atom ~ postfix* }
 atom = {
     lambda
     | new_expr
-    | get_service
     | named_cast
     | generic_call
     | boolean
@@ -297,7 +306,7 @@ at_sigil = { "@" ~ ident }
 boolean = { KW_TRUE | KW_FALSE }
 null_lit = { KW_NULL | KW_NULLPTR }
 
-postfix = { qmark_dot_suf | cleanup_suf | scope_suf | colon_suf | as_suf | dot_suf | index_suf | inc_suf | call_args | init_suf }
+postfix = { qmark_dot_suf | cleanup_suf | scope_suf | as_suf | dot_suf | index_suf | inc_suf | call_args | init_suf }
 
 qmark_dot_suf = { "?." ~ ident ~ type_generic? ~ call_args? }
 cleanup_suf = { "~>" ~ ident ~ type_generic? ~ call_args? }
@@ -321,8 +330,7 @@ dict_pair = { "{" ~ expr ~ "," ~ expr ~ "}" }
 expr_list = { expr ~ ("," ~ expr)* ~ ","? }
 
 new_expr = { KW_NEW ~ ident ~ call_args? }
-get_service = { "GetService" ~ "<" ~ ident ~ ">" ~ "(" ~ ")" }
-/// Free-function call with explicit type args: `Id<int>(x)`.
+/// Free-function call with explicit type args: `Id<int>(x)`, `GetService<Players>()`.
 generic_call = { ident ~ type_generic ~ call_args }
 named_cast_kw = { "static_cast" | "const_cast" | "reinterpret_cast" | "dynamic_cast" }
 named_cast = { named_cast_kw ~ "<" ~ type_spec ~ ">" ~ "(" ~ expr ~ ")" }

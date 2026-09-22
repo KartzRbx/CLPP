@@ -735,7 +735,77 @@ fn walk_stmts(
                     out,
                 );
             }
+            Stmt::Match {
+                discriminant,
+                arms,
+            } => {
+                check_expr(
+                    engine,
+                    discriminant,
+                    line,
+                    method_owner,
+                    comptime,
+                    loop_depth,
+                    in_do_while,
+                    out,
+                );
+                check_match_exhaustiveness(engine, discriminant, arms, line, out);
+                for arm in arms {
+                    // Narrowing: Ok(x)/Some(x) binding treated as present value in arm body.
+                    walk_stmts(
+                        engine,
+                        &arm.body,
+                        expected_ret,
+                        line,
+                        method_owner,
+                        comptime,
+                        loop_depth,
+                        in_do_while,
+                        out,
+                    );
+                }
+            }
             _ => {}
+        }
+    }
+}
+
+fn check_match_exhaustiveness(
+    engine: &mut Engine<'_>,
+    discriminant: &Expr,
+    arms: &[crate::ast::MatchArm],
+    line: usize,
+    out: &mut Vec<CompileDiagnostic>,
+) {
+    let ty = engine.type_of_expr(discriminant, line);
+    let tags: Vec<&str> = arms
+        .iter()
+        .filter_map(|a| a.class_name.as_deref())
+        .collect();
+    let has_wildcard = arms.iter().any(|a| a.class_name.is_none());
+    if engine.types.is_result(ty) {
+        let has_ok = tags.iter().any(|t| *t == "Ok");
+        let has_err = tags.iter().any(|t| *t == "Err");
+        if !(has_wildcard || (has_ok && has_err)) {
+            out.push(diag::diag(
+                diag::CLPP1102,
+                line.max(1),
+                1,
+                "non-exhaustive match on Result; cover Ok and Err (or `_`)",
+                "error",
+            ));
+        }
+    } else if engine.types.is_optional(ty) {
+        let has_some = tags.iter().any(|t| *t == "Some");
+        let has_none = tags.iter().any(|t| *t == "None");
+        if !(has_wildcard || (has_some && has_none)) {
+            out.push(diag::diag(
+                diag::CLPP1102,
+                line.max(1),
+                1,
+                "non-exhaustive match on Option; cover Some and None (or `_`)",
+                "error",
+            ));
         }
     }
 }
@@ -914,7 +984,35 @@ fn check_expr(
         Expr::Unary { argument, .. }
         | Expr::Await { argument }
         | Expr::Cast { argument, .. }
+        | Expr::Try { argument }
         | Expr::Update { target: argument, .. } => {
+            if matches!(expr, Expr::Try { .. }) {
+                let arg_ty = engine.type_of_expr(argument, line);
+                let is_resultish = engine.types.is_result(arg_ty)
+                    || matches!(
+                        argument.as_ref(),
+                        Expr::Call {
+                            object: None,
+                            name,
+                            ..
+                        } if name == "Ok" || name == "Err"
+                    );
+                if !is_resultish {
+                    use crate::types::TypeKind;
+                    if matches!(
+                        engine.types.peel(arg_ty),
+                        TypeKind::Primitive(_) | TypeKind::Nil | TypeKind::Void
+                    ) {
+                        out.push(diag::diag(
+                            diag::CLPP1101,
+                            line.max(1),
+                            1,
+                            format!("`?` requires Result, got {}", engine.types.label(arg_ty)),
+                            "error",
+                        ));
+                    }
+                }
+            }
             check_expr(
                 engine,
                 argument,
@@ -1630,6 +1728,29 @@ fn push_assign(
         };
         out.push(diag::diag(
             diag::CLPP0201,
+            line.max(1),
+            1,
+            detail,
+            "error",
+        ));
+        return;
+    }
+
+    if types.is_result(actual) && !types.is_result(expected) {
+        let detail = match site {
+            AssignSite::Init { name, .. } => format!(
+                "cannot initialize '{}' with {}; unwrap Ok/Err or change the type",
+                name,
+                types.label(actual)
+            ),
+            AssignSite::Flow => format!(
+                "cannot assign {} to non-Result {}",
+                types.label(actual),
+                types.label(expected)
+            ),
+        };
+        out.push(diag::diag(
+            diag::CLPP0202,
             line.max(1),
             1,
             detail,

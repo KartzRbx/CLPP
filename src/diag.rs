@@ -24,6 +24,11 @@ pub const CLPP0201: Code = Code {
     title: "optional assigned to a non-optional type",
     help: "use optional<T>, guard, assert, or static_cast",
 };
+pub const CLPP0202: Code = Code {
+    id: "CLPP0202",
+    title: "Result assigned to a non-Result type",
+    help: "match on Ok/Err, use `?`, or change the destination type to Result<T,E>",
+};
 pub const CLPP0301: Code = Code {
     id: "CLPP0301",
     title: "construct is not in CL++",
@@ -84,11 +89,27 @@ pub const CLPP0901: Code = Code {
     title: "generic type parameter bound violated",
     help: "pass a type that implements the bound, or add the missing members / widen the bound",
 };
+pub const CLPP1001: Code = Code {
+    id: "CLPP1001",
+    title: "import cycle detected",
+    help: "break the cycle with a forward declaration module or move shared types to a third file",
+};
+pub const CLPP1101: Code = Code {
+    id: "CLPP1101",
+    title: "try (?) on a non-Result value",
+    help: "`expr?` requires Result<T,E>; use Ok/Err or remove the operator",
+};
+pub const CLPP1102: Code = Code {
+    id: "CLPP1102",
+    title: "non-exhaustive match on Option/Result",
+    help: "cover Ok and Err (or Some and None), or add a `_` wildcard arm",
+};
 
 pub fn all() -> &'static [Code] {
     &[
-        CLPP0101, CLPP0102, CLPP0201, CLPP0301, CLPP0401, CLPP0402, CLPP0501, CLPP0601, CLPP0602,
-        CLPP0603, CLPP0604, CLPP0605, CLPP0701, CLPP0801, CLPP0901,
+        CLPP0101, CLPP0102, CLPP0201, CLPP0202, CLPP0301, CLPP0401, CLPP0402, CLPP0501, CLPP0601,
+        CLPP0602, CLPP0603, CLPP0604, CLPP0605, CLPP0701, CLPP0801, CLPP0901, CLPP1001, CLPP1101,
+        CLPP1102,
     ]
 }
 

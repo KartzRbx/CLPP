@@ -121,11 +121,7 @@ fn apply_generic(db: &mut TypeDatabase, name: &str, args: Vec<TypeId>) -> TypeId
         "Result" => {
             let ok = args.first().copied().unwrap_or(db.any);
             let err = args.get(1).copied().unwrap_or(db.any);
-            db.intern(TypeKind::Nominal(format!(
-                "Result<{},{}>",
-                db.label(ok),
-                db.label(err)
-            )))
+            db.result(ok, err)
         }
         "array" | "vector" | "LuaArray" | "span" => {
             db.array(args.first().copied().unwrap_or(db.any))

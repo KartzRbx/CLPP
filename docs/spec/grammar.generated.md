@@ -1,11 +1,11 @@
 ---
 title: Grammar (generated)
-description: Copy of src/parser/grammar.pest converted for the 0.7 spec.
+description: Copy of src/parser/grammar.pest converted for the 0.8 spec.
 ---
 
 # Grammar (generated)
 
-This is the Pest grammar shipped in CL++ 0.7.0 (`src/parser/grammar.pest`). Productions: `@ident`, `continue`, `do/while`, `try/catch`, `?.`, `??`, ranges, `enum`, `using`, `[[attr]]`, `signal`, template strings, `~>`.
+This is the Pest grammar shipped in CL++ 0.8.0 (`src/parser/grammar.pest`). Productions: `@ident`, `continue`, `do/while`, `try/catch`, `?.`, `??`, `import`, ranges, `enum`, `using`, `[[attr]]`, `signal`, template strings, `~>`.
 
 ```pest
 WHITESPACE = _{ " " | "\t" | "\r" | "\n" }

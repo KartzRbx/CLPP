@@ -223,6 +223,26 @@ impl TypeDatabase {
         self.intern(TypeKind::Union(vec![inner, self.nil]))
     }
 
+    /// `Result<T,E>` as nominal `Result<labelT,labelE>` (RFC 0012).
+    pub fn result(&mut self, ok: TypeId, err: TypeId) -> TypeId {
+        let label = format!("Result<{},{}>", self.label(ok), self.label(err));
+        self.intern(TypeKind::Nominal(label))
+    }
+
+    pub fn is_result(&self, id: TypeId) -> bool {
+        matches!(self.peel(id), TypeKind::Nominal(n) if n.starts_with("Result<"))
+    }
+
+    pub fn unwrap_result_labels(&self, id: TypeId) -> Option<(String, String)> {
+        match self.peel(id) {
+            TypeKind::Nominal(n) if n.starts_with("Result<") && n.ends_with('>') => {
+                let inner = &n["Result<".len()..n.len() - 1];
+                split_top_comma(inner).map(|(a, b)| (a.to_string(), b.to_string()))
+            }
+            _ => None,
+        }
+    }
+
     pub fn array(&mut self, elem: TypeId) -> TypeId {
         self.intern(TypeKind::Array(elem))
     }
@@ -681,6 +701,19 @@ impl TypeDatabase {
     pub fn is_assignable(&self, value: TypeId, target: TypeId) -> bool {
         self.is_subtype(value, target)
     }
+}
+
+fn split_top_comma(s: &str) -> Option<(&str, &str)> {
+    let mut depth = 0i32;
+    for (i, c) in s.char_indices() {
+        match c {
+            '<' | '(' | '[' => depth += 1,
+            '>' | ')' | ']' => depth -= 1,
+            ',' if depth == 0 => return Some((s[..i].trim(), s[i + 1..].trim())),
+            _ => {}
+        }
+    }
+    None
 }
 
 impl fmt::Display for TypeId {

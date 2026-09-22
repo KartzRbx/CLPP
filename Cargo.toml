@@ -1,6 +1,6 @@
 [package]
 name = "clpp"
-version = "0.7.0"
+version = "0.8.0"
 edition = "2021"
 description = "CL++ compiler — a C++-inspired language that compiles to Luau"
 license = "MIT"
@@ -12,9 +12,14 @@ categories = ["compilers", "command-line-utilities"]
 [[bin]]
 name = "clpp"
 path = "src/main.rs"
+required-features = ["cli"]
+
+[features]
+default = ["cli"]
+cli = ["dep:clap"]
 
 [dependencies]
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4", features = ["derive"], optional = true }
 miette = { version = "7", features = ["fancy"] }
 pest = "2"
 pest_derive = "2"

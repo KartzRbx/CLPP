@@ -124,6 +124,7 @@ fn visit_expr(expr: &Expr, f: &mut impl FnMut(NodeRef<'_>) -> bool) -> bool {
         Expr::Unary { argument, .. }
         | Expr::Await { argument }
         | Expr::Cast { argument, .. }
+        | Expr::Try { argument }
         | Expr::Update { target: argument, .. } => visit_expr(argument, f),
         Expr::Member { object, .. } | Expr::Index { object, .. } | Expr::OptionalChain { object, .. } => {
             visit_expr(object, f)

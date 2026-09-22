@@ -29,6 +29,10 @@ pub struct Session {
     pub types: TypeDatabase,
     files: HashMap<String, CheckedFile>,
     prelude: BoundFile,
+    /// Import edges for incremental invalidation (RFC 0006 lite).
+    deps: HashMap<String, HashSet<String>>,
+    /// Monotonic session epoch bumped on any invalidate.
+    pub epoch: u64,
 }
 
 impl Default for Session {
@@ -48,6 +52,8 @@ impl Session {
             prelude: BoundFile {
                 symbols: SymbolDatabase::new(),
             },
+            deps: HashMap::new(),
+            epoch: 0,
         }
     }
 
@@ -62,6 +68,8 @@ impl Session {
             types: types.clone(),
             files: HashMap::new(),
             prelude: prelude.clone(),
+            deps: HashMap::new(),
+            epoch: 0,
         }
     }
 
@@ -123,8 +131,39 @@ impl Session {
         let mut seen = HashSet::new();
         crate::modules::import_requires(&mut file, &mut self.types, &mut seen);
         crate::modules::import_named(&mut file, &mut self.types, &mut seen);
+        let deps: HashSet<String> = file
+            .ctx
+            .requires
+            .iter()
+            .map(|r| r.to_file.clone())
+            .collect();
+        self.deps.insert(path.to_string(), deps);
         let _ = &self.prelude;
         file
+    }
+
+    /// Drop a file and dependents from the cache (RFC 0006 lite).
+    pub fn invalidate(&mut self, path: &str) {
+        self.epoch = self.epoch.wrapping_add(1);
+        let mut doomed = vec![path.to_string()];
+        let mut i = 0;
+        while i < doomed.len() {
+            let cur = doomed[i].clone();
+            i += 1;
+            for (from, tos) in &self.deps {
+                if tos.contains(&cur) && !doomed.contains(from) {
+                    doomed.push(from.clone());
+                }
+            }
+        }
+        for p in &doomed {
+            self.files.remove(p);
+            self.deps.remove(p);
+        }
+    }
+
+    pub fn dep_graph(&self) -> &HashMap<String, HashSet<String>> {
+        &self.deps
     }
 
     pub fn get(&self, path: &str) -> Option<&CheckedFile> {

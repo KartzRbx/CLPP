@@ -2,7 +2,11 @@
   "name": "clpp-language",
   "displayName": "CL++",
   "description": "CL++ language support for VS Code, Cursor, and compatible editors: highlighting, icon, and IntelliSense (.clpp / .clp / .clh)",
+<<<<<<< HEAD
   "version": "0.7.1",
+=======
+  "version": "0.8.0",
+>>>>>>> 1481066 (Release CL++ 0.8.0 with import modules, Option/Result, and opt Phase 1 lite.)
   "publisher": "clpp",
   "repository": {
     "type": "git",

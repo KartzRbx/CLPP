@@ -9,7 +9,7 @@ CL++ is the language and compiler (Luau backend). Roblox lives in `platform` / `
 | `main.rs` | clap CLI (`compile` / `build` / `api` / `install` / `lsp`) |
 | `parser/grammar.pest` | PEG grammar |
 | `parser/mod.rs` | pest pairs → AST |
-| `ast/` | language enums (no Roblox type database; `GetService<T>()` is a Call) |
+| `ast/` | language enums (no Roblox type database; `GetService<T>()` is a normal `generic_call` → Call) |
 | `binder/` | AST → symbols and nested scopes |
 | `symbols/` | `SymbolId`, scopes |
 | `types/` | interned `TypeId` / `TypeKind` / assignability |

@@ -3,6 +3,7 @@
 //! Fold / prop / DCE → inline → scalar/escape → loop hoist → mono → layout/native hints.
 //! Not a Luau peephole pass — leave low-level opts to Luau / native.
 
+mod buffer_spec;
 mod escape;
 mod fold;
 mod inline;
@@ -11,6 +12,7 @@ mod loop_opt;
 mod mono;
 mod native;
 mod scalar;
+mod soa;
 
 use crate::ast::{Function, Item, Program, Stmt};
 use fold::{eval_bool, fold_expr, ConstEnv};
@@ -32,11 +34,16 @@ pub fn optimize(program: &mut Program) -> OptReport {
     inline::run(program);
     fold_and_dce(program);
     scalar::run(program);
+    let soa_notes = soa::run(program);
     loop_opt::run(program);
     let specialized = mono::run(program);
     fold_and_dce(program);
     let native_hints = native::run(program);
-    let layout_hints = layout::run(program);
+    let mut layout_hints = layout::run(program);
+    layout_hints.extend(soa_notes);
+    layout_hints.extend(buffer_spec::run(program));
+    layout_hints.sort();
+    layout_hints.dedup();
     OptReport {
         native_hints,
         specialized,

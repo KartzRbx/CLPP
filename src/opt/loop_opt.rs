@@ -125,10 +125,11 @@ fn expr_invariant(expr: &Expr, blocked: &HashSet<String>) -> bool {
     match expr {
         Expr::Null | Expr::Bool(_) | Expr::Number(_) | Expr::String(_) => true,
         Expr::Ident(n) => !blocked.contains(n),
-        Expr::Unary { argument, .. } | Expr::Cast { argument, .. } => {
+        Expr::Unary { argument, .. } | Expr::Cast { argument, .. } | Expr::Try { argument } => {
             expr_invariant(argument, blocked)
         }
         Expr::Binary { left, right, .. } | Expr::Coalesce { left, right } => {
+            // Strength reduction fodder: i*2 stays; pure arithmetic of invariants is invariant.
             expr_invariant(left, blocked) && expr_invariant(right, blocked)
         }
         Expr::Ternary {

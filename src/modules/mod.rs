@@ -31,6 +31,45 @@ pub fn import_requires(
 }
 
 /// `import { Foo, Bar as B } from "./Foo"` — same path resolver as quoted `#include`.
+/// Detect import cycles for diagnostics (RFC 0003 hardening).
+pub fn detect_cycles(root: &str, edges: &[(String, String)]) -> Vec<(String, String)> {
+    let mut adj: HashMap<String, Vec<String>> = HashMap::new();
+    for (a, b) in edges {
+        adj.entry(a.clone()).or_default().push(b.clone());
+    }
+    let mut stack = Vec::new();
+    let mut on_stack = HashSet::new();
+    let mut seen = HashSet::new();
+    let mut cycles = Vec::new();
+    fn dfs(
+        node: &str,
+        adj: &HashMap<String, Vec<String>>,
+        stack: &mut Vec<String>,
+        on_stack: &mut HashSet<String>,
+        seen: &mut HashSet<String>,
+        cycles: &mut Vec<(String, String)>,
+    ) {
+        if !seen.insert(node.to_string()) {
+            return;
+        }
+        stack.push(node.to_string());
+        on_stack.insert(node.to_string());
+        if let Some(nexts) = adj.get(node) {
+            for n in nexts {
+                if on_stack.contains(n) {
+                    cycles.push((node.to_string(), n.clone()));
+                } else {
+                    dfs(n, adj, stack, on_stack, seen, cycles);
+                }
+            }
+        }
+        on_stack.remove(node);
+        stack.pop();
+    }
+    dfs(root, &adj, &mut stack, &mut on_stack, &mut seen, &mut cycles);
+    cycles
+}
+
 pub fn import_named(file: &mut CheckedFile, types: &mut TypeDatabase, seen: &mut HashSet<String>) {
     attach_named_requires(&file.program, Path::new(&file.path), &mut file.ctx);
     let imports: Vec<(Vec<ImportName>, String, usize)> = file
@@ -74,6 +113,22 @@ pub fn import_named(file: &mut CheckedFile, types: &mut TypeDatabase, seen: &mut
         import_requires(&mut child, types, seen);
         import_named(&mut child, types, seen);
         merge_exports(file, &child, Some(&names), types);
+    }
+    // Cycle check on requires gathered so far.
+    let edges: Vec<(String, String)> = file
+        .ctx
+        .requires
+        .iter()
+        .map(|r| (r.from_file.clone(), r.to_file.clone()))
+        .collect();
+    for (a, b) in detect_cycles(&file.path, &edges) {
+        file.diagnostics.push(crate::diag::diag(
+            crate::diag::CLPP1001,
+            1,
+            1,
+            format!("import cycle involving {a} → {b}"),
+            "error",
+        ));
     }
 }
 

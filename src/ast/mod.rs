@@ -239,6 +239,10 @@ pub enum Expr {
         then_expr: Box<Expr>,
         else_expr: Box<Expr>,
     },
+    /// RFC 0012 try operator: `expr?` unwraps Result or early-returns Err.
+    Try {
+        argument: Box<Expr>,
+    },
 }
 
 #[derive(Debug, Clone)]

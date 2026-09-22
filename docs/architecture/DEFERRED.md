@@ -12,7 +12,7 @@ No full HIR / SSA between AST and Luau yet. The emitter still walks the CL++ AST
 
 ## Performance (092–095, 241–258)
 
-No arena rewrite, no parallel checker, no ICE dump protocol beyond existing miette errors.
+No arena rewrite yet (`src/ice.rs` holds an ICE report stub + `ArenaHint`). No parallel checker. ICE dump protocol is the stub `IceReport` plus existing miette errors.
 
 ## Advanced language (291, 293–294, phase 14) → Intent System
 

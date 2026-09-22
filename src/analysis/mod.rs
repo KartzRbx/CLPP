@@ -253,6 +253,65 @@ pub fn highlight_request(req: &PositionRequest) -> DefinitionResponse {
     references_request(req)
 }
 
+/// Rename: returns all reference locations with the new name applied in `newName` field of text edits.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RenameResponse {
+    pub ok: bool,
+    #[serde(default)]
+    pub edits: Vec<TextEdit>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TextEdit {
+    pub line: usize,
+    pub column: usize,
+    #[serde(rename = "endColumn")]
+    pub end_column: usize,
+    #[serde(rename = "newText")]
+    pub new_text: String,
+}
+
+pub fn rename_request(req: &PositionRequest, new_name: &str) -> RenameResponse {
+    if new_name.is_empty()
+        || !new_name
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
+    {
+        return RenameResponse {
+            ok: false,
+            edits: Vec::new(),
+            error: Some("invalid identifier".into()),
+        };
+    }
+    let refs = references_request(req);
+    if refs.locations.is_empty() {
+        return RenameResponse {
+            ok: false,
+            edits: Vec::new(),
+            error: Some("no symbol at position".into()),
+        };
+    }
+    let old = word_at(&req.source, req.line, req.column);
+    let edits = refs
+        .locations
+        .into_iter()
+        .map(|loc| TextEdit {
+            line: loc.line,
+            column: loc.column,
+            end_column: loc.column + old.len().max(1),
+            new_text: new_name.to_string(),
+        })
+        .collect();
+    RenameResponse {
+        ok: true,
+        edits,
+        error: None,
+    }
+}
+
 pub fn workspace_symbols(req: &PositionRequest) -> SymbolsResponse {
     symbols_request(req)
 }
@@ -854,6 +913,33 @@ fn ident_items(index: &Index, line: usize) -> Vec<CompletionItem> {
             });
         }
     }
+    for name in crate::intent::OPTION_RESULT_BUILTINS {
+        if seen.insert((*name).to_string()) {
+            let (detail, insert) = match *name {
+                "None" => ("Option constructor".into(), None),
+                "Some" => ("Option constructor".into(), Some("Some($1)".into())),
+                "Ok" => ("Result constructor".into(), Some("Ok($1)".into())),
+                "Err" => ("Result constructor".into(), Some("Err($1)".into())),
+                _ => ("Intent".into(), None),
+            };
+            items.push(CompletionItem {
+                label: (*name).into(),
+                kind: "Function".into(),
+                detail,
+                insert_text: insert,
+            });
+        }
+    }
+    for name in crate::intent::INTENT_RESERVED {
+        if seen.insert((*name).to_string()) {
+            items.push(CompletionItem {
+                label: (*name).into(),
+                kind: "Keyword".into(),
+                detail: "Intent reserved".into(),
+                insert_text: None,
+            });
+        }
+    }
     for sym in &index.symbols {
         if sym.kind != "Function" {
             continue;
@@ -1089,6 +1175,20 @@ fn hover_from(index: &Index, req: &PositionRequest) -> Option<HoverInfo> {
         return None;
     }
     let bare = word.trim_start_matches('@');
+    if crate::intent::is_option_result_builtin(bare) {
+        let contents = match bare {
+            "Some" => "**Some(x)** — `Option<T>` / `optional<T>` present value (RFC 0012).",
+            "None" => "**None** — absent `Option` (`nil`).",
+            "Ok" => "**Ok(v)** — `Result<T,E>` success tag `{ ok = v }`.",
+            "Err" => "**Err(e)** — `Result<T,E>` failure tag `{ err = e }`.",
+            _ => "Intent Option/Result builtin.",
+        };
+        return Some(HoverInfo {
+            contents: contents.into(),
+            line: req.line,
+            column: req.column,
+        });
+    }
     if let Some(b) = builtins::find(bare) {
         return Some(HoverInfo {
             contents: format!("**{}** → `{}`\n\n{}", b.clpp, b.luau, b.detail),

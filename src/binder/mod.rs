@@ -384,10 +384,15 @@ fn bind_stmt(db: &mut SymbolDatabase, scope: ScopeId, owner: Option<SymbolId>, s
                 let cspan = stmts_span(stmt.span(), &arm.body);
                 let cscope = db.alloc_scope(ScopeKind::Block, scope, cspan, owner);
                 if let (Some(class), Some(binding)) = (&arm.class_name, &arm.binding) {
+                    // Ok/Err/Some bindings hold the payload, not the tag name as a type.
+                    let ty = match class.as_str() {
+                        "Ok" | "Err" | "Some" | "None" => None,
+                        other => Some(other.to_string()),
+                    };
                     db.alloc(
                         binding.clone(),
                         SymbolKind::Variable,
-                        Some(class.clone()),
+                        ty,
                         stmt.span(),
                         cscope,
                         None,
@@ -436,6 +441,7 @@ fn bind_expr(db: &mut SymbolDatabase, scope: ScopeId, owner: Option<SymbolId>, e
         Expr::Unary { argument, .. }
         | Expr::Await { argument }
         | Expr::Cast { argument, .. }
+        | Expr::Try { argument }
         | Expr::Update { target: argument, .. } => bind_expr(db, scope, owner, argument),
         Expr::Binary { left, right, .. }
         | Expr::Assign { left, right, .. }

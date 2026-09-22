@@ -5,7 +5,7 @@ description: Full CLI, JSON, and language contract so Cluaupp can target the cur
 
 # Update Cluaupp for CL++ 0.4
 
-This page is the **handoff for the Cluaupp CLI**. Pin **CL++ 0.7.0**. See also [Cluaupp 0.7.0 handoff](cluaupp-070). Call the `clpp` binary. Do not reimplement the compiler, do not embed a VM, and do not generate C++-looking source that 0.7.0 rejects.
+This page is the **handoff for the Cluaupp CLI**. Pin **CL++ 0.8.0**. See also [Cluaupp 0.8.0 handoff](cluaupp-080) and [0.7.0](cluaupp-070). Call the `clpp` binary. Do not reimplement the compiler, do not embed a VM, and do not generate C++-looking source that 0.8.0 rejects.
 
 CL++ is the **language** (parse → analysis → Luau). Cluaupp owns **Roblox wiring**: generated Instance headers, Rojo, project `init`, package install.
 

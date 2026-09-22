@@ -90,15 +90,11 @@ pub fn compile_artifact_source_ex(
         .into_iter()
         .map(|d| remap_diagnostic(d, &ctx.line_map))
         .collect::<Vec<_>>();
-    match crate::checker::check_program_ex(&program, &expanded, &ctx.libraries) {
-        Ok(items) => diagnostics.extend(items.into_iter().map(|d| remap_diagnostic(d, &ctx.line_map))),
-        Err(err) => return Ok(fail_report(&file_name, err, &ctx.line_map)),
-    };
     let mut bound = crate::binder::bind(&program);
     let mut types = crate::session::Session::new().types;
     crate::checker::resolve(&program, &mut bound, &mut types);
     diagnostics.extend(
-        crate::checker::check_typed(&program, &bound, &mut types, &expanded)
+        crate::checker::check_unified(&program, &expanded, &ctx.libraries, &bound, &mut types)
             .into_iter()
             .map(|d| remap_diagnostic(d, &ctx.line_map)),
     );

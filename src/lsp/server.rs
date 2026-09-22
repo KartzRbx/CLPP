@@ -1,8 +1,10 @@
 //! `clpp lsp` — protocol via [`tower_lsp_server`]; semantics via [`crate::analysis`] / Session.
 
 use crate::analysis::{
-    complete_request, definition_request, hover_request, PositionRequest,
+    complete_request, definition_request, hover_request, references_request, rename_request,
+    signature_request, PositionRequest,
 };
+use crate::fmt::format_source;
 use std::collections::HashMap;
 use std::io;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -72,6 +74,14 @@ impl LanguageServer for Backend {
                 }),
                 hover_provider: Some(HoverProviderCapability::Simple(true)),
                 definition_provider: Some(OneOf::Left(true)),
+                references_provider: Some(OneOf::Left(true)),
+                rename_provider: Some(OneOf::Left(true)),
+                signature_help_provider: Some(SignatureHelpOptions {
+                    trigger_characters: Some(vec!["(".into(), ",".into()]),
+                    retrigger_characters: None,
+                    work_done_progress_options: Default::default(),
+                }),
+                document_formatting_provider: Some(OneOf::Left(true)),
                 ..Default::default()
             },
             server_info: Some(ServerInfo {
@@ -191,25 +201,124 @@ impl LanguageServer for Backend {
         }
         let locations: Vec<Location> = locs
             .into_iter()
-            .map(|loc| {
-                let line = loc.line.saturating_sub(1) as u32;
-                let col = loc.column.saturating_sub(1) as u32;
-                Location {
-                    uri: uri.clone(),
-                    range: Range {
-                        start: Position {
-                            line,
-                            character: col,
-                        },
-                        end: Position {
-                            line,
-                            character: col,
-                        },
-                    },
-                }
-            })
+            .map(|loc| loc_to_lsp(uri, loc.line, loc.column))
             .collect();
         Ok(Some(GotoDefinitionResponse::Array(locations)))
+    }
+
+    async fn references(&self, params: ReferenceParams) -> LspResult<Option<Vec<Location>>> {
+        let uri = &params.text_document_position.text_document.uri;
+        let text = doc_text(&self.state, uri).await;
+        let req = pos_req(uri, text, &params.text_document_position.position);
+        let locs = references_request(&req).locations;
+        Ok(Some(
+            locs.into_iter()
+                .map(|loc| loc_to_lsp(uri, loc.line, loc.column))
+                .collect(),
+        ))
+    }
+
+    async fn rename(&self, params: RenameParams) -> LspResult<Option<WorkspaceEdit>> {
+        let uri = &params.text_document_position.text_document.uri;
+        let text = doc_text(&self.state, uri).await;
+        let req = pos_req(uri, text, &params.text_document_position.position);
+        let resp = rename_request(&req, &params.new_name);
+        if !resp.ok {
+            return Ok(None);
+        }
+        let edits: Vec<TextEdit> = resp
+            .edits
+            .into_iter()
+            .map(|e| TextEdit {
+                range: Range {
+                    start: Position {
+                        line: e.line.saturating_sub(1) as u32,
+                        character: e.column.saturating_sub(1) as u32,
+                    },
+                    end: Position {
+                        line: e.line.saturating_sub(1) as u32,
+                        character: e.end_column.saturating_sub(1) as u32,
+                    },
+                },
+                new_text: e.new_text,
+            })
+            .collect();
+        let mut changes = HashMap::new();
+        changes.insert(uri.clone(), edits);
+        Ok(Some(WorkspaceEdit {
+            changes: Some(changes),
+            ..Default::default()
+        }))
+    }
+
+    async fn signature_help(&self, params: SignatureHelpParams) -> LspResult<Option<SignatureHelp>> {
+        let uri = &params.text_document_position_params.text_document.uri;
+        let text = doc_text(&self.state, uri).await;
+        let req = pos_req(uri, text, &params.text_document_position_params.position);
+        let resp = signature_request(&req);
+        let Some(sig) = resp.signature else {
+            return Ok(None);
+        };
+        Ok(Some(SignatureHelp {
+            signatures: vec![SignatureInformation {
+                label: sig.label,
+                documentation: None,
+                parameters: Some(
+                    sig.parameters
+                        .into_iter()
+                        .map(|p| ParameterInformation {
+                            label: ParameterLabel::Simple(p),
+                            documentation: None,
+                        })
+                        .collect(),
+                ),
+                active_parameter: Some(sig.active_parameter as u32),
+            }],
+            active_signature: Some(0),
+            active_parameter: Some(sig.active_parameter as u32),
+        }))
+    }
+
+    async fn formatting(&self, params: DocumentFormattingParams) -> LspResult<Option<Vec<TextEdit>>> {
+        let uri = &params.text_document.uri;
+        let text = doc_text(&self.state, uri).await;
+        let formatted = format_source(&text);
+        if formatted == text {
+            return Ok(Some(vec![]));
+        }
+        let end_line = text.lines().count().saturating_sub(1) as u32;
+        let end_col = text.lines().last().map(|l| l.len() as u32).unwrap_or(0);
+        Ok(Some(vec![TextEdit {
+            range: Range {
+                start: Position {
+                    line: 0,
+                    character: 0,
+                },
+                end: Position {
+                    line: end_line,
+                    character: end_col,
+                },
+            },
+            new_text: formatted,
+        }]))
+    }
+}
+
+fn loc_to_lsp(uri: &Uri, line: usize, column: usize) -> Location {
+    let line = line.saturating_sub(1) as u32;
+    let col = column.saturating_sub(1) as u32;
+    Location {
+        uri: uri.clone(),
+        range: Range {
+            start: Position {
+                line,
+                character: col,
+            },
+            end: Position {
+                line,
+                character: col,
+            },
+        },
     }
 }
 

@@ -4,6 +4,7 @@ use crate::ast::{Expr, Function, Item, Program, Stmt};
 use std::collections::{HashMap, HashSet};
 
 const MAX_BODY_STMTS: usize = 3;
+const MAX_INLINE_COST: usize = 12;
 
 pub fn run(program: &mut Program) {
     let candidates = collect_candidates(program);
@@ -12,13 +13,7 @@ pub fn run(program: &mut Program) {
     }
     for item in &mut program.items {
         if let Item::Function(func) | Item::Proto(func) = item {
-            // Do not rewrite a function while inlining itself into callers of peers.
-            let skip = candidates.contains_key(&func.name);
-            if skip && func.owner.is_none() {
-                // Still allow inlining *other* candidates into this body.
-            }
             let mut env = candidates.clone();
-            // Never inline a function into itself.
             env.remove(&func.name);
             func.body = rewrite_stmts(std::mem::take(&mut func.body), &env);
         }
@@ -47,6 +42,9 @@ fn is_candidate(func: &Function) -> bool {
     if func.body.is_empty() || func.body.len() > MAX_BODY_STMTS {
         return false;
     }
+    if expr_cost_body(func) > MAX_INLINE_COST {
+        return false;
+    }
     let params: HashSet<String> = func.params.iter().map(|p| p.name.clone()).collect();
     let mut saw_return = false;
     for stmt in &func.body {
@@ -69,6 +67,38 @@ fn is_candidate(func: &Function) -> bool {
         }
     }
     saw_return
+}
+
+fn expr_cost_body(func: &Function) -> usize {
+    func.body.iter().map(stmt_cost).sum()
+}
+
+fn stmt_cost(stmt: &Stmt) -> usize {
+    match stmt {
+        Stmt::Return(Some(e)) | Stmt::Expr(e) => expr_cost(e),
+        Stmt::Decl(d) => d.value.as_ref().map(expr_cost).unwrap_or(1),
+        Stmt::Return(None) => 1,
+        _ => 8,
+    }
+}
+
+fn expr_cost(expr: &Expr) -> usize {
+    match expr {
+        Expr::Null | Expr::Bool(_) | Expr::Number(_) | Expr::String(_) | Expr::Ident(_) => 1,
+        Expr::Unary { argument, .. } | Expr::Cast { argument, .. } | Expr::Try { argument } => {
+            1 + expr_cost(argument)
+        }
+        Expr::Binary { left, right, .. } | Expr::Coalesce { left, right } => {
+            1 + expr_cost(left) + expr_cost(right)
+        }
+        Expr::Ternary {
+            cond,
+            then_expr,
+            else_expr,
+        } => 2 + expr_cost(cond) + expr_cost(then_expr) + expr_cost(else_expr),
+        Expr::Tuple(vs) => vs.iter().map(expr_cost).sum::<usize>() + 1,
+        _ => 6,
+    }
 }
 
 fn expr_is_pure(expr: &Expr, params: &HashSet<String>) -> bool {
