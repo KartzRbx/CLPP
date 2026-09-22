@@ -28,6 +28,7 @@ export const sidebar = [
         items: [
           { label: "Signals & observables", slug: "docs/observables-signals" },
           { label: "guard and match", slug: "docs/guard-match" },
+          { label: "Option and Result", slug: "docs/option-result" },
           { label: "Concurrency", slug: "docs/concurrency" },
           { label: "Attributes", slug: "docs/attributes" },
         ],
@@ -216,10 +217,19 @@ export const sidebar = [
     label: "Cluaupp",
     collapsed: true,
     items: [
-      { label: "Update Cluaupp for 0.4", slug: "docs/cluaupp-032" },
+      { label: "Cluaupp 0.8.0 handoff", slug: "docs/cluaupp-080" },
+      { label: "Cluaupp host (hints)", slug: "docs/cluaupp-host" },
       { slug: "docs/cluaupp" },
-      { slug: "docs/cluaupp-callbacks" },
       { slug: "docs/cluaupp-support" },
+      { slug: "docs/cluaupp-callbacks" },
+      { label: "Update Cluaupp for 0.4", slug: "docs/cluaupp-032" },
+    ],
+  },
+  {
+    label: "Release notes",
+    collapsed: true,
+    items: [
+      { label: "0.8.0 detailed", slug: "docs/CHANGELOG-0.8-DETAILED" },
     ],
   },
 ];
