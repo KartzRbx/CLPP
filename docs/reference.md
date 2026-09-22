@@ -10,7 +10,7 @@ Every utility has its own page: syntax, parameters, return value, Luau emit, exa
 
 <div class="clpp-ref-quick" aria-label="Quick access">
 
-[post](reference/post) · [warn](reference/warn) · [report](reference/report) · [GetService](reference/GetService) · [new](reference/new) · [::](reference/operator-method) · [.:](reference/operator-concat) · [~>](reference/operator-janitor) · [guard](reference/guard) · [match](reference/match) · [signal](reference/signal-type) · [Fire](reference/Fire) · [init](reference/init) · [#include](reference/include) · [struct](reference/struct) · [cheatsheet](cheatsheet)
+[post](reference/post) · [warn](reference/warn) · [report](reference/report) · [GetService](reference/GetService) · [new](reference/new) · [import](reference/import) · [::](reference/operator-method) · [.:](reference/operator-concat) · [~>](reference/operator-janitor) · [guard](reference/guard) · [match](reference/match) · [signal](reference/signal-type) · [Fire](reference/Fire) · [init](reference/init) · [struct](reference/struct) · [cheatsheet](cheatsheet)
 
 </div>
 
@@ -113,18 +113,17 @@ Every utility has its own page: syntax, parameters, return value, Luau emit, exa
 - [parallel](reference/parallel)
 - [`auto [a, b] =`](reference/destructure)
 
-## Attributes &amp; preprocessor
+## Modules &amp; preprocessor
 
-- [`[[server]]`](reference/attr-server)
-- [`[[client]]`](reference/attr-client)
-- [#include](reference/include)
+- [import](reference/import)
+- [#include (legacy / host)](reference/include)
 - [#pragma strict](reference/pragma-strict)
 - [#pragma nostrict](reference/pragma-nstrict)
 - [#pragma native](reference/pragma-native)
 - [#pragma optimize](reference/pragma-optimize)
 - [#pragma once](reference/pragma-once)
 
-## Headers
+## Headers (Cluaupp)
 
 - [&lt;clpp/roblox.clh&gt;](reference/header-roblox)
 - [&lt;clpp/generated/instances.clh&gt;](reference/header-instances)
@@ -142,4 +141,4 @@ Every utility has its own page: syntax, parameters, return value, Luau emit, exa
 
 ## Not in the language
 
-See [What CL++ does not do](unsupported): `->`, `continue`, ternary, `do/while`, `try/catch`, `goto`, C pointers, C++ captures, generic templates, `std::`.
+See [What CL++ does not do](unsupported): `->`, C pointers, C++ captures, overloading, default arguments, full ISO templates. Modules use [`import`](modules); checked generics and enums **are** in the language.

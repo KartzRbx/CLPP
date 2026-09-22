@@ -1,6 +1,6 @@
 use crate::ast::{CompileContext, ModuleRequire, SourceComment};
 use crate::error::ClppError;
-use crate::semantic::lib_from_include;
+use crate::names::lib_from_include;
 use miette::Result;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -274,7 +274,7 @@ fn strip_dot_segments(spec: &str) -> String {
     spec.trim_start_matches("./").to_string()
 }
 
-fn resolve_quoted_include(spec: &str, from: &Path) -> Option<PathBuf> {
+pub(crate) fn resolve_quoted_include(spec: &str, from: &Path) -> Option<PathBuf> {
     let spec = spec.replace('\\', "/");
     let spec = spec.trim().trim_start_matches("./");
     let stripped = strip_dot_segments(spec);

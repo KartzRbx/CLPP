@@ -47,9 +47,9 @@ clpp setup
 ## Compile a file
 
 ```bash
-clpp compile examples/hello/hello.server.clpp
+clpp compile examples/syntax/features.clp
 clpp build examples -o out
-clpp fmt examples/hello/hello.server.clpp
+clpp fmt examples/syntax/features.clp
 clpp watch examples -o out
 ```
 

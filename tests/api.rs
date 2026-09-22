@@ -1,25 +1,32 @@
 use clpp::compile_request;
 use clpp::support::{language_manifest, CompileRequest};
-use std::path::PathBuf;
-
-fn example(rel: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples").join(rel)
-}
 
 #[test]
-fn api_compile_hello_json_shape() {
-    let source = std::fs::read_to_string(example("hello/hello.server.clpp")).unwrap();
+fn api_compile_server_json_shape() {
+    let source = r#"
+struct Hello {
+    void Greet();
+};
+void Hello::Greet() {
+    post("hi");
+}
+void init() {
+    Hello h;
+    h.Greet();
+}
+"#;
     let art = compile_request(&CompileRequest {
-        source,
+        source: source.into(),
         file_name: "hello.server.clpp".into(),
         strict: None,
+        optimize: None,
     })
     .expect("compile");
-    assert!(art.ok);
+    assert!(art.ok, "{:?}", art.diagnostics);
     assert_eq!(art.rojo_class, "Script");
     assert_eq!(art.script_kind.as_deref(), Some("server"));
     assert!(art.output_hint.ends_with("hello.server.luau"));
-    assert!(art.luau.contains("game:GetService(\"Players\")"));
+    assert!(art.luau.contains("function Hello:Greet"));
 }
 
 #[test]

@@ -1,3 +1,3 @@
 # tests/golden/
 
-Reference emitted Luau, compared in `tests/compile_examples.rs` with `pretty_assertions`.
+Optional reference Luau for language samples under `examples/`. Roblox game goldens moved out with Cluaupp samples.

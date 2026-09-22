@@ -44,5 +44,6 @@ Treat failures as Luau-side issues (types, unknown globals in the **emit**). Syn
 - Do not send `.clpp` buffers to luau-lsp.
 - Do not expect the CL++ language server to load Roblox class dumps — that remains Cluaupp headers plus the editor catalog.
 - Do not look for a CL++ bytecode VM. Performance of the language tool is parser + analysis + emit.
+- Do not re-implement LSP wire format in CL++; `clpp lsp` uses `tower-lsp-server` as the protocol adapter (see [DONT_REINVENT.md](DONT_REINVENT.md)).
 
 See the [Luau engineering map](luau-mapping) and the [compiler pipeline](../spec/compiler).

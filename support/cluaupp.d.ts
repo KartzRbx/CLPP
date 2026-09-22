@@ -8,6 +8,8 @@ export interface CompileRequest {
   source: string;
   fileName: string;
   strict?: boolean;
+  /** false = skip high-level opts (baseline D). */
+  optimize?: boolean;
 }
 
 export interface CompileDiagnostic {
@@ -31,6 +33,15 @@ export interface CompileArtifact {
   libraries: string[];
   error?: string;
   diagnostics?: CompileDiagnostic[];
+  sourceMap?: Array<{ luauLine: number; clppLine: number; file: string }>;
+  /** Selective @native candidates for Cluaupp (RFC 0011). Not auto-applied. */
+  nativeHints?: string[];
+  /** Monomorphized generic symbols (`name__Type`). */
+  specialized?: string[];
+  /** Dense / SoA / buffer layout candidates. */
+  layoutHints?: string[];
+  /** False when compiled with --no-opt / optimize:false. */
+  optimized?: boolean;
 }
 
 export interface LanguageManifest {

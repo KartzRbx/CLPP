@@ -4,17 +4,21 @@ title: Structs and methods
 
 # Structs and methods
 
-## Header
+## Types module
 
 ```clpp
 #pragma once
-#include <clpp/libs/janitor.clh>
 
 struct LeaderstatsServer {
     static constexpr int STARTING_COINS = 0;
-    Janitor janitor;
     void PlayerEntered(Player player);
 };
+```
+
+Consumers pull it with:
+
+```clpp
+import { LeaderstatsServer } from "./LeaderstatsServer.clh";
 ```
 
 ## Implementation
@@ -28,35 +32,18 @@ void LeaderstatsServer::PlayerEntered(Player player) {
     Folder folder = new Folder(player);
     folder.Name = "leaderstats";
 }
+
+void init() {
+    LeaderstatsServer server;
+}
 ```
 
-`Class::Method` emits `function Class:Method(...)`. Inside, [`@this`](reference/this) is `self`. `@janitor` is `self.janitor`. Bare fields still become `self.field`. `this` without `@` is the same alias.
+`Class::Method` emits `function Class:Method(...)`. Inside, [`@this`](reference/this) is `self`. `@janitor` is `self.janitor`.
 
 :::tip[Receiver]
 `@` is the sigil. `@this` is the object. `@field` is `self.field`. Calls from outside still use `.` (`hello.Greet(player)`).
 :::
 
-## init singleton
+## OOP model
 
-```clpp
-void init() {
-    Players players = GetService<Players>();
-    LeaderstatsServer leaderstatsServer;
-
-    for (Player player in players.GetPlayers()) {
-        leaderstatsServer.PlayerEntered(player);
-    }
-
-    players.PlayerAdded~>Connect(func (Player playerEntered) {
-        leaderstatsServer.PlayerEntered(playerEntered);
-    });
-}
-```
-
-Build **one** service object and capture it. That is the game's singleton.
-
-Field-only structs in a `.clh` (PlayerData templates) emit `const function Name()` with default fields.
-
-Untagged files that only define `Class::` methods `return` the table (ModuleScript).
-
-Next: [I/O](io).
+CL++ OOP is **struct/class/interface + methods + optional parent**, emitting Luau tables — not a full C++ object model (no language-level vtables/destructors). Inheritance shares members; `public` / `private` are checked. See [TYPE_SYSTEM](architecture/TYPE_SYSTEM).

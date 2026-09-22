@@ -1,0 +1,8 @@
+void Step(array<float> px, array<float> py, array<float> pz, array<float> vx, array<float> vy, array<float> vz, array<float> life, float dt, int n) {
+    for (int i = 0; i < n; i++) {
+        px[i] = px[i] + vx[i] * dt;
+        py[i] = py[i] + vy[i] * dt;
+        pz[i] = pz[i] + vz[i] * dt;
+        life[i] = life[i] - dt;
+    }
+}

@@ -6,7 +6,11 @@ title: Language cheat sheet
 
 ## Files
 
-`.clh` header · `.clp` module · `.clpp` script · `.server` Script · `.client` LocalScript
+`.clh` types/prototypes · `.clp` module · `.clpp` script · `.server` Script · `.client` LocalScript
+
+## Modules
+
+`import { Name } from "./path.clh"` · `import { Name as Alias } from "…"` · angle `#include <clpp/…>` = Cluaupp/host only
 
 ## Access
 
@@ -14,44 +18,28 @@ title: Language cheat sheet
 
 ## Text
 
-`"double"` · `'single'` · `` `template {expr}` `` · `` `a`, expr, `b` ``
+`"double"` · `'single'` · `` `template {expr}` ``
 
 ## I/O
 
-`post` output · `warn` warning · `report` error · `null` empty value · `to_string` / `to_number` / `to_bool` convert
+`post` · `warn` · `report` · `null` · `to_string` / `to_number` / `to_bool`
 
 ## Types
 
-`int` `float` `double` `bool` `string` `void` `func` `auto` `optional<T>` `array<T>` `dictionary<K,V>` `Player` `signal<T...>` `observable T`
+`int` `float` `bool` `string` `void` `func` (lossy) · `auto` · `optional<T>` · `array<T>` · `dictionary<K,V>` · `type` / `using` · `A | B` · `A & B` · `enum class` · `template <typename T : Bound>` · `comptime { }`
 
 ## Control
 
-`if` `else if` `else` · `while` · C-for · range-for `for (T x in xs)` · `switch` · `guard` · `match { Type t => }` · `break` · `return`
+`if` `else` · `while` · C-for · `for (T x in xs)` · `switch` · `guard` · `match` · `break` · `continue` · `return`
 
 ## Concurrency
 
 `async` `await` · `spawn { }` · `parallel { }` · `auto [a,b] = pcall(...)`
 
-## Events
-
-`.Fire` `::Connect` (manual) `~>Connect` `~>Once` · `.OnChange` on observables · `GetPropertyChangedSignal`
-
 ## OOP
 
-`struct` in `.clh` · `Class::Method` in `.clpp` · `@this` / `@field` → `self` · `void init()` · `new Class(parent)` · `GetService<T>()`
+`struct` / `class` / `interface` · `Class::Method` · `@this` / `@field` · `public:` / `private:` · parent `: Base`
 
-## Attributes
+## Not in the language
 
-`[[server]]` `[[client]]`
-
-## Pragma
-
-`#pragma strict` `#pragma nostrict` `#pragma native` `#pragma optimize` `#pragma optimize 2` `#pragma once`
-
-## Forbidden (by design)
-
-`->` · C pointers · `continue` · ternary · `do/while` · `try/catch` · `goto` · C++ captures · `func []` · generic templates · `std::`
-
-Generated API: [Builtins](/CLPP/api/Builtins) · [Operators](/CLPP/api/Operators) · [Signals](/CLPP/api/Signals)
-
-Header-style index (every utility): [Language reference](reference)
+Overloading · default args · C++ captures · pointers · macros (beyond pragmas) — [unsupported](unsupported)

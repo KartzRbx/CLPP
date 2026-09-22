@@ -1,0 +1,16 @@
+float PickTarget(float sx, float sy, float sz, float tx, float ty, float tz) {
+    float dx = sx - tx;
+    float dy = sy - ty;
+    float dz = sz - tz;
+    return dx * dx + dy * dy + dz * dz;
+}
+
+void UpdateNpc(int count, float sx, float sy, float sz) {
+    for (int i = 0; i < count; i++) {
+        float d = PickTarget(sx, sy, sz, 0.0, 0.0, 0.0);
+        if (d < 100.0) {
+            float hit = 10.0 * 1.25;
+            post(hit);
+        }
+    }
+}

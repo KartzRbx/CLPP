@@ -432,9 +432,10 @@ echo '{"source":"void init() { []() {} }","fileName":"bad.server.clpp"}' | clpp 
 
 In-tree examples that must keep compiling:
 
-- `examples/hello/hello.server.clpp`
-- `examples/leaderstats/LeaderstatsServer.server.clpp`
-- `examples/advanced/CombatServer.server.clpp`
+- `examples/syntax/features.clp`
+- `examples/shared/config.clp` / `PlayerData.clh`
+
+Roblox Studio samples (`leaderstats`, combat, Fusion/Vide) belong in the Cluaupp repo.
 
 ## See also
 

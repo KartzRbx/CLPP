@@ -13,8 +13,8 @@ hero:
     - text: Hello world
       link: docs/hello-world
       icon: right-arrow
-    - text: Language reference
-      link: docs/reference
+    - text: Benchmarks
+      link: docs/benchmarks
       variant: minimal
 ---
 
@@ -22,16 +22,20 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
 
 <CardGrid stagger>
   <Card title="User guide" icon="open-book">
-    Install the compiler, write a first script, then learn types, operators, `@this`, and style.
+    Install the compiler, write a first script, then learn types, modules, `@this`, and style.
     Start at [What is CL++?](docs/intro).
   </Card>
+  <Card title="Modules" icon="puzzle">
+    Language dependencies use `import { Name } from "path"` — not `#include` as the module system.
+    Read [Modules and imports](docs/modules).
+  </Card>
   <Card title="Language reference" icon="list-format">
-    One page per construct: syntax, parameters, Luau emit, example. Same job as a C++ reference.
+    One page per construct: syntax, parameters, Luau emit, example.
     Open the [index](docs/reference).
   </Card>
-  <Card title="Specification" icon="seti:json">
-    Pest EBNF, type table, and how `clpp` emits Luau. For contributors and host tools.
-    See the [compiler pipeline](docs/spec/compiler).
+  <Card title="Benchmarks" icon="rocket">
+    Real compile throughput and type-check catches — the CL++ differential vs “just write Luau.”
+    See [Benchmarks](docs/benchmarks).
   </Card>
 </CardGrid>
 
@@ -40,13 +44,14 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
 <pre class="mermaid">
 flowchart LR
   src[".clpp / .clh / .clp"] --> pest["Pest grammar"]
-  pest --> check["Semantic check"]
+  pest --> mods["import graph"]
+  mods --> check["TypeId check"]
   check --> luau["Luau emit"]
   luau --> rojo["Rojo / Cluaupp"]
   src --> lsp["Editor pack + LSP"]
 </pre>
 
-CL++ is the **language**. [Cluaupp](https://github.com/KartzRbx/Cluaupp) owns engine headers, Rojo, and project `init`. There is no bytecode VM and no C++ hosting API — `clpp` writes Luau files.
+CL++ is the **language**. [Cluaupp](https://github.com/KartzRbx/Cluaupp) owns engine headers, Rojo, and project `init`. There is no bytecode VM — `clpp` writes Luau files.
 
 ## Two accessors to remember
 
@@ -55,4 +60,5 @@ CL++ is the **language**. [Cluaupp](https://github.com/KartzRbx/Cluaupp) owns en
 | `player.Name` / `player.Kick()` | property / instance method |
 | `@this` / `@janitor` | receiver and field inside `Class::Method` |
 | `players.PlayerAdded~>Connect` | Janitor connection |
+| `import { Wallet } from "./…"` | language module |
 | `Player player` | Instance of class Player |

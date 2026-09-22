@@ -1,0 +1,66 @@
+{
+  "generated_at": "unix_ms=1790080714271",
+  "rustc_opt": "debug",
+  "rows": [
+    {
+      "name": "syntax/features.clp",
+      "iters": 25,
+      "median_ms": 83.9328,
+      "p95_ms": 98.11880000000001,
+      "loc": 92,
+      "loc_per_sec": 1096.1149872278775
+    },
+    {
+      "name": "shared/config.clp",
+      "iters": 25,
+      "median_ms": 3.1468999999999996,
+      "p95_ms": 4.5589,
+      "loc": 4,
+      "loc_per_sec": 1271.092185960787
+    },
+    {
+      "name": "checked_generics_ok",
+      "iters": 25,
+      "median_ms": 8.8487,
+      "p95_ms": 11.0577,
+      "loc": 5,
+      "loc_per_sec": 565.0547538056438
+    },
+    {
+      "name": "synthetic_200_stmts",
+      "iters": 25,
+      "median_ms": 347.1683,
+      "p95_ms": 424.1404,
+      "loc": 402,
+      "loc_per_sec": 1157.9398234228183
+    }
+  ],
+  "catches": [
+    {
+      "name": "optional → plain (CLPP0201)",
+      "code": "CLPP0201",
+      "caught": true
+    },
+    {
+      "name": "private member (CLPP0401)",
+      "code": "CLPP0401",
+      "caught": true
+    },
+    {
+      "name": "generic bound (CLPP0901)",
+      "code": "CLPP0901",
+      "caught": true
+    },
+    {
+      "name": "static_assert (CLPP0701)",
+      "code": "CLPP0701",
+      "caught": true
+    },
+    {
+      "name": "bare method (CLPP0101)",
+      "code": "CLPP0101",
+      "caught": true
+    }
+  ],
+  "session_repeat_ms": 0.0253
+}

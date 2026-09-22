@@ -23,6 +23,7 @@ KW_SIGNAL = @{ "signal" ~ !ident_char }
 KW_BREAK = @{ "break" ~ !ident_char }
 KW_CONTINUE = @{ "continue" ~ !ident_char }
 KW_CLASS = @{ "class" ~ !ident_char }
+KW_COMPTIME = @{ "comptime" ~ !ident_char }
 KW_CONST = @{ "const" ~ !ident_char }
 KW_FALSE = @{ "false" ~ !ident_char }
 KW_FLOAT = @{ "float" ~ !ident_char }
@@ -50,6 +51,9 @@ KW_INT = @{ "int" ~ !ident_char }
 KW_IN = @{ "in" ~ !ident_char }
 KW_NEW = @{ "new" ~ !ident_char }
 KW_USING = @{ "using" ~ !ident_char }
+KW_INTERFACE = @{ "interface" ~ !ident_char }
+KW_TYPE = @{ "type" ~ !ident_char }
+KW_AS = @{ "as" ~ !ident_char }
 KW_EXTERN = @{ "extern" ~ !ident_char }
 KW_INLINE = @{ "inline" ~ !ident_char }
 KW_DOUBLE = @{ "double" ~ !ident_char }
@@ -60,18 +64,22 @@ KW_IF = @{ "if" ~ !ident_char }
 KW_BY = @{ "by" ~ !ident_char }
 KW_TUPLE = @{ "tuple" ~ !ident_char }
 KW_VARIANT = @{ "variant" ~ !ident_char }
+KW_IMPORT = @{ "import" ~ !ident_char }
+KW_FROM = @{ "from" ~ !ident_char }
+KW_EXPORT = @{ "export" ~ !ident_char }
 
 kw = _{
     KW_CONSTEXPR | KW_NAMESPACE | KW_OBSERVABLE | KW_PROTECTED | KW_PARALLEL |
     KW_NULLPTR | KW_PRIVATE | KW_PUBLIC |
     KW_TEMPLATE | KW_TYPENAME | KW_TYPEDEF | KW_DEFAULT | KW_STATIC |
-    KW_STRUCT | KW_SWITCH | KW_RETURN | KW_SIGNAL | KW_BREAK | KW_CONTINUE | KW_CLASS | KW_CONST |
+    KW_STRUCT | KW_SWITCH | KW_RETURN | KW_SIGNAL | KW_BREAK | KW_CONTINUE | KW_CLASS |
+    KW_COMPTIME | KW_CONST |
     KW_FALSE | KW_FLOAT | KW_WHILE | KW_ASYNC | KW_AWAIT | KW_GUARD | KW_MATCH | KW_SPAWN |
     KW_DELAY | KW_DEFER | KW_CATCH | KW_OVERRIDE | KW_TRY | KW_DO |
     KW_AUTO | KW_BOOL | KW_CASE | KW_ELSE |
-    KW_ENUM | KW_TRUE | KW_VOID | KW_FOR | KW_INT | KW_NEW | KW_USING |
+    KW_ENUM | KW_TRUE | KW_VOID | KW_FOR | KW_INT | KW_NEW | KW_USING | KW_TYPE | KW_INTERFACE | KW_AS |
     KW_EXTERN | KW_INLINE | KW_DOUBLE | KW_STRING | KW_FUNC | KW_NULL | KW_IF | KW_IN | KW_BY |
-    KW_TUPLE | KW_VARIANT
+    KW_TUPLE | KW_VARIANT | KW_IMPORT | KW_FROM | KW_EXPORT
 }
 
 ident = @{ !kw ~ (ASCII_ALPHA | "_") ~ ident_char* }
@@ -90,6 +98,7 @@ file = { SOI ~ item* ~ EOI }
 
 item = {
     struct_decl
+    | interface_decl
     | enum_decl
     | function_item
     | field_destructure
@@ -97,15 +106,25 @@ item = {
     | var_decl
     | using_namespace
     | using_stmt
+    | type_alias_decl
+    | import_decl
     | namespace_item
     | skip_decl
     | hash_line
 }
 
 hash_line = { "#" ~ (!NEWLINE ~ ANY)* }
+/// Canonical module import (010 / RFC 0003). Prefer this over `#include "Other.clh"`.
+import_decl = {
+    KW_IMPORT ~ "{" ~
+        import_binding ~ ("," ~ import_binding)* ~ ","? ~
+    "}" ~ KW_FROM ~ string ~ ";"
+}
+import_binding = { ident ~ (KW_AS ~ ident)? }
 
 using_namespace = { KW_USING ~ KW_NAMESPACE ~ ident? ~ ";" }
 using_stmt = { KW_USING ~ ident ~ "=" ~ type_spec ~ ";" }
+type_alias_decl = { KW_TYPE ~ ident ~ type_generic? ~ "=" ~ type_spec ~ ";" }
 namespace_item = { KW_NAMESPACE ~ ident? ~ "{" ~ item* ~ "}" }
 skip_decl = { (KW_TYPEDEF | KW_EXTERN) ~ skip_balanced }
 
@@ -122,7 +141,7 @@ specifiers = { (KW_STATIC | KW_CONSTEXPR | KW_INLINE | KW_CONST | KW_OBSERVABLE 
 attr = { "[[" ~ ident ~ ("(" ~ string ~ ")")? ~ "]]" }
 
 template_head = { KW_TEMPLATE ~ "<" ~ template_param ~ ("," ~ template_param)* ~ ">" }
-template_param = { (KW_TYPENAME | KW_CLASS) ~ ident ~ ("=" ~ type_spec)? }
+template_param = { (KW_TYPENAME | KW_CLASS) ~ ident ~ (":" ~ ident)? ~ ("=" ~ type_spec)? }
 
 type_name = {
     KW_VOID | KW_DOUBLE | KW_FLOAT | KW_AUTO | KW_BOOL | KW_INT | KW_STRING | KW_FUNC | KW_SIGNAL | KW_TUPLE | KW_VARIANT
@@ -133,7 +152,7 @@ function_type = { "function" ~ "<" ~ type_spec ~ "(" ~ type_spec? ~ ("," ~ type_
 type_atom = { specifiers? ~ (function_type | type_name ~ type_generic?) ~ "*"* }
 type_spec = { type_atom ~ (("|" | "&") ~ type_atom)* }
 
-param = { type_spec ~ ident | ident ~ ":" ~ type_spec }
+param = { type_spec ~ ident ~ ("=" ~ expr)? | ident ~ ":" ~ type_spec ~ ("=" ~ expr)? }
 param_list = { param ~ ("," ~ param)* }
 
 function_item = {
@@ -151,6 +170,9 @@ enum_variant = { ident ~ ("=" ~ number)? }
 
 struct_decl = {
     template_head? ~ (KW_STRUCT | KW_CLASS) ~ ident ~ type_generic? ~ (":" ~ ident)? ~ "{" ~ struct_member* ~ "}" ~ ";"
+}
+interface_decl = {
+    KW_INTERFACE ~ ident ~ type_generic? ~ (":" ~ ident)? ~ "{" ~ struct_member* ~ "}" ~ ";"
 }
 
 struct_member = {
@@ -182,6 +204,7 @@ stmt = {
     | parallel_stmt
     | delay_stmt
     | defer_stmt
+    | comptime_stmt
     | return_stmt
     | break_stmt
     | continue_stmt
@@ -213,6 +236,7 @@ spawn_stmt = { KW_SPAWN ~ block ~ ";"? }
 parallel_stmt = { KW_PARALLEL ~ block ~ ";"? }
 delay_stmt = { KW_DELAY ~ "(" ~ expr ~ ")" ~ block ~ ";"? }
 defer_stmt = { KW_DEFER ~ block ~ ";"? }
+comptime_stmt = { KW_COMPTIME ~ block ~ ";"? }
 try_stmt = { KW_TRY ~ block ~ KW_CATCH ~ "(" ~ (KW_AUTO | type_spec) ~ ident ~ ")" ~ block }
 
 switch_stmt = { KW_SWITCH ~ "(" ~ expr ~ ")" ~ "{" ~ switch_clause* ~ "}" }
@@ -253,6 +277,7 @@ atom = {
     | new_expr
     | get_service
     | named_cast
+    | generic_call
     | boolean
     | null_lit
     | number
@@ -272,13 +297,14 @@ at_sigil = { "@" ~ ident }
 boolean = { KW_TRUE | KW_FALSE }
 null_lit = { KW_NULL | KW_NULLPTR }
 
-postfix = { qmark_dot_suf | cleanup_suf | scope_suf | colon_suf | dot_suf | index_suf | inc_suf | call_args | init_suf }
+postfix = { qmark_dot_suf | cleanup_suf | scope_suf | colon_suf | as_suf | dot_suf | index_suf | inc_suf | call_args | init_suf }
 
-qmark_dot_suf = { "?." ~ ident ~ call_args? }
-cleanup_suf = { "~>" ~ ident ~ call_args? }
-scope_suf = { "::" ~ ident ~ call_args? }
-colon_suf = { ":" ~ !":" ~ ident ~ call_args? }
-dot_suf = { "." ~ !":" ~ ident ~ call_args? }
+qmark_dot_suf = { "?." ~ ident ~ type_generic? ~ call_args? }
+cleanup_suf = { "~>" ~ ident ~ type_generic? ~ call_args? }
+scope_suf = { "::" ~ ident ~ type_generic? ~ call_args? }
+colon_suf = { ":" ~ !":" ~ ident ~ type_generic? ~ call_args? }
+dot_suf = { "." ~ !":" ~ ident ~ type_generic? ~ call_args? }
+as_suf = { KW_AS ~ type_spec }
 index_suf = { "[" ~ expr ~ "]" }
 inc_suf = { "++" | "--" }
 call_args = { "(" ~ args? ~ ")" }
@@ -296,6 +322,8 @@ expr_list = { expr ~ ("," ~ expr)* ~ ","? }
 
 new_expr = { KW_NEW ~ ident ~ call_args? }
 get_service = { "GetService" ~ "<" ~ ident ~ ">" ~ "(" ~ ")" }
+/// Free-function call with explicit type args: `Id<int>(x)`.
+generic_call = { ident ~ type_generic ~ call_args }
 named_cast_kw = { "static_cast" | "const_cast" | "reinterpret_cast" | "dynamic_cast" }
 named_cast = { named_cast_kw ~ "<" ~ type_spec ~ ">" ~ "(" ~ expr ~ ")" }
 

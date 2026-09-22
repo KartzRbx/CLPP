@@ -7,21 +7,14 @@ sidebar_label: "func"
 
 <div class="clpp-ref-meta">Type</div>
 
-Function type and anonymous callback prefix. Callbacks, listeners, `pcall` bodies.
+Loose function type and anonymous callback prefix. **Loses** parameter and return detail in emit today.
 
 ## Syntax
 
 ```clpp
 func name = value;
+func (Player player) { }
 ```
-
-## Parameters
-
-None.
-
-## Return value
-
-A value of type `func`, emitted as `(...any) -> any`.
 
 ## Luau emit
 
@@ -29,7 +22,15 @@ A value of type `func`, emitted as `(...any) -> any`.
 
 ## Description
 
-There are no C++ captures. Write `func (int n) { }` or assign `func cb = func () {};`.
+There are no C++ captures. Prefer **named functions** with typed parameters when you care about checking:
+
+```clpp
+void OnCoins(int newValue) {
+    post("New value: " .: newValue);
+}
+```
+
+Checked generics and `TypeId` function types are expanding; bare `func` remains an escape hatch. See [Type system](../architecture/TYPE_SYSTEM).
 
 ## Example
 
@@ -39,14 +40,6 @@ func onCoinsChanged = func (int newValue) {
 };
 ```
 
-Emits:
-
-```luau
-local onCoinsChanged: (...any) -> any = function(newValue: number)
-	print("New value: " .. newValue)
-end
-```
-
 ## See also
 
-[lambda](lambda) · [function](function) · [Connect](Connect)
+[function](function) · [lambda](lambda) · [Types](../types)

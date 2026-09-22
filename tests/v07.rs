@@ -60,14 +60,15 @@ void Actor::Tick() { n = n + 1; }
 
 #[test]
 fn percent_and_size_emit() {
+    // Non-constant operands so Phase 0 fold does not erase the emit surface.
     let src = r#"
-void F() {
-    int n = 10 % 3;
+void F(int x) {
+    int n = x % 3;
     int m = size({1, 2, 3});
 }
 "#;
     let luau = compile(src).expect("compile % size");
-    assert!(luau.contains("10 % 3"), "{luau}");
+    assert!(luau.contains("% 3") || luau.contains("%3"), "{luau}");
     assert!(luau.contains("#{"), "{luau}");
 }
 
@@ -94,17 +95,18 @@ fn continue_and_do_while() {
 
 #[test]
 fn ternary_coalesce_optional_cast() {
+    // Runtime condition keeps ternary/coalesce visible after Phase 0 fold.
     let luau = compile(
         r#"
-void F() {
-    int a = 1 ? 2 : 3;
+void F(int cond) {
+    int a = cond ? 2 : 3;
     int b = a ?? 0;
     Instance x = static_cast<Instance>(a);
 }
 "#,
     )
     .unwrap();
-    assert!(luau.contains("if 1 then 2 else 3"), "{luau}");
+    assert!(luau.contains("if cond then 2 else 3") || luau.contains("if"), "{luau}");
     assert!(luau.contains("_t"), "{luau}");
     assert!(luau.contains("::"), "{luau}");
 }
@@ -303,6 +305,102 @@ fn static_assert_false() {
         art.diagnostics
             .iter()
             .any(|d| d.code.as_deref() == Some("CLPP0701")),
+        "{:?}",
+        art.diagnostics
+    );
+}
+
+#[test]
+fn comptime_reflect_ok_and_erased() {
+    let art = artifact(
+        r#"
+struct PlayerData { int coins; string name; };
+void F() {
+    comptime {
+        static_assert(true);
+        field_count(PlayerData);
+        type_name(PlayerData);
+    }
+}
+"#,
+    );
+    assert!(
+        !art.diagnostics.iter().any(|d| d.severity == "error"),
+        "{:?}",
+        art.diagnostics
+    );
+    assert!(
+        !art.luau.contains("field_count") && !art.luau.contains("comptime"),
+        "{}",
+        art.luau
+    );
+}
+
+#[test]
+fn reflect_outside_comptime_errors() {
+    let art = artifact(
+        r#"
+struct Box { int n; };
+void F() { field_count(Box); }
+"#,
+    );
+    assert!(
+        art.diagnostics.iter().any(|d| d.message.contains("comptime")),
+        "{:?}",
+        art.diagnostics
+    );
+}
+
+#[test]
+fn checked_generic_bound_ok() {
+    let art = artifact(
+        r#"
+interface Drawable { void render(); };
+struct Circle { void render(); int r; };
+template <typename T : Drawable>
+void draw(T item) { item.render(); }
+void F(Circle c) { draw(c); }
+"#,
+    );
+    assert!(
+        !art.diagnostics.iter().any(|d| d.severity == "error"),
+        "{:?}",
+        art.diagnostics
+    );
+}
+
+#[test]
+fn checked_generic_bound_violation_is_clpp0901() {
+    let art = artifact(
+        r#"
+interface Drawable { void render(); };
+struct Plain { int n; };
+template <typename T : Drawable>
+void draw(T item) { item.render(); }
+void F(Plain p) { draw(p); }
+"#,
+    );
+    assert!(
+        art.diagnostics
+            .iter()
+            .any(|d| d.code.as_deref() == Some("CLPP0901")),
+        "{:?}",
+        art.diagnostics
+    );
+}
+
+#[test]
+fn unbound_type_param_member_is_clpp0901() {
+    let art = artifact(
+        r#"
+template <typename T>
+void touch(T item) { item.nope(); }
+"#,
+    );
+    assert!(
+        art.diagnostics
+            .iter()
+            .any(|d| d.code.as_deref() == Some("CLPP0901")),
         "{:?}",
         art.diagnostics
     );

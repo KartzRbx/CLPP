@@ -155,6 +155,14 @@ function main() {
     const text = fs.readFileSync(file, "utf8");
     fs.writeFileSync(dest, transform(rel, text));
   }
+
+  // Machine-readable bench output for the site / CI consumers.
+  const benchJson = path.join(SRC, "benchmarks", "results.json");
+  if (fs.existsSync(benchJson)) {
+    const pubBench = path.join(PUBLIC, "benchmarks");
+    fs.mkdirSync(pubBench, { recursive: true });
+    fs.copyFileSync(benchJson, path.join(pubBench, "results.json"));
+  }
 }
 
 main();

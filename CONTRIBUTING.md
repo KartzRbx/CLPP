@@ -6,7 +6,7 @@ CL++ is the language (syntax, semantics, OOP). Roblox API wiring belongs in [Clu
 
 ```bash
 cargo test
-cargo run -- compile examples/hello/hello.server.clpp
+cargo run -- compile examples/syntax/features.clp
 ```
 
 Keep user-facing copy in English: CLI help, README, docs, editor pack, and example strings.

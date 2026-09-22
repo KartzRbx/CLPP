@@ -235,13 +235,37 @@ pub const BUILTINS: &[Builtin] = &[
         max_arity: 1,
         detail: "Marks a path that must not run.",
     },
+    Builtin {
+        clpp: "Some",
+        luau: "Some",
+        kind: "Function",
+        min_arity: 1,
+        max_arity: 1,
+        detail: "Option present (RFC 0012). Emits the value.",
+    },
+    Builtin {
+        clpp: "Ok",
+        luau: "Ok",
+        kind: "Function",
+        min_arity: 1,
+        max_arity: 1,
+        detail: "Result success (RFC 0012). Emits { ok = v }.",
+    },
+    Builtin {
+        clpp: "Err",
+        luau: "Err",
+        kind: "Function",
+        min_arity: 1,
+        max_arity: 1,
+        detail: "Result failure (RFC 0012). Emits { err = e }.",
+    },
 ];
 
 pub const KEYWORDS: &[&str] = &[
     "void", "int", "float", "double", "bool", "string", "auto", "func", "const", "observable",
-    "signal", "struct", "return", "if", "else", "while", "for", "in", "switch", "case", "default",
+    "signal", "struct", "interface", "type", "return", "if", "else", "while", "for", "in", "switch", "case", "default",
     "break", "continue", "guard", "match", "spawn", "parallel", "async", "await", "new", "null",
-    "true", "false", "this", "enum", "using", "try", "catch", "do", "delay", "defer", "template",
+    "true", "false", "this", "enum", "using", "try", "catch", "do", "delay", "defer", "comptime", "template",
     "typename", "override", "static", "private", "public", "class",
 ];
 

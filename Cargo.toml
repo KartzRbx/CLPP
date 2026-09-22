@@ -22,6 +22,8 @@ thiserror = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 include_dir = "0.7"
+tower-lsp-server = "0.23"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "io-std", "time", "sync"] }
 
 [dev-dependencies]
 pretty_assertions = "1"

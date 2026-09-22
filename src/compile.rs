@@ -24,14 +24,28 @@ pub fn compile_source(source: &str, path: &Path) -> Result<String> {
     Ok(art.luau)
 }
 
+/// Compile with an explicit optimize switch (baseline D = `false`).
+pub fn compile_source_opts(source: &str, path: &Path, optimize: bool) -> Result<String> {
+    let art = compile_artifact_source_ex(source, path, None, Some(optimize))?;
+    if !art.ok {
+        miette::bail!("{}", art.error.unwrap_or_else(|| "compile failed".into()));
+    }
+    Ok(art.luau)
+}
+
 pub fn compile_artifact(path: &Path) -> Result<CompileArtifact> {
     let source = fs::read_to_string(path).into_diagnostic()?;
     compile_artifact_source(&source, path, None)
 }
 
+pub fn compile_artifact_with_opts(path: &Path, optimize: bool) -> Result<CompileArtifact> {
+    let source = fs::read_to_string(path).into_diagnostic()?;
+    compile_artifact_source_ex(&source, path, None, Some(optimize))
+}
+
 pub fn compile_request(request: &CompileRequest) -> Result<CompileArtifact> {
     let path = PathBuf::from(&request.file_name);
-    compile_artifact_source(&request.source, &path, request.strict)
+    compile_artifact_source_ex(&request.source, &path, request.strict, request.optimize)
 }
 
 pub fn compile_artifact_source(
@@ -39,6 +53,16 @@ pub fn compile_artifact_source(
     path: &Path,
     strict: Option<bool>,
 ) -> Result<CompileArtifact> {
+    compile_artifact_source_ex(source, path, strict, None)
+}
+
+pub fn compile_artifact_source_ex(
+    source: &str,
+    path: &Path,
+    strict: Option<bool>,
+    optimize: Option<bool>,
+) -> Result<CompileArtifact> {
+    let do_opt = optimize_enabled(optimize);
     let file_name = path.display().to_string();
     let (expanded, mut ctx) = match preprocess(source, path) {
         Ok(pair) => pair,
@@ -59,14 +83,26 @@ pub fn compile_artifact_source(
             Ok(pair) => pair,
             Err(err) => return Ok(fail_report(&file_name, err, &ctx.line_map)),
         };
+    let mut program = program;
+    crate::ast::attach_docs(&mut program, &ctx.comments);
+    crate::modules::attach_named_requires(&program, path, &mut ctx);
     let mut diagnostics = parse_diags
         .into_iter()
         .map(|d| remap_diagnostic(d, &ctx.line_map))
         .collect::<Vec<_>>();
-    match crate::semantic::check::check_program_ex(&program, &expanded, &ctx.libraries) {
+    match crate::checker::check_program_ex(&program, &expanded, &ctx.libraries) {
         Ok(items) => diagnostics.extend(items.into_iter().map(|d| remap_diagnostic(d, &ctx.line_map))),
         Err(err) => return Ok(fail_report(&file_name, err, &ctx.line_map)),
     };
+    let mut bound = crate::binder::bind(&program);
+    let mut types = crate::session::Session::new().types;
+    crate::checker::resolve(&program, &mut bound, &mut types);
+    diagnostics.extend(
+        crate::checker::check_typed(&program, &bound, &mut types, &expanded)
+            .into_iter()
+            .map(|d| remap_diagnostic(d, &ctx.line_map)),
+    );
+    let _ = bound;
     diagnostics.retain(|d| {
         !source
             .lines()
@@ -85,6 +121,11 @@ pub fn compile_artifact_source(
             .unwrap_or_else(|| "compile failed".into());
         return Ok(CompileArtifact::fail_with(file_name, message, diagnostics));
     }
+    let opt = if do_opt {
+        crate::opt::optimize(&mut program)
+    } else {
+        crate::opt::OptReport::default()
+    };
     let luau = emit(&program, &ctx);
     let source_map = build_source_map(&luau, &file_name);
     let kind = script_kind(path);
@@ -108,7 +149,21 @@ pub fn compile_artifact_source(
         error: None,
         diagnostics,
         source_map,
+        native_hints: opt.native_hints,
+        specialized: opt.specialized,
+        layout_hints: opt.layout_hints,
+        optimized: do_opt,
     })
+}
+
+fn optimize_enabled(explicit: Option<bool>) -> bool {
+    if let Some(v) = explicit {
+        return v;
+    }
+    match std::env::var("CLPP_NO_OPT") {
+        Ok(v) => !(v == "1" || v.eq_ignore_ascii_case("true")),
+        Err(_) => true,
+    }
 }
 
 fn build_source_map(luau: &str, file_name: &str) -> Vec<crate::support::SourceMapLine> {

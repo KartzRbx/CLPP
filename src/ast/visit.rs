@@ -21,7 +21,16 @@ fn visit_item(item: &Item, f: &mut impl FnMut(NodeRef<'_>) -> bool) -> bool {
         return false;
     }
     match item {
-        Item::Function(func) | Item::Proto(func) => visit_stmts(&func.body, f),
+        Item::Function(func) | Item::Proto(func) => {
+            for param in &func.params {
+                if let Some(default) = &param.default {
+                    if !visit_expr(default, f) {
+                        return false;
+                    }
+                }
+            }
+            visit_stmts(&func.body, f)
+        }
         Item::Decl(decl) => {
             if let Some(value) = &decl.value {
                 visit_expr(value, f)
@@ -30,7 +39,7 @@ fn visit_item(item: &Item, f: &mut impl FnMut(NodeRef<'_>) -> bool) -> bool {
             }
         }
         Item::Destructure { value, .. } => visit_expr(value, f),
-        Item::Unsupported { .. } | Item::Enum { .. } | Item::TypeAlias { .. } | Item::Class { .. } => true,
+        Item::Unsupported { .. } | Item::Enum { .. } | Item::TypeAlias { .. } | Item::Class { .. } | Item::Import { .. } => true,
     }
 }
 
@@ -99,7 +108,8 @@ fn visit_stmt(stmt: &Stmt, f: &mut impl FnMut(NodeRef<'_>) -> bool) -> bool {
         | Stmt::Block(body)
         | Stmt::DoWhile { body, .. }
         | Stmt::Delay { body, .. }
-        | Stmt::Defer { body, .. } => visit_stmts(body, f),
+        | Stmt::Defer { body }
+        | Stmt::Comptime { body, .. } => visit_stmts(body, f),
         Stmt::Try { body, catch, .. } => visit_stmts(body, f) && visit_stmts(catch, f),
         Stmt::FieldDestructure { value, .. } => visit_expr(value, f),
         Stmt::Return(None) | Stmt::Break | Stmt::Continue => true,
@@ -188,7 +198,8 @@ fn walk_stmts<'a>(stmts: &'a [Stmt], line: usize, col: usize, found: &mut Option
             | Stmt::CFor { body, .. }
             | Stmt::DoWhile { body, .. }
             | Stmt::Delay { body, .. }
-            | Stmt::Defer { body, .. } => walk_stmts(body, line, col, found),
+            | Stmt::Defer { body, .. }
+            | Stmt::Comptime { body, .. } => walk_stmts(body, line, col, found),
             Stmt::Try { body, catch, .. } => {
                 walk_stmts(body, line, col, found);
                 walk_stmts(catch, line, col, found);

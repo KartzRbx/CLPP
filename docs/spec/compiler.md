@@ -12,8 +12,11 @@ flowchart TD
   src["Source .clpp / .clh / .clp"] --> pp["Preprocessor includes and pragma"]
   pp --> pest["Pest grammar"]
   pest --> ast["AST plus spans"]
-  ast --> analysis["Analysis: check, symbols, complete_at"]
-  analysis --> emit["Luau codegen"]
+  ast --> binder["Binder: symbols and scopes"]
+  binder --> types["Type database"]
+  types --> checker["Type checker / narrowing"]
+  checker --> analysis["Language service"]
+  checker --> emit["Luau codegen"]
   emit --> out[".luau file"]
   analysis --> api["clpp api complete / hover / symbols"]
   api --> lsp["editors/vscode LSP"]
@@ -26,7 +29,8 @@ flowchart TD
 | --- | --- | --- |
 | Include / pragma | `src/preprocess` | One translation unit; comments keep source lines |
 | Parse | `src/parser/grammar.pest` | AST (recovery for the IDE after the first Pest error) |
-| Analysis | `src/analysis` + `src/semantic/check.rs` | Diagnostics, scopes, completions, hover, outline |
+| Analysis | `src/analysis` + `src/session` + `src/checker` | Diagnostics, symbols, completions, hover, outline |
+| Binder | `src/binder` + `src/symbols` + `src/types` | Symbol table and interned types |
 | Builtins | `src/builtins` | One table for emit, manifest, and IDE |
 | Emit | `src/codegen/emit` | Luau (`function Class:Method`, `self`, `game:GetService`) |
 | Editor | `editors/vscode` | LSP calls `clpp api complete` |

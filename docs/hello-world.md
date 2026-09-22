@@ -7,8 +7,6 @@ title: Your first script
 Create `hello.server.clpp`. The `.server` tag means Rojo will treat the output as a **Script**.
 
 ```clpp
-#include <clpp/roblox.clh>
-
 struct HelloServer {
     void Greet(Player player);
 };
@@ -33,22 +31,19 @@ void init() {
 
 ## Line by line
 
-1. `#include <clpp/roblox.clh>` — IntelliSense for engine types. No Luau is emitted for this header.
-2. `struct HelloServer` + `void HelloServer::Greet` — define methods with `::`. Call them with `.` (`hello.Greet(player)`).
-3. `player.Name` — **property** (dot).
-4. `"Player name: " .: player.Name` — **concatenation** (`.:` → Luau `..`).
-5. `void init()` — runs at the end of Scripts and LocalScripts.
-6. `GetService<Players>()` — typed service lookup.
-7. `for (Player player in players.GetPlayers())` — range-for. `in` is the collection.
-8. `players.PlayerAdded~>Connect` — `.` reads the signal, `~>` gives Connect to Janitor. Manual (no janitor) is `::Connect`.
-9. `func (Player playerEntered) { ... }` — anonymous callback. Luau closures still see outer locals. There is no C++ capture list `[]`.
+1. `struct HelloServer` + `void HelloServer::Greet` — define methods with `::`. Call them with `.` (`hello.Greet(player)`).
+2. `player.Name` — **property** (dot).
+3. `"Player name: " .: player.Name` — **concatenation** (`.:` → Luau `..`).
+4. `void init()` — runs at the end of Scripts and LocalScripts.
+5. `PlayerAdded~>Connect` — Janitor-style connection.
+6. Shared types from another file use [`import { … } from`](modules), not language `#include`.
 
-Compile:
+Platform headers (`<clpp/roblox.clh>`) remain a **Cluaupp** concern when the host wants IDE dump types.
 
-```bash
-clpp compile hello.server.clpp
+## Multi-file
+
+```clpp
+import { Wallet } from "./PlayerData.clh";
 ```
 
-You get Luau with `function HelloServer:Greet`, `game:GetService("Players")`, and an `init()` call at the bottom.
-
-Next: [Mental model](mental-model).
+See [Modules](modules) · [Files](files).

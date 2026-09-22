@@ -7,9 +7,10 @@ use crate::ast::{
 use crate::builtins;
 use crate::parser::{parse_for_ide, parse_with_diagnostics};
 use crate::preprocess::preprocess;
-use crate::semantic::{is_bare_global, is_instance_type, luau_type};
-use crate::semantic::check::check_program_ex;
+use crate::names::{is_bare_global, is_instance_type, luau_type};
+use crate::checker::check_program_ex;
 use crate::support::CompileDiagnostic;
+use crate::types::MemberKind;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
@@ -224,6 +225,12 @@ pub fn references_request(req: &PositionRequest) -> DefinitionResponse {
 
 pub fn signature_request(req: &PositionRequest) -> SignatureResponse {
     let (index, prefix) = index_at(req);
+    if let Some(signature) = typed_signature(req, &prefix) {
+        return SignatureResponse {
+            ok: true,
+            signature: Some(signature),
+        };
+    }
     SignatureResponse {
         ok: true,
         signature: signature_from(&index, &prefix),
@@ -278,15 +285,11 @@ fn index_at(req: &PositionRequest) -> (Index, String) {
     if let Ok(check) = check_program_ex(&program, &expanded, &ctx.libraries) {
         diagnostics.extend(check);
     }
-    attach_docs(&program, &ctx.comments);
+    let mut program = program;
+    crate::ast::attach_docs(&mut program, &ctx.comments);
     let index = build_index(program, ctx.comments, diagnostics);
     let prefix = line_prefix(&req.source, req.line, req.column);
     (index, prefix)
-}
-
-fn attach_docs(program: &Program, comments: &[SourceComment]) {
-    let _ = program;
-    let _ = comments;
 }
 
 fn build_index(
@@ -422,6 +425,71 @@ fn build_index(
                 }
                 symbols.push(sym);
             }
+            Item::Class { name, parent, line, span, doc, .. } => {
+                symbols.push(Symbol {
+                    name: name.clone(),
+                    kind: "Class".into(),
+                    detail: parent
+                        .clone()
+                        .unwrap_or_else(|| "struct".into()),
+                    ty: name.clone(),
+                    line: *line,
+                    column: 1,
+                    end_line: span.end_line.max(*line),
+                    owner: parent.clone(),
+                    params: Vec::new(),
+                    insert: None,
+                    doc: doc.clone(),
+                });
+            }
+            Item::TypeAlias { name, ty, line, span, doc, .. } => {
+                symbols.push(Symbol {
+                    name: name.clone(),
+                    kind: "TypeAlias".into(),
+                    detail: ty.clone(),
+                    ty: ty.clone(),
+                    line: *line,
+                    column: 1,
+                    end_line: span.end_line.max(*line),
+                    owner: None,
+                    params: Vec::new(),
+                    insert: None,
+                    doc: doc.clone(),
+                });
+            }
+            Item::Enum { name, line, span, doc, .. } => {
+                symbols.push(Symbol {
+                    name: name.clone(),
+                    kind: "Enum".into(),
+                    detail: "enum".into(),
+                    ty: name.clone(),
+                    line: *line,
+                    column: 1,
+                    end_line: span.end_line.max(*line),
+                    owner: None,
+                    params: Vec::new(),
+                    insert: None,
+                    doc: doc.clone(),
+                });
+            }
+            Item::Import { names, module, line, span } => {
+                for binding in names {
+                    let local = binding.local_name().to_string();
+                    symbols.push(Symbol {
+                        name: local.clone(),
+                        kind: "Module".into(),
+                        detail: format!("import {} from {module}", binding.name),
+                        ty: local,
+                        line: *line,
+                        column: 1,
+                        end_line: span.end_line.max(*line),
+                        owner: None,
+                        params: Vec::new(),
+                        insert: None,
+                        doc: None,
+                    });
+                }
+            }
             _ => {}
         }
     }
@@ -504,7 +572,8 @@ fn collect_locals(stmts: &[Stmt], locals: &mut Vec<Symbol>, owner: Option<&str>)
             | Stmt::While { body, .. }
             | Stmt::Spawn { body, .. }
             | Stmt::Block(body)
-            | Stmt::CFor { body, .. } => collect_locals(body, locals, owner),
+            | Stmt::CFor { body, .. }
+            | Stmt::Comptime { body, .. } => collect_locals(body, locals, owner),
             Stmt::Switch { cases, .. } => {
                 for case in cases {
                     collect_locals(&case.body, locals, owner);
@@ -684,17 +753,69 @@ fn in_scope<'a>(index: &'a Index, line: usize) -> Vec<&'a Symbol> {
 fn complete_from(index: &Index, req: &PositionRequest, prefix: &str) -> Vec<CompletionItem> {
     match parse_access(prefix) {
         Access::Include(_, angled) => include_items(angled),
-        Access::At(partial) => filter_partial(at_items(index, req.line), &partial),
-        Access::Member(obj, partial) => {
+        Access::At(partial) => {
+            let typed = typed_member_items(req, prefix);
+            if !typed.is_empty() {
+                let mut items = typed
+                    .into_iter()
+                    .map(|mut i| {
+                        if !i.label.starts_with('@') {
+                            i.insert_text = Some(format!("@{}", i.label));
+                            i.label = format!("@{}", i.label);
+                        }
+                        i
+                    })
+                    .collect::<Vec<_>>();
+                items.extend(at_items(index, req.line));
+                return filter_partial(items, &partial);
+            }
+            filter_partial(at_items(index, req.line), &partial)
+        }
+        Access::Member(_, partial) | Access::Static(_, partial) => {
+            let typed = typed_member_items(req, prefix);
+            if !typed.is_empty() {
+                return filter_partial(typed, &partial);
+            }
+            let obj = match parse_access(prefix) {
+                Access::Member(o, _) | Access::Static(o, _) => o,
+                _ => String::new(),
+            };
             filter_partial(member_items(index, req.line, &obj, false), &partial)
         }
-        Access::Static(obj, partial) => {
-            filter_partial(member_items(index, req.line, &obj, true), &partial)
+        Access::Cleanup(_, partial) => {
+            let typed = typed_member_items(req, prefix);
+            if !typed.is_empty() {
+                return filter_partial(typed, &partial);
+            }
+            filter_partial(cleanup_items(), &partial)
         }
-        Access::Cleanup(_, partial) => filter_partial(cleanup_items(), &partial),
         Access::Service(partial) => filter_partial(service_items(), &partial),
         Access::Ident(partial) => filter_partial(ident_items(index, req.line), &partial),
     }
+}
+
+fn typed_member_items(req: &PositionRequest, prefix: &str) -> Vec<CompletionItem> {
+    let (file, mut types) = crate::session::analyze(&req.source, &req.file_name);
+    let members = crate::session::members_of(&file, &mut types, req.line, prefix);
+    members
+        .into_iter()
+        .map(|m| {
+            let kind = match m.kind {
+                MemberKind::Method | MemberKind::Constructor => "Method",
+                MemberKind::Field | MemberKind::Property => "Field",
+            };
+            CompletionItem {
+                label: m.name.clone(),
+                kind: kind.into(),
+                detail: types.label(m.type_id),
+                insert_text: if m.kind == MemberKind::Method || m.kind == MemberKind::Constructor {
+                    Some(format!("{}($1)", m.name))
+                } else {
+                    None
+                },
+            }
+        })
+        .collect()
 }
 
 fn filter_partial(mut items: Vec<CompletionItem>, partial: &str) -> Vec<CompletionItem> {
@@ -987,6 +1108,11 @@ fn hover_from(index: &Index, req: &PositionRequest) -> Option<HoverInfo> {
         let short = sym.name.rsplit("::").next().unwrap_or(&sym.name);
         if short == bare || sym.name == bare || format!("@{short}") == word {
             let mut md = format!("**{}** — `{}` ({})", short, sym.ty, sym.kind);
+            let (file, mut types) = crate::session::analyze(&req.source, &req.file_name);
+            let ty = crate::session::type_at(&file, &mut types, req.line, short);
+            if !types.is_unknown(ty) {
+                md = format!("**{}** — `{}` ({})", short, types.label(ty), sym.kind);
+            }
             if let Some(doc) = &sym.doc {
                 md.push_str("\n\n");
                 md.push_str(doc);
@@ -1050,6 +1176,52 @@ fn references_from(index: &Index, req: &PositionRequest) -> Vec<LocationInfo> {
         }
     }
     out
+}
+
+fn typed_signature(req: &PositionRequest, prefix: &str) -> Option<SignatureInfo> {
+    let open = prefix.rfind('(')?;
+    let before = prefix[..open].trim_end();
+    let name = object_name(before);
+    if name != "Connect" && name != "Once" && name != "Wait" && name != "FindFirstChild" {
+        return None;
+    }
+    let (file, mut types) = crate::session::analyze(&req.source, &req.file_name);
+    let obj_prefix = if before.ends_with(&name) {
+        let cut = before.len() - name.len();
+        before[..cut].to_string()
+    } else {
+        before.to_string()
+    };
+    let ty = crate::session::type_prefix(&file, &mut types, req.line, &obj_prefix);
+    if let Some(params) = types.signal_params(ty) {
+        let labels: Vec<String> = params
+            .iter()
+            .enumerate()
+            .map(|(i, p)| format!("arg{}: {}", i, types.label(*p)))
+            .collect();
+        let label = if labels.is_empty() {
+            format!("{name}(callback)")
+        } else {
+            format!("{name}(callback: ({}) -> void)", labels.join(", "))
+        };
+        return Some(SignatureInfo {
+            label,
+            parameters: if labels.is_empty() {
+                vec!["callback".into()]
+            } else {
+                labels
+            },
+            active_parameter: 0,
+        });
+    }
+    if name == "FindFirstChild" {
+        return Some(SignatureInfo {
+            label: "FindFirstChild(name: string)".into(),
+            parameters: vec!["name: string".into()],
+            active_parameter: 0,
+        });
+    }
+    None
 }
 
 fn signature_from(index: &Index, prefix: &str) -> Option<SignatureInfo> {

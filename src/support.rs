@@ -25,10 +25,17 @@ pub struct CompileRequest {
     pub file_name: String,
     #[serde(default)]
     pub strict: Option<bool>,
+    /// When `Some(false)`, skip RFC 0011 high-level opts (fair baseline D).
+    #[serde(default)]
+    pub optimize: Option<bool>,
 }
 
 fn default_file_name() -> String {
     "input.clpp".into()
+}
+
+fn default_true() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -54,6 +61,18 @@ pub struct CompileArtifact {
     pub diagnostics: Vec<CompileDiagnostic>,
     #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "sourceMap")]
     pub source_map: Vec<SourceMapLine>,
+    /// Cluaupp: functions that look like selective `@native` candidates (RFC 0011).
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "nativeHints")]
+    pub native_hints: Vec<String>,
+    /// Specialized generic symbols emitted this compile (`name__Type`).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub specialized: Vec<String>,
+    /// Dense numeric / SoA / buffer layout candidates (RFC 0011 Phase 1).
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "layoutHints")]
+    pub layout_hints: Vec<String>,
+    /// Whether high-level opts ran for this artifact.
+    #[serde(default = "default_true", rename = "optimized")]
+    pub optimized: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -80,6 +99,10 @@ impl CompileArtifact {
             error: Some(error.into()),
             diagnostics: Vec::new(),
             source_map: Vec::new(),
+            native_hints: Vec::new(),
+            specialized: Vec::new(),
+            layout_hints: Vec::new(),
+            optimized: false,
         }
     }
 
@@ -101,6 +124,10 @@ impl CompileArtifact {
             error: Some(error.into()),
             diagnostics,
             source_map: Vec::new(),
+            native_hints: Vec::new(),
+            specialized: Vec::new(),
+            layout_hints: Vec::new(),
+            optimized: false,
         }
     }
 }

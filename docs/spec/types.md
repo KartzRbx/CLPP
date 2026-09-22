@@ -1,62 +1,37 @@
 # Types
 
-CL++ is statically typed in what you write and in the Luau it emits.
+CL++ is statically typed in what you write and in the Luau it emits. Narrative guide: [Types and values](../types). Formal surface: [TYPE_SYSTEM](../architecture/TYPE_SYSTEM).
 
-## Primitives
+## Primitives and containers
 
 | CL++ | Luau | Use |
 | --- | --- | --- |
 | `int` / `float` / `double` | `number` | counts, damage, alpha |
 | `bool` | `boolean` | flags |
-| `string` | `string` | names, paths (not `std::string`) |
+| `string` | `string` | names, paths |
 | `void` | no return annotation | procedures |
-| `func` | `(...any) -> any` | callbacks / lambdas |
+| `func` | `(...any) -> any` | loose callback escape hatch |
 | `auto` | inferred | `new`, `GetService`, datatype ctor |
-| `Player` / `Folder` | `Player` / `Folder` | Instance (class name) |
-| `array<T>` / `LuaArray<T>` / `vector<T>` / `span<T>` | `{T}` | arrays |
-| `dictionary<K, V>` | `{ [K]: V }` | tables / maps |
-| `optional<T>` | `T?` | missing value |
-| `const` / `static constexpr` | Luau `const` | immutable |
+| `Player` / `Folder` | same | Instance (class name) |
+| `array<T>` / `vector<T>` / `span<T>` | `{T}` | arrays |
+| `dictionary<K, V>` | `{ [K]: V }` | maps |
+| `optional<T>` | `T?` | missing value (= `T \| null`) |
+| `A \| B` / `A & B` | Luau union / intersection | aliases |
+| `type` / `using` | type alias | including `type Box<T> = …` |
+| `enum` / `enum class` | string/number enums | exhaustiveness |
+| `template <typename T : B>` | erased / name-only | checked generics |
 | `null` | `nil` | absence |
-| `Vector3` `CFrame` `UDim2` `Color3` | same names | datatypes (copy) |
-| `Enum.Material.Plastic` | `Enum.Material.Plastic` | enums |
+| `Vector3` `CFrame` … | same | datatypes |
+| `Enum.Material.Plastic` | same | Roblox enums |
 
-Examples:
+## Assignability (summary)
 
-```clpp
-int coins = 100;
-float speed = 16.5;
-string name = "Kartz";
-bool isActive = true;
-func callback = func () {};
-auto dynamicVal = DataService.Server;
-Player playerRef = null;
-```
-
-Always initialize: `int coins = 0;` — `int coins;` emits `nil`.
-
-There is no `delete`, no address-of, and no `->`. Numbers copy; Instances mutate through `.` (property and instance method).
-
-## Instances are class names
-
-`Player player` is an Instance of class Player. Properties and instance methods use `.`. Protected calls use `:`. Static names use `::`. [`match`](../guard-match.md) arms write `Part p =>`.
-
-```clpp
-player.Name = "Kartz";
-player.FindFirstChild("leaderstats");
-```
-
-```luau
-player.Name = "Kartz"
-player:FindFirstChild("leaderstats")
-```
-
-There is no pointer arithmetic and no `std::unique_ptr`. Lifetime is Roblox's: `Destroy` or Janitor.
-
-## `auto`
-
-Inferred when the value is `new Class(...)`, `GetService<T>()`, or a datatype constructor. Prefer an explicit type on parameters and `struct` fields.
+- `int` widens to `float`.
+- `optional<T>` does **not** assign to plain `T` (CLPP0201) until narrowed.
+- Generic `T : Bound` accepts values that nominally or structurally satisfy `Bound` (CLPP0901).
 
 ## Casts
 
-`static_cast<T>(x)`, `const_cast`, `reinterpret_cast`, and `dynamic_cast` emit the argument. `(void)x;` disappears (silences unused in clangd). Luau has no casts — they do not check `ClassName`.
+`static_cast` / `as` emit the value with no runtime `ClassName` check. Document that when writing host tools.
+
+There is no `delete`, no address-of, and no `->`.

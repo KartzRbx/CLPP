@@ -107,6 +107,6 @@ void BindDrop(Instance inst, auto coins) {
 }
 ```
 
-Full file: [`examples/ui/FusionHud.client.clpp`](https://github.com/KartzRbx/CLPP/blob/main/examples/ui/FusionHud.client.clpp).
+Full sample lives in the Cluaupp repo (Roblox UI host), not under CL++ `examples/`.
 
 Next: [Vide](ui-vide).

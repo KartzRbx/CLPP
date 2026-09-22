@@ -38,6 +38,30 @@ impl Span {
     pub fn contains_line(&self, line: usize) -> bool {
         line >= self.start_line && line <= self.end_line
     }
+
+    /// Expand to cover both spans (ignores default/empty).
+    pub fn cover(self, other: Span) -> Span {
+        if other.start_line == 0 {
+            return self;
+        }
+        if self.start_line == 0 {
+            return other;
+        }
+        Span {
+            start_line: self.start_line.min(other.start_line),
+            start_col: if self.start_line <= other.start_line {
+                self.start_col
+            } else {
+                other.start_col
+            },
+            end_line: self.end_line.max(other.end_line),
+            end_col: if self.end_line >= other.end_line {
+                self.end_col
+            } else {
+                other.end_col
+            },
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

@@ -1,18 +1,19 @@
 ---
-title: Files, tags, includes
+title: Files, tags, modules
+description: Extensions, Rojo tags, and how modules connect — import first, include only for host/legacy.
 ---
 
-# Files, tags, includes
+# Files, tags, modules
 
-Everything the compiler reads is CL++. The extension only chooses **role**.
+Everything the compiler reads is CL++. The extension chooses **role**; **`import`** chooses **dependencies**.
 
-| Extension | Role | C++ analog | Emitted? |
-| --- | --- | --- | --- |
-| `.clh` | Header: `struct`, constants, prototypes | `.h` | Types and constants; no function bodies |
-| `.clp` | Module implementation | `.c` / untagged `.cpp` | ModuleScript by default |
-| `.clpp` | Script / methods | `.cpp` | Script / LocalScript / ModuleScript from the tag |
+## Extensions
 
-Prefer `.clh` + `.clpp`: declare in the header, define in the script.
+| Extension | Role | Emitted? |
+| --- | --- | --- |
+| `.clh` | Types, constants, prototypes | Types / constants; no function bodies |
+| `.clp` | Shared module | ModuleScript by default |
+| `.clpp` | Script / methods | Script / LocalScript / ModuleScript from the tag |
 
 ## Filename tags
 
@@ -25,24 +26,26 @@ Prefer `.clh` + `.clpp`: declare in the header, define in the script.
 | `Foo.clp` / `Foo.clpp` (no tag) | ModuleScript |
 | `Foo.clh` | type ModuleScript |
 
-## Includes
+## Modules (canonical)
+
+```clpp
+import { Wallet } from "./PlayerData.clh";
+import { PlayerData as Data } from "./PlayerData.clh";
+```
+
+Full rules: [Modules and imports](modules).
+
+## Platform / legacy includes
+
+Angle brackets are **Cluaupp / platform** (IntelliSense and lib `require`), not the language module system:
 
 ```clpp
 #include <clpp/roblox.clh>
 #include <clpp/libs/janitor.clh>
-#include "LeaderstatsServer.clh"
-#include "../shared/PlayerData.clh"
 ```
 
-| Form | Effect |
-| --- | --- |
-| `<clpp/roblox.clh>` | IntelliSense only |
-| `<clpp/libs/janitor.clh>` | IntelliSense **and** `require` |
-| `"Stem.clh"` with the same stem | **Inlined** into the `.clpp` |
-| `"Other.clh"` | `require` |
+Same-stem quoted `#include "Foo.clh"` next to `Foo.clpp` remains a **header/impl splice** for older layouts. Prefer `import` for cross-file language symbols.
 
-`#pragma once` is valid in `.clh` (include guard). `#pragma strict` → `--!strict`. `#pragma nostrict` → `--!nonstrict`. `#pragma native` → `--!native`. `#pragma optimize` / `#pragma optimize 2` → `--!optimize 2`.
+`#pragma once` · `#pragma strict` / `nostrict` · `#pragma native` · `#pragma optimize` are valid.
 
-`using …;` is skipped. `namespace { }` is flattened. `//` and `/* */` comments are stripped.
-
-Next: [Types and values](types).
+Next: [Modules](modules) · [Types](types).

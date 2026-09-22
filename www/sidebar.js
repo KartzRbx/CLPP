@@ -8,6 +8,7 @@ export const sidebar = [
       { label: "Hello world", slug: "docs/hello-world" },
       { label: "Mental model", slug: "docs/mental-model" },
       { label: "Files and tags", slug: "docs/files" },
+      { label: "Modules and imports", slug: "docs/modules" },
       {
         label: "Learn the language",
         items: [
@@ -38,6 +39,7 @@ export const sidebar = [
           { label: "Vide", slug: "docs/ui-vide" },
           { label: "Advanced types", slug: "docs/advanced-types" },
           { label: "Patterns", slug: "docs/advanced-patterns" },
+          { label: "Benchmarks", slug: "docs/benchmarks" },
         ],
       },
       { label: "Style guide", slug: "docs/style" },
@@ -47,6 +49,21 @@ export const sidebar = [
     label: "Language reference",
     items: [
       { label: "Index", slug: "docs/reference" },
+      {
+        label: "Modules & preprocessor",
+        collapsed: true,
+        items: [
+          { slug: "docs/reference/import" },
+          { slug: "docs/reference/include", label: "#include (legacy)" },
+          { slug: "docs/reference/attr-server" },
+          { slug: "docs/reference/attr-client" },
+          { slug: "docs/reference/pragma-strict" },
+          { slug: "docs/reference/pragma-nstrict" },
+          { slug: "docs/reference/pragma-native" },
+          { slug: "docs/reference/pragma-optimize" },
+          { slug: "docs/reference/pragma-once" },
+        ],
+      },
       {
         label: "I/O",
         collapsed: true,
@@ -163,21 +180,7 @@ export const sidebar = [
         ],
       },
       {
-        label: "Attributes & preprocessor",
-        collapsed: true,
-        items: [
-          { slug: "docs/reference/attr-server" },
-          { slug: "docs/reference/attr-client" },
-          { slug: "docs/reference/include" },
-          { slug: "docs/reference/pragma-strict" },
-          { slug: "docs/reference/pragma-nstrict" },
-          { slug: "docs/reference/pragma-native" },
-          { slug: "docs/reference/pragma-optimize" },
-          { slug: "docs/reference/pragma-once" },
-        ],
-      },
-      {
-        label: "Headers",
+        label: "Headers (Cluaupp)",
         collapsed: true,
         items: [
           { slug: "docs/reference/header-roblox" },
@@ -196,6 +199,8 @@ export const sidebar = [
     label: "Specification",
     items: [
       { label: "Compiler pipeline", slug: "docs/spec/compiler" },
+      { label: "Type system", slug: "docs/architecture/TYPE_SYSTEM" },
+      { label: "Optimization", slug: "docs/architecture/OPTIMIZATION" },
       { label: "Luau engineering map", slug: "docs/architecture/luau-mapping" },
       { label: "CL++ + luau-lsp", slug: "docs/architecture/luau-lsp" },
       { label: "Grammar (EBNF)", slug: "docs/spec/grammar" },
@@ -204,6 +209,7 @@ export const sidebar = [
       { label: "Emit", slug: "docs/spec/emit" },
       { label: "Files", slug: "docs/spec/files" },
       { label: "C++ → Luau map", slug: "docs/design/cpp-luau" },
+      { label: "Benchmarks", slug: "docs/benchmarks" },
     ],
   },
   {

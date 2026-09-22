@@ -89,6 +89,6 @@ void init() {
 - **[[server]]** documents that workspace watching is not a LocalScript concern.
 - **~>** means you do not leak connections when the janitor cleans up.
 
-Full file: [`examples/advanced/CombatServer.server.clpp`](https://github.com/KartzRbx/CLPP/blob/main/examples/advanced/CombatServer.server.clpp).
+Full sample lives in the Cluaupp repo (Roblox game patterns), not under CL++ `examples/`.
 
 Next: [Cheat sheet](cheatsheet).

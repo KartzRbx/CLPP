@@ -74,11 +74,21 @@ pub const CLPP0701: Code = Code {
     title: "static_assert failed",
     help: "the condition must be a true compile-time constant",
 };
+pub const CLPP0801: Code = Code {
+    id: "CLPP0801",
+    title: "module import not found",
+    help: "use a path the quoted-include resolver can find (.clh / .clpp next to this file)",
+};
+pub const CLPP0901: Code = Code {
+    id: "CLPP0901",
+    title: "generic type parameter bound violated",
+    help: "pass a type that implements the bound, or add the missing members / widen the bound",
+};
 
 pub fn all() -> &'static [Code] {
     &[
         CLPP0101, CLPP0102, CLPP0201, CLPP0301, CLPP0401, CLPP0402, CLPP0501, CLPP0601, CLPP0602,
-        CLPP0603, CLPP0604, CLPP0605, CLPP0701,
+        CLPP0603, CLPP0604, CLPP0605, CLPP0701, CLPP0801, CLPP0901,
     ]
 }
 

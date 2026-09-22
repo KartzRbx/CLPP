@@ -4,7 +4,7 @@ use clpp::analysis::{
     highlight_request, hover_request, inlay_request, references_request, signature_request,
     symbols_request, workspace_symbols, PositionRequest,
 };
-use clpp::compile::{build_dir, compile_artifact, compile_request};
+use clpp::compile::{build_dir, compile_artifact, compile_artifact_with_opts, compile_request};
 use clpp::diag;
 use clpp::doctor;
 use clpp::fmt::format_source;
@@ -45,6 +45,9 @@ enum Commands {
         /// Run luau-analyze / luau-lsp on the emit when present
         #[arg(long)]
         check: bool,
+        /// Skip high-level opts (fair baseline D). Also: CLPP_NO_OPT=1
+        #[arg(long)]
+        no_opt: bool,
     },
     /// Emit Luau (alias of compile) with optional --check / --no-banner
     Emit {
@@ -55,6 +58,8 @@ enum Commands {
         no_banner: bool,
         #[arg(long)]
         check: bool,
+        #[arg(long)]
+        no_opt: bool,
     },
     /// Persistent JSON-RPC language server (stdio)
     Lsp,
@@ -158,13 +163,15 @@ fn main() -> Result<()> {
             json,
             no_banner,
             check,
-        } => run_compile(file, output, json, no_banner, check)?,
+            no_opt,
+        } => run_compile(file, output, json, no_banner, check, !no_opt)?,
         Commands::Emit {
             file,
             output,
             no_banner,
             check,
-        } => run_compile(file, output, false, no_banner, check)?,
+            no_opt,
+        } => run_compile(file, output, false, no_banner, check, !no_opt)?,
         Commands::Lsp => lsp::run().into_diagnostic()?,
         Commands::Doctor => {
             let report = doctor::report();
@@ -210,6 +217,7 @@ fn main() -> Result<()> {
                         source,
                         file_name: path.display().to_string(),
                         strict: None,
+                        optimize: None,
                     }
                 } else {
                     let mut buf = String::new();
@@ -329,8 +337,14 @@ fn run_compile(
     json: bool,
     no_banner: bool,
     check: bool,
+    optimize: bool,
 ) -> Result<()> {
-    match compile_artifact(&file) {
+    let compiled = if optimize {
+        compile_artifact(&file)
+    } else {
+        compile_artifact_with_opts(&file, false)
+    };
+    match compiled {
         Ok(mut art) => {
             if no_banner {
                 art.luau = art

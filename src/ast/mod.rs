@@ -34,6 +34,7 @@ pub enum Item {
     TypeAlias {
         name: String,
         ty: String,
+        type_params: Vec<String>,
         line: usize,
         span: Span,
         doc: Option<String>,
@@ -41,11 +42,47 @@ pub enum Item {
     Class {
         name: String,
         parent: Option<String>,
-        type_params: Vec<String>,
+        type_params: Vec<TypeParam>,
         line: usize,
         span: Span,
         doc: Option<String>,
     },
+    Import {
+        /// Bindings: export name in the module + optional local alias (`as`).
+        names: Vec<ImportName>,
+        module: String,
+        line: usize,
+        span: Span,
+    },
+}
+
+/// Generic type parameter (`T` or `T : Bound`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypeParam {
+    pub name: String,
+    /// Nominal interface/struct bound (checked generics, RFC 0010).
+    pub bound: Option<String>,
+}
+
+impl TypeParam {
+    pub fn unbound(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            bound: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ImportName {
+    pub name: String,
+    pub alias: Option<String>,
+}
+
+impl ImportName {
+    pub fn local_name(&self) -> &str {
+        self.alias.as_deref().unwrap_or(&self.name)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -63,7 +100,7 @@ pub struct Function {
     pub is_static: bool,
     pub is_override: bool,
     pub visibility: Option<String>,
-    pub type_params: Vec<String>,
+    pub type_params: Vec<TypeParam>,
     pub attrs: Vec<Attr>,
     pub parent: Option<String>,
     pub line: usize,
@@ -79,6 +116,7 @@ pub struct Attr {
 pub struct Param {
     pub name: String,
     pub value_type: Option<String>,
+    pub default: Option<Expr>,
 }
 
 #[derive(Debug, Clone)]
@@ -155,13 +193,11 @@ pub enum Expr {
         name: String,
         args: Vec<Expr>,
         access: String,
+        type_args: Vec<String>,
     },
     New {
         class_name: String,
         args: Vec<Expr>,
-    },
-    GetService {
-        service: String,
     },
     Cast {
         value_type: String,
@@ -276,6 +312,11 @@ pub enum Stmt {
     Defer {
         body: Vec<Stmt>,
     },
+    /// Compile-time-only block (Intent Phase A). Erased from Luau emit.
+    Comptime {
+        body: Vec<Stmt>,
+        span: Span,
+    },
     FieldDestructure {
         names: Vec<String>,
         value: Expr,
@@ -310,6 +351,63 @@ pub struct CompileContext {
     pub defines: Vec<String>,
 }
 
+/// Member/call access. `Janitor` is `~>` (signal connect tracked by Janitor).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AccessKind {
+    Dot,
+    Colon,
+    Scope,
+    Janitor,
+}
+
+impl AccessKind {
+    pub fn parse(access: &str) -> Self {
+        match access {
+            "~>" => Self::Janitor,
+            ":" => Self::Colon,
+            "::" => Self::Scope,
+            _ => Self::Dot,
+        }
+    }
+
+    pub fn is_janitor(self) -> bool {
+        matches!(self, Self::Janitor)
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Dot => ".",
+            Self::Colon => ":",
+            Self::Scope => "::",
+            Self::Janitor => "~>",
+        }
+    }
+}
+
+/// Attach `///` comments that sit immediately above a declaration.
+pub fn attach_docs(program: &mut Program, comments: &[SourceComment]) {
+    for item in &mut program.items {
+        let line = match item {
+            Item::Function(f) | Item::Proto(f) => f.line,
+            Item::Decl(d) => d.line,
+            Item::Class { line, .. } | Item::Enum { line, .. } | Item::TypeAlias { line, .. } => {
+                *line
+            }
+            _ => continue,
+        };
+        let doc = comments.iter().rev().find(|c| c.is_doc && (c.line + 1 == line || c.line == line));
+        let Some(doc) = doc else { continue };
+        match item {
+            Item::Function(f) | Item::Proto(f) => f.doc = Some(doc.text.clone()),
+            Item::Decl(d) => d.doc = Some(doc.text.clone()),
+            Item::Class { doc: slot, .. }
+            | Item::Enum { doc: slot, .. }
+            | Item::TypeAlias { doc: slot, .. } => *slot = Some(doc.text.clone()),
+            _ => {}
+        }
+    }
+}
+
 impl Function {
     pub fn span(&self) -> Span {
         self.span
@@ -326,7 +424,7 @@ impl Stmt {
     pub fn span(&self) -> Span {
         match self {
             Stmt::Decl(decl) => decl.span,
-            Stmt::ForEach { span, .. } => *span,
+            Stmt::ForEach { span, .. } | Stmt::Comptime { span, .. } => *span,
             Stmt::Expr(expr) | Stmt::Return(Some(expr)) | Stmt::Destructure { value: expr, .. } => {
                 expr.span()
             }
@@ -383,5 +481,9 @@ impl Expr {
             Expr::AtField { name, .. } => Some(name.as_str()),
             _ => None,
         }
+    }
+
+    pub fn access_kind(access: &str) -> AccessKind {
+        AccessKind::parse(access)
     }
 }

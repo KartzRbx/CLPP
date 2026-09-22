@@ -1,6 +1,6 @@
 use crate::ast::{CompileContext, Decl, Expr, Function, Item, MatchArm, Program, SourceComment, Stmt, SwitchCase};
 use crate::builtins;
-use crate::semantic::{
+use crate::names::{
     is_array_type, is_bare_global, is_datatype, is_instance_type, is_library_type, is_luau_lib,
     is_method, is_signal_type, luau_type, observable_class,
 };
@@ -60,7 +60,8 @@ impl<'a> Emitter<'a> {
                 | Item::Unsupported { .. }
                 | Item::Enum { .. }
                 | Item::TypeAlias { .. }
-                | Item::Class { .. } => {}
+                | Item::Class { .. }
+                | Item::Import { .. } => {}
             }
         }
         let mut nested_types = HashSet::new();
@@ -154,6 +155,7 @@ impl<'a> Emitter<'a> {
                             | Item::Enum { .. }
                             | Item::TypeAlias { .. }
                             | Item::Unsupported { .. }
+                            | Item::Import { .. }
                     )
                 });
 
@@ -214,7 +216,7 @@ impl<'a> Emitter<'a> {
                 .iter()
                 .all(|item| match item {
                     Item::Decl(d) => d.owner.is_none(),
-                    Item::Class { .. } | Item::Enum { .. } | Item::TypeAlias { .. } | Item::Unsupported { .. } => true,
+                    Item::Class { .. } | Item::Enum { .. } | Item::TypeAlias { .. } | Item::Unsupported { .. } | Item::Import { .. } => true,
                     _ => false,
                 });
 
@@ -237,7 +239,8 @@ impl<'a> Emitter<'a> {
                 }
                 Item::Proto(_)
                 | Item::Unsupported { .. }
-                | Item::Class { .. } => {}
+                | Item::Class { .. }
+                | Item::Import { .. } => {}
                 Item::Enum {
                     name,
                     numeric,
@@ -246,9 +249,16 @@ impl<'a> Emitter<'a> {
                 } => {
                     self.emit_enum(name, *numeric, variants);
                 }
-                Item::TypeAlias { name, ty, .. } => {
+                Item::TypeAlias { name, ty, type_params, .. } => {
                     let mapped = luau_type(Some(ty)).unwrap_or_else(|| ty.clone());
-                    self.lines.push(format!("type {name} = {mapped}"));
+                    if type_params.is_empty() {
+                        self.lines.push(format!("type {name} = {mapped}"));
+                    } else {
+                        self.lines.push(format!(
+                            "type {name}<{}> = {mapped}",
+                            type_params.join(", ")
+                        ));
+                    }
                     self.lines.push(String::new());
                 }
             }
@@ -508,6 +518,9 @@ impl<'a> Emitter<'a> {
                         || arms.iter().any(|a| a.body.iter().any(|s| walk_stmt(s, name)))
                 }
                 Stmt::Spawn { body, .. } => body.iter().any(|s| walk_stmt(s, name)),
+                Stmt::Comptime { body, .. } | Stmt::Block(body) => {
+                    body.iter().any(|s| walk_stmt(s, name))
+                }
                 Stmt::If {
                     test,
                     consequent,
@@ -546,7 +559,6 @@ impl<'a> Emitter<'a> {
                                 || c.body.iter().any(|s| walk_stmt(s, name))
                         })
                 }
-                Stmt::Block(body) => body.iter().any(|s| walk_stmt(s, name)),
                 _ => false,
             }
         }
@@ -657,6 +669,12 @@ impl<'a> Emitter<'a> {
             self.local_names.insert(param.name.clone());
         }
         let params = self.param_list(func);
+        let gens = if func.type_params.is_empty() {
+            String::new()
+        } else {
+            let names: Vec<&str> = func.type_params.iter().map(|p| p.name.as_str()).collect();
+            format!("<{}>", names.join(", "))
+        };
         let ret = return_ann(func);
         if let Some(doc) = &func.doc {
             for line in doc.lines() {
@@ -669,20 +687,20 @@ impl<'a> Emitter<'a> {
             }
             if func.is_static {
                 self.lines
-                    .push(format!("function {owner}.{}({params}){ret}", func.name));
+                    .push(format!("function {owner}.{}{gens}({params}){ret}", func.name));
             } else if func.name == *owner {
                 self.lines
-                    .push(format!("function {owner}.new({params}){ret}"));
+                    .push(format!("function {owner}.new{gens}({params}){ret}"));
             } else {
                 self.lines
-                    .push(format!("function {owner}:{}({params}){ret}", func.name));
+                    .push(format!("function {owner}:{}{gens}({params}){ret}", func.name));
             }
         } else {
             if func.attrs.iter().any(|a| a.name == "native") {
                 self.lines.push("@native".into());
             }
             self.lines
-                .push(format!("const function {}({params}){ret}", func.name));
+                .push(format!("const function {}{gens}({params}){ret}", func.name));
         }
         if func.name == func.owner.as_deref().unwrap_or("") {
             self.lines
@@ -706,6 +724,16 @@ impl<'a> Emitter<'a> {
             self.local_names.insert("__janitor".into());
             self.lines
                 .push("\tlocal __janitor = Janitor.new()".into());
+        }
+        for param in &func.params {
+            if let Some(default) = &param.default {
+                self.lines.push(format!(
+                    "\tif {} == nil then {} = {} end",
+                    param.name,
+                    param.name,
+                    self.emit_expr(default)
+                ));
+            }
         }
         let body = func.body.clone();
         for stmt in &body {
@@ -1128,6 +1156,8 @@ impl<'a> Emitter<'a> {
                 out.push(format!("{prefix}end)"));
                 out
             }
+            // Intent comptime: erased from Luau (checked at compile time only).
+            Stmt::Comptime { .. } => Vec::new(),
             Stmt::FieldDestructure { names, value } => {
                 let obj = self.emit_expr(value);
                 let lhs = names.join(", ");
@@ -1298,6 +1328,9 @@ impl<'a> Emitter<'a> {
             Expr::String(s) => format!("\"{}\"", escape_lua_string(s)),
             Expr::Interp { parts } => emit_interp(self, parts),
             Expr::Ident(name) => {
+                if name == "None" {
+                    return "nil".into();
+                }
                 let base = self.emit_self_ident(name);
                 if self.observables.contains(name) {
                     format!("{base}.Value")
@@ -1423,7 +1456,6 @@ impl<'a> Emitter<'a> {
                     format!("-{inner}")
                 }
             }
-            Expr::GetService { service } => format!("game:GetService(\"{service}\")"),
             Expr::New { class_name, args } => {
                 if is_library_type(class_name) || !is_instance_type(class_name) {
                     let args = args.iter().map(|a| self.emit_expr(a)).collect::<Vec<_>>().join(", ");
@@ -1440,7 +1472,23 @@ impl<'a> Emitter<'a> {
                 name,
                 args,
                 access,
-            } => self.emit_call(object.as_deref(), name, args, access),
+                type_args,
+            } => {
+                if object.is_none() && name == "GetService" {
+                    let service = type_args
+                        .first()
+                        .cloned()
+                        .or_else(|| {
+                            args.first().and_then(|a| match a {
+                                Expr::String(s) => Some(s.clone()),
+                                _ => None,
+                            })
+                        })
+                        .unwrap_or_else(|| "Instance".into());
+                    return format!("game:GetService(\"{service}\")");
+                }
+                self.emit_call(object.as_deref(), name, args, access)
+            }
             Expr::Assign { op, left, right, .. } => {
                 let mapped = match op.as_str() {
                     ".:" | ".:=" => "..=",
@@ -1455,7 +1503,11 @@ impl<'a> Emitter<'a> {
                     }
                 }
                 if op == ".:" {
-                    return format!("{} .. {}", self.emit_expr(left), self.emit_expr(right));
+                    return format!(
+                        "{} .. {}",
+                        self.emit_concat_part(left),
+                        self.emit_concat_part(right)
+                    );
                 }
                 if op == "**" {
                     return format!("{} ^ {}", self.emit_expr(left), self.emit_expr(right));
@@ -1512,6 +1564,20 @@ impl<'a> Emitter<'a> {
         }
     }
 
+    fn emit_concat_part(&self, expr: &Expr) -> String {
+        match expr {
+            Expr::String(_) | Expr::Interp { .. } => self.emit_expr(expr),
+            Expr::Binary { op, .. } if op == ".:" => self.emit_expr(expr),
+            Expr::Member { .. }
+            | Expr::Call { .. }
+            | Expr::AtField { .. }
+            | Expr::This { .. }
+            | Expr::Cast { .. }
+            | Expr::OptionalChain { .. } => self.emit_expr(expr),
+            _ => format!("tostring({})", self.emit_expr(expr)),
+        }
+    }
+
     fn emit_call(
         &self,
         object: Option<&Expr>,
@@ -1526,6 +1592,26 @@ impl<'a> Emitter<'a> {
                 1 => parts[0].clone(),
                 _ => format!("({})", parts.join(" .. ")),
             };
+        }
+        if object.is_none() && name == "Some" {
+            return args
+                .first()
+                .map(|a| self.emit_expr(a))
+                .unwrap_or_else(|| "nil".into());
+        }
+        if object.is_none() && name == "Ok" {
+            let inner = args
+                .first()
+                .map(|a| self.emit_expr(a))
+                .unwrap_or_else(|| "nil".into());
+            return format!("{{ ok = {inner} }}");
+        }
+        if object.is_none() && name == "Err" {
+            let inner = args
+                .first()
+                .map(|a| self.emit_expr(a))
+                .unwrap_or_else(|| "nil".into());
+            return format!("{{ err = {inner} }}");
         }
         if object.is_none() && name == "unreachable" {
             return "error(\"unreachable\")".into();
@@ -1816,6 +1902,7 @@ fn stmt_has_signal_decl(body: &[Stmt]) -> bool {
         | Stmt::CFor { body, .. }
         | Stmt::Spawn { body, .. }
         | Stmt::Block(body)
+        | Stmt::Comptime { body, .. }
         | Stmt::Guard { body, .. } => stmt_has_signal_decl(body),
         Stmt::Switch { cases, .. } => cases.iter().any(|c| stmt_has_signal_decl(&c.body)),
         Stmt::Match { arms, .. } => arms.iter().any(|a| stmt_has_signal_decl(&a.body)),
@@ -1873,7 +1960,9 @@ fn stmt_has_cleanup(stmt: &Stmt) -> bool {
             discriminant,
             arms,
         } => expr_has_cleanup(discriminant) || arms.iter().any(|a| stmt_has_cleanup_list(&a.body)),
-        Stmt::Spawn { body, .. } | Stmt::Block(body) => stmt_has_cleanup_list(body),
+        Stmt::Spawn { body, .. } | Stmt::Block(body) | Stmt::Comptime { body, .. } => {
+            stmt_has_cleanup_list(body)
+        }
         _ => false,
     }
 }
@@ -1953,7 +2042,9 @@ fn stmt_has_await(stmt: &Stmt) -> bool {
             discriminant,
             arms,
         } => expr_has_await(discriminant) || arms.iter().any(|a| stmt_has_await_list(&a.body)),
-        Stmt::Spawn { body, .. } | Stmt::Block(body) => stmt_has_await_list(body),
+        Stmt::Spawn { body, .. } | Stmt::Block(body) | Stmt::Comptime { body, .. } => {
+            stmt_has_await_list(body)
+        }
         _ => false,
     }
 }
@@ -2127,8 +2218,13 @@ fn stream_print(expr: &Expr) -> Option<&'static str> {
 fn inferred_type(decl: &Decl) -> Option<String> {
     match &decl.value {
         Some(Expr::New { class_name, .. }) => Some(class_name.clone()),
+        Some(Expr::Call {
+            object: None,
+            name,
+            type_args,
+            ..
+        }) if name == "GetService" => type_args.first().cloned(),
         Some(Expr::Call { object: None, name, .. }) if is_datatype(name) => Some(name.clone()),
-        Some(Expr::GetService { service }) => Some(service.clone()),
         _ => luau_type(decl.value_type.as_deref()).filter(|t| t != "auto"),
     }
 }

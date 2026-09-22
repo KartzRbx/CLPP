@@ -1,14 +1,11 @@
 # examples/
 
-Sample CL++ programs. Instance methods use `.` (`hello.Greet(player)`). Definitions stay `Class::Method`. Inside a method, `@this` / `@field` is `self`.
+Language-only samples for the CL++ compiler. **Roblox / game samples live in Cluaupp**, not here.
 
 | Folder | Files | Shows |
 | --- | --- | --- |
-| `hello/` | `hello.server.clpp` | `struct` + `Class::Method`, `.Greet`, range-for, `~>Connect`, `func (` |
-| `syntax/` | `features.clp` | Types, `@coins`, `observable`, `signal`, `guard`, `~>`, `async`/`await`, `match`, `spawn` |
-| `shared/` | `config.clp`, `PlayerData.clh` | Constants module and data Template |
-| `ui/` | `FusionHud.client.clpp`, `VideCounter.client.clpp` | Declarative UI mounted with `.Mount` |
-| `advanced/` | `CombatServer.server.clpp` | `@janitor`, `@OnHit`, `@this.BindPart`, `guard`, `match`, `[[server]]` |
-| `leaderstats/` | `LeaderstatsServer.clh` + `.server.clpp` | Header + `@this` / `@janitor`, DataService, `~>Connect` |
+| `syntax/` | `features.clp` | Types, `@`, structs/methods, `guard`, `~>`, `match`, `spawn` |
+| `shared/` | `config.clp`, `PlayerData.clh`, `use_player_data.clp` | Constants + `import { … } from "…"` |
+
 
 Extensions: `.clh` (header), `.clp` (module), `.clpp` (implementation / script).

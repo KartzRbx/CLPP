@@ -1,58 +1,35 @@
 ---
-title: "#include"
+title: "#include (legacy / host)"
 sidebar_label: "#include"
 ---
 
-# #include
+# #include (legacy / host)
 
-<div class="clpp-ref-meta">Preprocessor</div>
+<div class="clpp-ref-meta">Preprocessor · legacy</div>
 
-Angle-bracket includes are IntelliSense (and `require` for libs). Quoted sibling stem is inlined.
+**For language modules, use [`import`](import).** This page documents what still exists for Cluaupp headers and old header/impl pairs.
 
-## Syntax
+## Prefer
 
 ```clpp
-#include <clpp/roblox.clh>
-#include "LeaderstatsServer.clh"
+import { Wallet } from "./PlayerData.clh";
 ```
 
-## Parameters
-
-| Name | Type | Description |
-| --- | --- | --- |
-| `path` | `string` | Header path. |
-
-## Return value
-
-None.
-
-## Luau emit
-
-`require(…) for libs / non-stem quotes; stem quote is inlined`
-
-## Description
-
-**Quoted, same stem** as the `.clpp`: the header is **inlined**.
-
-**Quoted, any other name**: `require`.
-
-**Angle** `<clpp/libs/janitor.clh>`: IntelliSense **and** `require` Janitor. `<clpp/roblox.clh>` is IntelliSense only (engine globals).
-
-See [headers](header-roblox).
-
-## Example
+## Legacy / host syntax
 
 ```clpp
 #include <clpp/roblox.clh>
 #include <clpp/libs/janitor.clh>
+#include "LeaderstatsServer.clh"
 ```
 
-Emits:
-
-```luau
-local Janitor = require(...)
-```
+| Form | Effect |
+| --- | --- |
+| `"Stem.clh"` same stem as the `.clpp` | Text **splice** (header/impl) |
+| `"Other.clh"` | `require` |
+| `<clpp/libs/…>` | IntelliSense **and** `require` |
+| `<clpp/roblox.clh>` | IntelliSense only (engine globals) |
 
 ## See also
 
-[header-roblox](header-roblox) · [header-janitor](header-janitor) · [pragma-strict](pragma-strict)
+[import](import) · [Modules](../modules) · [Files](../files)

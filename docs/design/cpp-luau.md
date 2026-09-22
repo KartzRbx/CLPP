@@ -2,31 +2,30 @@
 
 CL++ is the **language** (syntax, semantics, OOP): a C++-inspired subset aimed at Roblox scripts. The compiler emits Luau. Engine API wiring (generated headers, runtime, services) belongs to **Cluaupp**, not CL++.
 
-The study reference is real leaderstats code (`LeaderstatsServer`, `PlayerData`) and the C++ → Luau handbook.
-
 ## Goals
 
 1. Write like C++ (types, `struct`, `new`, `GetService<T>`), with our own operators: `.` property/instance method, `:` type/protected call, `::` static/manual Connect, `~>` Janitor, `.:` concatenation.
-2. Emit modern Luau (`local`, `const`, `const function`, `Instance.new`, `game:GetService`).
+2. Emit modern Luau (`local`, `const`, `Instance.new`, `game:GetService`).
 3. One input file becomes one output file (Rojo infers Script / LocalScript / ModuleScript from the name).
 4. Own extensions: `.clh`, `.clp`, `.clpp` — not `.h` / `.cpp`.
+5. Language modules use `import { Name } from "path"` ([RFC 0003](../../rfc/0003-module-system.md)).
 
 ## What we are not
 
-CL++ is **not** a full C++ compiler and **not** the Roblox API connector. There is no `std::`, pointer arithmetic, `delete`, overloading, generic templates (beyond the mapped ones), `continue`, ternary, `do/while`, `try/catch`, or `goto`.
+Not a full ISO C++ compiler and not the Roblox API connector. No `std::`, pointer arithmetic, `delete`, **overloading**, or C++ template specialization/SFINAE.
 
-`Player` is a Roblox Instance of class `Player`. Access is `player.Name` / `player.FindFirstChild(...)`. There is no `->`.
+**In** the language today (do not list as missing): `continue`, ternary, `do/while`, `try/catch`, `enum`, `type`/`using`, unions, checked generics (`template <typename T : Bound>`), `comptime`.
 
-Range-for uses `in` between the name and the collection: `for (Player player in players.GetPlayers())`. The C++-style `:` in `for (T x : xs)` is the same loop, not a protected call.
+`Player` is a Roblox Instance. Access is `player.Name` / `player.FindFirstChild(...)`. There is no `->`.
 
 ## Study files
 
 | Role | CL++ equivalent |
 | --- | --- |
-| `struct` + prototypes | `LeaderstatsServer.clh` |
-| `Class::` + `void init()` | `LeaderstatsServer.server.clpp` |
-| Template structs | `PlayerData.clh` |
+| Types / prototypes | `PlayerData.clh` + `import { … }` |
+| `Class::` + `void init()` | `.server.clpp` |
+| Checked generics | RFC 0010 samples in tests |
 
-## Matching stem
+## Matching stem (legacy)
 
-`LeaderstatsServer.clh` next to `LeaderstatsServer.server.clpp`. An include with the same stem is **inlined**. An include with another name becomes `require`.
+Same-stem `#include "Foo.clh"` next to `Foo.clpp` can still **splice** for header/impl pairs. Prefer `import` for cross-file language symbols. Angle `<clpp/…>` stays Cluaupp/platform.

@@ -73,6 +73,6 @@ workspace.ChildAdded~>Once(func (Instance child) {
 
 `~>` still uses Janitor. Vide sources stay independent of that connection.
 
-Full file: [`examples/ui/VideCounter.client.clpp`](https://github.com/KartzRbx/CLPP/blob/main/examples/ui/VideCounter.client.clpp).
+Full sample lives in the Cluaupp repo (Roblox UI host), not under CL++ `examples/`.
 
 Next: [Advanced typing](advanced-types).
