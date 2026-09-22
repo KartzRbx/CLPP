@@ -405,6 +405,34 @@ struct Leaderstats {
 }
 
 #[test]
+fn header_void_methods_export_unit_return() {
+    let art = compile_artifact_source(
+        r#"
+struct CurrenciesClient {
+    const void PathUpdate(Instance inst, double NewValue);
+    const void init();
+};
+"#,
+        Path::new("CurrenciesClient.clh"),
+        None,
+    )
+    .expect("header");
+    assert!(art.ok, "{:?}", art.error);
+    assert!(
+        art.luau.contains(
+            "PathUpdate: (self: CurrenciesClient, inst: Instance, NewValue: number) -> ()"
+        ),
+        "got: {}",
+        art.luau
+    );
+    assert!(
+        art.luau.contains("init: (self: CurrenciesClient) -> ()"),
+        "got: {}",
+        art.luau
+    );
+}
+
+#[test]
 fn observable_initial_value_is_marked() {
     let luau = compile(
         r#"

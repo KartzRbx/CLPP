@@ -577,9 +577,10 @@ impl<'a> Emitter<'a> {
                     {
                         let params = self.param_list(func);
                         let extra = if params.is_empty() { String::new() } else { format!(", {params}") };
+                        // Luau function types always need a return: void → `-> ()`
                         let ret = match luau_type(func.return_type.as_deref()) {
-                            Some(ty) if ty != "()" => format!(" -> {ty}"),
-                            _ => String::new(),
+                            Some(ty) => format!(" -> {ty}"),
+                            None => " -> ()".into(),
                         };
                         self.lines
                             .push(format!("\t{}: (self: {root}{extra}){ret},", func.name));
