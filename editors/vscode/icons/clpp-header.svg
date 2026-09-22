@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="CL++ header">
+  <rect x="8" y="8" width="112" height="112" rx="24" fill="#141820"/>
+  <rect x="8" y="8" width="112" height="112" rx="24" fill="none" stroke="#2a3340" stroke-width="2.5"/>
+  <g transform="translate(64 64) rotate(-16)">
+    <!-- Left stem -->
+    <rect x="-30" y="-36" width="16" height="72" rx="4" fill="#2B7CD3"/>
+    <!-- Right stem -->
+    <rect x="14" y="-36" width="16" height="72" rx="4" fill="#2B7CD3"/>
+    <!-- Crossbar -->
+    <rect x="-30" y="-8" width="60" height="16" rx="4" fill="#2B7CD3"/>
+  </g>
+</svg>

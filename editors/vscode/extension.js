@@ -89,8 +89,12 @@ function filePathOf(document) {
   return document.uri.scheme === "file" ? document.uri.fsPath : null;
 }
 
+function isClppLanguage(languageId) {
+  return languageId === "clpp" || languageId === "clpp-header";
+}
+
 function noteDocument(document) {
-  if (!document || document.languageId !== "clpp") {
+  if (!document || !isClppLanguage(document.languageId)) {
     return;
   }
   scheduleLoad(document.getText(), filePathOf(document), workspaceFolders());
@@ -394,7 +398,7 @@ function registerInProcessDiagnostics(context, selector, lens) {
   const collection = vscode.languages.createDiagnosticCollection("clpp");
   let timer;
   function refresh(document) {
-    if (!document || document.languageId !== "clpp") {
+    if (!document || !isClppLanguage(document.languageId)) {
       return;
     }
     const lint = lintDocument(document.getText());
@@ -476,7 +480,7 @@ function registerCommands(context, output, status) {
   context.subscriptions.push(
     vscode.commands.registerCommand("clpp.compileFile", async () => {
       const editor = vscode.window.activeTextEditor;
-      if (!editor || editor.document.languageId !== "clpp") {
+      if (!editor || !isClppLanguage(editor.document.languageId)) {
         vscode.window.showWarningMessage("Open a CL++ file first.");
         return;
       }
@@ -507,7 +511,7 @@ function registerCommands(context, output, status) {
     }),
     vscode.commands.registerCommand("clpp.showLuau", async () => {
       const editor = vscode.window.activeTextEditor;
-      if (!editor || editor.document.languageId !== "clpp") {
+      if (!editor || !isClppLanguage(editor.document.languageId)) {
         vscode.window.showWarningMessage("Open a CL++ file first.");
         return;
       }
@@ -544,6 +548,8 @@ function activate(context) {
   const selector = [
     { language: "clpp", scheme: "file" },
     { language: "clpp", scheme: "untitled" },
+    { language: "clpp-header", scheme: "file" },
+    { language: "clpp-header", scheme: "untitled" },
   ];
   const lens = createLens(vscode);
   const output = vscode.window.createOutputChannel("CL++");

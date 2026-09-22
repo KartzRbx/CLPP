@@ -11,7 +11,7 @@ function createLens(vscode) {
 }
 
 function applyLens(vscode, types, editor, diagnostics) {
-  if (!editor || editor.document.languageId !== "clpp") {
+  if (!editor || (editor.document.languageId !== "clpp" && editor.document.languageId !== "clpp-header")) {
     return;
   }
   const enabled = vscode.workspace.getConfiguration("clpp").get("lens.enabled", true);

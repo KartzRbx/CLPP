@@ -13,7 +13,10 @@ function startLspClient(context, vscode) {
       "CL++",
       { command, args: ["lsp"] },
       {
-        documentSelector: [{ language: "clpp" }],
+        documentSelector: [
+          { language: "clpp" },
+          { language: "clpp-header" },
+        ],
         synchronize: {
           fileEvents: vscode.workspace.createFileSystemWatcher("**/*.{clpp,clp,clh}"),
         },
@@ -155,7 +158,7 @@ function startStdioFallback(context, vscode) {
     });
 
   function sync(document) {
-    if (document.languageId !== "clpp") {
+    if (document.languageId !== "clpp" && document.languageId !== "clpp-header") {
       return;
     }
     send("textDocument/didChange", {
@@ -181,7 +184,7 @@ function startStdioFallback(context, vscode) {
     ready,
     isAlive: () => alive,
     open(document) {
-      if (document.languageId !== "clpp") {
+      if (document.languageId !== "clpp" && document.languageId !== "clpp-header") {
         return;
       }
       send("textDocument/didOpen", {
