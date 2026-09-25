@@ -228,7 +228,23 @@ fn parse_item(pair: Pair<Rule>, diagnostics: &mut Vec<CompileDiagnostic>) -> Vec
             }]
         }
         Rule::using_stmt | Rule::type_alias_decl => vec![parse_using(inner)],
-        Rule::import_decl => vec![parse_import(inner)],
+        Rule::import_decl => {
+            let line = inner.line_col().0;
+            diagnostics.push(CompileDiagnostic {
+                message: "use `link`".into(),
+                line,
+                column: 1,
+                severity: "error".into(),
+                code: Some("CLPP0801".into()),
+                help: Some("write `link \"./path\" as Name;`, `link @clpp…`, or `link @game…`".into()),
+            });
+            vec![Item::Unsupported {
+                kind: "import".into(),
+                line,
+                message: "use `link`".into(),
+            }]
+        }
+        Rule::link_decl => vec![parse_link(inner)],
         Rule::namespace_item => {
             let line = inner.line_col().0;
             diagnostics.push(CompileDiagnostic {
@@ -252,7 +268,27 @@ fn parse_item(pair: Pair<Rule>, diagnostics: &mut Vec<CompileDiagnostic>) -> Vec
             );
             items
         }
-        Rule::hash_line => Vec::new(),
+        Rule::hash_line => {
+            let text = inner.as_str().trim();
+            if text.starts_with("#include") || text.starts_with("# include") {
+                let line = inner.line_col().0;
+                diagnostics.push(CompileDiagnostic {
+                    message: "use `link`".into(),
+                    line,
+                    column: 1,
+                    severity: "error".into(),
+                    code: Some("CLPP0801".into()),
+                    help: Some("write `link \"./path\" as Name;`, `link @clpp…`, or `link @game…`".into()),
+                });
+                vec![Item::Unsupported {
+                    kind: "include".into(),
+                    line,
+                    message: "use `link`".into(),
+                }]
+            } else {
+                Vec::new()
+            }
+        }
         Rule::skip_decl => {
             let line = inner.line_col().0;
             let kind = if inner.as_str().trim_start().starts_with("enum") {
@@ -279,6 +315,38 @@ fn parse_item(pair: Pair<Rule>, diagnostics: &mut Vec<CompileDiagnostic>) -> Vec
             }]
         }
         _ => Vec::new(),
+    }
+}
+
+fn parse_link(pair: Pair<Rule>) -> Item {
+    let span = pair_span(&pair);
+    let mut module = String::new();
+    let mut alias = None;
+    for inner in pair.into_inner() {
+        match inner.as_rule() {
+            Rule::link_target => {
+                let text = inner.as_str().trim().trim_matches('"').to_string();
+                module = text;
+            }
+            Rule::ident => alias = Some(inner.as_str().to_string()),
+            _ => {}
+        }
+    }
+    let name = alias.unwrap_or_else(|| {
+        module
+            .rsplit(['/', '.'])
+            .next()
+            .unwrap_or("Module")
+            .trim_end_matches(".clh")
+            .trim_end_matches(".clpp")
+            .trim_end_matches(".clp")
+            .to_string()
+    });
+    Item::Import {
+        names: vec![crate::ast::ImportName { name, alias: None }],
+        module,
+        line: span.start_line,
+        span,
     }
 }
 

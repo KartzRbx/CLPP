@@ -65,6 +65,7 @@ KW_BY = @{ "by" ~ !ident_char }
 KW_TUPLE = @{ "tuple" ~ !ident_char }
 KW_VARIANT = @{ "variant" ~ !ident_char }
 KW_IMPORT = @{ "import" ~ !ident_char }
+KW_LINK = @{ "link" ~ !ident_char }
 KW_FROM = @{ "from" ~ !ident_char }
 // No export keyword (RFC 0003): every top-level symbol in a module file is importable.
 
@@ -79,7 +80,7 @@ kw = _{
     KW_AUTO | KW_BOOL | KW_CASE | KW_ELSE |
     KW_ENUM | KW_TRUE | KW_VOID | KW_FOR | KW_INT | KW_NEW | KW_USING | KW_TYPE | KW_INTERFACE | KW_AS |
     KW_EXTERN | KW_INLINE | KW_DOUBLE | KW_STRING | KW_FUNC | KW_NULL | KW_IF | KW_IN | KW_BY |
-    KW_TUPLE | KW_VARIANT | KW_IMPORT | KW_FROM
+    KW_TUPLE | KW_VARIANT | KW_IMPORT | KW_LINK | KW_FROM
 }
 
 ident = @{ !kw ~ (ASCII_ALPHA | "_") ~ ident_char* }
@@ -107,6 +108,7 @@ item = {
     | using_namespace
     | using_stmt
     | type_alias_decl
+    | link_decl
     | import_decl
     | namespace_item
     | skip_decl
@@ -114,7 +116,10 @@ item = {
 }
 
 hash_line = { "#" ~ (!NEWLINE ~ ANY)* }
-/// Canonical module import (010 / RFC 0003). Prefer this over `#include "Other.clh"`.
+/// Only module form. `import` is parsed so it can be rejected.
+link_decl = { KW_LINK ~ link_target ~ (KW_AS ~ ident)? ~ ";" }
+link_target = { at_link | string }
+at_link = @{ "@" ~ ident ~ ("." ~ ident)* }
 import_decl = {
     KW_IMPORT ~ "{" ~
         import_binding ~ ("," ~ import_binding)* ~ ","? ~

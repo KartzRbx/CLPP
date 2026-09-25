@@ -1,6 +1,5 @@
-use crate::ast::{CompileContext, ModuleRequire, SourceComment};
+use crate::ast::{CompileContext, SourceComment};
 use crate::error::ClppError;
-use crate::names::lib_from_include;
 use miette::Result;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -140,47 +139,14 @@ fn expand(
             continue;
         }
         if is_preprocessor_line(trimmed) {
-            if let Some(rest) = preprocessor_payload(trimmed, "include") {
-                let rest = rest.trim();
-                if let Some(path) = angled(rest) {
-                    if let Some(lib) = lib_from_include(&path) {
-                        if !ctx.libraries.contains(&lib) {
-                            ctx.libraries.push(lib);
-                        }
-                    }
-                } else if let Some(path) = quoted(rest) {
-                    let Some(resolved) = resolve_quoted_include(&path, file_path) else {
-                        return Err(ClppError::at_line(
-                            source,
-                            orig_line,
-                            1,
-                            format!("include not found: {path}"),
-                        )
-                        .into());
-                    };
-                    let included_stem = file_stem_name(&resolved);
-                    if included_stem == stem {
-                        let inner = crate::doctor::cached_read(&resolved).map_err(|err| {
-                            ClppError::at_line(source, orig_line, 1, format!("read {path}: {err}"))
-                        })?;
-                        let inner = expand(&inner, &resolved, ctx, seen, Some(mapped))?;
-                        if inner.is_empty() {
-                            push_mapped_line(ctx, &mut out, "", mapped);
-                        } else {
-                            out.push_str(&inner);
-                            if !inner.ends_with('\n') {
-                                out.push('\n');
-                            }
-                        }
-                        continue;
-                    } else {
-                        ctx.requires.push(ModuleRequire {
-                            name: included_stem,
-                            from_file: file_path.to_string_lossy().into_owned(),
-                            to_file: resolved.to_string_lossy().into_owned(),
-                        });
-                    }
-                }
+            if let Some(_rest) = preprocessor_payload(trimmed, "include") {
+                return Err(ClppError::at_line(
+                    source,
+                    orig_line,
+                    1,
+                    "use `link`".to_string(),
+                )
+                .into());
             }
             if let Some(rest) = preprocessor_payload(trimmed, "pragma") {
                 apply_pragma(rest, ctx);

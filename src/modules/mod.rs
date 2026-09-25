@@ -89,6 +89,18 @@ pub fn import_named(file: &mut CheckedFile, types: &mut TypeDatabase, seen: &mut
     let from_path = file.path.clone();
     let from = Path::new(&from_path);
     for (names, module, line) in imports {
+        if module.starts_with('@') {
+            let name = names
+                .first()
+                .map(|n| n.local_name().to_string())
+                .unwrap_or_else(|| "module".into());
+            file.ctx.requires.push(crate::ast::ModuleRequire {
+                name,
+                from_file: from_path.clone(),
+                to_file: module,
+            });
+            continue;
+        }
         let Some(resolved) = resolve_quoted_include(&module, from) else {
             file.diagnostics.push(crate::diag::diag(
                 crate::diag::CLPP0801,
@@ -147,6 +159,15 @@ pub fn named_requires(program: &Program, from: &Path) -> Vec<ModuleRequire> {
         let Item::Import { module, .. } = item else {
             continue;
         };
+        if module.starts_with('@') {
+            let name = module.rsplit(['.', '/']).next().unwrap_or("module").to_string();
+            out.push(ModuleRequire {
+                name,
+                from_file: from.to_string_lossy().into_owned(),
+                to_file: module.clone(),
+            });
+            continue;
+        }
         let Some(resolved) = resolve_quoted_include(module, from) else {
             continue;
         };
