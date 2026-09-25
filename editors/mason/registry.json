@@ -6,7 +6,7 @@
   "languages": ["CL++"],
   "categories": ["Compiler", "LSP"],
   "source": {
-    "id": "pkg:github/KartzRbx/CLPP@v0.8.0"
+    "id": "pkg:github/KartzRbx/CLPP@v0.8.1"
   },
   "bin": {
     "clpp": {
@@ -17,7 +17,7 @@
     }
   },
   "release": {
-    "tag": "v0.8.0",
+    "tag": "v0.8.1",
     "assets": {
       "win32-x64": "clpp.exe",
       "linux-x64": "clpp",

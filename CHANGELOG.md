@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.1
+
+- Editor grammar highlights `import { Name } from "…"`, including `from` / `as` and the module path. Completions list `import`, `from`, and `as`.
+
 ## 0.8.0 — Intent + opt Phase 1 lite
 
 Detalhamento completo: [`docs/CHANGELOG-0.8-DETAILED.md`](docs/CHANGELOG-0.8-DETAILED.md).

@@ -265,7 +265,7 @@ pub const KEYWORDS: &[&str] = &[
     "void", "int", "float", "double", "bool", "string", "auto", "func", "const", "observable",
     "signal", "struct", "interface", "type", "return", "if", "else", "while", "for", "in", "switch", "case", "default",
     "break", "continue", "guard", "match", "spawn", "parallel", "async", "await", "new", "null",
-    "true", "false", "this", "enum", "using", "try", "catch", "do", "delay", "defer", "comptime", "template",
+    "true", "false", "this", "enum", "using", "import", "from", "as", "try", "catch", "do", "delay", "defer", "comptime", "template",
     "typename", "override", "static", "private", "public", "class",
 ];
 

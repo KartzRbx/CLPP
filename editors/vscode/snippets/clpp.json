@@ -108,5 +108,10 @@
     "prefix": "inc",
     "body": ["#include <clpp/roblox.clh>"],
     "description": "Include CL++ stdlib"
+  },
+  "import": {
+    "prefix": "import",
+    "body": ["import { ${1:Name} } from \"${2:./Module.clh}\";"],
+    "description": "Named module import"
   }
 }
