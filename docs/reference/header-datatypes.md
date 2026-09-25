@@ -12,7 +12,7 @@ Vector3, CFrame, UDim2, Color3, and `string_concat`.
 ## Syntax
 
 ```clpp
-#include <clpp/datatypes.clh>
+link @clpp.datatypes;
 ```
 
 ## Parameters

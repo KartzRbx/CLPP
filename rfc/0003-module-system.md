@@ -4,14 +4,16 @@ Status: Accepted (MVP)
 
 ## Problem
 
-`.clh` was often spliced as text. Different-stem quoted includes needed a symbol graph. Named `import {}` is the language surface for modules.
+`.clh` files are modules. The language surface is `link`.
 
 ## Syntax (canonical)
 
 ```clpp
-import { Wallet } from "./PlayerData.clh";
-import { PlayerData as Data } from "./PlayerData.clh";
-import { Wallet, PlayerData } from "./PlayerData.clh";
+link @clpp.roblox;
+link @clpp.libs.janitor as Janitor;
+link @game.ReplicatedStorage.Modules.Combat as CombatModule;
+link "./PlayerData.clh" as PlayerData;
+link "./PlayerData.clh" as Data;
 ```
 
 Prefer this in all new CL++ sources.
@@ -21,9 +23,9 @@ There is **no `export` keyword**. Every top-level struct / function / type alias
 ### Legacy / host
 
 ```clpp
-#include "PlayerData.clh"   // different stem → still require() (Cluaupp / old code)
-#include "Main.clh"         // same stem as Main.clpp → text splice (header/impl pair)
-#include <clpp/roblox.clh>  // Cluaupp platform prelude — not a language module
+link "./PlayerData.clh" as PlayerData;   // different stem → still require() (Cluaupp / old code)
+link "./Main.clh" as Main;         // same stem as Main.clpp → text splice (header/impl pair)
+link @clpp.roblox;  // Cluaupp platform prelude — not a language module
 ```
 
 ## Semantics

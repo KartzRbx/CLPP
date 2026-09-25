@@ -9,7 +9,7 @@ CL++ is not C++. Write the forms this compiler emits. The editor pack (`clpp ins
 
 - Headers: `.clh`. Modules: `.clp` / untagged `.clpp`. Scripts: `.server.clpp` / `.client.clpp`.
 - One service type per pair: `LeaderstatsServer.clh` next to `LeaderstatsServer.server.clpp`.
-- `#include <clpp/roblox.clh>` for engine names. `#include <clpp/libs/janitor.clh>` when you use `~>`.
+- `link @clpp.roblox;` for engine names. `link @clpp.libs.janitor as Janitor;` when you use `~>`.
 
 ## Types
 

@@ -1,0 +1,10 @@
+[package]
+name = "clpp_syntax"
+version = "0.8.0"
+edition = "2021"
+description = "CL++ tokens and rowan concrete syntax tree"
+license = "MIT"
+publish = false
+
+[dependencies]
+rowan = { workspace = true }

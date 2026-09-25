@@ -8,7 +8,9 @@ export const sidebar = [
       { label: "Hello world", slug: "docs/hello-world" },
       { label: "Mental model", slug: "docs/mental-model" },
       { label: "Files and tags", slug: "docs/files" },
-      { label: "Modules and imports", slug: "docs/modules" },
+      { label: "Modules", slug: "docs/modules" },
+      { label: "Safety", slug: "docs/safety" },
+      { label: "Comparison", slug: "docs/comparison" },
       {
         label: "Learn the language",
         items: [
@@ -51,11 +53,11 @@ export const sidebar = [
     items: [
       { label: "Index", slug: "docs/reference" },
       {
-        label: "Modules & preprocessor",
+        label: "Modules",
         collapsed: true,
         items: [
-          { slug: "docs/reference/import" },
-          { slug: "docs/reference/include", label: "#include (legacy)" },
+          { slug: "docs/reference/import", label: "link" },
+          { slug: "docs/reference/include", label: "#include (removed)" },
           { slug: "docs/reference/attr-server" },
           { slug: "docs/reference/attr-client" },
           { slug: "docs/reference/pragma-strict" },
@@ -200,6 +202,7 @@ export const sidebar = [
     label: "Specification",
     items: [
       { label: "Compiler pipeline", slug: "docs/spec/compiler" },
+      { label: "Rowan CST", slug: "docs/compiler-architecture" },
       { label: "Type system", slug: "docs/architecture/TYPE_SYSTEM" },
       { label: "Optimization", slug: "docs/architecture/OPTIMIZATION" },
       { label: "Luau engineering map", slug: "docs/architecture/luau-mapping" },
@@ -218,6 +221,7 @@ export const sidebar = [
     collapsed: true,
     items: [
       { label: "Cluaupp 0.8.0 handoff", slug: "docs/cluaupp-080" },
+      { label: "Syntax for Cluaupp", slug: "docs/cluaupp-syntax" },
       { label: "Cluaupp host (hints)", slug: "docs/cluaupp-host" },
       { slug: "docs/cluaupp" },
       { slug: "docs/cluaupp-support" },

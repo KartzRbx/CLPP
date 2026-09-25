@@ -117,7 +117,7 @@ Header (`.clh`):
 
 ```clpp
 #pragma once
-#include <clpp/libs/janitor.clh>
+link @clpp.libs.janitor as Janitor;
 
 struct LeaderstatsServer {
     static constexpr int STARTING_COINS = 0;
@@ -188,13 +188,13 @@ Untagged files that only define `Class::` methods `return` the table (ModuleScri
 ## Includes and pragma
 
 ```clpp
-#include <clpp/roblox.clh>                 // IntelliSense only — no Luau emitted
-#include <clpp/generated/instances.clh>    // Cluaupp-generated dump
-#include <clpp/datatypes.clh>
-#include <clpp/libs/janitor.clh>           // IntelliSense + require
-#include <clpp/libs/dataservice.clh>
-#include "LeaderstatsServer.clh"           // same stem as the .clpp → inlined
-#include "../shared/PlayerData.clh"        // other stem → require
+link @clpp.roblox;                 // IntelliSense only — no Luau emitted
+link @clpp.generated.instances;    // Cluaupp-generated dump
+link @clpp.datatypes;
+link @clpp.libs.janitor as Janitor;           // IntelliSense + require
+link @clpp.libs.dataservice as DataService;
+link "./LeaderstatsServer.clh" as LeaderstatsServer;           // same stem as the .clpp → inlined
+link "../shared/PlayerData.clh" as PlayerData;        // other stem → require
 ```
 
 | Pragma | Luau |
@@ -383,7 +383,7 @@ auto [success, result] = pcall(func () {
 ### Hello Script
 
 ```clpp
-#include <clpp/roblox.clh>
+link @clpp.roblox;
 
 struct HelloServer {
     void Greet(Player player);

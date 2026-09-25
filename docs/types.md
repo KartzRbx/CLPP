@@ -92,6 +92,6 @@ These are **values**. Do not write `new Vector3`.
 
 ## Modules
 
-Bring types from other files with [`import`](modules) — not `#include` for language symbols.
+Bring types from other files with [`link`](modules).
 
 See [Type table](spec/types). Next: [Operators](operators).

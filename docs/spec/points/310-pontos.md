@@ -25,6 +25,8 @@ A lista abaixo preserva a numeração e os títulos dos 310 pontos do relatório
 
 ## 010. Eu criaria import {} no CL++
 
+The form to write now is `link`, not `import`.
+
 ## 011. Roblox deveria ser tratado como uma biblioteca tipada
 
 ## 012. Isso resolve seu problema de "herança da Roblox API"

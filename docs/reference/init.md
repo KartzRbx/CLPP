@@ -40,7 +40,7 @@ In `init()`, a synthetic `__janitor` is created and also `game:BindToClose`.
 ## Example
 
 ```clpp
-#include <clpp/roblox.clh>
+link @clpp.roblox;
 
 void init() {
     Players players = GetService<Players>();

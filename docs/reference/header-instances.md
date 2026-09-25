@@ -12,7 +12,7 @@ Generated Instance class names for IntelliSense (Cluaupp).
 ## Syntax
 
 ```clpp
-#include <clpp/generated/instances.clh>
+link @clpp.generated.instances;
 ```
 
 ## Parameters
@@ -34,7 +34,7 @@ Produced by Cluaupp from the Roblox API dump. CL++ the language does not ship a 
 ## Example
 
 ```clpp
-#include <clpp/generated/instances.clh>
+link @clpp.generated.instances;
 ```
 
 Emits:

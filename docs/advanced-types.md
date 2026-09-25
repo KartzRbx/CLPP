@@ -41,6 +41,6 @@ void Grant(Inventory bag, ItemId id, int n) {
 | `type` / `using` | name a shape without a new nominal |
 | `A \| B` | open union |
 | `template <typename T : B>` | checked generics |
-| `import { … }` | pull types from another module |
+| `link` | pull a module, `@clpp`, or `@game` |
 
 See [Types](types) · [TYPE_SYSTEM](architecture/TYPE_SYSTEM) · [Modules](modules).

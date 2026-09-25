@@ -36,14 +36,14 @@ void init() {
 3. `"Player name: " .: player.Name` — **concatenation** (`.:` → Luau `..`).
 4. `void init()` — runs at the end of Scripts and LocalScripts.
 5. `PlayerAdded~>Connect` — Janitor-style connection.
-6. Shared types from another file use [`import { … } from`](modules), not language `#include`.
+6. Shared types from another file use [`link`](modules).
 
-Platform headers (`<clpp/roblox.clh>`) remain a **Cluaupp** concern when the host wants IDE dump types.
+Platform names come from `link @clpp.roblox;`.
 
 ## Multi-file
 
 ```clpp
-import { Wallet } from "./PlayerData.clh";
+link "./PlayerData.clh" as Wallet;
 ```
 
 See [Modules](modules) · [Files](files).

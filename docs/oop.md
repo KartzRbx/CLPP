@@ -18,7 +18,7 @@ struct LeaderstatsServer {
 Consumers pull it with:
 
 ```clpp
-import { LeaderstatsServer } from "./LeaderstatsServer.clh";
+link "./LeaderstatsServer.clh" as LeaderstatsServer;
 ```
 
 ## Implementation

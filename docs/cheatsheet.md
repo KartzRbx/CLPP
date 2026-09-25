@@ -10,7 +10,7 @@ title: Language cheat sheet
 
 ## Modules
 
-`import { Name } from "./path.clh"` · `import { Name as Alias } from "…"` · angle `#include <clpp/…>` = Cluaupp/host only
+`link @clpp.roblox` · `link @clpp.libs.janitor as Janitor` · `link @game.ReplicatedStorage.Modules.Combat as Combat` · `link "./path.clh" as Name`
 
 ## Access
 

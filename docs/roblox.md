@@ -40,6 +40,6 @@ player.GetPropertyChangedSignal("Name")~>Connect(func () {
 
 ## Libraries
 
-`#include <clpp/libs/janitor.clh>` both documents Janitor and emits `require`. DataService tables use `DataService.Server` / `DataService.Client`.
+`link @clpp.libs.janitor as Janitor;` both documents Janitor and emits `require`. DataService tables use `DataService.Server` / `DataService.Client`.
 
 Next: [Observable and signals](observables-signals).

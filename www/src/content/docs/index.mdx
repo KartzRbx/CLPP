@@ -1,64 +1,101 @@
 ---
 title: CL++
-description: A C++-inspired language that compiles to Luau. User guide, language reference, and specification.
+description: An industrial language for Roblox. Compiles to Luau with a lossless Rust compiler.
 template: splash
 hero:
   title: CL++
-  tagline: A C++-inspired language that compiles to Luau. Syntax, semantics, and OOP — not a Roblox SDK.
+  tagline: An industrial language for Roblox. A Rust compiler with a lossless CST emits Luau.
   actions:
     - text: Install
       link: docs/install
       icon: rocket
       variant: primary
-    - text: Hello world
-      link: docs/hello-world
+    - text: Syntax
+      link: docs/cluaupp-syntax
       icon: right-arrow
-    - text: Benchmarks
-      link: docs/benchmarks
+    - text: Comparison
+      link: docs/comparison
       variant: minimal
 ---
 
 import { Card, CardGrid } from "@astrojs/starlight/components";
 
 <CardGrid stagger>
-  <Card title="User guide" icon="open-book">
-    Install the compiler, write a first script, then learn types, modules, `@this`, and style.
-    Start at [What is CL++?](docs/intro).
-  </Card>
   <Card title="Modules" icon="puzzle">
-    Language dependencies use `import { Name } from "path"` — not `#include` as the module system.
-    Read [Modules and imports](docs/modules).
+    The only module form is `link` — `@clpp`, `@game`, or a relative path.
+    Read [Modules](docs/modules).
   </Card>
-  <Card title="Language reference" icon="list-format">
-    One page per construct: syntax, parameters, Luau emit, example.
-    Open the [index](docs/reference).
+  <Card title="Compiler" icon="setting">
+    Cargo workspace, rowan CST, error recovery, and an LSP that still completes on a broken line.
+    Read [Rowan CST](docs/compiler-architecture).
   </Card>
-  <Card title="Benchmarks" icon="rocket">
-    Real compile throughput and type-check catches — the CL++ differential vs “just write Luau.”
-    See [Benchmarks](docs/benchmarks).
+  <Card title="Safety" icon="approve-check">
+    `CLUAU_AUTH` and `CLUAU_PAR` run in the type checker. The editor underlines them while you type.
+    Read [Safety](docs/safety).
+  </Card>
+  <Card title="Comparison" icon="list-format">
+    How CL++ sits next to Luau, roblox-ts, and C++ on Roblox.
+    Read [Comparison](docs/comparison).
   </Card>
 </CardGrid>
 
-## How the compiler sits in a project
+## Showcase
+
+```clpp
+link @clpp.roblox;
+link @clpp.libs.janitor as Janitor;
+link @game.ReplicatedStorage.Modules.Combat as Combat;
+
+struct Session {
+    Janitor janitor;
+    optional<Player> player;
+    void Bind(Player player);
+};
+
+void Session::Bind(Player player) {
+    @player = Some(player);
+    @janitor.Add(player);
+    Combat.Start(player);
+}
+
+@server
+void Save(Session session);
+
+@client
+void OpenHud(Session session);
+
+void init() {
+    Players players = GetService<Players>();
+    Session session;
+    session.janitor = new Janitor();
+    players.PlayerAdded~>Connect(func (Player player) {
+        session.Bind(player);
+        Save(session);
+    });
+}
+```
+
+`link @clpp…` is the standard library. `link @game…` is a Rojo DataModel path and becomes `GetService` plus `require`. `@server` / `@client` are checked against the file tag. A Client file that calls `Save` is `CLUAU_AUTH001`, and the compiler does not emit Luau.
+
+## Pipeline
 
 <pre class="mermaid">
 flowchart LR
-  src[".clpp / .clh / .clp"] --> pest["Pest grammar"]
-  pest --> mods["import graph"]
-  mods --> check["TypeId check"]
-  check --> luau["Luau emit"]
+  src[".clpp source"] --> cst["rowan CST"]
+  cst --> ty["clpp_ty AUTH and PAR"]
+  ty --> luau["Luau"]
   luau --> rojo["Rojo / Cluaupp"]
-  src --> lsp["Editor pack + LSP"]
+  cst --> lsp["LSP completion"]
 </pre>
 
-CL++ is the **language**. [Cluaupp](https://github.com/KartzRbx/Cluaupp) owns engine headers, Rojo, and project `init`. There is no bytecode VM — `clpp` writes Luau files.
+CL++ is the language and the compiler. [Cluaupp](https://github.com/KartzRbx/Cluaupp) is the Roblox host: project layout, Rojo, and the engine registry. `clpp` does not ship a bytecode VM.
 
-## Two accessors to remember
+## Accessors
 
 | You write | You mean |
 | --- | --- |
 | `player.Name` / `player.Kick()` | property / instance method |
 | `@this` / `@janitor` | receiver and field inside `Class::Method` |
 | `players.PlayerAdded~>Connect` | Janitor connection |
-| `import { Wallet } from "./…"` | language module |
-| `Player player` | Instance of class Player |
+| `link "./Wallet.clh" as Wallet` | language module |
+| `Player player` | instance of class Player |

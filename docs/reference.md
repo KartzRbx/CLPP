@@ -116,7 +116,7 @@ Every utility has its own page: syntax, parameters, return value, Luau emit, exa
 ## Modules &amp; preprocessor
 
 - [import](reference/import)
-- [#include (legacy / host)](reference/include)
+- [link](reference/import)
 - [#pragma strict](reference/pragma-strict)
 - [#pragma nostrict](reference/pragma-nstrict)
 - [#pragma native](reference/pragma-native)

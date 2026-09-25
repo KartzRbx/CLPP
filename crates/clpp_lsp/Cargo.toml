@@ -1,0 +1,14 @@
+[package]
+name = "clpp_lsp"
+version = "0.8.0"
+edition = "2021"
+description = "CL++ language server (new CST). The live server is still the `clpp` binary."
+license = "MIT"
+publish = false
+
+[dependencies]
+clpp_cli = { path = "../clpp_cli" }
+clpp_parser = { path = "../clpp_parser" }
+clpp_syntax = { path = "../clpp_syntax" }
+clpp_ty = { path = "../clpp_ty" }
+lsp-types = "0.97"

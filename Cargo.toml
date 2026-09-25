@@ -41,5 +41,18 @@ strip = true
 # panic = "unwind" (miette backtraces; do not abort)
 
 [workspace]
-members = ["."]
+resolver = "2"
+members = [
+    ".",
+    "crates/clpp_syntax",
+    "crates/clpp_parser",
+    "crates/clpp_hir",
+    "crates/clpp_ty",
+    "crates/clpp_codegen",
+    "crates/clpp_lsp",
+    "crates/clpp_cli",
+]
 exclude = ["fuzz"]
+
+[workspace.dependencies]
+rowan = "0.15"

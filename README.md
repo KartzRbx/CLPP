@@ -31,7 +31,7 @@
 CL++ is the **language**. You write C++-looking source; `clpp` emits one Luau file. [Cluaupp](https://github.com/KartzRbx/Cluaupp) owns engine headers, Rojo, and project `init`.
 
 ```clpp
-#include <clpp/roblox.clh>
+link @clpp.roblox;
 
 void init() {
     Players players = GetService<Players>();

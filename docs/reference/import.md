@@ -1,55 +1,40 @@
 ---
-title: "import"
-sidebar_label: "import"
+title: "link"
+sidebar_label: "link"
 ---
 
-# import
+# link
 
 <div class="clpp-ref-meta">Modules</div>
 
-Named import of another CL++ module’s exports. Canonical module surface ([RFC 0003](https://github.com/KartzRbx/CLPP/blob/main/rfc/0003-module-system.md)).
+The only module form. `import` and `#include` do not parse.
 
 ## Syntax
 
 ```clpp
-import { Name } from "./path.clh";
-import { Name as Alias } from "./path.clh";
-import { A, B } from "./path.clp";
+link @clpp.roblox;
+link @clpp.libs.janitor as Janitor;
+link @game.ReplicatedStorage.Modules.Combat as CombatModule;
+link "./Components/Health" as Health;
 ```
 
 ## Parameters
 
-| Name | Type | Description |
-| --- | --- | --- |
-| `Name` | ident | Exported symbol in the module |
-| `Alias` | ident | Local name in the consumer (`as`) |
-| `path` | string | Module path relative to this file |
-
-## Return value
-
-None. Symbols are bound into the file scope for checking and completion.
+| Name | Description |
+| --- | --- |
+| `@clpp…` | Standard library path |
+| `@game…` | DataModel path from the Rojo project |
+| `"./…"` | Path relative to this file |
+| `as Alias` | Name bound in this file |
 
 ## Luau emit
 
-`require(…)` for the module path (host maps the string).
+`@game` becomes `GetService` plus `require`. `@clpp` is a prelude and does not emit `require`. A relative path becomes `require`.
 
-## Description
+## Errors
 
-- Merges only listed names (and their members).
-- Cycles are cut with a visit set.
-- Missing path → `CLPP0801`.
-- Not a text splice — that remains the same-stem `#include` legacy case.
-
-## Example
-
-```clpp
-import { Wallet } from "./PlayerData.clh";
-
-void F(Wallet w) {
-    post(w.Coins);
-}
-```
-
-## See also
-
-[Modules guide](../modules) · [legacy #include](include) · [Files](../files)
+| Code | When |
+| --- | --- |
+| `` use `link` `` | The file uses `import` or `#include` |
+| `CLPP0801` | The path does not exist |
+| `CLPP1001` | The module graph has a cycle |

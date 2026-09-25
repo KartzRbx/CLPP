@@ -12,7 +12,7 @@ Engine globals for IntelliSense. Does not emit `require`.
 ## Syntax
 
 ```clpp
-#include <clpp/roblox.clh>
+link @clpp.roblox;
 ```
 
 ## Parameters
@@ -34,7 +34,7 @@ Gives the editor `game`, `workspace`, services, and the usual Roblox globals. Ru
 ## Example
 
 ```clpp
-#include <clpp/roblox.clh>
+link @clpp.roblox;
 void init() {
     Players players = GetService<Players>();
 }

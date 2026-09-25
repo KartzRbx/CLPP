@@ -11,7 +11,7 @@ Detalhamento completo: [`docs/CHANGELOG-0.8-DETAILED.md`](docs/CHANGELOG-0.8-DET
 ### Compiler
 - Unified TypeId checker path (`check_unified`) with Result/Option assign rules (`CLPP0202`).
 - RFC 0012/0013: `Ok`/`Err`/`Some`/`None`, `?` (`Expr::Try`, `CLPP1101`), exhaustive Option/Result `match` (`CLPP1102`).
-- **Modules (RFC 0003):** canonical `import { Name } from "./path"` replaces `#include` as the language surface; no `export` keyword; cycles → `CLPP1001`. Legacy `#include` kept for header/impl splice and Cluaupp angle includes only.
+- **Modules:** `link @clpp…`, `link @game…`, and `link "./path" as Name`. `import` and `#include` are rejected.
 - Opt Phase 1 lite: SoA rewrite, buffer specialize hints, mono type-arg inference, inline cost heuristic, broader escape analysis, loop invariant hoist.
 - Session: dependency graph + invalidate (RFC 0006 lite).
 - Platform: `capabilities_from_hints` for Cluaupp.

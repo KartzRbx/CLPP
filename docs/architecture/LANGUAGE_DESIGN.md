@@ -18,7 +18,7 @@ Platform (fora do núcleo): Roblox API, `GetService`, Instance, Rojo — ver `RO
 
 ## Recursos centrais do MVP
 
-`struct`, functions, methods, variables, `const`, optional, unions, inheritance (IS-A ≠ intersection), **`import { Name } from "path"`**, `using`/`type`, guards, `static_cast`, `@`, `~>`, `.:`.
+`struct`, functions, methods, variables, `const`, optional, unions, inheritance (IS-A ≠ intersection), **`link`**, `using`/`type`, guards, `static_cast`, `@`, `~>`, `.:`.
 
 APIs de plataforma (`GetService<T>`, tipos Instance) entram pelo prelude do host, não pela gramática.
 

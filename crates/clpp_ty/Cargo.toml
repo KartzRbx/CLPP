@@ -1,0 +1,11 @@
+[package]
+name = "clpp_ty"
+version = "0.8.0"
+edition = "2021"
+description = "CL++ type checker, including context and parallel safety"
+license = "MIT"
+publish = false
+
+[dependencies]
+miette = { version = "7", features = ["fancy"] }
+thiserror = "2"

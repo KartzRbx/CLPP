@@ -31,14 +31,14 @@ An Instance of class `T` (`game:GetService("T")`).
 
 ## Description
 
-`T` is the Roblox class name, not a C++ template you define. You must `#include <clpp/roblox.clh>` (IntelliSense) so the editor knows the type.
+`T` is the Roblox class name, not a C++ template you define. You must `link @clpp.roblox;` (IntelliSense) so the editor knows the type.
 
 There is no `game:GetService` in CL++ source — always this form.
 
 ## Example
 
 ```clpp
-#include <clpp/roblox.clh>
+link @clpp.roblox;
 
 void init() {
     Players players = GetService<Players>();

@@ -18,7 +18,7 @@ Cluaupp (or your Rojo tree) should `require` Fusion. In CL++ you treat it as a g
 ## Coins HUD
 
 ```clpp
-#include <clpp/roblox.clh>
+link @clpp.roblox;
 
 void init() {
     Players players = GetService<Players>();

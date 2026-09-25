@@ -1,35 +1,18 @@
 ---
-title: "#include (legacy / host)"
-sidebar_label: "#include"
+title: "#include (removed)"
+sidebar_label: "#include (removed)"
 ---
 
-# #include (legacy / host)
+# #include
 
-<div class="clpp-ref-meta">Preprocessor · legacy</div>
+<div class="clpp-ref-meta">Removed</div>
 
-**For language modules, use [`import`](import).** This page documents what still exists for Cluaupp headers and old header/impl pairs.
-
-## Prefer
+`#include` is not a module form. The parser reports `` use `link` ``.
 
 ```clpp
-import { Wallet } from "./PlayerData.clh";
+link @clpp.roblox;
+link @clpp.libs.janitor as Janitor;
+link "./LeaderstatsServer.clh" as LeaderstatsServer;
 ```
 
-## Legacy / host syntax
-
-```clpp
-#include <clpp/roblox.clh>
-#include <clpp/libs/janitor.clh>
-#include "LeaderstatsServer.clh"
-```
-
-| Form | Effect |
-| --- | --- |
-| `"Stem.clh"` same stem as the `.clpp` | Text **splice** (header/impl) |
-| `"Other.clh"` | `require` |
-| `<clpp/libs/…>` | IntelliSense **and** `require` |
-| `<clpp/roblox.clh>` | IntelliSense only (engine globals) |
-
-## See also
-
-[import](import) · [Modules](../modules) · [Files](../files)
+`#pragma once`, `#pragma strict`, `#pragma native`, and `#pragma optimize` stay. See [link](import).

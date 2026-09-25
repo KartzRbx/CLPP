@@ -1,0 +1,10 @@
+[package]
+name = "clpp_codegen"
+version = "0.8.0"
+edition = "2021"
+description = "CL++ Luau emit"
+license = "MIT"
+publish = false
+
+[dependencies]
+clpp_ty = { path = "../clpp_ty" }

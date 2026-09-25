@@ -3,7 +3,7 @@ title: Compiler pipeline
 description: How CL++ source becomes Luau. There is no bytecode VM.
 ---
 
-CL++ is a **source-to-source** compiler. Pest parses `.clpp` / `.clh` / `.clp`. **Analysis** builds scopes and feeds the editor. Codegen writes Luau. There is no CL++ virtual machine, no opcode table, and no C++ embedding API — host tools call `clpp compile` or `clpp api compile`.
+The pipeline that the site documents is the Cargo workspace: a rowan CST, then `clpp_ty`, then Luau. See [Rowan CST](../compiler-architecture). The binary installed as `clpp` 0.8 still parses with Pest until that cutover finishes. There is no bytecode VM.
 
 How this maps to the [Luau](https://github.com/luau-lang/luau) repo: [Luau engineering map](../architecture/luau-mapping).
 

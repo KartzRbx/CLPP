@@ -1,68 +1,50 @@
 ---
-title: Modules and imports
-description: Named import { } from is the language module surface. Headers and angle includes are host/legacy.
+title: Modules and links
+description: link is the only module form. import and #include are rejected.
 ---
 
-# Modules and imports
+# Modules and links
 
-CL++ modules are **files**. The language surface for pulling another file’s symbols is:
+Pull another file or a host namespace with `link`:
 
 ```clpp
-import { Wallet } from "./PlayerData.clh";
-import { PlayerData as Data } from "./PlayerData.clh";
-import { Wallet, PlayerData } from "./PlayerData.clh";
+link @clpp.roblox;
+link @clpp.libs.janitor as Janitor;
+link @game.ReplicatedStorage.Modules.Combat as CombatModule;
+link "./PlayerData.clh" as PlayerData;
+link "./PlayerData.clh" as Data;
 ```
 
-This is the form new code should use. See [RFC 0003](https://github.com/KartzRbx/CLPP/blob/main/rfc/0003-module-system.md).
+`import { … } from` and `#include` are syntax errors. The diagnostic is `` use `link` ``.
 
 ## Who is visible?
 
-Top-level `struct` / `class` / `interface` / `enum` / `type` / `using` / free functions in the module file are **exports**. Named import merges only the listed names (plus their fields/methods). There is no separate `export` keyword in the MVP — visibility is “top-level in the module file.”
+Top-level `struct`, `class`, `interface`, `enum`, `type`, `using`, and free functions in the linked file are the module's symbols. `as` is the name in this file. There is no `export` keyword.
 
-## How does the compiler resolve paths?
+## How paths resolve
 
 | Form | Resolution |
 | --- | --- |
-| `"./Foo.clh"` / `"../shared/Bar.clp"` | Relative to the importing file |
-| Same stem as the current `.clpp` (legacy `#include`) | Text splice for header/impl pairs |
-| Angle `<clpp/…>` | **Cluaupp / platform** prelude — not a language module |
+| `@clpp.libs.janitor` | Standard library (`CLPP_INCLUDE`, the install pack, or `~/.clpp/include`) |
+| `@game.ReplicatedStorage.Modules.Combat` | Rojo `default.project.json`, or the place named in `clpp.toml` |
+| `"./Foo.clh"` / `"../shared/Bar.clp"` | Relative to this file |
 
-Missing module path → diagnostic **CLPP0801**.
-
-## Cycles
-
-The module graph keeps a `seen` set and runs **`detect_cycles`**. A real cycle produces diagnostic **CLPP1001** (break it with a shared types-only `.clh` or by removing the back-edge). The `seen` set also prevents infinite recursion while loading.
-
-## Type-only / star / package (status)
-
-| Feature | Status |
-| --- | --- |
-| `import { X } from "…"` | **Implemented** |
-| `import { X as Y }` | **Implemented** |
-| `import type { … }` | Not yet — planned on the same resolver |
-| `import * as M` | Not yet |
-| Package / registry resolution | Host concern (Cluaupp / Rojo layout) |
+Missing path → **CLPP0801**. A cycle → **CLPP1001**.
 
 ## Emit
 
-Named imports become `require(…)` entries on the compile artifact (`CompileContext.requires`). Cluaupp / Rojo map those paths into the DataModel.
+| Form | Luau |
+| --- | --- |
+| `link @game.Service.Path as Name` | `game:GetService("Service")` and `require(Service.Path)` |
+| `link @clpp…` | Prelude comment only. Not a game `require`. |
+| `link "./Path" as Name` | `require` of that module |
 
-## Legacy `#include`
+Luau is emitted only when Context Safety (`CLUAU_AUTH`) and parallel safety (`CLUAU_PAR`) pass.
 
-```clpp
-#include "PlayerData.clh"      // different stem → still require()
-#include "Main.clh"            // same stem as Main.clpp → splice
-#include <clpp/roblox.clh>     // platform IntelliSense — Cluaupp
-```
-
-Prefer `import { … } from` for **language** dependencies. Keep angle includes for **engine / generated** headers owned by Cluaupp. Details: [reference/import](reference/import), legacy notes on [reference/include](reference/include).
-
-## File roles (unchanged)
+## File roles
 
 | Extension | Role | Typical Roblox instance |
 | --- | --- | --- |
-| `.clh` | Types, constants, prototypes | ModuleScript (types) |
+| `.clh` | Types, constants, prototypes | ModuleScript |
 | `.clp` | Shared module | ModuleScript |
-| `.clpp` | Script / methods | Script / LocalScript / ModuleScript from tag |
-
-Next: [Types](types) · [Files and tags](files).
+| `.clpp` | Script or methods | Script, LocalScript, or ModuleScript from the tag |

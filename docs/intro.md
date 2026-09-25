@@ -14,7 +14,7 @@ By the end of this course you will:
 
 1. Install `clpp` and the editor pack.
 2. Write `.clh` / `.clp` / `.clpp` files and know which Roblox instance they become.
-3. Connect files with [`import { Name } from "path"`](modules).
+3. Connect files with [`link`](modules).
 4. Use `.` for the default, `:` for types and safe calls, `::` for static/manual Connect, `~>` for Janitor.
 5. Build services with `struct`, `guard`, `match`, `observable`, and `signal`.
 6. Read the **[language reference](reference)** the same way you would read a C++ reference.
@@ -37,7 +37,7 @@ void init() {
 }
 ```
 
-`void init()` is the script entry point. There is no `int main()`. `post` is print. `GetService<Players>()` is `game:GetService("Players")`. Engine IntelliSense still comes from Cluaupp headers when the host injects them — not from inventing `#include` as the module system.
+`void init()` is the script entry point. There is no `int main()`. `post` is print. `GetService<Players>()` is `game:GetService("Players")`. Standard library and DataModel names come from [`link`](modules).
 
 ## Course map
 

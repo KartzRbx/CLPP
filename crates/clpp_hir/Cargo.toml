@@ -1,0 +1,9 @@
+[package]
+name = "clpp_hir"
+version = "0.8.0"
+edition = "2021"
+description = "CL++ high-level IR"
+license = "MIT"
+publish = false
+
+[dependencies]

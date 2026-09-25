@@ -1,3 +1,5 @@
+> Current module syntax is `link`. Sections below that show `import` or `#include` describe the 0.8 cut, not the syntax to write now. See [modules](modules).
+
 # Relatório COMPLETO de mudanças — CL++ 0.8
 
 Tudo o que mudou nesta linha de trabalho, sem omitir camadas.
@@ -91,9 +93,9 @@ import_binding = { ident ~ (KW_AS ~ ident)? }
 **`#include` continua só como legado / host:**
 
 ```clpp
-#include "PlayerData.clh"      // stem diferente → ainda require()
-#include "Main.clh"            // mesmo stem que Main.clpp → splice header/impl
-#include <clpp/roblox.clh>     // prelude Cluaupp — NÃO é módulo de linguagem
+link "./PlayerData.clh" as PlayerData;      // stem diferente → ainda require()
+link "./Main.clh" as Main;            // mesmo stem que Main.clpp → splice header/impl
+link @clpp.roblox;     // prelude Cluaupp — NÃO é módulo de linguagem
 ```
 
 Regra prática: **código novo = `import`**. Angle `#include <…>` só para headers de engine/gerados do Cluaupp.
@@ -585,9 +587,9 @@ import { PlayerData as Data } from "./PlayerData.clh";
 ### Forma antiga (legado / host)
 
 ```clpp
-#include "PlayerData.clh"       // ainda aceito; preferir import
-#include "Main.clh"             // splice se mesmo stem do .clpp
-#include <clpp/roblox.clh>      // só plataforma Cluaupp
+link "./PlayerData.clh" as PlayerData;       // ainda aceito; preferir import
+link "./Main.clh" as Main;             // splice se mesmo stem do .clpp
+link @clpp.roblox;      // só plataforma Cluaupp
 ```
 
 | Precisa de… | Use |

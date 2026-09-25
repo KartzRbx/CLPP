@@ -12,7 +12,7 @@ IntelliSense **and** `require` of Janitor. Needed for [`~>`](operator-janitor).
 ## Syntax
 
 ```clpp
-#include <clpp/libs/janitor.clh>
+link @clpp.libs.janitor as Janitor;
 ```
 
 ## Parameters
@@ -34,7 +34,7 @@ None.
 ## Example
 
 ```clpp
-#include <clpp/libs/janitor.clh>
+link @clpp.libs.janitor as Janitor;
 auto janitor = new Janitor();
 ```
 

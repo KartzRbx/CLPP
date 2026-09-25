@@ -12,7 +12,7 @@ DataService table (`.Server` / `.Client`) plus `require`.
 ## Syntax
 
 ```clpp
-#include <clpp/libs/dataservice.clh>
+link @clpp.libs.dataservice as DataService;
 ```
 
 ## Parameters

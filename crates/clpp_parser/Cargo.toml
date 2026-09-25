@@ -1,0 +1,11 @@
+[package]
+name = "clpp_parser"
+version = "0.8.0"
+edition = "2021"
+description = "Error-tolerant CL++ parser (rowan CST)"
+license = "MIT"
+publish = false
+
+[dependencies]
+clpp_syntax = { path = "../clpp_syntax" }
+rowan = { workspace = true }

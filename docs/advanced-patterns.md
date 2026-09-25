@@ -7,8 +7,8 @@ title: Advanced production patterns
 A compact combat pickup script: **guard**, **match**, **observable**, **signal**, **Once**, **spawn**, **[[server]]**.
 
 ```clpp
-#include <clpp/roblox.clh>
-#include <clpp/libs/janitor.clh>
+link @clpp.roblox;
+link @clpp.libs.janitor as Janitor;
 
 struct CombatServer {
     Janitor janitor;

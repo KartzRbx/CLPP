@@ -1,11 +1,11 @@
 ---
 title: Files, tags, modules
-description: Extensions, Rojo tags, and how modules connect — import first, include only for host/legacy.
+description: Extensions, Rojo tags, and how modules connect with link.
 ---
 
 # Files, tags, modules
 
-Everything the compiler reads is CL++. The extension chooses **role**; **`import`** chooses **dependencies**.
+Everything the compiler reads is CL++. The extension chooses the **role**. **`link`** chooses the **dependency**.
 
 ## Extensions
 
@@ -26,26 +26,17 @@ Everything the compiler reads is CL++. The extension chooses **role**; **`import
 | `Foo.clp` / `Foo.clpp` (no tag) | ModuleScript |
 | `Foo.clh` | type ModuleScript |
 
-## Modules (canonical)
+## Modules
 
 ```clpp
-import { Wallet } from "./PlayerData.clh";
-import { PlayerData as Data } from "./PlayerData.clh";
+link @clpp.roblox;
+link @clpp.libs.janitor as Janitor;
+link "./PlayerData.clh" as PlayerData;
+link "./PlayerData.clh" as Data;
 ```
 
-Full rules: [Modules and imports](modules).
+Full rules: [Modules and links](modules).
 
-## Platform / legacy includes
-
-Angle brackets are **Cluaupp / platform** (IntelliSense and lib `require`), not the language module system:
-
-```clpp
-#include <clpp/roblox.clh>
-#include <clpp/libs/janitor.clh>
-```
-
-Same-stem quoted `#include "Foo.clh"` next to `Foo.clpp` remains a **header/impl splice** for older layouts. Prefer `import` for cross-file language symbols.
-
-`#pragma once` · `#pragma strict` / `nostrict` · `#pragma native` · `#pragma optimize` are valid.
+`#pragma once`, `#pragma strict`, `#pragma native`, and `#pragma optimize` are valid. `#include` is not.
 
 Next: [Modules](modules) · [Types](types).

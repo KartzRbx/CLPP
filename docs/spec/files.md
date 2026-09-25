@@ -37,20 +37,20 @@ src/shared/PlayerData.clh                             →  out/shared/PlayerData
 ## Includes
 
 ```clpp
-#include <clpp/roblox.clh>
-#include <clpp/libs/janitor.clh>
-#include "LeaderstatsServer.clh"
-#include "../shared/PlayerData.clh"
+link @clpp.roblox;
+link @clpp.libs.janitor as Janitor;
+link "./LeaderstatsServer.clh" as LeaderstatsServer;
+link "../shared/PlayerData.clh" as PlayerData;
 ```
 
 | Form | Effect |
 | --- | --- |
-| `#include <clpp/roblox.clh>` | IntelliSense only. No Luau emit |
-| `#include <clpp/generated/instances.clh>` | IntelliSense for Roblox classes |
-| `#include <clpp/datatypes.clh>` | IntelliSense for `Vector3`, `string_concat`, … |
-| `#include <clpp/libs/janitor.clh>` | IntelliSense **and** a `require` of the lib |
-| `#include "Stem.clh"` with the same stem as the `.clpp` | **Inlined** (class body) |
-| `#include "Other.clh"` / `"Other.clp"` | `require` (Rojo path) |
+| `link @clpp.roblox;` | IntelliSense only. No Luau emit |
+| `link @clpp.generated.instances;` | IntelliSense for Roblox classes |
+| `link @clpp.datatypes;` | IntelliSense for `Vector3`, `string_concat`, … |
+| `link @clpp.libs.janitor as Janitor;` | IntelliSense **and** a `require` of the lib |
+| `link "./Stem.clh" as Stem` | Header symbols for the matching `.clpp` |
+| `link "./Other.clh" as Other` | `require` (Rojo path) |
 | `#pragma once` | Include guard; stripped before parse |
 | `#pragma strict` | Emits `--!strict` |
 | `#pragma nostrict` | Emits `--!nonstrict` (`nstrict` / `nonstrict` aliases) |

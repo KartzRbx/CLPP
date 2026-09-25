@@ -18,7 +18,7 @@ Rule for the two products and the ecosystem:
 | AST + semantic model | Own — `analysis` / `CompilerApi` |
 | CL++ → Luau lowering | Own — `codegen` / `emitter` (not LLVM) |
 | IDE queries (complete/hover/…) | Own — semantic engine; LSP is only the adapter |
-| Module imports | Own — `import { Name as Alias } from "path"` (RFC 0003) |
+| Module imports | Own — `link` (`@clpp`, `@game`, or `"./path" as Name`) |
 
 ## Reuse (already or target)
 

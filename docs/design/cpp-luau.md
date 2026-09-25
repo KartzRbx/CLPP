@@ -8,7 +8,7 @@ CL++ is the **language** (syntax, semantics, OOP): a C++-inspired subset aimed a
 2. Emit modern Luau (`local`, `const`, `Instance.new`, `game:GetService`).
 3. One input file becomes one output file (Rojo infers Script / LocalScript / ModuleScript from the name).
 4. Own extensions: `.clh`, `.clp`, `.clpp` — not `.h` / `.cpp`.
-5. Language modules use `import { Name } from "path"` ([RFC 0003](../../rfc/0003-module-system.md)).
+5. Language modules use `link` ([modules](../modules)).
 
 ## What we are not
 
@@ -22,10 +22,10 @@ Not a full ISO C++ compiler and not the Roblox API connector. No `std::`, pointe
 
 | Role | CL++ equivalent |
 | --- | --- |
-| Types / prototypes | `PlayerData.clh` + `import { … }` |
+| Types / prototypes | `PlayerData.clh` + `link "./PlayerData.clh" as PlayerData` |
 | `Class::` + `void init()` | `.server.clpp` |
 | Checked generics | RFC 0010 samples in tests |
 
 ## Matching stem (legacy)
 
-Same-stem `#include "Foo.clh"` next to `Foo.clpp` can still **splice** for header/impl pairs. Prefer `import` for cross-file language symbols. Angle `<clpp/…>` stays Cluaupp/platform.
+`link "./Foo.clh" as Foo` is how a `.clpp` pulls its header. Angle includes are not a module form.

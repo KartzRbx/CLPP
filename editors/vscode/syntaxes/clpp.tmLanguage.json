@@ -5,6 +5,7 @@
   "patterns": [
     { "include": "#comments" },
     { "include": "#preprocessor" },
+    { "include": "#link" },
     { "include": "#attributes" },
     { "include": "#strings" },
     { "include": "#receiver" },
@@ -38,7 +39,7 @@
           "begin": "^\\s*(#include)\\b",
           "end": "$",
           "beginCaptures": {
-            "1": { "name": "keyword.control.directive.include.clpp" }
+            "1": { "name": "invalid.deprecated.include.clpp" }
           },
           "patterns": [
             {
@@ -63,9 +64,29 @@
         }
       ]
     },
+    "link": {
+      "patterns": [
+        {
+          "name": "keyword.control.import.clpp",
+          "match": "\\b(link|as)\\b"
+        },
+        {
+          "name": "entity.name.namespace.clpp",
+          "match": "@(clpp|game)\\b"
+        }
+      ]
+    },
     "attributes": {
-      "name": "support.type.annotation.clpp",
-      "match": "\\[\\[(server|client)\\]\\]"
+      "patterns": [
+        {
+          "name": "support.type.annotation.clpp",
+          "match": "\\[\\[(server|client)\\]\\]"
+        },
+        {
+          "name": "storage.modifier.attribute.clpp",
+          "match": "@(client|server|parallel|layout)\\b"
+        }
+      ]
     },
     "strings": {
       "patterns": [
@@ -143,11 +164,11 @@
       "patterns": [
         {
           "name": "keyword.control.clpp",
-          "match": "\\b(if|else|guard|for|in|while|switch|case|default|break|return|match|spawn|parallel|async|await|import|from)\\b"
+          "match": "\\b(if|else|guard|for|in|while|switch|case|default|break|return|match|defer|spawn|parallel|async|await|import|from)\\b"
         },
         {
           "name": "keyword.other.clpp",
-          "match": "\\b(struct|class|namespace|using|template|typedef|enum|public|private|protected|static|const|constexpr|inline|extern|new)\\b"
+          "match": "\\b(struct|class|namespace|using|template|typedef|enum|public|private|protected|static|const|constexpr|inline|extern|new|impl)\\b"
         },
         {
           "name": "storage.modifier.clpp",
@@ -163,7 +184,7 @@
       "patterns": [
         {
           "name": "storage.type.clpp",
-          "match": "\\b(void|int|float|double|bool|string|auto|func|array|dictionary|map|optional)\\b"
+          "match": "\\b(void|int|float|double|bool|string|auto|func|array|dictionary|map|optional|option)\\b"
         },
         {
           "name": "entity.name.type.clpp",

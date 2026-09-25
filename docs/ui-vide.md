@@ -9,7 +9,7 @@ title: Declarative UI with Vide
 ## Counter
 
 ```clpp
-#include <clpp/roblox.clh>
+link @clpp.roblox;
 
 void init() {
     Players players = GetService<Players>();

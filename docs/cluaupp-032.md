@@ -166,7 +166,7 @@ let art = compile_request(&CompileRequest {
 | `isScript` | Tagged script (server / client / plugin) |
 | `isHeader` | `.clh` |
 | `rojoClass` | `"Script"` \| `"LocalScript"` \| `"ModuleScript"` — use this, do not re-parse the filename |
-| `libraries` | Runtime libs implied by `#include <clpp/libs/…>` — Cluaupp should `require` / vendor these |
+| `libraries` | Runtime libs implied by `link @clpp.libs…` — Cluaupp should `require` / vendor these |
 | `error` | Present when `ok` is false |
 | `diagnostics` | `{ message, line, column, severity }[]`. **Line and column are 1-based.** |
 
@@ -302,16 +302,16 @@ void Service::Tick() {
 ### Includes Cluaupp / projects should write
 
 ```clpp
-#include <clpp/roblox.clh>                 // IntelliSense only — no Luau emitted
-#include <clpp/generated/instances.clh>    // Cluaupp-generated Instance dump
-#include <clpp/datatypes.clh>
-#include <clpp/libs/janitor.clh>           // IntelliSense + require; artifact.libraries includes "Janitor"
-#include <clpp/libs/dataservice.clh>       // libraries: "DataService"
-#include "LeaderstatsServer.clh"           // same stem as the .clpp → inlined
-#include "../shared/PlayerData.clh"        // other stem → require
+link @clpp.roblox;                 // IntelliSense only — no Luau emitted
+link @clpp.generated.instances;    // Cluaupp-generated Instance dump
+link @clpp.datatypes;
+link @clpp.libs.janitor as Janitor;           // IntelliSense + require; artifact.libraries includes "Janitor"
+link @clpp.libs.dataservice as DataService;       // libraries: "DataService"
+link "./LeaderstatsServer.clh" as LeaderstatsServer;           // same stem as the .clpp → inlined
+link "../shared/PlayerData.clh" as PlayerData;        // other stem → require
 ```
 
-`#include <clpp/libs.clh>` sets `libraries` to `["*"]` (all bundled libs). Prefer the specific header.
+`link @clpp.libs;` sets `libraries` to `["*"]` (all bundled libs). Prefer the specific header.
 
 Angled `clpp/roblox.clh` does **not** pull in a live API dump. Missing `ProximityPrompt` is a **Cluaupp generated-header** problem.
 
@@ -348,7 +348,7 @@ Copy these shapes. They compile on 0.4.0.
 ### Hello Script (`hello.server.clpp`)
 
 ```clpp
-#include <clpp/roblox.clh>
+link @clpp.roblox;
 
 struct HelloServer {
     void Greet(Player player);

@@ -1,0 +1,13 @@
+[package]
+name = "clpp_cli"
+version = "0.8.0"
+edition = "2021"
+description = "Future `clpp` front-end. The current binary stays in the root crate."
+license = "MIT"
+publish = false
+
+[dependencies]
+clpp_codegen = { path = "../clpp_codegen" }
+clpp_parser = { path = "../clpp_parser" }
+clpp_ty = { path = "../clpp_ty" }
+serde_json = "1"
