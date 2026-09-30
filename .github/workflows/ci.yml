@@ -6,7 +6,16 @@ on:
   pull_request:
 
 jobs:
-  test:
+  node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node editors/vscode/intellisense.test.js
+
+  cargo:
     strategy:
       fail-fast: false
       matrix:
@@ -15,11 +24,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-      - run: node editors/vscode/intellisense.test.js
-      - run: cargo test
+      - run: cargo test --workspace
+
+  libs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       - name: Check libs.json vs headers
         shell: bash
         run: python3 scripts/check_libs.py || python scripts/check_libs.py

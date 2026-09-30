@@ -556,7 +556,7 @@ fn player_kick_and_intvalue_and_vector3() {
 }
 
 #[test]
-fn quoted_include_imports_exported_symbols() {
+fn quoted_link_imports_exported_symbols() {
     let dir = std::env::temp_dir().join(format!("clpp-mod-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("temp dir");
     let header = dir.join("PlayerData.clh");
@@ -564,7 +564,7 @@ fn quoted_include_imports_exported_symbols() {
     std::fs::write(&header, "struct Wallet { int Coins; };\n").expect("header");
     std::fs::write(
         &consumer,
-        "#include \"PlayerData.clh\"\nvoid init() {\n    Wallet w;\n    w.\n}\n",
+        "link \"./PlayerData.clh\" as Wallet;\nvoid init() {\n    Wallet w;\n    w.\n}\n",
     )
     .expect("consumer");
     let src = std::fs::read_to_string(&consumer).expect("read");
@@ -686,26 +686,21 @@ fn language_session_has_no_roblox_prelude() {
 }
 
 #[test]
-fn parses_named_import() {
-    let src = r#"import { Wallet, PlayerData as Data } from "./PlayerData.clh";
-void init() {}
-"#;
+fn parses_link_alias() {
+    let src = "link \"./PlayerData.clh\" as Data;\nvoid init() {}\n";
     let program = parse(src, "t.clpp").expect("parse");
     match &program.items[0] {
         clpp::ast::Item::Import { names, module, .. } => {
-            assert_eq!(names.len(), 2);
-            assert_eq!(names[0].name, "Wallet");
-            assert!(names[0].alias.is_none());
-            assert_eq!(names[1].name, "PlayerData");
-            assert_eq!(names[1].alias.as_deref(), Some("Data"));
+            assert_eq!(names.len(), 1);
+            assert_eq!(names[0].local_name(), "Data");
             assert_eq!(module, "./PlayerData.clh");
         }
-        other => panic!("expected Import, got {other:?}"),
+        other => panic!("expected link, got {other:?}"),
     }
 }
 
 #[test]
-fn named_import_imports_exported_symbols() {
+fn named_link_imports_exported_symbols() {
     let dir = std::env::temp_dir().join(format!("clpp-import-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("temp dir");
     let header = dir.join("PlayerData.clh");
@@ -713,7 +708,7 @@ fn named_import_imports_exported_symbols() {
     std::fs::write(&header, "struct Wallet { int Coins; };\n").expect("header");
     std::fs::write(
         &consumer,
-        "import { Wallet } from \"./PlayerData.clh\";\nvoid init() {\n    Wallet w;\n    w.\n}\n",
+        "link \"./PlayerData.clh\" as Wallet;\nvoid init() {\n    Wallet w;\n    w.\n}\n",
     )
     .expect("consumer");
     let src = std::fs::read_to_string(&consumer).expect("read");
@@ -732,7 +727,7 @@ fn named_import_imports_exported_symbols() {
 }
 
 #[test]
-fn import_alias_binds_local_name() {
+fn link_alias_binds_local_name() {
     let dir = std::env::temp_dir().join(format!("clpp-import-alias-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("temp dir");
     let header = dir.join("PlayerData.clh");
@@ -740,10 +735,18 @@ fn import_alias_binds_local_name() {
     std::fs::write(&header, "struct Wallet { int Coins; };\n").expect("header");
     std::fs::write(
         &consumer,
-        "import { Wallet as Purse } from \"./PlayerData.clh\";\nvoid init() {\n    Purse w;\n    w.\n}\n",
+        "link \"./PlayerData.clh\" as Purse;\nvoid init() {\n    Wallet w;\n    w.\n}\n",
     )
     .expect("consumer");
     let src = std::fs::read_to_string(&consumer).expect("read");
+    let program = parse("link \"./PlayerData.clh\" as Purse;\n", "t.clpp").expect("parse");
+    match &program.items[0] {
+        clpp::ast::Item::Import { names, module, .. } => {
+            assert_eq!(names[0].local_name(), "Purse");
+            assert_eq!(module, "./PlayerData.clh");
+        }
+        other => panic!("expected link, got {other:?}"),
+    }
     let items = complete_request(&PositionRequest {
         source: src,
         file_name: consumer.display().to_string(),
@@ -753,7 +756,7 @@ fn import_alias_binds_local_name() {
     .items;
     assert!(
         items.iter().any(|i| i.label == "Coins"),
-        "alias Purse should resolve Wallet members: {:?}",
+        "linked Wallet members: {:?}",
         items.iter().map(|i| i.label.clone()).collect::<Vec<_>>()
     );
 }

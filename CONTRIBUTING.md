@@ -9,6 +9,8 @@ cargo test
 cargo run -- compile examples/syntax/features.clp
 ```
 
+Minimum supported Rust is 1.88 (`rust-version` in `Cargo.toml`). CI builds with stable.
+
 Keep user-facing copy in English: CLI help, README, docs, editor pack, and example strings.
 
 ## Layout

@@ -1,0 +1,16 @@
+[package]
+name = "clpp_front"
+version = "0.8.0-cf"
+edition = "2021"
+rust-version = "1.88"
+description = "CL++ phase-1 front end: lexer, lossless syntax tree, typed AST"
+license = "MIT"
+publish = false
+
+[dependencies]
+codespan-reporting = "0.11"
+rowan = "0.17"
+
+[[bin]]
+name = "clpp-front"
+path = "src/bin/clpp-front.rs"

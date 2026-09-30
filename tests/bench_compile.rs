@@ -3,7 +3,8 @@
 //! ```text
 //! cargo test --offline --test bench_compile -- --nocapture
 //! ```
-//! Writes `docs/benchmarks/results.json` for the site page.
+//! Writes `docs/benchmarks/results.json` only when `CLPP_WRITE_BENCH` is set.
+//! Otherwise the report goes to a temp file so `cargo test` stays hermetic.
 
 use clpp::compile::{compile_artifact_source, compile_source};
 use clpp::session::Session;
@@ -230,7 +231,15 @@ void Actor::Tick() { B(1); }
     };
 
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let out = root.join("docs/benchmarks/results.json");
+    let out = if std::env::var_os("CLPP_WRITE_BENCH").is_some() {
+        root.join("docs/benchmarks/results.json")
+    } else {
+        std::env::temp_dir().join(format!(
+            "clpp-bench-{}-{}.json",
+            std::process::id(),
+            chrono_like()
+        ))
+    };
     if let Some(parent) = out.parent() {
         let _ = std::fs::create_dir_all(parent);
     }

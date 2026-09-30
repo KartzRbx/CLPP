@@ -83,8 +83,8 @@ fn json_diagnostics_on_type_error() {
 }
 
 #[test]
-fn diagnostic_const_reassign_and_include_keep_source_line() {
-    let src = "#include <clpp/roblox.clh>\n\nvoid F() {\n\tconst int n = 1;\n\tn = 2;\n}\n";
+fn diagnostic_const_reassign_keeps_source_line() {
+    let src = "link @clpp.std;\n\nvoid F() {\n\tconst int n = 1;\n\tn = 2;\n}\n";
     let art = compile_artifact_source(src, Path::new("const.clp"), None).expect("artifact");
     assert!(!art.ok);
     let found = art
@@ -101,7 +101,7 @@ fn diagnostic_const_reassign_and_include_keep_source_line() {
 
 #[test]
 fn diagnostic_wrong_type_after_includes() {
-    let src = "#include <clpp/roblox.clh>\n\nvoid F() {\n\tint n = \"x\";\n}\n";
+    let src = "link @clpp.std;\n\nvoid F() {\n\tint n = \"x\";\n}\n";
     let art = compile_artifact_source(src, Path::new("type.clp"), None).expect("artifact");
     assert!(!art.ok);
     let found = art
@@ -452,7 +452,7 @@ void F() {
 }
 
 #[test]
-fn quoted_include_searches_src() {
+fn quoted_link_searches_src() {
     let root = std::env::temp_dir().join(format!("clpp-inc-{}", std::process::id()));
     let data_dir = root.join("src").join("ReplicatedStorage").join("Shareds");
     std::fs::create_dir_all(&data_dir).unwrap();
@@ -461,7 +461,7 @@ fn quoted_include_searches_src() {
     std::fs::create_dir_all(&server).unwrap();
     let from = server.join("Main.server.clpp");
     let src = r#"
-#include "src/ReplicatedStorage/Shareds/PlayerData.clp"
+link "src/ReplicatedStorage/Shareds/PlayerData.clp";
 void F() { post("ok"); }
 "#;
     let art = compile_artifact_source(src, &from, None).expect("include");

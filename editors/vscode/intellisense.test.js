@@ -32,10 +32,10 @@ const symbols = engine.indexDocument(source, [playerData]);
 
 assert.strictEqual(symbols.vars.get("Paths").type, "PlayerData");
 assert.ok(symbols.types.PlayerData, "parses PlayerData from the header");
-assert.deepStrictEqual(labels(symbols.types.PlayerData.properties), ["Currencies", "Inventory"]);
+assert.deepStrictEqual(labels(symbols.types.PlayerData.properties), ["Currencies"]);
 
 const pathsDot = engine.resolve("    Paths.", symbols);
-assert.deepStrictEqual(labels(pathsDot.members), ["Currencies", "Inventory"]);
+assert.deepStrictEqual(labels(pathsDot.members), ["Currencies"]);
 assert.ok(!labels(pathsDot.members).includes("Archivable"), "does not fall back to Instance");
 
 const currenciesDot = engine.resolve("    Paths.Currencies.", symbols);
@@ -45,13 +45,13 @@ const coinsInCall = engine.resolve("    playerData.GetChangedSignal(Paths.Curren
 assert.deepStrictEqual(labels(coinsInCall.members), ["Coins", "Rebirths"]);
 
 const modulePaths = engine.resolve("    DataService.Paths.", symbols);
-assert.deepStrictEqual(labels(modulePaths.members), ["Currencies", "Inventory"]);
+assert.deepStrictEqual(labels(modulePaths.members), ["Currencies"]);
 
 const colonModulePaths = engine.resolve("    DataService:Paths.", symbols);
-assert.deepStrictEqual(labels(colonModulePaths.members), ["Currencies", "Inventory"]);
+assert.deepStrictEqual(labels(colonModulePaths.members), ["Currencies"]);
 
 const serverPaths = engine.resolve("    DataService.Server.Paths.", symbols);
-assert.deepStrictEqual(labels(serverPaths.members), ["Currencies", "Inventory"]);
+assert.deepStrictEqual(labels(serverPaths.members), ["Currencies"]);
 
 const dataMethods = engine.resolve("    playerData.", symbols);
 assert.ok(labels(dataMethods.members).includes("GetChangedSignal"));

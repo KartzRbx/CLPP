@@ -2,6 +2,7 @@
 name = "clpp"
 version = "0.8.0-cf"
 edition = "2021"
+rust-version = "1.88"
 description = "CL++ compiler — a C++-inspired language that compiles to Luau"
 license = "MIT"
 repository = "https://github.com/KartzRbx/CLPP"
@@ -51,6 +52,7 @@ members = [
     "crates/clpp_codegen",
     "crates/clpp_lsp",
     "crates/clpp_cli",
+    "crates/clpp_front",
 ]
 exclude = ["fuzz"]
 
