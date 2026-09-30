@@ -4,7 +4,7 @@
 
 use crate::ast::{ImportName, Item, ModuleRequire, Program};
 use crate::parser::{parse, parse_for_ide};
-use crate::preprocess::{file_stem_name, preprocess, resolve_quoted_include};
+use crate::preprocess::{preprocess, resolve_quoted_include};
 use crate::session::CheckedFile;
 use crate::symbols::{SymbolId, SymbolKind};
 use crate::types::TypeDatabase;
@@ -90,15 +90,7 @@ pub fn import_named(file: &mut CheckedFile, types: &mut TypeDatabase, seen: &mut
     let from = Path::new(&from_path);
     for (names, module, line) in imports {
         if module.starts_with('@') {
-            let name = names
-                .first()
-                .map(|n| n.local_name().to_string())
-                .unwrap_or_else(|| "module".into());
-            file.ctx.requires.push(crate::ast::ModuleRequire {
-                name,
-                from_file: from_path.clone(),
-                to_file: module,
-            });
+            // A package link is not a file and must not become a script path.
             continue;
         }
         let Some(resolved) = resolve_quoted_include(&module, from) else {
@@ -156,29 +148,74 @@ pub fn attach_named_requires(program: &Program, from: &Path, ctx: &mut crate::as
 pub fn named_requires(program: &Program, from: &Path) -> Vec<ModuleRequire> {
     let mut out = Vec::new();
     for item in &program.items {
-        let Item::Import { module, .. } = item else {
+        let Item::Import { names, module, .. } = item else {
             continue;
         };
         if module.starts_with('@') {
-            let name = module.rsplit(['.', '/']).next().unwrap_or("module").to_string();
-            out.push(ModuleRequire {
-                name,
-                from_file: from.to_string_lossy().into_owned(),
-                to_file: module.clone(),
-            });
             continue;
         }
+        let alias = names.first().and_then(|n| n.alias.as_deref());
+        let Some(name) = crate::ast::link_binding(module, alias) else {
+            continue;
+        };
         let Some(resolved) = resolve_quoted_include(module, from) else {
             continue;
         };
-        let stem = file_stem_name(&resolved);
         out.push(ModuleRequire {
-            name: stem,
+            name,
             from_file: from.to_string_lossy().into_owned(),
             to_file: resolved.to_string_lossy().into_owned(),
         });
     }
     out
+}
+
+/// Diagnostics for links the emitter will not turn into `require`.
+///
+/// Package links stay unresolved: `@clpp` as a prelude comment and `@game` as
+/// `GetService` are both documented, and this emitter does not pick one or
+/// invent a `script.Parent` path. A path stem that is not an identifier needs
+/// `as Name`. Two links that bind one name in a file are an error.
+pub fn link_binding_diagnostics(program: &Program) -> Vec<crate::support::CompileDiagnostic> {
+    let mut diags = Vec::new();
+    let mut seen: HashMap<String, usize> = HashMap::new();
+    for item in &program.items {
+        let Item::Import { names, module, line, .. } = item else {
+            continue;
+        };
+        let alias = names.first().and_then(|n| n.alias.as_deref());
+        if module.starts_with('@') {
+            diags.push(crate::diag::diag(
+                crate::diag::CLPP0802,
+                *line,
+                1,
+                format!("package link `{module}` is not emitted as a script path"),
+                "error",
+            ));
+            continue;
+        }
+        let Some(name) = crate::ast::link_binding(module, alias) else {
+            let stem = clpp_front::file_stem(module);
+            diags.push(crate::diag::diag(
+                crate::diag::CLPP0802,
+                *line,
+                1,
+                format!("`{stem}` is not a binding name; write `as Name`"),
+                "error",
+            ));
+            continue;
+        };
+        if seen.insert(name.clone(), *line).is_some() {
+            diags.push(crate::diag::diag(
+                crate::diag::CLPP0802,
+                *line,
+                1,
+                format!("link binding `{name}` is already used in this file"),
+                "error",
+            ));
+        }
+    }
+    diags
 }
 
 fn load_module(path: &str, types: &mut TypeDatabase) -> Option<CheckedFile> {

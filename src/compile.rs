@@ -90,6 +90,11 @@ pub fn compile_artifact_source_ex(
         .into_iter()
         .map(|d| remap_diagnostic(d, &ctx.line_map))
         .collect::<Vec<_>>();
+    diagnostics.extend(
+        crate::modules::link_binding_diagnostics(&program)
+            .into_iter()
+            .map(|d| remap_diagnostic(d, &ctx.line_map)),
+    );
     let mut bound = crate::binder::bind(&program);
     let mut types = crate::session::Session::new().types;
     crate::checker::resolve(&program, &mut bound, &mut types);

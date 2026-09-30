@@ -172,6 +172,7 @@ name = "clpp"
 version = "0.8.0-cf"
 dependencies = [
  "clap",
+ "clpp_front",
  "include_dir",
  "miette",
  "pest",

@@ -84,6 +84,11 @@ pub const CLPP0801: Code = Code {
     title: "module import not found",
     help: "use a path the quoted-include resolver can find (.clh / .clpp next to this file)",
 };
+pub const CLPP0802: Code = Code {
+    id: "CLPP0802",
+    title: "link is not a script require",
+    help: "a package link is not a script.Parent path; a path whose stem is not an identifier needs `as Name`",
+};
 pub const CLPP0901: Code = Code {
     id: "CLPP0901",
     title: "generic type parameter bound violated",
@@ -108,8 +113,8 @@ pub const CLPP1102: Code = Code {
 pub fn all() -> &'static [Code] {
     &[
         CLPP0101, CLPP0102, CLPP0201, CLPP0202, CLPP0301, CLPP0401, CLPP0402, CLPP0501, CLPP0601,
-        CLPP0602, CLPP0603, CLPP0604, CLPP0605, CLPP0701, CLPP0801, CLPP0901, CLPP1001, CLPP1101,
-        CLPP1102,
+        CLPP0602, CLPP0603, CLPP0604, CLPP0605, CLPP0701, CLPP0801, CLPP0802, CLPP0901, CLPP1001,
+        CLPP1101, CLPP1102,
     ]
 }
 

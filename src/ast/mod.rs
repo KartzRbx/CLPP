@@ -85,6 +85,22 @@ impl ImportName {
     }
 }
 
+/// Same binding rule as `clpp_front`: the alias when `as` was written, otherwise
+/// an identifier stem or last package segment. `as` never falls back to the stem.
+pub fn link_binding(module: &str, alias: Option<&str>) -> Option<String> {
+    let target = if let Some(rest) = module.trim().strip_prefix('@') {
+        clpp_front::LinkTarget::Package(
+            rest.split('.')
+                .filter(|seg| !seg.is_empty())
+                .map(str::to_string)
+                .collect(),
+        )
+    } else {
+        clpp_front::LinkTarget::Path(module.to_string())
+    };
+    clpp_front::link_binding_name(&target, alias, alias.is_some())
+}
+
 #[derive(Debug, Clone)]
 pub struct Function {
     pub name: String,

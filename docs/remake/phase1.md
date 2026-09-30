@@ -63,7 +63,7 @@ The local binding name is one function:
 
 Expressions, blocks, and types share a depth cap of 32. One more nest produces a single "nesting is too deep" diagnostic, and the rest of that construct is skipped in a loop so the stack does not grow with the input. That keeps a few thousand parentheses inside a 256 KiB stack. `=`, `**`, and `?:` chains are loops, so a few thousand of them do not recurse, do not hit the cap, and do not rescan the tail. A chain at one precedence is a single node (`a + b - c`, `a ** b ** c`, `a = b = c`) rather than a spine, which is also what keeps freeing the tree off the call stack. `+` and `-` share that node and associate left to right. `**` and assignment associate right to left. A tighter operator is still a nested node, so `a + b * c` is `+` whose right operand is `*`.
 
-The Pest pipeline still ignores `as` when it emits `require`, and its stem fallback splits on `.` before stripping the extension. Those tests and `examples/shared/use_player_data.clp` now use `link`. The old emitter is unchanged.
+The shipping `clpp emit` uses that same binding rule. `link "./shared/Wallet.clp" as Purse` emits `const Purse = require(...)`, and a stem that is not an identifier is not a `const` name. An `@package` link is `CLPP0802` and is never rewritten into a `script.Parent` path. The docs already distinguish `@clpp` (a prelude comment) from `@game` (`GetService` plus `require`); this emitter does not guess a Rojo layout, so both stay a diagnostic.
 
 ## Diagnostics
 

@@ -748,7 +748,7 @@ fn link_alias_binds_local_name() {
         other => panic!("expected link, got {other:?}"),
     }
     let items = complete_request(&PositionRequest {
-        source: src,
+        source: src.clone(),
         file_name: consumer.display().to_string(),
         line: 4,
         column: 7,
@@ -756,7 +756,21 @@ fn link_alias_binds_local_name() {
     .items;
     assert!(
         items.iter().any(|i| i.label == "Coins"),
-        "linked Wallet members: {:?}",
+        "struct Wallet stays named Wallet; members: {:?}",
         items.iter().map(|i| i.label.clone()).collect::<Vec<_>>()
+    );
+    let emit_src = "link \"./PlayerData.clh\" as Purse;\nvoid init() {}\n";
+    let art = clpp::compile::compile_artifact_source(emit_src, &consumer, None).expect("artifact");
+    assert!(art.ok, "{:?}", art.diagnostics);
+    let golden = include_str!("golden/link_purse.luau").trim();
+    assert!(
+        art.luau.contains(golden),
+        "require must bind the alias Purse\nexpected line:\n{golden}\ngot:\n{}",
+        art.luau
+    );
+    assert!(
+        !art.luau.contains("const Wallet = require") && !art.luau.contains("const PlayerData = require"),
+        "stem must not be the require binding\n{}",
+        art.luau
     );
 }

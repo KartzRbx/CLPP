@@ -405,6 +405,9 @@ impl<'a> Emitter<'a> {
                 .push(format!("const {lib} = require(ClppLibs.{lib})"));
         }
         for req in &self.ctx.requires {
+            if req.to_file.starts_with('@') || !clpp_front::is_binding_ident(&req.name) {
+                continue;
+            }
             let expr = rojo_require(&req.from_file, &req.to_file);
             self.lines
                 .push(format!("const {} = require({expr})", req.name));

@@ -332,18 +332,10 @@ fn parse_link(pair: Pair<Rule>) -> Item {
             _ => {}
         }
     }
-    let name = alias.unwrap_or_else(|| {
-        module
-            .rsplit(['/', '.'])
-            .next()
-            .unwrap_or("Module")
-            .trim_end_matches(".clh")
-            .trim_end_matches(".clpp")
-            .trim_end_matches(".clp")
-            .to_string()
-    });
+    let binding = crate::ast::link_binding(&module, alias.as_deref());
+    let name = binding.unwrap_or_else(|| module.clone());
     Item::Import {
-        names: vec![crate::ast::ImportName { name, alias: None }],
+        names: vec![crate::ast::ImportName { name, alias }],
         module,
         line: span.start_line,
         span,
