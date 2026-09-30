@@ -39,6 +39,8 @@ A test walks `crates/clpp_front/src` and fails if a host-runtime name appears (`
 
 The Pest grammar lists both a `//` comment and the operator `//=`, but comments are tried first, so `//=` never reached the parser. Dropping the operator, or changing the comment syntax, would break one of those two spellings. The lookahead keeps both.
 
+`---` is maximal munch. The lexer takes `--` (decrement) and then `-`, so `---x` is not three unary minuses. `- - -x` with spaces is three unaries. That matches the token `MinusMinus` and is not rewritten into three minuses.
+
 ## What is not a keyword
 
 `signal`, `observable`, `spawn`, `parallel`, `delay`, and `defer` are ordinary names. `signal<int>` is a generic type a target library can define. `observable int x` is a parse error, not a declaration form.
@@ -53,11 +55,13 @@ The Pest grammar lists both a `//` comment and the operator `//=`, but comments 
 
 The local binding name is one function:
 
-- the alias, when `as` is present
-- otherwise, for a path, the file stem with a trailing `.clpp`, `.clp`, or `.clh` removed (`./shared/Wallet.clp` binds `Wallet`, not `clp`)
-- otherwise, for `@a.b.c`, the last segment
+- when `as` is present, the alias, and only the alias. `as 1` and `as;` diagnose and bind nothing; they do not fall back to the stem
+- otherwise, for a path, the file stem with a trailing `.clpp`, `.clp`, or `.clh` removed (`./shared/Wallet.clp` binds `Wallet`, not `clp`), and only when that stem is an identifier
+- otherwise, for `@a.b.c`, the last segment, when it is an identifier
 
-A package link's display form is `@a.b.c` and never a filesystem path.
+`a.b.clp`, `.clh`, and `Main.server.clpp` are not identifiers. The link stays in the tree, `binding` is absent, and the diagnostic says to write `as Name`. Two links that bind the same name in one file are diagnosed. A package link's display form is `@a.b.c` and never a filesystem path.
+
+Expressions, blocks, and types share a depth cap of 32. One more nest produces a single "nesting is too deep" diagnostic, and the rest of that construct is skipped in a loop so the stack does not grow with the input. That keeps a few thousand parentheses inside a 256 KiB stack. `=`, `**`, and `?:` chains are loops, so a few thousand of them do not recurse, do not hit the cap, and do not rescan the tail. A chain at one precedence is a single node (`a + b - c`, `a ** b ** c`, `a = b = c`) rather than a spine, which is also what keeps freeing the tree off the call stack. `+` and `-` share that node and associate left to right. `**` and assignment associate right to left. A tighter operator is still a nested node, so `a + b * c` is `+` whose right operand is `*`.
 
 The Pest pipeline still ignores `as` when it emits `require`, and its stem fallback splits on `.` before stripping the extension. Those tests and `examples/shared/use_player_data.clp` now use `link`. The old emitter is unchanged.
 
@@ -65,7 +69,7 @@ The Pest pipeline still ignores `as` when it emits `require`, and its stem fallb
 
 A diagnostic has a byte span, a severity, an optional code, and an optional help note. A parse collects every error; it does not stop at the first one.
 
-The short renderer is `file:line:col` with the source line and carets. Columns are 1-based Unicode scalar counts. The `clpp-front` CLI also prints a codespan-reporting report (primary label, source, help), in the shape described by the rustc diagnostics guide.
+The short renderer is `file:line:col` with the source line and carets. `LineIndex::line_col` and `line_col_in` both count columns as 1-based Unicode scalar values (`é` is one column, not two bytes). `api_view` uses that same count. Mapping those columns to LSP UTF-16 code units is a later concern; this crate does not do it. The `clpp-front` CLI also prints a codespan-reporting report (primary label, source, help), in the shape described by the rustc diagnostics guide.
 
 `ApiDiagnostic` is the field set a future `clpp api compile` object can copy: `message`, `line`, `column`, `end_line`, `end_column`, `severity`, `code`, `help`. Today's `CompileDiagnostic` is `{message, line, column, severity, code?, help?}` and `SourceMapLine` is `{luauLine, clppLine, file}`. The extra end positions are there so a span-based source map can grow into the same JSON without a second diagnostic type.
 
@@ -92,6 +96,4 @@ Not implemented in this phase:
 
 ## Open questions
 
-- Role-tagged file names. `file_stem("Main.server.clpp")` is `Main.server`, which is not an identifier. Stripping `.server` / `.client` / `.plugin` is a later decision.
-- The Pest emitter still names a `require` from the file stem and ignores `as`. The new front end has the binding rule. Whether the old emitter should be fixed is a later change.
 - `#if` / `#pragma` are stored as directives and are not executed. The preprocessor stays on the old pipeline until a later phase owns it.

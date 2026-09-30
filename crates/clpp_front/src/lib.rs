@@ -16,11 +16,11 @@ pub mod link;
 pub mod parse;
 pub mod span;
 
-pub use ast::{dump_ast, dump_cst, lower, Item, Program, Ty, TyKind};
+pub use ast::{dump_ast, dump_cst, link_diagnostics, lower, Item, Link, Program, Ty, TyKind};
 pub use diag::{render, render_codespan, ApiDiagnostic, Diagnostic, Severity};
 pub use kind::{SyntaxKind, SyntaxNode};
 pub use lex::{lex, Lexed, Token};
-pub use link::{file_stem, link_binding_name, LinkTarget};
+pub use link::{file_stem, is_binding_ident, link_binding_name, LinkTarget};
 pub use span::{LineIndex, Span};
 
 #[derive(Clone, Debug)]
@@ -47,6 +47,7 @@ pub fn parse(file_name: &str, source: &str) -> Parsed {
     let ast = lower(&syntax);
     let mut diagnostics = lexed.diagnostics;
     diagnostics.extend(parse_diags);
+    diagnostics.extend(link_diagnostics(&ast));
     Parsed {
         file_name: file_name.to_string(),
         syntax,

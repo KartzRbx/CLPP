@@ -1,8 +1,10 @@
 //! Byte spans and a line map.
 //!
 //! Spans are UTF-8 byte offsets into the original file, inclusive start and
-//! exclusive end. Columns in rendered diagnostics are 1-based Unicode scalar
-//! counts so a caret lines up with the source the programmer sees.
+//! exclusive end. Columns are 1-based counts of Unicode scalar values, so a
+//! caret lines up with the source the programmer sees. `é` is one column,
+//! even though it is two bytes. Converting those columns to LSP's UTF-16
+//! code units is a later concern; this crate does not do it.
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Span {
@@ -48,16 +50,22 @@ impl LineIndex {
         Self { starts }
     }
 
-    /// 1-based line and 1-based character column.
-    pub fn line_col(&self, offset: u32) -> (u32, u32) {
+    /// 1-based line, and a 1-based column counted in Unicode scalar values.
+    pub fn line_col(&self, source: &str, offset: u32) -> (u32, u32) {
         let offset = offset as usize;
         let idx = match self.starts.binary_search(&(offset as u32)) {
             Ok(i) => i,
             Err(i) => i.saturating_sub(1),
         };
-        let line_start = self.starts[idx] as usize;
-        let col = source_column_at(line_start, offset);
-        ((idx as u32) + 1, col)
+        let line = (idx as u32) + 1;
+        let start = self.starts[idx] as usize;
+        let end = offset.min(source.len());
+        let col = if end >= start {
+            source[start..end].chars().count() as u32 + 1
+        } else {
+            1
+        };
+        (line, col)
     }
 
     pub fn line_start(&self, line_1: u32) -> u32 {
@@ -78,26 +86,9 @@ impl LineIndex {
     }
 }
 
-fn source_column_at(line_start: usize, offset: usize) -> u32 {
-    // Character column. The caller passes offsets; the source is not here,
-    // so this helper only works when both offsets are byte indexes of the
-    // same line and we count later. See `LineIndex::line_col` — it does not
-    // have the source. We count bytes for the column when the source is
-    // ASCII, which CL++ punctuation is, and fix the real column in
-    // `line_col_in`.
-    (offset.saturating_sub(line_start) as u32) + 1
-}
-
 impl LineIndex {
+    /// Same column convention as [`LineIndex::line_col`].
     pub fn line_col_in(&self, source: &str, offset: u32) -> (u32, u32) {
-        let (line, _) = self.line_col(offset);
-        let start = self.line_start(line) as usize;
-        let end = (offset as usize).min(source.len());
-        let col = if end >= start {
-            source[start..end].chars().count() as u32 + 1
-        } else {
-            1
-        };
-        (line, col)
+        self.line_col(source, offset)
     }
 }

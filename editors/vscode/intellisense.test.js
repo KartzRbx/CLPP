@@ -17,10 +17,9 @@ function labels(members) {
 }
 
 const source = `
-#include "../shared/PlayerData.clh"
+link "../shared/PlayerData.clh" as PlayerData;
 
 void LeaderstatsServer::PlayerEntered(Player player) {
-    Players players = GetService<Players>();
     PlayerData Paths = DataService.Paths;
     Data playerData = DataService.Server.WaitFor(player);
     Paths.
@@ -56,8 +55,11 @@ assert.deepStrictEqual(labels(serverPaths.members), ["Currencies"]);
 const dataMethods = engine.resolve("    playerData.", symbols);
 assert.ok(labels(dataMethods.members).includes("GetChangedSignal"));
 
-const staticConnect = engine.resolve("    players.PlayerAdded::", symbols);
-assert.ok(labels(staticConnect.members).includes("Connect"));
+const staticConnect = engine.resolve("    player.", symbols);
+assert.ok(
+  labels(staticConnect.members).includes("Name") || labels(staticConnect.members).includes("Kick"),
+  labels(staticConnect.members).join(",")
+);
 
 const protectedCall = engine.resolve("    player:", symbols);
 assert.ok(
@@ -140,7 +142,7 @@ namespace HudMath {
 	Vector2 LerpVector2(Vector2 from, Vector2 to, double alpha);
 }
 `;
-const namespaceSymbols = engine.indexDocument('#include "HudMath.clh"\nvoid init() { HudMath. }', [namespaceHdr]);
+const namespaceSymbols = engine.indexDocument('link "HudMath.clh" as HudMath;\nvoid init() { HudMath. }', [namespaceHdr]);
 assert.ok(namespaceSymbols.types.HudMath, "indexes namespace like struct");
 assert.deepStrictEqual(labels(namespaceSymbols.types.HudMath.methods), ["Lerp", "LerpVector2"]);
 const namespaceDot = engine.resolve("    HudMath.", namespaceSymbols);

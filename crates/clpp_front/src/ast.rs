@@ -5,7 +5,8 @@
 //! this layer is what a later resolver would consume.
 
 use crate::kind::{SyntaxKind, SyntaxNode, SyntaxToken};
-use crate::link::{link_binding_name, LinkTarget};
+use crate::diag::Diagnostic;
+use crate::link::{file_stem, is_binding_ident, link_binding_name, LinkTarget};
 use crate::span::Span;
 use rowan::{NodeOrToken, TextRange};
 
@@ -84,7 +85,10 @@ pub struct Link {
     pub span: Span,
     pub target: LinkTarget,
     pub alias: Option<String>,
-    pub binding: String,
+    /// True when the source wrote `as`, even if the name is missing.
+    pub has_as: bool,
+    /// Absent when `as` is missing or invalid, or the stem is not an identifier.
+    pub binding: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -264,6 +268,7 @@ fn lower_enum(node: &SyntaxNode) -> Enum {
 fn lower_link(node: &SyntaxNode) -> Link {
     let mut alias = None;
     let mut target = LinkTarget::Package(Vec::new());
+    let has_as = tokens(node).iter().any(|t| t.kind() == SyntaxKind::KwAs);
     for child in node.children() {
         match child.kind() {
             SyntaxKind::Literal => {
@@ -279,16 +284,70 @@ fn lower_link(node: &SyntaxNode) -> Link {
                     .collect();
                 target = LinkTarget::Package(segs);
             }
-            SyntaxKind::Name => alias = first_ident(&child),
+            SyntaxKind::Name if has_as => alias = first_ident(&child),
             _ => {}
         }
     }
-    let binding = link_binding_name(&target, alias.as_deref());
+    let binding = link_binding_name(&target, alias.as_deref(), has_as);
     Link {
         span: span_of_node(node),
         target,
         alias,
+        has_as,
         binding,
+    }
+}
+
+/// Diagnostics for bindings `lower` recorded but did not judge.
+///
+/// A second link that reuses a name, and a stem that is not an identifier,
+/// are reported here. An `as` clause with no name is already a parse error;
+/// its binding stays absent.
+pub fn link_diagnostics(program: &Program) -> Vec<Diagnostic> {
+    let mut out = Vec::new();
+    let mut seen: Vec<(String, Span)> = Vec::new();
+    collect_link_diagnostics(&program.items, &mut seen, &mut out);
+    out
+}
+
+fn collect_link_diagnostics(items: &[Item], seen: &mut Vec<(String, Span)>, out: &mut Vec<Diagnostic>) {
+    for item in items {
+        match item {
+            Item::Link(link) => {
+                if link.binding.is_none() && !link.has_as {
+                    let raw = match &link.target {
+                        LinkTarget::Path(path) => file_stem(path),
+                        LinkTarget::Package(segs) => segs.last().cloned().unwrap_or_default(),
+                    };
+                    let shown = if raw.is_empty() { "module".to_string() } else { raw };
+                    out.push(
+                        Diagnostic::error(
+                            link.span,
+                            format!("`{shown}` is not a binding name; write `as Name`"),
+                        )
+                        .with_code("CLPP0802"),
+                    );
+                }
+                if let Some(name) = &link.binding {
+                    if !is_binding_ident(name) {
+                        out.push(
+                            Diagnostic::error(link.span, format!("`{name}` is not a binding name; write `as Name`"))
+                                .with_code("CLPP0802"),
+                        );
+                    } else if seen.iter().any(|(prev, _)| prev == name) {
+                        out.push(
+                            Diagnostic::error(link.span, format!("link binding `{name}` is already used in this file"))
+                                .with_code("CLPP0802")
+                                .with_help("rename one link with `as`"),
+                        );
+                    } else {
+                        seen.push((name.clone(), link.span));
+                    }
+                }
+            }
+            Item::Namespace(ns) => collect_link_diagnostics(&ns.items, seen, out),
+            _ => {}
+        }
     }
 }
 
@@ -615,7 +674,7 @@ fn dump_item(item: &Item, indent: usize, out: &mut String) {
         Item::Link(l) => out.push_str(&format!(
             "{pad}(link {} as {})\n",
             l.target.display(),
-            l.binding
+            l.binding.as_deref().unwrap_or("<error>")
         )),
         Item::Directive(_) => out.push_str(&format!("{pad}(directive)\n")),
         Item::RejectedModule { form, .. } => out.push_str(&format!("{pad}(rejected {form})\n")),

@@ -13,12 +13,20 @@ use crate::lex::Token;
 use crate::span::Span;
 use rowan::{GreenNodeBuilder, Language};
 
+/// Nesting of expressions, blocks, and types. Right-associative `=`, `**`,
+/// and `?:` are loops. Past this depth the parser skips the nested construct
+/// in one loop, so a few thousand parentheses do not recurse and still fit
+/// in a 256 KiB stack.
+const MAX_PARSE_DEPTH: u32 = 32;
+
 struct Parser<'a> {
     source: &'a str,
     tokens: &'a [Token],
     i: usize,
     elems: Vec<Elem>,
     diags: Vec<Diagnostic>,
+    depth: u32,
+    depth_noted: bool,
 }
 
 enum Elem {
@@ -30,6 +38,8 @@ struct Cp {
     i: usize,
     elems: usize,
     diags: usize,
+    depth: u32,
+    depth_noted: bool,
 }
 
 pub fn parse_tokens(source: &str, tokens: &[Token]) -> (SyntaxNode, Vec<Diagnostic>) {
@@ -39,6 +49,8 @@ pub fn parse_tokens(source: &str, tokens: &[Token]) -> (SyntaxNode, Vec<Diagnost
         i: 0,
         elems: Vec::new(),
         diags: Vec::new(),
+        depth: 0,
+        depth_noted: false,
     };
     let root = p.parse_source();
     if p.i < p.tokens.len() {
@@ -56,26 +68,36 @@ pub fn parse_tokens(source: &str, tokens: &[Token]) -> (SyntaxNode, Vec<Diagnost
 
 fn to_rowan(source: &str, elems: &[Elem], root: u32) -> SyntaxNode {
     let mut builder = GreenNodeBuilder::new();
-    emit(&mut builder, source, elems, root);
-    SyntaxNode::new_root(builder.finish())
-}
-
-fn emit(builder: &mut GreenNodeBuilder<'_>, source: &str, elems: &[Elem], id: u32) {
-    match &elems[id as usize] {
-        Elem::Token { kind, span } => {
-            let text = source
-                .get(span.start as usize..span.end as usize)
-                .unwrap_or("");
-            builder.token(Lang::kind_to_raw(*kind), text);
-        }
-        Elem::Node { kind, children, .. } => {
-            builder.start_node(Lang::kind_to_raw(*kind));
-            for &child in children {
-                emit(builder, source, elems, child);
-            }
-            builder.finish_node();
+    // A right-associative chain is a deep spine. Walk it on the heap so
+    // `a ** b ** c ** ...` does not overflow the thread stack.
+    enum Step {
+        Start(u32),
+        Finish,
+    }
+    let mut stack = vec![Step::Start(root)];
+    while let Some(step) = stack.pop() {
+        match step {
+            Step::Finish => builder.finish_node(),
+            Step::Start(id) => match &elems[id as usize] {
+                Elem::Token { kind, span } => {
+                    let text = source
+                        .get(span.start as usize..span.end as usize)
+                        .unwrap_or("");
+                    builder.token(Lang::kind_to_raw(*kind), text);
+                }
+                Elem::Node { kind, children, .. } => {
+                    let raw = Lang::kind_to_raw(*kind);
+                    let kids: Vec<u32> = children.clone();
+                    builder.start_node(raw);
+                    stack.push(Step::Finish);
+                    for child in kids.into_iter().rev() {
+                        stack.push(Step::Start(child));
+                    }
+                }
+            },
         }
     }
+    SyntaxNode::new_root(builder.finish())
 }
 
 impl<'a> Parser<'a> {
@@ -240,7 +262,17 @@ impl<'a> Parser<'a> {
         }
         if self.at(SyntaxKind::KwAs) {
             kids.extend(self.bump());
-            kids.push(self.parse_name());
+            if self.at(SyntaxKind::Ident) {
+                kids.push(self.parse_name());
+            } else {
+                self.error_msg("expected a name after `as`");
+                if !self.at(SyntaxKind::Semi) && !self.eof() {
+                    let bad = self.bump();
+                    kids.push(self.node(SyntaxKind::Error, bad));
+                } else {
+                    kids.push(self.node(SyntaxKind::Error, Vec::new()));
+                }
+            }
         }
         kids.extend(self.expect(SyntaxKind::Semi));
         self.node(SyntaxKind::Link, kids)
@@ -519,6 +551,16 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_block(&mut self) -> u32 {
+        if !self.enter() {
+            let kids = self.skip_balanced_block();
+            return self.node(SyntaxKind::Error, kids);
+        }
+        let id = self.parse_block_body();
+        self.leave();
+        id
+    }
+
+    fn parse_block_body(&mut self) -> u32 {
         let mut kids = self.expect(SyntaxKind::LBrace);
         while !self.at(SyntaxKind::RBrace) && !self.eof() {
             let before = self.i;
@@ -813,19 +855,28 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_expr(&mut self) -> u32 {
-        self.parse_assign()
+        if !self.enter() {
+            let kids = self.skip_balanced_expr();
+            return self.node(SyntaxKind::Error, kids);
+        }
+        let expr = self.parse_assign();
+        self.leave();
+        expr
     }
 
     fn parse_assign(&mut self) -> u32 {
-        let lhs = self.parse_try_expr();
-        if self.is_assign_op() {
-            let mut kids = vec![lhs];
-            kids.extend(self.bump());
-            kids.push(self.parse_assign());
-            self.node(SyntaxKind::Assign, kids)
-        } else {
-            lhs
+        let first = self.parse_try_expr();
+        if !self.is_assign_op() {
+            return first;
         }
+        // One node for the whole chain. Nesting each `=` made a spine that
+        // overflowed while the tree was freed. Operands associate right to left.
+        let mut kids = vec![first];
+        while self.is_assign_op() {
+            kids.extend(self.bump());
+            kids.push(self.parse_try_expr());
+        }
+        self.node(SyntaxKind::Assign, kids)
     }
 
     fn parse_try_expr(&mut self) -> u32 {
@@ -857,55 +908,115 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_ternary(&mut self) -> u32 {
-        let cond = self.parse_bp(0);
-        if !self.at(SyntaxKind::Question) {
+        let mut cond = self.parse_bp(0);
+        // `?` followed by an expression is a conditional. `?` at the end of
+        // an expression stays a postfix try for `parse_try_expr`. A missing
+        // `:` is one diagnostic and does not give the following token back.
+        let mut pending: Vec<(u32, Vec<u32>, u32, Vec<u32>)> = Vec::new();
+        while self.at(SyntaxKind::Question) && self.can_start_expr_after(1) {
+            let q = self.bump();
+            let mid = self.parse_bp(0);
+            if !self.at(SyntaxKind::Colon) {
+                self.error_msg("expected `:` in conditional expression");
+                let mut kids = Vec::new();
+                for (earlier, eq, emid, colon) in pending {
+                    kids.push(earlier);
+                    kids.extend(eq);
+                    kids.push(emid);
+                    kids.extend(colon);
+                }
+                kids.push(cond);
+                kids.extend(q);
+                kids.push(mid);
+                kids.push(self.node(SyntaxKind::Error, Vec::new()));
+                return self.node(SyntaxKind::Ternary, kids);
+            }
+            let colon = self.bump();
+            pending.push((cond, q, mid, colon));
+            cond = self.parse_bp(0);
+        }
+        if pending.is_empty() {
             return cond;
         }
-        let cp = self.cp();
-        let q = self.bump();
-        let mid = self.parse_ternary();
-        if self.at(SyntaxKind::Colon) {
-            let mut kids = vec![cond];
+        let mut kids = Vec::new();
+        for (earlier, q, mid, colon) in pending {
+            kids.push(earlier);
             kids.extend(q);
             kids.push(mid);
-            kids.extend(self.bump());
-            kids.push(self.parse_ternary());
-            self.node(SyntaxKind::Ternary, kids)
-        } else {
-            self.rewind(cp);
-            cond
+            kids.extend(colon);
         }
+        kids.push(cond);
+        self.node(SyntaxKind::Ternary, kids)
     }
 
     fn parse_bp(&mut self, min: u8) -> u32 {
         let mut lhs = self.parse_prefix();
         loop {
-            let Some((lbp, rbp)) = self.infix_bp() else {
+            let Some((lbp, _)) = self.infix_bp() else {
                 break;
             };
             if lbp < min {
                 break;
             }
+            if self.at(SyntaxKind::StarStar) {
+                lhs = self.parse_pow_chain(lhs, min);
+                continue;
+            }
+            // Same precedence stays one node (`a + b - c`), so a long sum is
+            // not a spine. The right-hand side is still parsed at `rbp`, which
+            // is what nests a tighter operator (`a + b * c`).
             let mut kids = vec![lhs];
-            kids.extend(self.bump());
-            kids.push(self.parse_bp(rbp));
+            while let Some((next_lbp, next_rbp)) = self.infix_bp() {
+                if next_lbp != lbp || self.at(SyntaxKind::StarStar) {
+                    break;
+                }
+                kids.extend(self.bump());
+                kids.push(self.parse_bp(next_rbp));
+            }
             lhs = self.node(SyntaxKind::Binary, kids);
         }
         lhs
     }
 
+    /// Right-associative `**` as one node. Operands associate right to left.
+    fn parse_pow_chain(&mut self, first: u32, min: u8) -> u32 {
+        let mut kids = vec![first];
+        while self.at(SyntaxKind::StarStar) {
+            let Some((lbp, _)) = self.infix_bp() else {
+                break;
+            };
+            if lbp < min {
+                break;
+            }
+            kids.extend(self.bump());
+            kids.push(self.parse_prefix());
+        }
+        self.node(SyntaxKind::Binary, kids)
+    }
+
     fn parse_prefix(&mut self) -> u32 {
-        if self.at(SyntaxKind::KwAwait) {
-            let mut kids = self.bump();
-            kids.push(self.parse_bp(29));
-            return self.node(SyntaxKind::Await, kids);
+        let mut ops: Vec<(SyntaxKind, Vec<u32>)> = Vec::new();
+        while self.at(SyntaxKind::KwAwait) || self.at(SyntaxKind::Bang) || self.at(SyntaxKind::Minus) {
+            let kind = self.nth(0);
+            ops.push((kind, self.bump()));
         }
-        if self.at(SyntaxKind::Bang) || self.at(SyntaxKind::Minus) {
-            let mut kids = self.bump();
-            kids.push(self.parse_bp(29));
-            return self.node(SyntaxKind::Unary, kids);
+        let mut expr = if ops.is_empty() {
+            self.parse_primary()
+        } else {
+            // Prefix binds looser than `**`, so `-a**b` is `-(a**b)`.
+            self.parse_bp(29)
+        };
+        while let Some((kind, op)) = ops.pop() {
+            let node_kind = if kind == SyntaxKind::KwAwait {
+                SyntaxKind::Await
+            } else {
+                SyntaxKind::Unary
+            };
+            let mut kids = op;
+            kids.push(expr);
+            expr = self.node(node_kind, kids);
         }
-        self.parse_primary()
+        expr
     }
 
     fn parse_primary(&mut self) -> u32 {
@@ -1202,6 +1313,16 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_type(&mut self) -> u32 {
+        if !self.enter() {
+            let kids = self.skip_balanced_type();
+            return self.node(SyntaxKind::Type, kids);
+        }
+        let id = self.parse_type_body();
+        self.leave();
+        id
+    }
+
+    fn parse_type_body(&mut self) -> u32 {
         let mut left = self.parse_type_prefixed();
         while self.at(SyntaxKind::Pipe) || self.at(SyntaxKind::Amp) {
             let mut kids = vec![left];
@@ -1559,6 +1680,150 @@ impl<'a> Parser<'a> {
         self.node(SyntaxKind::Error, kids)
     }
 
+    /// Eat one expression, including nested brackets, without calling back
+    /// into `parse_expr`. A `)` / `]` / `}` that this expression did not open
+    /// is left for the caller.
+    fn skip_balanced_expr(&mut self) -> Vec<u32> {
+        let mut kids = Vec::new();
+        let mut paren = 0i32;
+        let mut brack = 0i32;
+        let mut brace = 0i32;
+        while !self.eof() {
+            let k = self.nth(0);
+            let flat = paren == 0 && brack == 0 && brace == 0;
+            if flat && self.expr_skip_boundary(k) {
+                break;
+            }
+            match k {
+                SyntaxKind::LParen => paren += 1,
+                SyntaxKind::RParen => {
+                    if paren == 0 {
+                        break;
+                    }
+                    paren -= 1;
+                }
+                SyntaxKind::LBracket => brack += 1,
+                SyntaxKind::RBracket => {
+                    if brack == 0 {
+                        break;
+                    }
+                    brack -= 1;
+                }
+                SyntaxKind::LBrace => brace += 1,
+                SyntaxKind::RBrace => {
+                    if brace == 0 {
+                        break;
+                    }
+                    brace -= 1;
+                }
+                _ => {}
+            }
+            kids.extend(self.bump());
+        }
+        kids
+    }
+
+    fn expr_skip_boundary(&self, kind: SyntaxKind) -> bool {
+        matches!(
+            kind,
+            SyntaxKind::Semi
+                | SyntaxKind::RParen
+                | SyntaxKind::RBrace
+                | SyntaxKind::RBracket
+                | SyntaxKind::Comma
+                | SyntaxKind::Colon
+                | SyntaxKind::FatArrow
+                | SyntaxKind::KwElse
+        )
+    }
+
+    fn skip_balanced_block(&mut self) -> Vec<u32> {
+        if !self.at(SyntaxKind::LBrace) {
+            return Vec::new();
+        }
+        let mut kids = Vec::new();
+        let mut brace = 0i32;
+        while !self.eof() {
+            let k = self.nth(0);
+            if k == SyntaxKind::LBrace {
+                brace += 1;
+            }
+            kids.extend(self.bump());
+            if k == SyntaxKind::RBrace {
+                brace -= 1;
+                if brace == 0 {
+                    break;
+                }
+            }
+        }
+        kids
+    }
+
+    fn skip_balanced_type(&mut self) -> Vec<u32> {
+        let mut kids = Vec::new();
+        let mut angle = 0i32;
+        let mut paren = 0i32;
+        let mut brack = 0i32;
+        let mut brace = 0i32;
+        while !self.eof() {
+            let k = self.nth(0);
+            let flat = angle == 0 && paren == 0 && brack == 0 && brace == 0;
+            if flat
+                && !kids.is_empty()
+                && matches!(
+                    k,
+                    SyntaxKind::Comma
+                        | SyntaxKind::Gt
+                        | SyntaxKind::RParen
+                        | SyntaxKind::RBrace
+                        | SyntaxKind::RBracket
+                        | SyntaxKind::Semi
+                        | SyntaxKind::LBrace
+                        | SyntaxKind::Eq
+                        | SyntaxKind::Colon
+                        | SyntaxKind::Pipe
+                        | SyntaxKind::Amp
+                        | SyntaxKind::Ident
+                )
+            {
+                break;
+            }
+            match k {
+                SyntaxKind::Lt => angle += 1,
+                SyntaxKind::Gt => {
+                    if angle == 0 {
+                        break;
+                    }
+                    angle -= 1;
+                }
+                SyntaxKind::LParen => paren += 1,
+                SyntaxKind::RParen => {
+                    if paren == 0 {
+                        break;
+                    }
+                    paren -= 1;
+                }
+                SyntaxKind::LBracket => brack += 1,
+                SyntaxKind::RBracket => {
+                    if brack == 0 {
+                        break;
+                    }
+                    brack -= 1;
+                }
+                SyntaxKind::LBrace => brace += 1,
+                SyntaxKind::RBrace => {
+                    if brace == 0 {
+                        break;
+                    }
+                    brace -= 1;
+                }
+                _ => {}
+            }
+            kids.extend(self.bump());
+        }
+        kids
+    }
+
     fn recover_balanced(&mut self) -> Vec<u32> {
         let mut kids = Vec::new();
         let mut depth = 0i32;
@@ -1700,6 +1965,8 @@ impl<'a> Parser<'a> {
             i: self.i,
             elems: self.elems.len(),
             diags: self.diags.len(),
+            depth: self.depth,
+            depth_noted: self.depth_noted,
         }
     }
 
@@ -1707,6 +1974,24 @@ impl<'a> Parser<'a> {
         self.i = cp.i;
         self.elems.truncate(cp.elems);
         self.diags.truncate(cp.diags);
+        self.depth = cp.depth;
+        self.depth_noted = cp.depth_noted;
+    }
+
+    fn enter(&mut self) -> bool {
+        if self.depth >= MAX_PARSE_DEPTH {
+            if !self.depth_noted {
+                self.depth_noted = true;
+                self.error_msg("nesting is too deep");
+            }
+            return false;
+        }
+        self.depth += 1;
+        true
+    }
+
+    fn leave(&mut self) {
+        self.depth = self.depth.saturating_sub(1);
     }
 
     fn at(&self, kind: SyntaxKind) -> bool {

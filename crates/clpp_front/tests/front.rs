@@ -1,6 +1,6 @@
 use clpp_front::{
-    dump_ast, file_stem, lex, link_binding_name, parse, render, render_codespan, LinkTarget,
-    SyntaxKind,
+    dump_ast, file_stem, lex, link_binding_name, parse, render, render_codespan, Item, LineIndex,
+    LinkTarget, SyntaxKind,
 };
 
 fn kinds(source: &str) -> Vec<SyntaxKind> {
@@ -108,22 +108,24 @@ fn link_binding_uses_alias_or_stem() {
     assert_eq!(
         link_binding_name(
             &LinkTarget::Path("./shared/Wallet.clp".into()),
-            Some("Purse")
-        ),
-        "Purse"
+            Some("Purse"),
+            true
+        )
+        .as_deref(),
+        Some("Purse")
     );
     assert_eq!(
-        link_binding_name(&LinkTarget::Path("./shared/Wallet.clp".into()), None),
-        "Wallet"
+        link_binding_name(&LinkTarget::Path("./shared/Wallet.clp".into()), None, false).as_deref(),
+        Some("Wallet")
     );
     assert_eq!(
-        link_binding_name(&LinkTarget::Path("../PlayerData.clh".into()), None),
-        "PlayerData"
+        link_binding_name(&LinkTarget::Path("../PlayerData.clh".into()), None, false).as_deref(),
+        Some("PlayerData")
     );
     assert_eq!(file_stem("A.B.clpp"), "A.B");
     assert_eq!(file_stem("Main.server.clpp"), "Main.server");
     let pkg = LinkTarget::Package(vec!["clpp".into(), "std".into()]);
-    assert_eq!(link_binding_name(&pkg, None), "std");
+    assert_eq!(link_binding_name(&pkg, None, false).as_deref(), Some("std"));
     assert!(!pkg.display().contains('/'));
     assert_eq!(pkg.display(), "@clpp.std");
 }
@@ -257,6 +259,149 @@ fn core_example_parses() {
     assert!(dump.contains("(link \"./PlayerData.clh\" as Purse)"), "{dump}");
     assert!(dump.contains("(link \"./Wallet.clp\" as Wallet)"), "{dump}");
     assert!(dump.contains("(link @clpp.std as std)"), "{dump}");
+}
+
+#[test]
+fn incomplete_ternary_keeps_the_semicolon() {
+    let src = "void f() { auto x = a ? b; }\n";
+    let parsed = parse("t.clp", src);
+    assert_lossless(src);
+    let msgs: Vec<_> = parsed.diagnostics.iter().map(|d| d.message.as_str()).collect();
+    assert_eq!(msgs, ["expected `:` in conditional expression"], "{msgs:?}");
+    let var = parsed
+        .syntax
+        .descendants()
+        .find(|n| n.kind() == SyntaxKind::Var)
+        .expect("declaration");
+    let text = var.text().to_string();
+    assert!(text.contains("auto x = a ? b;"), "{text}");
+    assert!(
+        parsed.syntax.descendants().all(|n| n.kind() != SyntaxKind::ExprStmt),
+        "the `;` moved to a following statement"
+    );
+    assert!(
+        parsed.syntax.descendants().all(|n| n.kind() != SyntaxKind::Try),
+        "postfix try took the `?`"
+    );
+}
+
+#[test]
+fn invalid_alias_does_not_bind_the_stem() {
+    for src in ["link \"./Wallet.clp\" as 1;\n", "link \"./Wallet.clp\" as;\n"] {
+        let parsed = parse("t.clp", src);
+        assert_lossless(src);
+        let Item::Link(link) = &parsed.ast.items[0] else {
+            panic!("{}", dump_ast(&parsed.ast));
+        };
+        assert!(link.has_as, "{src}");
+        assert_eq!(link.alias, None, "{src}");
+        assert_eq!(link.binding, None, "{src}");
+        assert!(parsed.diagnostics.iter().any(|d| d.message.contains("name")), "{:?}", parsed.diagnostics);
+    }
+}
+
+#[test]
+fn stem_must_be_an_identifier_and_names_must_be_unique() {
+    let src = "link \"./a.b.clp\";\nlink \".clh\";\nlink \"Main.server.clpp\";\nlink \"./Wallet.clp\" as Purse;\nlink \"./Other.clp\" as Purse;\n";
+    let parsed = parse("t.clp", src);
+    assert_lossless(src);
+    let links: Vec<_> = parsed
+        .ast
+        .items
+        .iter()
+        .filter_map(|item| match item {
+            Item::Link(link) => Some(link),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(links.len(), 5, "{}", dump_ast(&parsed.ast));
+    assert_eq!(links[0].binding, None);
+    assert_eq!(links[1].binding, None);
+    assert_eq!(links[2].binding, None);
+    assert_eq!(links[3].binding.as_deref(), Some("Purse"));
+    assert_eq!(links[4].binding.as_deref(), Some("Purse"));
+    let msgs: Vec<_> = parsed.diagnostics.iter().map(|d| d.message.clone()).collect();
+    assert!(msgs.iter().any(|m| m.contains("`a.b`") && m.contains("as Name")), "{msgs:?}");
+    assert!(msgs.iter().any(|m| m.contains("`.clh`") && m.contains("as Name")), "{msgs:?}");
+    assert!(msgs.iter().any(|m| m.contains("`Main.server`") && m.contains("as Name")), "{msgs:?}");
+    assert!(msgs.iter().any(|m| m.contains("already used")), "{msgs:?}");
+}
+
+#[test]
+fn columns_count_unicode_scalars() {
+    let src = "void f() { \"é\" }";
+    let parsed = parse("t.clp", src);
+    let diag = parsed
+        .diagnostics
+        .iter()
+        .find(|d| d.message.contains("Semi") || d.message.contains("expected"))
+        .expect("diagnostic");
+    let lines = LineIndex::new(src);
+    let api = diag.api_view(src);
+    let from_line_col = lines.line_col(src, diag.span.start);
+    let from_line_col_in = lines.line_col_in(src, diag.span.start);
+    assert_eq!(from_line_col, from_line_col_in);
+    assert_eq!(api.column, from_line_col.1);
+    // `void f() { "` is 12 scalars, so `é` is column 13 and the following `"` is 14, not the byte offset.
+    let quote = src.find('é').unwrap() as u32;
+    assert_eq!(lines.line_col(src, quote).1, 13);
+    assert_eq!(lines.line_col(src, quote + 2).1, 14);
+    assert_ne!(
+        lines.line_col(src, quote + 2).1,
+        (quote + 2) as u32 + 1,
+        "column must not count UTF-8 bytes"
+    );
+}
+
+#[test]
+fn deep_expressions_stay_on_a_small_stack() {
+    let cases = [
+        ("q", "a?".repeat(2000)),
+        ("paren", format!("{}a{}", "(".repeat(2000), ")".repeat(2000))),
+        ("pow", (0..2000).map(|i| if i == 0 { "a".into() } else { format!("**a{i}") }).collect::<String>()),
+        ("eq", (0..2000).map(|i| format!("a{i}=")).collect::<String>() + "a"),
+    ];
+    for (name, body) in cases {
+        let src = format!("void f() {{ {body}; }}\n");
+        let src2 = src.clone();
+        let handle = std::thread::Builder::new()
+            .name(name.into())
+            .stack_size(256 * 1024)
+            .spawn(move || {
+                let parsed = parse("t.clp", &src2);
+                assert_eq!(parsed.syntax.text().to_string(), src2, "{name}");
+                let deep = parsed
+                    .diagnostics
+                    .iter()
+                    .any(|d| d.message.contains("nesting is too deep"));
+                if name == "paren" {
+                    assert!(deep, "parentheses past the depth cap need a diagnostic");
+                } else {
+                    assert!(!deep, "{name} is a loop and must not hit the depth cap");
+                }
+            })
+            .unwrap();
+        handle.join().expect(name);
+    }
+}
+
+#[test]
+fn long_try_chain_is_not_quadratic() {
+    fn elapsed(n: usize) -> std::time::Duration {
+        let body = "a?".repeat(n);
+        let src = format!("void f() {{ {body}; }}\n");
+        let start = std::time::Instant::now();
+        let parsed = parse("t.clp", &src);
+        assert_eq!(parsed.syntax.text().to_string(), src);
+        start.elapsed()
+    }
+    let _ = elapsed(500);
+    let small = elapsed(2_000);
+    let large = elapsed(8_000);
+    assert!(
+        large < small.saturating_mul(10),
+        "8k took {large:?}, 2k took {small:?}"
+    );
 }
 
 #[test]
