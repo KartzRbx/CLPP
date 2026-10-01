@@ -1,0 +1,11 @@
+CompileFlags:
+  Add:
+    - -std=c++20
+    - -Wall
+    - -Wextra
+CompilationDatabase: build/ucrt64
+
+Diagnostics:
+  ClangTidy:
+    Add: performance-*, modernize-*, bugprone-*
+    Remove: modernize-use-trailing-return-type

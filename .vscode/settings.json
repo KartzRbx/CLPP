@@ -1,0 +1,18 @@
+{
+  "cmake.useCMakePresets": "always",
+  "cmake.configurePreset": "ucrt64",
+  "cmake.buildPreset": "ucrt64",
+  "cmake.testPreset": "ucrt64",
+
+  "C_Cpp.intelliSenseEngine": "disabled",
+  "clangd.path": "clangd",
+  "clangd.arguments": [
+    "--background-index",
+    "--clang-tidy",
+    "--header-insertion=iwyu"
+  ],
+
+  "files.associations": {
+    "*.clp": "clpp"
+  }
+}

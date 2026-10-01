@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux GCC (ASan + UBSan)
+            os: ubuntu-24.04
+            preset: asan
+            test_preset: asan
+          - name: Linux release + benchmarks
+            os: ubuntu-24.04
+            preset: release
+            test_preset: ""
+          - name: macOS Clang
+            os: macos-14
+            preset: debug
+            test_preset: debug
+          - name: Windows MSVC
+            os: windows-2022
+            preset: debug
+            test_preset: debug
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Ninja (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Ninja (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja
+
+      - name: MSVC environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Configure
+        run: cmake --preset ${{ matrix.preset }}
+
+      - name: Build
+        run: cmake --build build/${{ matrix.preset }}
+
+      - name: Test
+        if: matrix.test_preset != ''
+        run: ctest --test-dir build/${{ matrix.preset }} --output-on-failure -j 2
+
+      - name: Benchmarks
+        if: matrix.preset == 'release'
+        run: python benchmarks/run.py build/release/src/clpp --runs 5 --markdown >> "$GITHUB_STEP_SUMMARY"
+
+  windows-package:
+    name: Windows exe + VS Code extension
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: llvm-mingw
+        run: |
+          curl -sSL -o llvm-mingw.tar.xz https://github.com/mstorsjo/llvm-mingw/releases/download/20240619/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz
+          tar xf llvm-mingw.tar.xz
+          echo "LLVM_MINGW=$PWD/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64" >> "$GITHUB_ENV"
+          sudo apt-get update && sudo apt-get install -y ninja-build
+      - name: Cross-compile clpp.exe
+        run: |
+          cmake -S . -B build-win -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/llvm-mingw-x86_64.cmake -DCLPP_BUILD_TESTS=OFF
+          cmake --build build-win --target clpp
+      - name: Package the extension
+        run: python3 tools/vscode/package_vsix.py --exe build-win/src/clpp.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clpp-windows
+          path: |
+            build-win/src/clpp.exe
+            dist/*.vsix

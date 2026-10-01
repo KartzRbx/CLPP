@@ -1,0 +1,6 @@
+<< Chamadas recursivas: fib(27) = 196418
+func fib(n) {
+  if (n < 2) { return n; }
+  return fib(n - 1) + fib(n - 2);
+}
+post(fib(27));

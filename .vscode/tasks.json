@@ -1,0 +1,27 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "cmake: configure (debug)",
+      "type": "shell",
+      "command": "cmake --preset ucrt64",
+      "group": "build"
+    },
+    {
+      "label": "cmake: build (debug)",
+      "type": "shell",
+      "command": "cmake --build --preset ucrt64",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "dependsOn": "cmake: configure (debug)"
+    },
+    {
+      "label": "ctest (debug)",
+      "type": "shell",
+      "command": "ctest --preset ucrt64 --output-on-failure",
+      "group": "test"
+    }
+  ]
+}

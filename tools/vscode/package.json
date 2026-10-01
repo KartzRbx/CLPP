@@ -1,0 +1,57 @@
+{
+  "name": "clpp-language",
+  "displayName": "CL++",
+  "description": "CL++ language support: syntax highlighting, IntelliSense (completion, inherited members, linked modules), hover, go to definition, inline errors, quick fixes, rename, outline and formatting — powered by the CL++ compiler itself.",
+  "version": "0.9.0",
+  "publisher": "kartzrbx",
+  "license": "MIT",
+  "icon": "images/icon.png",
+  "repository": { "type": "git", "url": "https://github.com/KartzRbx/CLPP" },
+  "engines": { "vscode": "^1.84.0" },
+  "categories": ["Programming Languages", "Snippets", "Formatters"],
+  "keywords": ["clpp", "cl++", "game", "language", "lsp"],
+  "activationEvents": ["onLanguage:clpp", "workspaceContains:**/*.clp"],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "clpp",
+        "aliases": ["CL++", "clpp"],
+        "extensions": [".clp"],
+        "configuration": "./language-configuration.json",
+        "icon": { "light": "./images/clp-file.png", "dark": "./images/clp-file.png" }
+      }
+    ],
+    "grammars": [
+      { "language": "clpp", "scopeName": "source.clpp", "path": "./syntaxes/clpp.tmLanguage.json" }
+    ],
+    "commands": [
+      { "command": "clpp.runFile", "title": "CL++: Run current file", "icon": "$(play)" },
+      { "command": "clpp.restartServer", "title": "CL++: Restart language server" },
+      { "command": "clpp.showOutput", "title": "CL++: Show output" }
+    ],
+    "menus": {
+      "editor/title/run": [{ "command": "clpp.runFile", "when": "resourceLangId == clpp" }]
+    },
+    "keybindings": [{ "command": "clpp.runFile", "key": "ctrl+f5", "when": "editorLangId == clpp" }],
+    "configuration": {
+      "title": "CL++",
+      "properties": {
+        "clpp.serverPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Path to `clpp` / `clpp.exe`. Empty: the binary bundled with the extension, then `PATH`, then `%LOCALAPPDATA%\\Programs\\CLPP\\clpp.exe`."
+        }
+      }
+    },
+    "configurationDefaults": {
+      "[clpp]": {
+        "editor.quickSuggestions": { "other": true, "comments": false, "strings": true },
+        "editor.suggestOnTriggerCharacters": true,
+        "editor.wordBasedSuggestions": "off",
+        "editor.tabSize": 2,
+        "editor.semanticHighlighting.enabled": true
+      }
+    }
+  }
+}

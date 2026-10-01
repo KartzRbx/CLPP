@@ -1,0 +1,221 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "CL++",
+  "scopeName": "source.clpp",
+  "patterns": [
+    {
+      "include": "#comment-doc"
+    },
+    {
+      "include": "#comment-block"
+    },
+    {
+      "include": "#comment-line"
+    },
+    {
+      "include": "#string-double"
+    },
+    {
+      "include": "#string-single"
+    },
+    {
+      "include": "#string-template"
+    },
+    {
+      "include": "#link"
+    },
+    {
+      "include": "#declaration-function"
+    },
+    {
+      "include": "#declaration-type"
+    },
+    {
+      "include": "#number-hex"
+    },
+    {
+      "include": "#number-bin"
+    },
+    {
+      "include": "#number"
+    },
+    {
+      "include": "#language"
+    },
+    {
+      "include": "#type"
+    },
+    {
+      "include": "#keyword"
+    },
+    {
+      "include": "#receiver"
+    },
+    {
+      "include": "#call"
+    },
+    {
+      "include": "#type-name"
+    },
+    {
+      "include": "#operator"
+    }
+  ],
+  "repository": {
+    "comment-doc": {
+      "name": "comment.block.documentation.clpp",
+      "begin": "<<\\[\\[",
+      "end": ">>"
+    },
+    "comment-block": {
+      "name": "comment.block.clpp",
+      "begin": "<<\\[",
+      "end": "\\]>>"
+    },
+    "comment-line": {
+      "name": "comment.line.clpp",
+      "match": "<<.*$"
+    },
+    "string-double": {
+      "name": "string.quoted.double.clpp",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.clpp",
+          "match": "\\\\."
+        }
+      ]
+    },
+    "string-single": {
+      "name": "string.quoted.single.clpp",
+      "begin": "'",
+      "end": "'",
+      "patterns": [
+        {
+          "name": "constant.character.escape.clpp",
+          "match": "\\\\."
+        }
+      ]
+    },
+    "string-template": {
+      "name": "string.quoted.other.template.clpp",
+      "begin": "`",
+      "end": "`",
+      "patterns": [
+        {
+          "name": "constant.character.escape.clpp",
+          "match": "\\\\."
+        },
+        {
+          "name": "meta.embedded.expression.clpp",
+          "begin": "\\$\\{",
+          "end": "\\}",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.template-expression.begin.clpp"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.template-expression.end.clpp"
+            }
+          },
+          "patterns": [
+            {
+              "include": "$self"
+            }
+          ]
+        }
+      ]
+    },
+    "number-hex": {
+      "name": "constant.numeric.hex.clpp",
+      "match": "\\b0[xX][0-9A-Fa-f_]+\\b"
+    },
+    "number-bin": {
+      "name": "constant.numeric.binary.clpp",
+      "match": "\\b0[bB][01_]+\\b"
+    },
+    "number": {
+      "name": "constant.numeric.clpp",
+      "match": "\\b\\d[\\d_]*(\\.[\\d_]+)?([eE][+-]?[\\d_]+)?\\b"
+    },
+    "language": {
+      "name": "constant.language.clpp",
+      "match": "\\b(true|false|null)\\b"
+    },
+    "type": {
+      "name": "storage.type.clpp",
+      "match": "\\b(Vector2|Vector3|Vector4|auto|bool|buffer|double|float|int|string|task|void)\\b"
+    },
+    "keyword": {
+      "patterns": [
+        {
+          "name": "storage.modifier.clpp",
+          "match": "\\b(abstract|async|const|constexpr|enum|extern|final|func|let|link|import|from|as|mut|namespace|operator|override|private|public|static|struct|type|using|variant|where|signal|observable|thread|atomic)\\b"
+        },
+        {
+          "name": "keyword.control.clpp",
+          "match": "\\b(await|break|continue|case|catch|default|else|for|guard|if|in|join|match|move|new|parallel|pcall|return|spawn|switch|try|while|and|or|not|shl|shr|decltype)\\b"
+        },
+        {
+          "name": "support.function.builtin.clpp",
+          "match": "\\b(post|warn|report|cout|endl|len|list|sort|find|push|pop|insert|remove|args|mutex|lock|unlock|fetch_add|atomic_load|actor)\\b"
+        }
+      ]
+    },
+    "operator": {
+      "name": "keyword.operator.clpp",
+      "match": "\\.{3}|->|=>|\\+\\+|--|&&|\\|\\||==|!=|<=|>=|\\?:|\\.:|::|\\.\\.|\\+|\\-|\\*|/|%|=|<|>|&|\\||\\^|~|\\?|:|\\."
+    },
+    "link": {
+      "match": "\\b(link|import)\\s+(@[A-Za-z_][\\w.]*)",
+      "captures": {
+        "1": {
+          "name": "storage.modifier.clpp"
+        },
+        "2": {
+          "name": "entity.name.namespace.clpp"
+        }
+      }
+    },
+    "declaration-function": {
+      "match": "\\b(func)\\s+([A-Za-z_\\x{00C0}-\\x{024F}][\\w\\x{00C0}-\\x{024F}]*)",
+      "captures": {
+        "1": {
+          "name": "storage.modifier.clpp"
+        },
+        "2": {
+          "name": "entity.name.function.clpp"
+        }
+      }
+    },
+    "declaration-type": {
+      "match": "\\b(struct|enum|variant|type)\\s+([A-Za-z_][\\w]*)(?:\\s*:\\s*([A-Za-z_][\\w]*(?:\\s*,\\s*[A-Za-z_][\\w]*)*))?",
+      "captures": {
+        "1": {
+          "name": "storage.modifier.clpp"
+        },
+        "2": {
+          "name": "entity.name.type.clpp"
+        },
+        "3": {
+          "name": "entity.other.inherited-class.clpp"
+        }
+      }
+    },
+    "receiver": {
+      "match": "@(this|[A-Za-z_][\\w]*)",
+      "name": "variable.other.member.clpp"
+    },
+    "call": {
+      "match": "\\b([A-Za-z_\\x{00C0}-\\x{024F}][\\w\\x{00C0}-\\x{024F}]*)\\s*(?=\\()",
+      "name": "entity.name.function.call.clpp"
+    },
+    "type-name": {
+      "match": "\\b[A-Z][A-Za-z0-9_]*\\b",
+      "name": "entity.name.type.clpp"
+    }
+  }
+}
