@@ -1641,7 +1641,11 @@ std::optional<Stmt> Parser::parse_match() {
     if (wildcard) {
       arm.wildcard = true;
       advance();
-    } else if (check(TokenType::IntLiteral) || check(TokenType::FloatLiteral) || check(TokenType::Identifier)) {
+    } else if (check(TokenType::IntLiteral) || check(TokenType::FloatLiteral) || check(TokenType::Identifier) ||
+               check(TokenType::StringLiteral) || check(TokenType::KwTrue) || check(TokenType::KwFalse) ||
+               (check(TokenType::Minus) && (peek_at(1).type == TokenType::IntLiteral ||
+                                            peek_at(1).type == TokenType::FloatLiteral))) {
+      // literal patterns: 100, -1, 2.5, "play", true; identifiers are enum cases
       std::optional<Expr> pattern = parse_expression();
       if (!pattern) {
         synchronize();

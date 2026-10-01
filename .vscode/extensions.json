@@ -1,10 +1,12 @@
 {
   "recommendations": [
+    "kartzrbx.clpp-language",
     "llvm-vs-code-extensions.vscode-clangd",
     "ms-vscode.cmake-tools",
     "twxs.cmake"
   ],
   "unwantedRecommendations": [
-    "ms-vscode.cpptools"
+    "ms-vscode.cpptools",
+    "clpp.clpp-language"
   ]
 }

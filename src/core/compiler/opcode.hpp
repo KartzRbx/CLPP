@@ -95,6 +95,7 @@ enum class Opcode : std::uint8_t {
   ListPop = 88,     // [] -> [last element of local `imm`], removed
   ListInsert = 89,  // [index, value] -> [], inserted into local `imm`
   ListRemove = 90,  // [index or key] -> [removed element], from local `imm` (list or dictionary)
+  Host = 91,        // like Axiom: imm = (arity << 8) | id into the host library registry (window, gfx, ui, json...)
 };
 
 }  // namespace clpp::compiler

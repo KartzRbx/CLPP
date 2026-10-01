@@ -4,6 +4,8 @@
   "cmake.buildPreset": "ucrt64",
   "cmake.testPreset": "ucrt64",
 
+  "clpp.serverPath": "",
+
   "C_Cpp.intelliSenseEngine": "disabled",
   "clangd.path": "clangd",
   "clangd.arguments": [
@@ -14,5 +16,9 @@
 
   "files.associations": {
     "*.clp": "clpp"
+  },
+
+  "[clpp]": {
+    "editor.semanticHighlighting.enabled": false
   }
 }

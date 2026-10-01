@@ -1,14 +1,18 @@
 #include "clpp/ide.hpp"
 
 #include "clpp/core/lexer/lexer.hpp"
+#include "clpp/semantic.hpp"
 #include "clpp/stdlib.hpp"
 #include "core/compiler/analyze.hpp"
 
 #include <algorithm>
 #include <cctype>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <string_view>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -216,21 +220,28 @@ void walk_stmts(const std::vector<parser::Stmt>& statements, const std::uint32_t
 void add_unique(std::vector<Item>& items, Item item) {
   switch (item.kind) {
     case Kind::Field:
+    case Kind::EnumMember:
       item.sort_text = "0";
       break;
     case Kind::Variable:
+    case Kind::Constant:
       item.sort_text = "1";
       break;
     case Kind::Function:
+    case Kind::Method:
       item.sort_text = "2";
       break;
     case Kind::Struct:
     case Kind::Enum:
     case Kind::Module:
+    case Kind::Type:
       item.sort_text = "3";
       break;
     case Kind::Keyword:
       item.sort_text = "4";
+      break;
+    case Kind::Snippet:
+      item.sort_text = "6";
       break;
   }
   for (const Item& existing : items) {
@@ -458,7 +469,7 @@ void add_unique(std::vector<Item>& items, Item item) {
   std::uint32_t found_line = 0;
   for (const parser::Function& function : program.functions) {
     const std::size_t dot = function.name.find('.');
-    if (dot == std::string::npos || function.params.empty() || function.params.front() != "self" ||
+    if (dot == std::string::npos || function.imported || function.params.empty() || function.params.front() != "self" ||
         function.name_location.line == 0 || function.name_location.line > line) {
       continue;
     }
@@ -504,7 +515,7 @@ void add_struct_members(const std::string& type, const std::string& prefix, cons
       }
       Item item{field.name, field.type_name.empty() ? "auto" : field.type_name, Kind::Field};
       if (owner != chain.front()->name) {
-        item.detail += "  (herdado de " + owner + ")";
+        item.detail += "  (inherited from " + owner + ")";
       }
       item.documentation = code_block((field.type_name.empty() ? "auto" : field.type_name) + " " + owner + "." + field.name);
       add_unique(items, std::move(item));
@@ -521,9 +532,9 @@ void add_struct_members(const std::string& type, const std::string& prefix, cons
       if (!matches_prefix(label, prefix)) {
         continue;
       }
-      Item item{label, signature_text(function), Kind::Function};
+      Item item{label, signature_text(function), Kind::Method};
       if (decl.name != chain.front()->name) {
-        item.detail += "  (herdado de " + decl.name + ")";
+        item.detail += "  (inherited from " + decl.name + ")";
       }
       item.documentation = code_block(decl.name + "." + signature_text(function).substr(5));
       item.insert_text = label + (params_text(function).empty() ? "()" : "($1)$0");
@@ -549,7 +560,7 @@ void complete_members(const std::string& owner, const std::string& prefix, const
         continue;
       }
       if (matches_prefix(field, prefix)) {
-        add_unique(items, Item{field, "float", Kind::Field});
+        add_unique(items, Item{field, "float · componente", Kind::Field});
       }
     }
   }
@@ -561,7 +572,7 @@ void complete_members(const std::string& owner, const std::string& prefix, const
     for (std::size_t index = 0; index < decl->variants.size(); ++index) {
       const std::string& variant = decl->variants[index];
       if (matches_prefix(variant, prefix)) {
-        Item item{variant, owner + " = " + std::to_string(index), Kind::Enum};
+        Item item{variant, owner + " = " + std::to_string(index), Kind::EnumMember};
         add_unique(items, std::move(item));
       }
     }
@@ -578,7 +589,7 @@ void complete_members(const std::string& owner, const std::string& prefix, const
     Item item{label, signature_text(function), Kind::Function};
     item.documentation = code_block(signature_text(function));
     if (const ModuleInfo* module = origin_of_function(analysis, function.name)) {
-      item.documentation += "\n\nDe `" + module->path + "`";
+      item.documentation += "\n\nFrom `" + module->path + "`";
     }
     item.insert_text = label + (params_text(function).empty() ? "()" : "($1)$0");
     item.snippet = !params_text(function).empty();
@@ -589,8 +600,8 @@ void complete_members(const std::string& owner, const std::string& prefix, const
       if (!matches_prefix(constant.name, prefix)) {
         continue;
       }
-      Item item{constant.name, constant.type + " = " + constant.display, Kind::Variable};
-      item.documentation = code_block("const " + constant.name + " = " + constant.display + ";") + "\n\nDe `" +
+      Item item{constant.name, constant.type + " = " + constant.display, Kind::Constant};
+      item.documentation = code_block("const " + constant.name + " = " + constant.display + ";") + "\n\nFrom `" +
                            module->path + "`";
       add_unique(items, std::move(item));
     }
@@ -673,11 +684,11 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
       end_line = program.functions[index + 1].name_location.line;
       end_column = program.functions[index + 1].name_location.column;
     }
-    const bool imported = origin_of_function(analysis, function.name) != nullptr;
+    const bool module_function = origin_of_function(analysis, function.name) != nullptr;
     if (function.name.find('.') == std::string::npos) {
       symbols.push_back(Symbol{function.name, signature_text(function), Kind::Function, 1, 1,
                                function.name_location.line, function.name_location.column, 0xFFFFFFFF, 0xFFFFFFFF});
-    } else if (imported || find_struct(program, function.name.substr(0, function.name.rfind('.'))) == nullptr) {
+    } else if (module_function || find_struct(program, function.name.substr(0, function.name.rfind('.'))) == nullptr) {
       const std::string alias = function.name.substr(0, function.name.find('.'));
       bool known = false;
       for (const Symbol& symbol : symbols) {
@@ -691,8 +702,8 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
                                  0xFFFFFFFF, 0xFFFFFFFF});
       }
     }
-    if (imported) {
-      continue;  // body and parameters live in the module file
+    if (function.imported) {
+      continue;  // body and parameters live in the module file (its own coordinates, not this file's)
     }
     walk_stmts(function.body, end_line, end_column, symbols, self_fields);
     for (std::size_t param = 0; param < function.params.size(); ++param) {
@@ -735,7 +746,12 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
   std::string owner;
   const auto previous_of = [&](const Token* token) { return token == nullptr ? nullptr : token_before(tokens, *token); };
   const Token* anchor = current;  // the token right before what is being typed
-  if (current != nullptr && current->type == TokenType::Identifier) {
+  // A reserved word being typed (`cons|`, `const|`) is a prefix too, like an identifier.
+  const bool typing_word = current != nullptr && !current->lexeme.empty() &&
+                    (std::isalpha(static_cast<unsigned char>(current->lexeme.front())) != 0 ||
+                     current->lexeme.front() == '_') &&
+                    keyword_doc(current->lexeme) != nullptr;
+  if (current != nullptr && (current->type == TokenType::Identifier || typing_word)) {
     const std::uint32_t offset = column - current->location.column;
     prefix = std::string(current->lexeme.substr(0, std::min<std::size_t>(offset, current->lexeme.size())));
     anchor = previous_of(current);
@@ -820,7 +836,7 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
   if (link_module) {
     const bool after_at = anchor != nullptr && anchor->type == TokenType::At;
     if (after_at) {
-      add_unique(info.completions, Item{"clpp", "biblioteca padrão", Kind::Module});
+      add_unique(info.completions, Item{"clpp", "standard library", Kind::Module});
     } else {
       for (const stdlib::ModuleEntry& entry : stdlib::module_catalog()) {
         const std::string name(entry.path.substr(6));  // after "@clpp."
@@ -878,34 +894,45 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
         {"len", "len(collection) -> int", "Number of elements of a list, array or dictionary, or characters of a string."},
         {"list", "list(values...) -> list", "Builds a list from the values."},
         {"sort", "sort(list) -> list", "A new list with the numbers in ascending order."},
-        {"find", "find(list, value) -> int", "Position of the value in the list, or -1."},
+        {"find", "find(list, value) -> int", "Position of the value in the list, or `-1`."},
         {"push", "push(list, value)", "Appends the value to the end of the list variable."},
         {"pop", "pop(list)", "Removes the last element of the list variable and returns it."},
         {"insert", "insert(list, index, value)", "Inserts the value at the position, shifting the rest."},
         {"remove", "remove(list, index) / remove(dictionary, key)", "Removes and returns the element (or the key's value)."},
         {"args", "args() -> list", "Command-line arguments after the file name."},
-        {"move", "move(variable)", "Takes the value out of the variable, leaving it empty."},
-        {"join", "join(thread)", "Waits for a thread and returns its result."},
-        {"mutex", "mutex()", "Creates a lock for lock()/unlock()."},
-        {"lock", "lock(mutex)", "Locks the mutex."},
-        {"unlock", "unlock(mutex)", "Unlocks the mutex."},
-        {"fetch_add", "fetch_add(atomic, amount)", "Adds atomically and returns the previous value."},
-        {"atomic_load", "atomic_load(atomic)", "Reads an atomic value."},
-        {"actor", "actor(function, value)", "Runs the function in isolation and returns its result."},
+        {"mutex", "mutex()", "Creates a lock for `lock()`/`unlock()`."},
+        {"lock", "lock(mutex)", "Enters the region protected by the lock."},
+        {"unlock", "unlock(mutex)", "Leaves the region protected by the lock."},
+        {"fetch_add", "fetch_add(atomic, n)", "Adds `n` atomically and returns the previous value."},
+        {"atomic_load", "atomic_load(atomic)", "Reads the current value of an `atomic`."},
+        {"actor", "actor(function, value)", "Runs the function isolated (no files, network or global state) and returns its result."},
     };
     for (const Builtin& builtin : kBuiltins) {
       if (matches_prefix(builtin.name, prefix)) {
         Item item{std::string(builtin.name), std::string(builtin.signature), Kind::Function};
-        item.documentation = std::string(builtin.doc);
+        item.documentation = code_block(std::string(builtin.signature)) + "\n\n" + std::string(builtin.doc);
         item.insert_text = std::string(builtin.name) + (builtin.name == "args" || builtin.name == "mutex" ? "()" : "($1)$0");
         item.snippet = item.insert_text.find('$') != std::string::npos;
         add_unique(info.completions, std::move(item));
       }
     }
+    // Reserved words, each with what it really is: `int` a type, `post` a function, `true` a
+    // constant, `match` a keyword. The editor shows a different icon and the description.
     for (const std::string_view keyword : keyword_names()) {
-      if (matches_prefix(keyword, prefix)) {
-        add_unique(info.completions, Item{std::string(keyword), "keyword", Kind::Keyword});
+      if (!matches_prefix(keyword, prefix)) {
+        continue;
       }
+      const KeywordDoc* doc = keyword_doc(keyword);
+      Item item{std::string(keyword), doc != nullptr ? std::string(doc->detail) : "reserved word",
+                doc != nullptr ? doc->kind : Kind::Keyword};
+      if (doc != nullptr) {
+        item.documentation = std::string(doc->doc);
+      }
+      if (item.kind == Kind::Function) {
+        item.insert_text = std::string(keyword) + "($1)$0";
+        item.snippet = true;
+      }
+      add_unique(info.completions, std::move(item));
     }
     // Snippets only where a statement can start (after `;`, `{`, `}` or at the top of the file).
     const Token* start = anchor;
@@ -916,7 +943,7 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
         if (!matches_prefix(snippet.label, prefix)) {
           continue;
         }
-        Item item{snippet.label, snippet.detail, Kind::Keyword};
+        Item item{snippet.label, snippet.detail, Kind::Snippet};
         item.sort_text = "6";
         item.insert_text = snippet.body;
         item.snippet = true;
@@ -954,7 +981,7 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
         info.hover_markdown = code_block(signature_text(*function));
         const ModuleInfo* module = origin_of_function(analysis, function->name);
         if (module != nullptr) {
-          info.hover_markdown += "\n\nDe `" + module->path + "` (via `" + module->alias + "`)";
+          info.hover_markdown += "\n\nFrom `" + module->path + "` (via `" + module->alias + "`)";
           info.definition_path = module->path;
         }
         info.has_definition = true;
@@ -971,7 +998,7 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
           info.has_hover = true;
           info.hover.text = base_name + "." + name + ": " + constant.type + " = " + constant.display;
           info.hover_markdown = code_block("const " + name + ": " + constant.type + " = " + constant.display) +
-                                "\n\nDe `" + constant_module->path + "`";
+                                "\n\nFrom `" + constant_module->path + "`";
           info.has_definition = constant.location.line != 0;
           info.definition = constant.location;
           info.definition_length = static_cast<std::uint32_t>(name.size());
@@ -1001,7 +1028,7 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
             info.hover.text = name + ": " + type;
             info.hover_markdown = code_block(type + " " + owner + "." + name);
             if (owner != bare_type(base_type)) {
-              info.hover_markdown += "\n\nHerdado de `" + owner + "`";
+              info.hover_markdown += "\n\nInherited from `" + owner + "`";
             }
             const parser::StructDecl* declaring = find_struct(program, owner);
             const parser::Field* original = &field;
@@ -1028,7 +1055,7 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
             info.hover.text = decl->name + "." + signature_text(*method).substr(5);
             info.hover_markdown = code_block(decl->name + "." + signature_text(*method).substr(5));
             if (decl->name != bare_type(base_type)) {
-              info.hover_markdown += "\n\nHerdado de `" + decl->name + "`";
+              info.hover_markdown += "\n\nInherited from `" + decl->name + "`";
             }
             info.has_definition = true;
             info.definition = method->name_location;
@@ -1044,7 +1071,7 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
               if (decl->variants[index] == name) {
                 info.has_hover = true;
                 info.hover.text = base_name + "." + name + " = " + std::to_string(index);
-                info.hover_markdown = code_block("enum " + base_name + " { " + name + " }") + "\n\nValor: `" +
+                info.hover_markdown = code_block("enum " + base_name + " { " + name + " }") + "\n\nValue: `" +
                                       std::to_string(index) + "`";
                 if (index < decl->variant_locations.size()) {
                   info.has_definition = decl->variant_locations[index].line != 0;
@@ -1083,7 +1110,7 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
             if (const parser::StructDecl* decl = find_struct(program, best->name)) {
               info.hover_markdown = code_block(struct_summary(program, *decl));
               if (const ModuleInfo* module = origin_of_type(analysis, best->name)) {
-                info.hover_markdown += "\n\nDe `" + module->path + "`";
+                info.hover_markdown += "\n\nFrom `" + module->path + "`";
                 info.definition_path = module->path;
               }
             } else {
@@ -1125,7 +1152,7 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
             const std::string text = "let " + best->name + (best->detail == "value" ? "" : ": " + best->detail);
             info.hover_markdown = code_block(text);
             if (!best->value.empty()) {
-              info.hover_markdown += "\n\nValor: `" + best->value + "`";
+              info.hover_markdown += "\n\nValue: `" + best->value + "`";
             }
             break;
           }
@@ -1138,6 +1165,15 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
           info.definition_length = 4;  // `link`
         }
       }
+    }
+  }
+  // Hover on a reserved word: what it is and an example.
+  if (!info.has_hover && word != nullptr && word->type != TokenType::Identifier && word->type != TokenType::Eof) {
+    if (const KeywordDoc* doc = keyword_doc(word->lexeme)) {
+      info.has_hover = true;
+      info.hover.text = std::string(doc->name) + ": " + std::string(doc->detail);
+      info.hover_markdown =
+          "**" + std::string(doc->name) + "** — " + std::string(doc->detail) + "\n\n" + std::string(doc->doc);
     }
   }
   info.symbols.reserve(symbols.size());
@@ -1273,8 +1309,22 @@ Info inspect(const std::string_view source, const std::uint32_t line, const std:
 
 namespace {
 
+// ---------------------------------------------------------------------------------------------
+// Semantic tokens.
+//
+// Two passes over the analyzed file:
+//   1. Declarations of *this* file (structs, fields, enums, functions, parameters, variables,
+//      `link` aliases) become tokens with the `declaration` modifier and are remembered as
+//      bindings. Declarations merged from a `link`ed module are skipped: their locations are
+//      coordinates in the module's text, and painting them here colored random slices of this
+//      file (the "am" of `amount` shown as a parameter). Every declaration must also sit exactly
+//      on an identifier token of this file with the same text, so a stale or synthetic location
+//      (the implicit `self`, anonymous functions) can never produce a partial token.
+//   2. Every remaining identifier is classified by context: member after `.`, `@field`, module
+//      alias, struct/enum name, binding in scope, built-in function.
+// ---------------------------------------------------------------------------------------------
+
 struct Binding {
-  std::string name;
   std::uint32_t line{1};
   std::uint32_t column{1};
   std::uint32_t end_line{0xFFFFFFFF};
@@ -1282,11 +1332,11 @@ struct Binding {
   std::uint32_t token_type{kSemanticVariable};
   std::uint32_t modifiers{0};
   bool local{false};
+  bool hoisted{false};  // functions: callable before the line that declares them
 };
 
-[[nodiscard]] std::uint32_t text_length(const std::string_view span, const std::string_view fallback) {
-  const std::string_view text = span.empty() ? fallback : span;
-  return static_cast<std::uint32_t>(text.size());
+[[nodiscard]] constexpr std::uint64_t position_key(const std::uint32_t line, const std::uint32_t column) {
+  return (static_cast<std::uint64_t>(line) << 32U) | column;
 }
 
 [[nodiscard]] bool earlier(const std::uint32_t line, const std::uint32_t column, const std::uint32_t other_line,
@@ -1294,22 +1344,98 @@ struct Binding {
   return line < other_line || (line == other_line && column < other_column);
 }
 
-void remember(std::vector<SemanticToken>& tokens, std::vector<Binding>& bindings, const std::string& name,
-              const SourceLocation location, const std::uint32_t length, const std::uint32_t token_type,
-              const std::uint32_t modifiers, const bool local, const std::uint32_t end_line,
-              const std::uint32_t end_column) {
-  if (location.line == 0 || length == 0 || name.empty()) {
-    return;
-  }
-  for (const SemanticToken& token : tokens) {
-    if (token.line == location.line && token.column == location.column) {
-      return;
+class Highlighter {
+ public:
+  explicit Highlighter(const std::vector<Token>& tokens) : m_tokens(tokens) {
+    for (std::size_t index = 0; index < tokens.size(); ++index) {
+      if (tokens[index].type != TokenType::Eof) {
+        m_index.emplace(position_key(tokens[index].location.line, tokens[index].location.column), index);
+      }
     }
   }
-  tokens.push_back(SemanticToken{location.line, location.column, length, token_type, modifiers | kSemanticDeclaration});
-  bindings.push_back(Binding{name, location.line, location.column, end_line, end_column, token_type,
-                             modifiers & ~kSemanticDeclaration, local});
-}
+
+  // A declaration of this file. Returns false when `location` is not an identifier token that
+  // spells `name` (imported or synthetic declarations), so nothing is painted.
+  bool declare(const std::string& name, const SourceLocation location, const std::uint32_t token_type,
+               const std::uint32_t modifiers, const bool local, const bool hoisted, const SourceLocation end) {
+    const Token* token = identifier_at(location, name);
+    if (token == nullptr || !mark(location)) {
+      return false;
+    }
+    m_result.push_back(SemanticToken{location.line, location.column, static_cast<std::uint32_t>(token->lexeme.size()),
+                                     token_type, modifiers | kSemanticDeclaration});
+    m_bindings[name].push_back(
+        Binding{location.line, location.column, end.line, end.column, token_type, modifiers, local, hoisted});
+    return true;
+  }
+
+  // A token that is not a declaration (a use, a member, a type keyword).
+  void paint(const Token& token, const std::uint32_t token_type, const std::uint32_t modifiers) {
+    if (mark(token.location)) {
+      m_result.push_back(SemanticToken{token.location.line, token.location.column,
+                                       static_cast<std::uint32_t>(token.lexeme.size()), token_type, modifiers});
+    }
+  }
+
+  [[nodiscard]] bool taken(const SourceLocation location) const {
+    return m_taken.count(position_key(location.line, location.column)) != 0;
+  }
+
+  // The innermost binding of `name` visible at `location`: a local of the enclosing function
+  // first (the latest one declared before the use, so shadowing works), then a global.
+  [[nodiscard]] const Binding* lookup(const std::string& name, const SourceLocation location) const {
+    const auto found = m_bindings.find(name);
+    if (found == m_bindings.end()) {
+      return nullptr;
+    }
+    const Binding* best = nullptr;
+    int best_rank = -1;
+    for (const Binding& binding : found->second) {
+      const bool started = binding.hoisted || earlier(binding.line, binding.column, location.line, location.column);
+      if (!started) {
+        continue;
+      }
+      if (binding.local && !earlier(location.line, location.column, binding.end_line, binding.end_column + 1)) {
+        continue;
+      }
+      const int rank = binding.local ? 2 : binding.hoisted ? 0 : 1;
+      if (rank > best_rank ||
+          (rank == best_rank && best != nullptr && earlier(best->line, best->column, binding.line, binding.column))) {
+        best = &binding;
+        best_rank = rank;
+      }
+    }
+    return best;
+  }
+
+  [[nodiscard]] std::vector<SemanticToken> take() {
+    std::sort(m_result.begin(), m_result.end(), [](const SemanticToken& left, const SemanticToken& right) {
+      return left.line != right.line ? left.line < right.line : left.column < right.column;
+    });
+    return std::move(m_result);
+  }
+
+ private:
+  [[nodiscard]] const Token* identifier_at(const SourceLocation location, const std::string& name) const {
+    if (location.line == 0 || name.empty()) {
+      return nullptr;
+    }
+    const auto found = m_index.find(position_key(location.line, location.column));
+    if (found == m_index.end()) {
+      return nullptr;
+    }
+    const Token& token = m_tokens[found->second];
+    return token.type == TokenType::Identifier && token.lexeme == name ? &token : nullptr;
+  }
+
+  bool mark(const SourceLocation location) { return m_taken.insert(position_key(location.line, location.column)).second; }
+
+  const std::vector<Token>& m_tokens;
+  std::unordered_map<std::uint64_t, std::size_t> m_index;
+  std::unordered_set<std::uint64_t> m_taken;
+  std::unordered_map<std::string, std::vector<Binding>> m_bindings;
+  std::vector<SemanticToken> m_result;
+};
 
 [[nodiscard]] SourceLocation function_close(const std::vector<Token>& tokens, const SourceLocation name) {
   bool seen = false;
@@ -1333,25 +1459,37 @@ void remember(std::vector<SemanticToken>& tokens, std::vector<Binding>& bindings
   return SourceLocation{0xFFFFFFFF, 0xFFFFFFFF};
 }
 
-void remember_statements(const std::vector<parser::Stmt>& statements, std::vector<SemanticToken>& tokens,
-                         std::vector<Binding>& bindings, const bool local, const std::uint32_t end_line,
-                         const std::uint32_t end_column) {
-  for (const parser::Stmt& stmt : statements) {
-    if (stmt.kind == parser::Stmt::Kind::Let || stmt.kind == parser::Stmt::Kind::ForIn || stmt.if_let) {
-      const std::uint32_t modifiers = stmt.kind == parser::Stmt::Kind::Let && stmt.immutable ? kSemanticReadonly : 0;
-      remember(tokens, bindings, stmt.name, stmt.name_location, text_length(stmt.name_span, stmt.name),
-               kSemanticVariable, modifiers, local, end_line, end_column);
+// First identifier token spelling `name` at or after `from`, on the same line (match arm bindings
+// only know where their pattern starts: `Some(price)` binds `price`, not `Some`).
+[[nodiscard]] SourceLocation name_after(const std::vector<Token>& tokens, const SourceLocation from,
+                                        const std::string& name) {
+  for (const Token& token : tokens) {
+    if (token.type == TokenType::Identifier && token.lexeme == name && token.location.line == from.line &&
+        token.location.column >= from.column) {
+      return token.location;
     }
-    remember_statements(stmt.then_body, tokens, bindings, local, end_line, end_column);
-    remember_statements(stmt.else_body, tokens, bindings, local, end_line, end_column);
-    remember_statements(stmt.init, tokens, bindings, local, end_line, end_column);
-    remember_statements(stmt.step, tokens, bindings, local, end_line, end_column);
+  }
+  return SourceLocation{0, 0};
+}
+
+void declare_statements(const std::vector<parser::Stmt>& statements, const std::vector<Token>& tokens,
+                        Highlighter& highlighter, const bool local, const SourceLocation end) {
+  for (const parser::Stmt& stmt : statements) {
+    if (stmt.kind == parser::Stmt::Kind::Let || stmt.kind == parser::Stmt::Kind::ForIn || stmt.if_let ||
+        stmt.kind == parser::Stmt::Kind::Signal) {
+      const std::uint32_t modifiers = stmt.kind == parser::Stmt::Kind::Let && stmt.immutable ? kSemanticReadonly : 0;
+      (void)highlighter.declare(stmt.name, stmt.name_location, kSemanticVariable, modifiers, local, false, end);
+    }
+    declare_statements(stmt.then_body, tokens, highlighter, local, end);
+    declare_statements(stmt.else_body, tokens, highlighter, local, end);
+    declare_statements(stmt.init, tokens, highlighter, local, end);
+    declare_statements(stmt.step, tokens, highlighter, local, end);
     for (const parser::Stmt::MatchArm& arm : stmt.arms) {
       if (!arm.bind_name.empty()) {
-        remember(tokens, bindings, arm.bind_name, arm.pattern.location, static_cast<std::uint32_t>(arm.bind_name.size()),
-                 kSemanticVariable, 0, local, end_line, end_column);
+        (void)highlighter.declare(arm.bind_name, name_after(tokens, arm.pattern.location, arm.bind_name),
+                                  kSemanticVariable, 0, local, false, end);
       }
-      remember_statements(arm.body, tokens, bindings, local, end_line, end_column);
+      declare_statements(arm.body, tokens, highlighter, local, end);
     }
   }
 }
@@ -1376,145 +1514,335 @@ void remember_statements(const std::vector<parser::Stmt>& statements, std::vecto
   }
 }
 
-[[nodiscard]] bool in_binding(const Binding& binding, const std::uint32_t line, const std::uint32_t column) {
-  if (!earlier(binding.line, binding.column, line, column)) {
-    return false;
+// Reserved words that are called like functions: `post(x)`, `pcall(e)`, `join(t)`.
+[[nodiscard]] bool is_builtin_call_token(const TokenType type) {
+  switch (type) {
+    case TokenType::KwPost:
+    case TokenType::KwWarn:
+    case TokenType::KwReport:
+    case TokenType::KwCout:
+    case TokenType::KwPcall:
+    case TokenType::KwJoin:
+    case TokenType::KwMove:
+      return true;
+    default:
+      return false;
   }
-  if (!binding.local) {
-    return true;
+}
+
+// Built-in functions that are ordinary names (resolved by the binder).
+[[nodiscard]] bool is_builtin_function(const std::string_view name) {
+  static constexpr std::string_view kNames[] = {"len",   "list",   "sort",      "find",        "push",
+                                                 "pop",   "insert", "remove",    "args",        "mutex",
+                                                 "lock",  "unlock", "fetch_add", "atomic_load", "actor",
+                                                 "array", "dictionary", "Some", "Ok", "Err"};
+  return std::find(std::begin(kNames), std::end(kNames), name) != std::end(kNames);
+}
+
+// `clpp` and `axiom` in `link @clpp.axiom as Axiom;`
+[[nodiscard]] bool in_link_path(const std::vector<Token>& tokens, const std::size_t index) {
+  std::size_t cursor = index;
+  while (cursor > 0) {
+    const TokenType type = tokens[cursor - 1].type;
+    if (type == TokenType::KwLink || type == TokenType::KwImport || type == TokenType::KwFrom) {
+      return true;
+    }
+    if (type != TokenType::Dot && type != TokenType::At && type != TokenType::Identifier) {
+      return false;
+    }
+    --cursor;
   }
-  return earlier(line, column, binding.end_line, binding.end_column) ||
-         (line == binding.end_line && column <= binding.end_column);
+  return false;
+}
+
+[[nodiscard]] bool is_synthetic_function(const std::string& name) {
+  return name.rfind("anon", 0) == 0 || name.find("operator") != std::string::npos;
 }
 
 }  // namespace
 
+const std::vector<std::string_view>& semantic_token_types() {
+  static const std::vector<std::string_view> types = {"type",     "struct",   "enum",     "enumMember",
+                                                      "parameter", "variable", "property", "function",
+                                                      "keyword",  "namespace", "method",  "typeParameter"};
+  return types;
+}
+
+const std::vector<std::string_view>& semantic_token_modifiers() {
+  static const std::vector<std::string_view> modifiers = {"declaration", "readonly", "async", "defaultLibrary",
+                                                          "static"};
+  return modifiers;
+}
+
 std::vector<SemanticToken> semantic_tokens(const std::string_view source, const ModuleLoader& modules) {
-  AnalysisResult analysis = analyze_program(source, modules);
+  const AnalysisResult analysis = analyze_program(source, modules);
   const parser::Program& program = analysis.program;
   const std::vector<Token>& tokens = analysis.tokens;
+  Highlighter highlighter(tokens);
+  constexpr SourceLocation kForever{0xFFFFFFFF, 0xFFFFFFFF};
 
-  std::vector<SemanticToken> highlighted;
-  std::vector<Binding> bindings;
-  remember_statements(program.statements, highlighted, bindings, false, 0xFFFFFFFF, 0xFFFFFFFF);
-
-  for (const parser::Function& function : program.functions) {
-    const SourceLocation end = function_close(tokens, function.name_location);
-    const std::uint32_t modifiers = function.is_async ? kSemanticAsync : 0;
-    const std::string bare = function.name.rfind('.') == std::string::npos
-                                 ? function.name
-                                 : function.name.substr(function.name.rfind('.') + 1);
-    remember(highlighted, bindings, bare, function.name_location, text_length(function.name_span, bare),
-             kSemanticFunction, modifiers, false, end.line, end.column);
-    for (std::size_t index = 0; index < function.params.size(); ++index) {
-      const std::string_view span = index < function.param_spans.size() ? function.param_spans[index] : std::string_view{};
-      const SourceLocation location =
-          index < function.param_locations.size() ? function.param_locations[index] : SourceLocation{};
-      remember(highlighted, bindings, function.params[index], location, text_length(span, function.params[index]),
-               kSemanticParameter, 0, true, end.line, end.column);
-    }
-    remember_statements(function.body, highlighted, bindings, true, end.line, end.column);
+  // --- 1. declarations of this file -------------------------------------------------------
+  std::unordered_set<std::string> type_params;
+  for (const parser::LinkDecl& link : analysis.links) {
+    (void)highlighter.declare(link.alias, link.alias_location, kSemanticNamespace, 0, false, true, kForever);
   }
-
   for (const parser::StructDecl& decl : program.structs) {
-    remember(highlighted, bindings, decl.name, decl.name_location, text_length(decl.name_span, decl.name),
-             kSemanticStruct, 0, false, 0xFFFFFFFF, 0xFFFFFFFF);
-    for (const parser::Field& field : decl.fields) {
-      remember(highlighted, bindings, field.name, field.name_location, text_length(field.name_span, field.name),
-               kSemanticProperty, 0, false, 0xFFFFFFFF, 0xFFFFFFFF);
-    }
-  }
-
-  for (const parser::EnumDecl& decl : program.enums) {
-    remember(highlighted, bindings, decl.name, decl.name_location, text_length(decl.name_span, decl.name), kSemanticEnum,
-             0, false, 0xFFFFFFFF, 0xFFFFFFFF);
-    for (std::size_t index = 0; index < decl.variants.size(); ++index) {
-      const std::string_view span = index < decl.variant_spans.size() ? decl.variant_spans[index] : std::string_view{};
-      const SourceLocation location =
-          index < decl.variant_locations.size() ? decl.variant_locations[index] : SourceLocation{};
-      remember(highlighted, bindings, decl.variants[index], location, text_length(span, decl.variants[index]),
-               kSemanticEnumMember, 0, false, 0xFFFFFFFF, 0xFFFFFFFF);
-    }
-  }
-
-  for (const Token& token : tokens) {
-    if (token.type == TokenType::Eof || token.location.line == 0 || token.lexeme.empty()) {
+    if (decl.imported) {
       continue;
     }
-    bool occupied = false;
-    for (const SemanticToken& highlighted_token : highlighted) {
-      if (highlighted_token.line == token.location.line && highlighted_token.column == token.location.column) {
-        occupied = true;
-        break;
+    (void)highlighter.declare(decl.name, decl.name_location, kSemanticStruct, 0, false, true, kForever);
+    for (const parser::Field& field : decl.fields) {
+      if (field.owner.empty() || field.owner == decl.name) {
+        (void)highlighter.declare(field.name, field.name_location, kSemanticProperty, 0, false, true, kForever);
       }
     }
-    if (occupied) {
+    type_params.insert(decl.type_params.begin(), decl.type_params.end());
+  }
+  for (const parser::EnumDecl& decl : program.enums) {
+    if (decl.imported) {
       continue;
     }
+    (void)highlighter.declare(decl.name, decl.name_location, kSemanticEnum, 0, false, true, kForever);
+    for (std::size_t index = 0; index < decl.variants.size() && index < decl.variant_locations.size(); ++index) {
+      (void)highlighter.declare(decl.variants[index], decl.variant_locations[index], kSemanticEnumMember, 0, false,
+                                true, kForever);
+    }
+  }
+  declare_statements(program.statements, tokens, highlighter, false, kForever);
+  for (const parser::Function& function : program.functions) {
+    if (function.imported) {
+      continue;
+    }
+    const SourceLocation end = function_close(tokens, function.name_location);
+    const std::size_t dot = function.name.rfind('.');
+    const bool method = dot != std::string::npos && !function.params.empty() && function.params.front() == "self";
+    if (!is_synthetic_function(function.name)) {
+      const std::string bare = dot == std::string::npos ? function.name : function.name.substr(dot + 1);
+      // Methods are reached through `obj.` / `@`, so only plain functions become a name binding.
+      const std::uint32_t modifiers = function.is_async ? kSemanticAsync : 0;
+      if (method || dot != std::string::npos) {
+        (void)highlighter.declare(bare, function.name_location, method ? kSemanticMethod : kSemanticFunction,
+                                  modifiers | (method ? 0 : kSemanticStatic), false, false, kForever);
+      } else {
+        (void)highlighter.declare(bare, function.name_location, kSemanticFunction, modifiers, false, true, kForever);
+      }
+    }
+    for (std::size_t index = method ? 1 : 0; index < function.params.size() && index < function.param_locations.size();
+         ++index) {
+      (void)highlighter.declare(function.params[index], function.param_locations[index], kSemanticParameter, 0, true,
+                                false, end);
+    }
+    type_params.insert(function.type_params.begin(), function.type_params.end());
+    declare_statements(function.body, tokens, highlighter, true, end);
+  }
+
+  std::unordered_map<std::string, const ModuleInfo*> modules_by_alias;
+  for (const ModuleInfo& module : analysis.modules) {
+    modules_by_alias.emplace(module.alias, &module);
+  }
+  std::unordered_map<std::string, std::uint32_t> type_names;  // struct, enum, variant and alias names
+  for (const parser::StructDecl& decl : program.structs) {
+    type_names.emplace(decl.name, kSemanticStruct);
+  }
+  for (const parser::EnumDecl& decl : program.enums) {
+    type_names.emplace(decl.name, kSemanticEnum);
+  }
+  for (const parser::VariantDecl& decl : program.variants) {
+    type_names.emplace(decl.name, kSemanticType);
+  }
+  for (const parser::TypeAlias& alias : program.aliases) {
+    type_names.emplace(alias.name, kSemanticType);
+  }
+  for (const std::string_view generic : {"array", "dictionary", "Option", "Result"}) {
+    type_names.emplace(std::string(generic), kSemanticType);
+  }
+  const auto library_type = [&](const std::string& name) {
+    for (const ModuleInfo& module : analysis.modules) {
+      if (!module.path.empty() && module.path.front() == '@' &&
+          std::find(module.types.begin(), module.types.end(), name) != module.types.end()) {
+        return true;
+      }
+    }
+    return false;
+  };
+  const auto enum_has = [&](const std::string& owner, const std::string& variant) {
+    for (const parser::EnumDecl& decl : program.enums) {
+      if (decl.name == owner) {
+        return std::find(decl.variants.begin(), decl.variants.end(), variant) != decl.variants.end();
+      }
+    }
+    return false;
+  };
+
+  // --- 2. every other token -----------------------------------------------------------------
+  for (std::size_t index = 0; index < tokens.size(); ++index) {
+    const Token& token = tokens[index];
+    if (token.type == TokenType::Eof || token.lexeme.empty() || highlighter.taken(token.location)) {
+      continue;
+    }
+    const Token* next = index + 1 < tokens.size() ? &tokens[index + 1] : nullptr;
+    const bool call = next != nullptr && next->type == TokenType::OpenParen;
     if (is_type_token(token.type)) {
-      highlighted.push_back(SemanticToken{token.location.line, token.location.column,
-                                          static_cast<std::uint32_t>(token.lexeme.size()), kSemanticType, 0});
+      highlighter.paint(token, kSemanticType, kSemanticDefaultLibrary);
+      continue;
+    }
+    if (is_builtin_call_token(token.type) && call) {
+      highlighter.paint(token, kSemanticFunction, kSemanticDefaultLibrary);
       continue;
     }
     if (token.type != TokenType::Identifier) {
       continue;
     }
     const std::string name(token.lexeme);
-    const Binding* match = nullptr;
-    int rank = 0;
-    for (const Binding& binding : bindings) {
-      if (binding.name != name || !in_binding(binding, token.location.line, token.location.column)) {
-        continue;
-      }
-      const int binding_rank = binding.local ? 3 : binding.token_type == kSemanticVariable ? 2 : 1;
-      if (match == nullptr || binding_rank >= rank) {
-        match = &binding;
-        rank = binding_rank;
-      }
-    }
-    if (match == nullptr) {
+    const Token* previous = index > 0 ? &tokens[index - 1] : nullptr;
+
+    // `link @clpp.axiom`: the pieces of a module path
+    if (in_link_path(tokens, index)) {
+      highlighter.paint(token, kSemanticNamespace, kSemanticDefaultLibrary);
       continue;
     }
-    highlighted.push_back(SemanticToken{token.location.line, token.location.column,
-                                        static_cast<std::uint32_t>(token.lexeme.size()), match->token_type,
-                                        match->modifiers});
-  }
-
-  std::sort(highlighted.begin(), highlighted.end(), [](const SemanticToken& left, const SemanticToken& right) {
-    if (left.line != right.line) {
-      return left.line < right.line;
+    // `owner.name`
+    if (previous != nullptr && previous->type == TokenType::Dot) {
+      const Token* owner = index > 1 ? &tokens[index - 2] : nullptr;
+      const std::string owner_name = owner != nullptr && owner->type == TokenType::Identifier ? std::string(owner->lexeme)
+                                                                                               : std::string{};
+      if (const auto module = modules_by_alias.find(owner_name); module != modules_by_alias.end()) {
+        const ModuleInfo& info = *module->second;
+        const std::uint32_t library = !info.path.empty() && info.path.front() == '@' ? kSemanticDefaultLibrary : 0;
+        if (std::find(info.functions.begin(), info.functions.end(), name) != info.functions.end()) {
+          highlighter.paint(token, kSemanticFunction, library);
+        } else if (const auto type = type_names.find(name); type != type_names.end()) {
+          highlighter.paint(token, type->second, library);
+        } else if (std::any_of(info.constants.begin(), info.constants.end(),
+                               [&](const ModuleInfo::Constant& constant) { return constant.name == name; })) {
+          highlighter.paint(token, kSemanticVariable, library | kSemanticReadonly | kSemanticStatic);
+        } else {
+          highlighter.paint(token, call ? kSemanticFunction : kSemanticProperty, library);
+        }
+        continue;
+      }
+      if (!owner_name.empty() && enum_has(owner_name, name)) {
+        highlighter.paint(token, kSemanticEnumMember, 0);
+        continue;
+      }
+      if (owner_name == "coroutine" || owner_name == "task") {
+        highlighter.paint(token, kSemanticFunction, kSemanticDefaultLibrary);
+        continue;
+      }
+      highlighter.paint(token, call ? kSemanticMethod : kSemanticProperty, 0);
+      continue;
     }
-    return left.column < right.column;
-  });
-  return highlighted;
+    // `@field`, `@method()`, `@this`
+    if (previous != nullptr && previous->type == TokenType::At) {
+      if (name != "this") {
+        highlighter.paint(token, call ? kSemanticMethod : kSemanticProperty, 0);
+      }
+      continue;
+    }
+    // `buffer::create(...)`, `@this::field`
+    if (previous != nullptr && previous->type == TokenType::Scope) {
+      highlighter.paint(token, call ? kSemanticFunction : kSemanticProperty, call ? kSemanticDefaultLibrary : 0);
+      continue;
+    }
+    if (name == "self") {
+      highlighter.paint(token, kSemanticParameter, kSemanticReadonly);
+      continue;
+    }
+    if (const Binding* binding = highlighter.lookup(name, token.location)) {
+      highlighter.paint(token, binding->token_type, binding->modifiers);
+      continue;
+    }
+    if (modules_by_alias.count(name) != 0) {
+      highlighter.paint(token, kSemanticNamespace, 0);
+      continue;
+    }
+    if (const auto type = type_names.find(name); type != type_names.end()) {
+      highlighter.paint(token, type->second, library_type(name) ? kSemanticDefaultLibrary : 0);
+      continue;
+    }
+    if (type_params.count(name) != 0) {
+      highlighter.paint(token, kSemanticTypeParameter, 0);
+      continue;
+    }
+    if (is_builtin_function(name) && (call || (next != nullptr && next->type == TokenType::Less))) {
+      highlighter.paint(token, kSemanticFunction, kSemanticDefaultLibrary);
+      continue;
+    }
+    if (name == "coroutine") {
+      highlighter.paint(token, kSemanticNamespace, kSemanticDefaultLibrary);
+    }
+  }
+  return highlighter.take();
 }
 
-std::vector<std::uint32_t> encode_semantic_tokens(const std::vector<SemanticToken>& tokens) {
+namespace {
+
+void append_encoded(std::vector<std::uint32_t>& data, std::uint32_t& previous_line, std::uint32_t& previous_column,
+                    const std::uint32_t line, const std::uint32_t column, const std::uint32_t length,
+                    const SemanticToken& token) {
+  const std::uint32_t delta_line = line - previous_line;
+  const std::uint32_t delta_column = delta_line == 0 ? column - previous_column : column;
+  data.push_back(delta_line);
+  data.push_back(delta_column);
+  data.push_back(length);
+  data.push_back(token.token_type);
+  data.push_back(token.modifiers);
+  previous_line = line;
+  previous_column = column;
+}
+
+[[nodiscard]] std::vector<SemanticToken> ordered_tokens(const std::vector<SemanticToken>& tokens) {
   std::vector<SemanticToken> ordered = tokens;
   std::sort(ordered.begin(), ordered.end(), [](const SemanticToken& left, const SemanticToken& right) {
-    if (left.line != right.line) {
-      return left.line < right.line;
-    }
-    return left.column < right.column;
+    return left.line != right.line ? left.line < right.line : left.column < right.column;
   });
+  return ordered;
+}
+
+}  // namespace
+
+std::vector<std::uint32_t> encode_semantic_tokens(const std::vector<SemanticToken>& tokens) {
   std::vector<std::uint32_t> data;
   std::uint32_t previous_line = 0;
   std::uint32_t previous_column = 0;
-  for (const SemanticToken& token : ordered) {
+  for (const SemanticToken& token : ordered_tokens(tokens)) {
     if (token.line == 0 || token.length == 0) {
       continue;
     }
-    const std::uint32_t line = token.line - 1;
-    const std::uint32_t column = token.column == 0 ? 0 : token.column - 1;
-    const std::uint32_t delta_line = line - previous_line;
-    const std::uint32_t delta_column = delta_line == 0 ? column - previous_column : column;
-    data.push_back(delta_line);
-    data.push_back(delta_column);
-    data.push_back(token.length);
-    data.push_back(token.token_type);
-    data.push_back(token.modifiers);
-    previous_line = line;
-    previous_column = column;
+    append_encoded(data, previous_line, previous_column, token.line - 1, token.column == 0 ? 0 : token.column - 1,
+                   token.length, token);
+  }
+  return data;
+}
+
+std::vector<std::uint32_t> encode_semantic_tokens(const std::vector<SemanticToken>& tokens, const std::string_view source) {
+  std::vector<std::size_t> line_starts{0};
+  for (std::size_t index = 0; index < source.size(); ++index) {
+    if (source[index] == '\n') {
+      line_starts.push_back(index + 1);
+    }
+  }
+  // Byte column (1-based) on a line -> UTF-16 units from the start of that line.
+  const auto utf16 = [&](const std::uint32_t line, const std::uint32_t column) -> std::uint32_t {
+    if (line == 0 || line > line_starts.size() || column <= 1) {
+      return 0;
+    }
+    const std::size_t start = line_starts[line - 1];
+    return static_cast<std::uint32_t>(utf16_units(source.substr(start), static_cast<std::size_t>(column - 1)));
+  };
+  std::vector<std::uint32_t> data;
+  std::uint32_t previous_line = 0;
+  std::uint32_t previous_column = 0;
+  for (const SemanticToken& token : ordered_tokens(tokens)) {
+    if (token.line == 0 || token.length == 0) {
+      continue;
+    }
+    const std::uint32_t start = utf16(token.line, token.column);
+    const std::uint32_t end = utf16(token.line, token.column + token.length);
+    if (end <= start) {
+      continue;
+    }
+    append_encoded(data, previous_line, previous_column, token.line - 1, start, end - start, token);
   }
   return data;
 }

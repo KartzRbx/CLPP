@@ -7,9 +7,12 @@ A biblioteca padrão é importada com `link @clpp.<nome>`. Cada módulo é escri
 | `@clpp.axiom` | `Axiom` | matemática para jogos |
 | `@clpp.text` | `Text` | textos (capítulo 9) |
 | `@clpp.math` | `Math` | `abs` |
-| `@clpp.fs` | `Fs` | arquivos |
+| `@clpp.fs` | `Fs` | arquivos (ler/escrever: capítulo 19) |
 | `@clpp.os` | `Os` | variáveis de ambiente |
 | `@clpp.http` | `Http` | URLs |
+| `@clpp.window`, `@clpp.gfx` | `Window`, `Gfx` | janela e desenho 2D (capítulo 17) |
+| `@clpp.ui`, `@clpp.gui` | `Ui`, `Gui` | interfaces (capítulo 18) |
+| `@clpp.audio`, `@clpp.io`, `@clpp.input`, `@clpp.json`, `@clpp.time` | — | som, console, automação, JSON, datas (capítulo 19) |
 
 Funções sempre disponíveis, sem `link`: `post`, `warn`, `report`, `len`, `list`, `push`, `pop`, `insert`, `remove`, `find`, `sort`, `args`, `pcall`, e os construtores `Vector2/3/4`, `array<T>`, `dictionary<K, V>`, `buffer::create`.
 

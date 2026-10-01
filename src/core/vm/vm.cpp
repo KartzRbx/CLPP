@@ -1552,11 +1552,42 @@ bool VirtualMachine::execute_registers(const RegChunk& lowered) {
           m_error = "runtime error";
           return false;
         }
+        if (m_isolated && (c == 4 || c == 5)) {  // fs::read / fs::list: an actor cannot touch files
+          m_error = "sandbox";
+          if (recover()) {
+            continue;
+          }
+          return false;
+        }
         Value copied[8];
         for (std::uint8_t index = 0; index < b; ++index) {
           copied[index] = m_stack[static_cast<std::size_t>(a) + index];
         }
         if (!stdlib::std_apply(c, b == 0 ? nullptr : copied, b, *dest, m_error)) {
+          if (recover()) {  // library errors are catchable like any other
+            continue;
+          }
+          return false;
+        }
+        break;
+      }
+      case RegOp::Host: {
+        if (b > 8 || static_cast<std::size_t>(a) + b > m_stack.size()) {
+          m_error = "runtime error";
+          return false;
+        }
+        if (m_isolated && stdlib::host_sandboxed(c)) {  // windows, files, clock: not inside actor(...)
+          m_error = "sandbox";
+          if (recover()) {
+            continue;
+          }
+          return false;
+        }
+        Value copied[8];
+        for (std::uint8_t index = 0; index < b; ++index) {
+          copied[index] = m_stack[static_cast<std::size_t>(a) + index];
+        }
+        if (!stdlib::host_apply(c, copied, b, *dest, m_error)) {
           if (recover()) {  // library errors are catchable like any other
             continue;
           }

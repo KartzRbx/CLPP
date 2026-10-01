@@ -24,8 +24,24 @@ add_library(clpp_std STATIC
   stdlib/std_fs.cpp
   stdlib/std_os.cpp
   stdlib/std_http.cpp
+  stdlib/std_host.cpp
+  stdlib/std_gfx.cpp
+  stdlib/gfx_font.cpp
+  stdlib/gfx_text.cpp
+  stdlib/std_window.cpp
+  stdlib/std_ui.cpp
+  stdlib/ui_style.cpp
+  stdlib/std_gui.cpp
+  stdlib/std_audio.cpp
+  stdlib/std_input.cpp
+  stdlib/std_json.cpp
+  stdlib/std_time.cpp
 )
 target_include_directories(clpp_std PUBLIC ${CLPP_PUBLIC_INCLUDES})
+if(WIN32)
+  # @clpp.window talks to Win32 directly: no extra DLLs ship with clpp.exe.
+  target_link_libraries(clpp_std PRIVATE user32 gdi32 winmm)
+endif()
 clpp_configure_target(clpp_std)
 
 add_library(clpp_front STATIC
@@ -73,6 +89,7 @@ FetchContent_MakeAvailable(nlohmann_json)
 
 add_library(clpp_tools STATIC
   core/ide/semantic.cpp
+  core/ide/keywords.cpp
   core/ide/ide.cpp
   core/ide/lsp.cpp
   core/repl/repl.cpp

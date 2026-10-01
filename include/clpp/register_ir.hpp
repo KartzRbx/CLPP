@@ -95,6 +95,7 @@ enum class RegOp : std::uint8_t {
   ListPop = 84,
   ListInsert = 85,
   ListRemove = 86,
+  Host = 87,
 };
 
 [[nodiscard]] inline std::uint32_t reg_abc(const RegOp op, const std::uint8_t a, const std::uint8_t b, const std::uint8_t c) {

@@ -20,6 +20,9 @@ Cada exemplo destes capítulos é executado pela suíte de testes: se a linguage
 14. [Biblioteca padrão](guia/14-biblioteca-padrao.md): Axiom (matemática para jogos), Fs, Os, Http
 15. [Ferramentas e editor](guia/15-ferramentas-e-editor.md): CLI, extensão do VS Code, build, testes, embutir em um jogo
 16. [Desempenho](guia/16-desempenho.md): benchmarks, o que foi otimizado e por quê, segurança
+17. [Windows and graphics](guia/17-janela-e-graficos.md): `@clpp.window` (native window, input, the frame loop) and `@clpp.gfx` (2D drawing, text, images, CPU effects)
+18. [User interfaces](guia/18-interface.md): `@clpp.ui` (immediate-mode widgets) and `@clpp.gui` (declarative, Roblox-style)
+19. [Sound, console and automation](guia/19-audio-io-automacao.md): `@clpp.audio`, `@clpp.io`, `@clpp.input` (macros/UI automation), `@clpp.json`, `@clpp.time`, writing with `@clpp.fs`
 
 ## O que mudou nesta revisão
 

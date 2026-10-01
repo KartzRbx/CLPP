@@ -130,13 +130,21 @@ post(abs(-7));
 | Módulo | Nome sugerido | Conteúdo |
 | --- | --- | --- |
 | `@clpp.axiom` | `Axiom` | matemática para jogos: interpolação, vetores, ângulos, easing, ruído, cores |
+| `@clpp.window` | `Window` | janela nativa, laço de frames, teclado, mouse, tempo ([cap. 17](17-janela-e-graficos.md)) |
+| `@clpp.gfx` | `Gfx` | desenho 2D, texto, imagens, efeitos ([cap. 17](17-janela-e-graficos.md)) |
+| `@clpp.ui` | `Ui` | widgets em modo imediato ([cap. 18](18-interface.md)) |
+| `@clpp.gui` | `Gui` | interface declarativa, estilo Roblox ([cap. 18](18-interface.md)) |
+| `@clpp.audio` | `Audio` | som: WAV e tons sintetizados ([cap. 19](19-audio-io-automacao.md)) |
+| `@clpp.io` | `Io` | console: imprimir, ler, cores, cursor ([cap. 19](19-audio-io-automacao.md)) |
+| `@clpp.input` | `Input` | automação de mouse/teclado para macros ([cap. 19](19-audio-io-automacao.md)) |
+| `@clpp.json` | `Json` | JSON ([cap. 19](19-audio-io-automacao.md)) |
+| `@clpp.time` | `Time` | relógios e datas ([cap. 19](19-audio-io-automacao.md)) |
 | `@clpp.text` | `Text` | funções de texto |
-| `@clpp.math` | `Math` | `abs` |
-| `@clpp.fs` | `Fs` | arquivos: `size`, `read`, `list` |
+| `@clpp.fs` | `Fs` | arquivos: ler, escrever, listar ([cap. 19](19-audio-io-automacao.md)) |
 | `@clpp.os` | `Os` | processo: `env` |
 | `@clpp.http` | `Http` | URLs: `host` |
 
-Ao digitar `link @clpp.` o editor lista esses módulos com a descrição de cada um. O capítulo 14 detalha as funções.
+Ao digitar `link @clpp.` o editor lista esses módulos com a descrição de cada um. Os capítulos 14, 17, 18 e 19 detalham as funções.
 
 ## Por que não há cabeçalhos
 

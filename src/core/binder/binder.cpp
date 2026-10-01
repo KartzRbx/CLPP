@@ -164,6 +164,9 @@ std::vector<SignalBind>* active_signals = nullptr;
   if (const int axiom = stdlib::axiom_native(name, arity); axiom >= 0) {
     return axiom;
   }
+  if (const int host = stdlib::host_native(name, arity); host >= 0) {
+    return host;
+  }
   if (name == "Vector3" && arity == 3) {
     return 0;
   }

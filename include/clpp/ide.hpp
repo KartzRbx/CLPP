@@ -7,6 +7,7 @@
 #include <iosfwd>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace clpp {
@@ -15,7 +16,10 @@ struct AnalysisResult;
 
 namespace clpp::ide {
 
-enum class Kind { Keyword, Function, Variable, Field, Struct, Enum, Module };
+// What a completion item, symbol or hover is. The LSP layer maps each kind to the matching
+// CompletionItemKind / SymbolKind, so the editor shows the right icon ("int" is a type, "post" a
+// function, "true" a constant, "match" a keyword).
+enum class Kind { Keyword, Function, Variable, Field, Struct, Enum, Module, Type, Constant, Method, EnumMember, Snippet };
 
 struct Item {
   std::string label;
@@ -62,9 +66,14 @@ struct Info {
   std::string link_path_prefix;
 };
 
+// Semantic token legend. Indices are part of the wire format: new entries go at the end, and
+// semantic_token_types()/semantic_token_modifiers() (used by the LSP and the VS Code client) must
+// list them in this order.
 inline constexpr std::uint32_t kSemanticDeclaration = 1;
 inline constexpr std::uint32_t kSemanticReadonly = 2;
 inline constexpr std::uint32_t kSemanticAsync = 4;
+inline constexpr std::uint32_t kSemanticDefaultLibrary = 8;  // comes from @clpp.* or the language itself
+inline constexpr std::uint32_t kSemanticStatic = 16;
 
 inline constexpr std::uint32_t kSemanticType = 0;
 inline constexpr std::uint32_t kSemanticStruct = 1;
@@ -75,6 +84,12 @@ inline constexpr std::uint32_t kSemanticVariable = 5;
 inline constexpr std::uint32_t kSemanticProperty = 6;
 inline constexpr std::uint32_t kSemanticFunction = 7;
 inline constexpr std::uint32_t kSemanticKeyword = 8;
+inline constexpr std::uint32_t kSemanticNamespace = 9;   // module alias (`Axiom` in `Axiom.Clamp`)
+inline constexpr std::uint32_t kSemanticMethod = 10;     // `hero.damage(5)`, `func damage(...)` inside a struct
+inline constexpr std::uint32_t kSemanticTypeParameter = 11;  // `T` in `struct Box<T>`
+
+[[nodiscard]] const std::vector<std::string_view>& semantic_token_types();
+[[nodiscard]] const std::vector<std::string_view>& semantic_token_modifiers();
 
 struct SemanticToken {
   std::uint32_t line{1};
@@ -86,7 +101,22 @@ struct SemanticToken {
 
 [[nodiscard]] std::vector<SemanticToken> semantic_tokens(std::string_view source, const ModuleLoader& modules = {});
 
+// Delta encoding of LSP `textDocument/semanticTokens`. Without `source`, columns and lengths stay in
+// bytes (the compiler's unit); with it they are converted to UTF-16 code units, which is what the
+// protocol requires (a line with "ação" before a name would otherwise shift every token after it).
 [[nodiscard]] std::vector<std::uint32_t> encode_semantic_tokens(const std::vector<SemanticToken>& tokens);
+[[nodiscard]] std::vector<std::uint32_t> encode_semantic_tokens(const std::vector<SemanticToken>& tokens,
+                                                                std::string_view source);
+
+// Documentation of a reserved word (`const`, `match`, `int`, `post`...): what it is, for the
+// completion list and for hover. Null for anything else.
+struct KeywordDoc {
+  std::string_view name;
+  Kind kind;
+  std::string_view detail;  // short, shown next to the suggestion
+  std::string_view doc;     // markdown
+};
+[[nodiscard]] const KeywordDoc* keyword_doc(std::string_view word);
 
 [[nodiscard]] std::string format_source(std::string_view source);
 

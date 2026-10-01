@@ -138,6 +138,7 @@ void unqualify_program(parser::Program& program, const std::string& alias, const
 }
 
 void forget_spans(parser::Function& function) {
+  function.imported = true;
   function.name_span = {};
   for (std::string_view& span : function.param_spans) {
     span = {};
@@ -145,6 +146,7 @@ void forget_spans(parser::Function& function) {
 }
 
 void forget_spans(parser::StructDecl& decl) {
+  decl.imported = true;
   decl.name_span = {};
   decl.base_span = {};
   for (std::string_view& span : decl.base_spans) {
@@ -159,6 +161,7 @@ void forget_spans(parser::StructDecl& decl) {
 }
 
 void forget_spans(parser::EnumDecl& decl) {
+  decl.imported = true;
   decl.name_span = {};
   for (std::string_view& span : decl.variant_spans) {
     span = {};
