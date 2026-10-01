@@ -1,0 +1,61 @@
+---
+title: CL++
+description: A compiled, general-purpose language made for games — with a built-in window, 2D graphics, UI, audio and automation, and no external dependencies.
+template: splash
+editUrl: false
+hero:
+  tagline: A compiled, general-purpose language made for games. Static types with inference, no headers, and a built-in window, 2D graphics, UI, audio and automation.
+  image:
+    file: ../../assets/logo.png
+  actions:
+    - text: Get started
+      link: guide/01-comecando/
+      icon: right-arrow
+      variant: primary
+    - text: Standard library
+      link: guide/14-biblioteca-padrao/
+      icon: open-book
+    - text: GitHub
+      link: https://github.com/KartzRbx/CLPP
+      icon: github
+      variant: minimal
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+<CardGrid stagger>
+  <Card title="Compiled and typed" icon="rocket">
+    Each `.clp` file compiles to verified bytecode and runs on a register VM. Static typing with
+    inference catches mistakes before the program runs — no headers, no forward declarations.
+  </Card>
+  <Card title="Made for games" icon="star">
+    Native `Vector2/3/4`, the Axiom math library (interpolation, easing, angles, noise, colors),
+    coroutines, `signal`, `observable`, tasks and threads.
+  </Card>
+  <Card title="Graphics, UI, audio, automation" icon="laptop">
+    A native window, 2D drawing with smooth text and CPU effects, immediate-mode and declarative
+    UI, sound, the console, and keyboard/mouse automation — all built in, no dependencies.
+  </Card>
+  <Card title="A real editor" icon="pencil">
+    A VS Code extension powered by the compiler itself: errors while you type, completion with
+    inherited and module members, hover, go to definition, rename and color swatches.
+  </Card>
+</CardGrid>
+
+```clp
+link @clpp.gfx as Gfx;
+link @clpp.window as Window;
+
+Window.Open("Hello", 480, 320);
+while (Window.Frame()) {
+  Gfx.Clear(Gfx.DARK);
+  Gfx.Text("Hello, CL++!", 40, 40, 24, Gfx.WHITE);
+  Gfx.Circle(240, 200, 60, Gfx.ORANGE);
+}
+```
+
+The [language guide](guide/01-comecando/) runs from your first program to graphics, UI, sound and
+concurrency; every example in it is executed by the test suite. The
+[standard library](guide/14-biblioteca-padrao/) and chapters
+[17](guide/17-janela-e-graficos/), [18](guide/18-interface/) and
+[19](guide/19-audio-io-automacao/) cover the window, graphics, UI, audio and automation modules.

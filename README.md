@@ -50,7 +50,7 @@ cmake --build --preset release
 
 ## Documentação
 
-O [guia da linguagem](docs/README.md) tem 16 capítulos, do primeiro programa à concorrência, com exemplos que a suíte de testes executa. As mudanças desta revisão estão em [docs/CHANGES.md](docs/CHANGES.md).
+O [site da documentação](https://kartzrbx.github.io/CLPP/) reúne o guia da linguagem e a referência técnica. O [guia no repositório](docs/README.md) tem 19 capítulos, do primeiro programa a gráficos, interfaces, som e automação, com exemplos que a suíte de testes executa. As mudanças desta revisão estão em [docs/CHANGES.md](docs/CHANGES.md).
 
 ## Desempenho
 
