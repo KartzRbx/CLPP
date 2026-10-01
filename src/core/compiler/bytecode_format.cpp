@@ -36,6 +36,7 @@ bool decode(const std::vector<std::uint8_t>& code, DecodedChunk& decoded) {
       case Opcode::Actor:
       case Opcode::Axiom:
       case Opcode::Std:
+      case Opcode::Host:
       case Opcode::MakeStruct:
       case Opcode::GetSelf:
       case Opcode::SetSelf:

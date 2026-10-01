@@ -35,6 +35,9 @@ class WorkspaceEdit { constructor() { this.edits = []; } replace(uri, range, tex
 class CodeAction { constructor(title, kind) { this.title = title; this.kind = kind; } }
 class SemanticTokens { constructor(data) { this.data = data; } }
 class SemanticTokensLegend { constructor(t, m) { this.tokenTypes = t; this.tokenModifiers = m; } }
+class Color { constructor(red, green, blue, alpha) { Object.assign(this, { red, green, blue, alpha }); } }
+class ColorInformation { constructor(range, color) { this.range = range; this.color = color; } }
+class ColorPresentation { constructor(label, detail) { this.label = label; this.detail = detail; } }
 class EventEmitter { constructor() { this.listeners = []; this.event = (fn) => { this.listeners.push(fn); return { dispose() {} }; }; } fire(v) { for (const l of this.listeners) l(v); } }
 
 const providers = {};
@@ -63,7 +66,7 @@ const register = (kind) => (selector, provider, ...rest) => { providers[kind] = 
 module.exports = {
   Position, Range, Uri, MarkdownString, SnippetString, CompletionItem, CompletionList, Hover, Location, Diagnostic,
   SignatureHelp, SignatureInformation, ParameterInformation, DocumentSymbol, FoldingRange, TextEdit, DocumentHighlight,
-  WorkspaceEdit, CodeAction, SemanticTokens, SemanticTokensLegend, EventEmitter,
+  WorkspaceEdit, CodeAction, SemanticTokens, SemanticTokensLegend, EventEmitter, Color, ColorInformation, ColorPresentation,
   DiagnosticSeverity: { Error: 0, Warning: 1, Information: 2, Hint: 3 },
   CodeActionKind: { QuickFix: "quickfix" },
   StatusBarAlignment: { Left: 1 },
@@ -92,6 +95,7 @@ module.exports = {
     registerRenameProvider: register("rename"), registerDocumentSymbolProvider: register("symbols"),
     registerFoldingRangeProvider: register("folding"), registerDocumentFormattingEditProvider: register("format"),
     registerCodeActionsProvider: register("codeAction"), registerDocumentSemanticTokensProvider: register("semantic"),
+    registerColorProvider: register("color"),
   },
   // test helpers
   __test: {

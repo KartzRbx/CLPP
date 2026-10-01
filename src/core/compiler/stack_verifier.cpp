@@ -167,6 +167,7 @@ StackCheck verify_stack(const BytecodeChunk& chunk, const compiler::bytecode::De
         break;
       case compiler::Opcode::Axiom:
       case compiler::Opcode::Std:
+      case compiler::Opcode::Host:
         ok = next_at(sp - static_cast<int>(insn.imm >> 8) + 1);
         break;
       case compiler::Opcode::MakeStruct:

@@ -26,6 +26,16 @@ struct ModuleEntry {
 [[nodiscard]] int axiom_native(std::string_view name, std::size_t arity);
 [[nodiscard]] bool axiom_apply(std::uint8_t id, const Value* args, std::uint8_t arity, Value& out, std::string& error);
 void set_program_args(const std::vector<std::string>& args);
+
+// Host libraries: natives that talk to the operating system or keep state between calls
+// (@clpp.window, @clpp.gfx, @clpp.ui, @clpp.json, @clpp.time and the writing half of @clpp.fs).
+// Their module sources call `lib::Name(...)`; the binder turns that into 2000 + id.
+[[nodiscard]] int host_native(std::string_view name, std::size_t arity);
+[[nodiscard]] bool host_apply(std::uint8_t id, const Value* args, std::uint8_t arity, Value& out, std::string& error);
+// True for natives refused inside actor(...): files, windows, input, the clock.
+[[nodiscard]] bool host_sandboxed(std::uint8_t id);
+// Names of every host native ("window::Open"), for tests and documentation checks.
+[[nodiscard]] std::vector<std::string> host_native_names();
 [[nodiscard]] bool std_apply(std::uint8_t id, const Value* args, std::uint8_t arity, Value& out, std::string& error);
 
 }  // namespace clpp::stdlib

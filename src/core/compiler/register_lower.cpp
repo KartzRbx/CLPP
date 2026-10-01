@@ -513,7 +513,10 @@ RegChunk lower_registers(const BytecodeChunk& chunk) {
         break;
       case compiler::Opcode::Axiom:
       case compiler::Opcode::Std:
-        emitted = push_abc(insn.op == compiler::Opcode::Std ? RegOp::Std : RegOp::Axiom,
+      case compiler::Opcode::Host:
+        emitted = push_abc(insn.op == compiler::Opcode::Std    ? RegOp::Std
+                           : insn.op == compiler::Opcode::Host ? RegOp::Host
+                                                               : RegOp::Axiom,
                            sp - static_cast<int>(insn.imm >> 8), static_cast<int>(insn.imm >> 8),
                            static_cast<int>(insn.imm & 0xFF));
         kill(sp - static_cast<int>(insn.imm >> 8));

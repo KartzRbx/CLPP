@@ -599,9 +599,11 @@ class Client {
         { providedCodeActionKinds: [vscode.CodeActionKind.QuickFix] }
       )
     );
+    // Must match semantic_token_types()/semantic_token_modifiers() in the server (src/core/ide/ide.cpp).
     const legend = new vscode.SemanticTokensLegend(
-      ["type", "struct", "enum", "enumMember", "parameter", "variable", "property", "function", "keyword"],
-      ["declaration", "readonly", "async"]
+      ["type", "struct", "enum", "enumMember", "parameter", "variable", "property", "function", "keyword",
+       "namespace", "method", "typeParameter"],
+      ["declaration", "readonly", "async", "defaultLibrary", "static"]
     );
     push(
       vscode.languages.registerDocumentSemanticTokensProvider(
@@ -642,6 +644,169 @@ function setStatus(text, tooltip) {
   statusItem.show();
 }
 
+// ---------------------------------------------------------------------------------------------
+// Color decorators (Gfx.Rgb / Gfx.Hsv / Gfx.Hex / 0xRRGGBB…)
+// ---------------------------------------------------------------------------------------------
+
+function parseNum(text) {
+  const cleaned = text.replace(/_/g, "");
+  const value = Number(cleaned);
+  return Number.isFinite(value) ? value : 0;
+}
+
+function clampByte(value) {
+  return Math.min(255, Math.max(0, Math.round(value)));
+}
+
+function colorFromRgbBytes(r, g, b, alpha255) {
+  const alpha = alpha255 == null ? 1 : clampByte(alpha255) / 255;
+  return new vscode.Color(r / 255, g / 255, b / 255, alpha);
+}
+
+function colorFromPacked(packed) {
+  const value = packed >>> 0;
+  const rgb = value & 0xffffff;
+  const transparency = (value >>> 24) & 0xff;
+  const alpha = (255 - transparency) / 255;
+  return new vscode.Color(((rgb >>> 16) & 0xff) / 255, ((rgb >>> 8) & 0xff) / 255, (rgb & 0xff) / 255, alpha);
+}
+
+function hsvToColor(h, s, v) {
+  let hue = h % 360;
+  if (hue < 0) {
+    hue += 360;
+  }
+  s = Math.min(1, Math.max(0, s));
+  v = Math.min(1, Math.max(0, v));
+  const c = v * s;
+  const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
+  const m = v - c;
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  if (hue < 60) {
+    r = c;
+    g = x;
+  } else if (hue < 120) {
+    r = x;
+    g = c;
+  } else if (hue < 180) {
+    g = c;
+    b = x;
+  } else if (hue < 240) {
+    g = x;
+    b = c;
+  } else if (hue < 300) {
+    r = x;
+    b = c;
+  } else {
+    r = c;
+    b = x;
+  }
+  const ch = (value) => clampByte((value + m) * 255);
+  return colorFromRgbBytes(ch(r), ch(g), ch(b));
+}
+
+function parseGfxHexString(raw) {
+  let text = raw;
+  if ((text.startsWith('"') && text.endsWith('"')) || (text.startsWith("'") && text.endsWith("'"))) {
+    text = text.slice(1, -1);
+  }
+  if (text.startsWith("#")) {
+    text = text.slice(1);
+  }
+  if (text.length === 3) {
+    text = text[0] + text[0] + text[1] + text[1] + text[2] + text[2];
+  }
+  if (text.length !== 6 || /[^0-9a-fA-F]/.test(text)) {
+    return undefined;
+  }
+  return colorFromPacked(parseInt(text, 16));
+}
+
+function hexLiteralColor(raw) {
+  const digits = raw.replace(/^0[xX]/, "").replace(/_/g, "");
+  if (digits.length !== 6 && digits.length !== 8) {
+    return undefined;
+  }
+  if (!/^[0-9A-Fa-f]+$/.test(digits)) {
+    return undefined;
+  }
+  return colorFromPacked(parseInt(digits, 16));
+}
+
+function pushMatch(colors, document, text, match, color) {
+  if (!color) {
+    return;
+  }
+  const start = document.positionAt(match.index);
+  const end = document.positionAt(match.index + match[0].length);
+  colors.push(new vscode.ColorInformation(new vscode.Range(start, end), color));
+}
+
+function collectDocumentColors(document) {
+  const text = document.getText();
+  const colors = [];
+
+  const rgbRe = /\bGfx\.Rgb\s*\(\s*(\d[\d_]*)\s*,\s*(\d[\d_]*)\s*,\s*(\d[\d_]*)(?:\s*,\s*(\d[\d_]*))?\s*\)/g;
+  for (let match = rgbRe.exec(text); match; match = rgbRe.exec(text)) {
+    const r = clampByte(parseNum(match[1]));
+    const g = clampByte(parseNum(match[2]));
+    const b = clampByte(parseNum(match[3]));
+    const a = match[4] != null ? clampByte(parseNum(match[4])) : null;
+    pushMatch(colors, document, text, match, colorFromRgbBytes(r, g, b, a));
+  }
+
+  const hsvRe = /\bGfx\.Hsv\s*\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\)/g;
+  for (let match = hsvRe.exec(text); match; match = hsvRe.exec(text)) {
+    pushMatch(colors, document, text, match, hsvToColor(parseNum(match[1]), parseNum(match[2]), parseNum(match[3])));
+  }
+
+  const hexCallRe = /\bGfx\.Hex\s*\(\s*("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')\s*\)/g;
+  for (let match = hexCallRe.exec(text); match; match = hexCallRe.exec(text)) {
+    pushMatch(colors, document, text, match, parseGfxHexString(match[1]));
+  }
+
+  const litRe = /\b0[xX][0-9A-Fa-f_]+\b/g;
+  for (let match = litRe.exec(text); match; match = litRe.exec(text)) {
+    pushMatch(colors, document, text, match, hexLiteralColor(match[0]));
+  }
+
+  return colors;
+}
+
+function colorPresentations(color) {
+  const r = clampByte(color.red * 255);
+  const g = clampByte(color.green * 255);
+  const b = clampByte(color.blue * 255);
+  const rgbHex = ((r << 16) | (g << 8) | b) >>> 0;
+  const hex6 = rgbHex.toString(16).toUpperCase().padStart(6, "0");
+  const transparency = clampByte((1 - color.alpha) * 255);
+  const packed = (transparency << 24) | rgbHex;
+  const hex8 = (packed >>> 0).toString(16).toUpperCase().padStart(8, "0");
+  const out = [
+    new vscode.ColorPresentation(`0x${hex6}`, `CL++ color 0x${hex6}`),
+    new vscode.ColorPresentation(`Gfx.Rgb(${r}, ${g}, ${b})`, "Gfx.Rgb"),
+    new vscode.ColorPresentation(`#${hex6}`, "CSS hex"),
+  ];
+  if (color.alpha < 0.999) {
+    out.splice(1, 0, new vscode.ColorPresentation(`0x${hex8}`, `CL++ color with alpha 0x${hex8}`));
+    out.push(new vscode.ColorPresentation(`Gfx.Rgb(${r}, ${g}, ${b}, ${clampByte(color.alpha * 255)})`, "Gfx.Rgb + alpha"));
+  }
+  return out;
+}
+
+function registerClppColorProvider() {
+  return vscode.languages.registerColorProvider(LANGUAGE, {
+    provideDocumentColors(document) {
+      return collectDocumentColors(document);
+    },
+    provideColorPresentations(color) {
+      return colorPresentations(color);
+    },
+  });
+}
+
 async function startClient(context) {
   const server = findServer(context);
   if (!server) {
@@ -665,7 +830,7 @@ async function activate(context) {
   output = vscode.window.createOutputChannel("CL++");
   statusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
   statusItem.command = "clpp.showOutput";
-  context.subscriptions.push(output, statusItem);
+  context.subscriptions.push(output, statusItem, registerClppColorProvider());
   context.subscriptions.push(
     vscode.commands.registerCommand("clpp.showOutput", () => output.show(true)),
     vscode.commands.registerCommand("clpp.restartServer", async () => {

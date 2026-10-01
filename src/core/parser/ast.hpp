@@ -164,6 +164,7 @@ struct Function {
   bool is_private{false};
   bool is_final{false};
   bool variadic{false};
+  bool imported{false};  // merged from a `link`ed module: locations point into that module's text
   std::uint16_t extern_id{0};
   std::vector<std::string> type_params;
   std::vector<Expr> defaults;
@@ -196,6 +197,7 @@ struct StructDecl {
   std::vector<std::string> type_params;
   bool is_abstract{false};
   bool is_final{false};
+  bool imported{false};  // merged from a `link`ed module
   std::vector<Field> fields;
   std::vector<Function> methods;
   std::vector<std::string> method_names;
@@ -211,6 +213,7 @@ struct EnumDecl {
   std::vector<std::string> payload_types;
   std::vector<std::string_view> variant_spans;
   std::vector<SourceLocation> variant_locations;
+  bool imported{false};  // merged from a `link`ed module
 };
 
 struct VariantDecl {

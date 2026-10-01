@@ -453,6 +453,13 @@ void emit_u16(BytecodeChunk& chunk, const std::uint16_t value) {
         return false;
       }
     }
+    if (expr.slot >= 2000) {  // host library (stdlib::host_native)
+      const auto id = static_cast<std::uint16_t>(expr.slot - 2000);
+      const auto arity = static_cast<std::uint16_t>(expr.args.size());
+      emit_op(chunk, compiler::Opcode::Host);
+      emit_u16(chunk, static_cast<std::uint16_t>((arity << 8) | id));
+      return true;
+    }
     if (expr.slot >= 1000) {
       const auto id = static_cast<std::uint16_t>(expr.slot - 1000);
       const auto arity = static_cast<std::uint16_t>(expr.args.size());

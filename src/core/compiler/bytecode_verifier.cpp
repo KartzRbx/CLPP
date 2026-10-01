@@ -122,7 +122,7 @@ BytecodeReport verify_bytecode_report(const BytecodeChunk& chunk) {
   for (std::size_t index = 0; index < instructions.size(); ++index) {
     const compiler::bytecode::Instruction& instruction = instructions[index];
     const std::uint8_t opcode = static_cast<std::uint8_t>(instruction.op);
-    if (opcode > static_cast<std::uint8_t>(compiler::Opcode::ListRemove) || opcode == 55) {
+    if (opcode > static_cast<std::uint8_t>(compiler::Opcode::Host) || opcode == 55) {
       fail(BytecodeError::Opcode, instruction.pc, static_cast<int>(index), "register opcode");
       return report;
     }
@@ -174,6 +174,7 @@ BytecodeReport verify_bytecode_report(const BytecodeChunk& chunk) {
         break;
       case compiler::Opcode::Axiom:
       case compiler::Opcode::Std:
+      case compiler::Opcode::Host:
         if ((instruction.imm >> 8) > 8) {
           fail(BytecodeError::Operand, instruction.pc, static_cast<int>(index), "register operand");
           return report;

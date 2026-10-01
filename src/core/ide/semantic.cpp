@@ -83,8 +83,15 @@ SemanticSnapshot build_snapshot(const AnalysisResult& analysis) {
   SemanticSnapshot snapshot;
   walk_stmts(analysis.program.statements, 0, snapshot);
   for (const parser::Function& function : analysis.program.functions) {
+    if (function.imported) {
+      continue;  // a linked module's function: its locations are coordinates in the module's text
+    }
     const std::uint32_t scope = static_cast<std::uint32_t>(function.index) + 1u;
-    for (std::size_t param = 0; param < function.params.size() && param < function.param_locations.size(); ++param) {
+    const bool method = function.name.find('.') != std::string::npos && !function.params.empty() &&
+                        function.params.front() == "self";
+    // The implicit `self` of a method has no token of its own (it points at the struct name).
+    for (std::size_t param = method ? 1 : 0; param < function.params.size() && param < function.param_locations.size();
+         ++param) {
       add_symbol(snapshot, scope, static_cast<std::uint16_t>(param), function.params[param],
                  function.param_locations[param], true);
     }

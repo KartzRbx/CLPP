@@ -845,7 +845,10 @@ void mismatch(const parser::Expr& expr, std::vector<Diagnostic>& diagnostics) {
       if (object != kError && object != kAny && object != kVector3 && !is_string_value(object) && !table) {
         mismatch(expr, diagnostics);
       }
-      if (!slice && !is_numeric(index) && index != kError && !(table && object.index == 65531 && is_string_value(index))) {
+      // Untyped values (`any`: JSON documents, lists from functions) may be dictionaries, so a
+      // string key is fine there: `data["name"]`.
+      if (!slice && !is_numeric(index) && index != kError && object != kAny &&
+          !(table && object.index == 65531 && is_string_value(index))) {
         mismatch(expr, diagnostics);
       }
       if (object == kAny) {
@@ -1007,7 +1010,13 @@ void check_stmts(const std::vector<parser::Stmt>& statements, std::vector<Bindin
       } else if (!assignable(declared, value)) {
         mismatch(stmt.expr, diagnostics);
       }
-      const Type stored = declared == kAny ? value : declared;
+      Type stored = declared == kAny ? value : declared;
+      // `let mut name = "Ada";` holds a string, not the literal type "Ada": otherwise every later
+      // assignment (`name = "Bob";`) was a type mismatch. Literal types stay for immutable
+      // bindings and for explicitly declared unions (`let state: State = "Idle";`).
+      if (declared == kAny && !stmt.immutable && stored.kind == Type::Kind::Literal) {
+        stored = kString;
+      }
       if (active_mode == parser::CheckMode::Strict && stmt.declared_type.empty() && !stmt.has_decltype && stored == kAny) {
         diagnostics.push_back(Diagnostic{stmt.name_location, stmt.name_span, "missing type"});
       }
@@ -1115,9 +1124,11 @@ void check_stmts(const std::vector<parser::Stmt>& statements, std::vector<Bindin
       if (enum_match && active_enums != nullptr && scrutinee.index < active_enums->size()) {
         covered.assign((*active_enums)[scrutinee.index].variants.size(), 0);
       } else if (enum_match && (scrutinee.index == 65534 || scrutinee.index == 65533)) {
-      } else if (!is_numeric(scrutinee) && scrutinee != kError) {
+      } else if (!is_numeric(scrutinee) && !is_string_value(scrutinee) && scrutinee != kBool && scrutinee != kError) {
         mismatch(stmt.expr, diagnostics);
       }
+      // Text is matched against text ("play" ~> ...), numbers and bools against numbers and bools.
+      const bool text_match = !enum_match && scrutinee != kAny && is_string_value(scrutinee);
       bool wildcard = false;
       for (const parser::Stmt::MatchArm& arm : stmt.arms) {
         if (arm.wildcard) {
@@ -1137,8 +1148,11 @@ void check_stmts(const std::vector<parser::Stmt>& statements, std::vector<Bindin
                        static_cast<std::size_t>(arm.pattern.number) < covered.size()) {
               covered[static_cast<std::size_t>(arm.pattern.number)] = 1;
             }
-          } else if (!is_numeric(pattern) && pattern != kError) {
-            mismatch(arm.pattern, diagnostics);
+          } else if (text_match ? !is_string_value(pattern)
+                                : !is_numeric(pattern) && pattern != kBool && !(scrutinee == kAny && is_string_value(pattern))) {
+            if (pattern != kError) {
+              mismatch(arm.pattern, diagnostics);
+            }
           }
         }
         if (arm.has_guard) {

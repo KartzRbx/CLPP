@@ -266,11 +266,14 @@ class Server {
                 {"end", position(text, line1, column1 + std::max<std::uint32_t>(length_bytes, 1))}};
   }
 
+  // LSP CompletionItemKind.
   [[nodiscard]] static int completion_kind(const Kind kind, const bool snippet) {
     if (snippet && kind == Kind::Keyword) {
       return 15;  // Snippet
     }
     switch (kind) {
+      case Kind::Method:
+        return 2;
       case Kind::Function:
         return 3;
       case Kind::Field:
@@ -283,14 +286,25 @@ class Server {
         return 13;
       case Kind::Keyword:
         return 14;
+      case Kind::Snippet:
+        return 15;
+      case Kind::EnumMember:
+        return 20;
+      case Kind::Constant:
+        return 21;
       case Kind::Struct:
         return 22;
+      case Kind::Type:
+        return 25;  // TypeParameter: the "type" icon, distinct from keywords and structs
     }
     return 1;
   }
 
+  // LSP SymbolKind.
   [[nodiscard]] static int symbol_kind(const Kind kind) {
     switch (kind) {
+      case Kind::Method:
+        return 6;
       case Kind::Function:
         return 12;
       case Kind::Struct:
@@ -303,7 +317,14 @@ class Server {
         return 2;
       case Kind::Variable:
         return 13;
+      case Kind::Constant:
+        return 14;
+      case Kind::EnumMember:
+        return 22;
+      case Kind::Type:
+        return 26;
       case Kind::Keyword:
+      case Kind::Snippet:
         return 14;
     }
     return 13;
@@ -442,9 +463,14 @@ class Server {
   }
 
   [[nodiscard]] static json initialize_result() {
-    json token_types = json::array({"type", "struct", "enum", "enumMember", "parameter", "variable", "property",
-                                    "function", "keyword"});
-    json token_modifiers = json::array({"declaration", "readonly", "async"});
+    json token_types = json::array();
+    for (const std::string_view type : semantic_token_types()) {
+      token_types.push_back(std::string(type));
+    }
+    json token_modifiers = json::array();
+    for (const std::string_view modifier : semantic_token_modifiers()) {
+      token_modifiers.push_back(std::string(modifier));
+    }
     return json{
         {"capabilities",
          {{"positionEncoding", "utf-16"},
@@ -463,7 +489,7 @@ class Server {
           {"documentSymbolProvider", true},
           {"semanticTokensProvider",
            {{"legend", {{"tokenTypes", token_types}, {"tokenModifiers", token_modifiers}}}, {"full", true}}}}},
-        {"serverInfo", {{"name", "clpp"}, {"version", "0.9"}}}};
+        {"serverInfo", {{"name", "clpp"}, {"version", "0.10"}}}};
   }
 
   void handle_document_request(const std::string& method, const json& id, const json& params, Document& doc) {
@@ -471,7 +497,7 @@ class Server {
     const AnalysisResult analysis = analyze_program(text, loader_for(doc.uri));
 
     if (method == "textDocument/semanticTokens/full") {
-      const std::vector<std::uint32_t> data = encode_semantic_tokens(semantic_tokens(text, loader_for(doc.uri)));
+      const std::vector<std::uint32_t> data = encode_semantic_tokens(semantic_tokens(text, loader_for(doc.uri)), text);
       reply(id, json{{"data", data}});
       return;
     }
@@ -529,7 +555,7 @@ class Server {
           if (keyword.type == TokenType::KwLet && target.lexeme == name) {
             json edit{{"range", range(text, target.location.line, target.location.column, 0)}, {"newText", "mut "}};
             edit["range"]["end"] = edit["range"]["start"];
-            actions.push_back(json{{"title", "Tornar '" + name + "' mutável (let mut)"},
+            actions.push_back(json{{"title", "Make '" + name + "' mutable (let mut)"},
                                    {"kind", "quickfix"},
                                    {"diagnostics", json::array({diagnostic})},
                                    {"isPreferred", true},
@@ -681,7 +707,7 @@ class Server {
       if (folder_part.empty() && typed.rfind("../", 0) == 0) {
         continue;
       }
-      json entry_json{{"label", label}, {"kind", is_dir ? 19 : 17}, {"detail", is_dir ? "pasta" : "módulo CL++"},
+      json entry_json{{"label", label}, {"kind", is_dir ? 19 : 17}, {"detail", is_dir ? "folder" : "CL++ module"},
                       {"sortText", std::string(is_dir ? "1" : "0") + label}};
       if (is_dir) {
         entry_json["command"] = json{{"title", "suggest"}, {"command", "editor.action.triggerSuggest"}};
@@ -689,7 +715,7 @@ class Server {
       items.push_back(std::move(entry_json));
     }
     if (typed.empty() || std::string("./").rfind(typed, 0) == 0 || typed == "../") {
-      items.push_back(json{{"label", "../"}, {"kind", 19}, {"detail", "pasta acima"}, {"sortText", "2../"}});
+      items.push_back(json{{"label", "../"}, {"kind", 19}, {"detail", "parent folder"}, {"sortText", "2../"}});
     }
   }
 

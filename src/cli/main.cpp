@@ -12,7 +12,23 @@
 #include <string_view>
 #include <vector>
 
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+
 int main(int argc, char* argv[]) {
+#ifdef _WIN32
+  // Programs print UTF-8 ("ação", "naïve"). Without this the Windows console shows it in the OEM
+  // code page ("a├º├úo"). Pipes and files are unaffected: they always get the raw UTF-8 bytes.
+  SetConsoleOutputCP(CP_UTF8);
+  SetConsoleCP(CP_UTF8);
+#endif
   const auto print_help = [](std::ostream& out) {
     out << "Usage: clpp <script.clp> [args...]\n";
     out << "       clpp --repl\n";
@@ -31,7 +47,7 @@ int main(int argc, char* argv[]) {
     return 0;
   }
   if (arg == "--version") {
-    std::cout << "clpp 0.9\n";
+    std::cout << "clpp 0.10\n";
     return 0;
   }
   if (arg == "--repl") {

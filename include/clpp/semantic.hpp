@@ -31,5 +31,7 @@ struct SemanticSnapshot {
 // LSP positions are UTF-16 code units. Lexer columns are 1-based bytes.
 [[nodiscard]] int byte_column_from_utf16(std::string_view text, int lsp_line, int lsp_character);
 [[nodiscard]] int lsp_character_at(std::string_view text, int line1, int column1);
+// UTF-16 code units in the first `byte_count` bytes of `text`.
+[[nodiscard]] int utf16_units(std::string_view text, std::size_t byte_count);
 
 }  // namespace clpp

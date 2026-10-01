@@ -1,3 +1,34 @@
+# Mudanças da revisão 0.10
+
+Esta revisão acrescenta um ecossistema gráfico e de sistema à linguagem, além de correções no editor e no verificador de tipos. Tudo com teste de regressão ou exemplo verificado na documentação.
+
+## Janela, gráficos, UI e som (novo)
+
+Dez módulos novos na biblioteca padrão, sem nenhuma dependência externa (Win32 direto no Windows; headless em qualquer sistema para testes e CI):
+
+- **`@clpp.window`** — janela nativa com laço de frames (`Window.Frame()`), teclado, mouse, tempo, diálogos e simulação de entrada.
+- **`@clpp.gfx`** — desenho 2D numa tela de software: formas anti-aliased, texto suave (fonte do sistema) ou pixel, gradientes, imagens PNG/BMP, salvar em PNG e efeitos de pós-processamento (blur, bloom, grayscale, vignette, scanlines, chromatic, pixelate…).
+- **`@clpp.ui`** — widgets em modo imediato (estilo Dear ImGui): painel, botão, checkbox, switch, slider, campo de texto, choice, progresso, com tema claro/escuro e animações.
+- **`@clpp.gui`** — interface **declarativa** estilo Roblox (Fusion/Roact): descreve a tela como uma árvore de elementos com propriedades nomeadas, `Gui.Render(...)` desenha e `Gui.Clicked/Changed/Value` lê o que aconteceu; estado retido por `id`.
+- **`@clpp.audio`** — som: WAV e tons sintetizados, mixados em software, com volume, pan, pitch e loop; `Audio.SaveWav`.
+- **`@clpp.io`** — console: imprimir sem quebra de linha, ler linha/número/tecla, cores e cursor ANSI.
+- **`@clpp.input`** — automação de mouse e teclado para macros e testes de UI (estilo AutoHotkey): mover/clicar, teclas, atalhos, digitar, ler pixels e capturar a tela. Recusado dentro de `actor(...)`.
+- **`@clpp.json`** — JSON: `Parse`, `Stringify`, `Pretty`, `Get`/`Has`/`Set` por caminho.
+- **`@clpp.time`** — relógios, `Sleep`, datas e `Format`.
+- **`@clpp.fs`** — além de ler, agora escreve: `write`, `append`, `exists`, `remove`, `makeDir`, `isDir`.
+
+Documentados nos capítulos [17](guia/17-janela-e-graficos.md), [18](guia/18-interface.md) e [19](guia/19-audio-io-automacao.md).
+
+## Correções desta revisão
+
+- **IntelliSense corrigido.** Os tokens semânticos foram reescritos: cada identificador agora recebe o tipo certo (struct, método, propriedade, parâmetro, namespace de módulo, tipo), em vez de coloridos como keyword, e não pintam mais pedaços de nomes (o `am` de `amount`). A conversão de colunas passou a ser em UTF-16, como o protocolo exige. O autocompletar distingue tipo, função, constante, método, membro de enum e palavra-chave, com descrição e exemplo em cada palavra reservada; hover nas palavras-chave.
+- **`let mut` de texto** agora aceita reatribuição (`let mut s = "a"; s = "b";`).
+- **`match`** aceita texto, `bool` e números negativos como padrão (`"play" ~> …`, `-1 ~> …`), e `switch` aceita texto.
+- **Indexar valores `any`** (vindos de JSON ou de funções) por chave de texto não é mais erro de tipo.
+- **Furo de sandbox:** `Fs.read`/`Fs.list` dentro de `actor(...)` liam arquivos; agora são bloqueados como o resto do `Fs`.
+- **Saída UTF-8 no console do Windows** (acentos saíam como `├│`).
+- **Ícone do executável** gerado a partir da marca.
+
 # Mudanças da revisão 0.9
 
 Esta revisão partiu do rework em C++20 (pasta `CLPP_Rework`) e do estudo do CL++ original em Rust → Luau. A sintaxe foi mantida: `<<`, `let`/`let mut`, `.:`, `post`, `@`, `~>`, `shl`/`shr`, `and`/`or`/`not`. O que mudou foi a correção do que estava errado, o que faltava para a linguagem ser usável de verdade, o editor e a documentação.

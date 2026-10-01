@@ -33,7 +33,8 @@ Ada: 70 hp em (0, 2.5, 0)
 - **Tipagem estática com inferência**: erros de tipo aparecem antes de rodar.
 - **Sem cabeçalhos**: cada `.clp` é um módulo; `link` traz funções, tipos e constantes.
 - **Feita para jogos**: `Vector2/3/4` nativos, biblioteca Axiom (interpolação, easing, vetores, ângulos, ruído, cores), corrotinas, `signal`, `observable`, tarefas e threads.
-- **Editor completo**: extensão do VS Code com erros ao digitar, autocompletar (inclusive membros herdados e de módulos), hover, ir para definição, renomear e executar com Ctrl+F5.
+- **Janela, gráficos, UI e som embutidos** — sem dependências externas: janela nativa (`@clpp.window`), desenho 2D com texto suave, imagens e efeitos (`@clpp.gfx`), widgets em modo imediato (`@clpp.ui`) e uma UI declarativa estilo Roblox (`@clpp.gui`), som (`@clpp.audio`), console (`@clpp.io`), automação de teclado/mouse para macros (`@clpp.input`), JSON (`@clpp.json`) e datas (`@clpp.time`). Veja os capítulos [17](docs/guia/17-janela-e-graficos.md), [18](docs/guia/18-interface.md) e [19](docs/guia/19-audio-io-automacao.md).
+- **Editor completo**: extensão do VS Code com erros ao digitar, autocompletar (inclusive membros herdados e de módulos), hover, ir para definição, renomear, amostras de cor para `0xRRGGBB` e executar com Ctrl+F5.
 
 ## Instalar
 
