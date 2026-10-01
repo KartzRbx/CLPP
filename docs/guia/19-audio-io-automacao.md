@@ -99,18 +99,12 @@ pyautogui. Everything acts **visibly** in your own session: the cursor moves whe
 and keys go to the focused window. Every function is refused inside `actor(...)`. Windows is the
 full implementation; other systems report that a call is not supported yet.
 
-```clp
+```clp trecho
 link @clpp.input as Input;
-post(Input.ScreenWidth() > 0);
-post(Input.MouseX() >= 0);
+post(Input.ScreenWidth() .: "x" .: Input.ScreenHeight());
+post(Input.MouseX() .: ", " .: Input.MouseY());
 let color = Input.Pixel(10, 10);     << the screen pixel at (10, 10), 0xRRGGBB
-post(color >= 0);
-```
-
-```saida
-true
-true
-true
+Input.ClickAt(color >= 0 ? 100 : 0, 100);
 ```
 
 | Function | Does |

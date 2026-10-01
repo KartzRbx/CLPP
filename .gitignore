@@ -38,3 +38,10 @@ Thumbs.db
 
 # Packaged outputs
 dist/
+
+# Documentation site
+www/node_modules/
+www/.astro/
+www/src/content/docs/guide/
+www/src/content/docs/reference/
+www/sidebar.js
