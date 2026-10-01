@@ -98,5 +98,7 @@ int main(int argc, char* argv[]) {
     std::cerr << "runtime error: " << vm.error() << '\n';
     return 1;
   }
+  // Flush script output before global worker slots are destroyed at process shutdown.
+  std::cout.flush();
   return 0;
 }
