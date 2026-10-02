@@ -40,7 +40,7 @@ Kartz Dev originally wanted a clearer, professional programming experience for R
 
 ## Install
 
-The current C++20 implementation has not yet been published as a versioned release. The existing [Releases](https://github.com/KartzRbx/CLPP/releases) predate it. Build the current source, or download the `clpp-windows` artifact from a successful [CI run](https://github.com/KartzRbx/CLPP/actions/workflows/ci.yml). That artifact contains `clpp.exe` and a VS Code `.vsix`; install the VSIX through **Extensions → … → Install from VSIX**. GitHub may require sign-in to download an Actions artifact.
+**[CL++ 0.10.0](https://github.com/KartzRbx/CLPP/releases/tag/v0.10.0)** is the current release: the C++20 bytecode compiler, register VM, graphics/UI/audio libraries, and the VS Code extension (`clpp-language-0.10.0.vsix`). On Windows x64, download `clpp.exe` and the `.vsix` from [Releases](https://github.com/KartzRbx/CLPP/releases) and install the extension through **Extensions → … → Install from VSIX**. You can also build from source or download the `clpp-windows` artifact from a successful [CI run](https://github.com/KartzRbx/CLPP/actions/workflows/ci.yml).
 
 To build from source, install CMake 3.20+, Ninja, and a C++20 compiler:
 
