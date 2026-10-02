@@ -1,10 +1,12 @@
 <p align="center">
-  <img src="assets/brand/clpp-256.png" width="128" alt="Logo do CL++">
+  <img src="assets/brand/clpp-256.png" width="128" alt="CL++ logo">
 </p>
 
 <h1 align="center">CL++</h1>
 
-<p align="center">Linguagem compilada, de uso geral, pensada para jogos.</p>
+<p align="center">A compiled, general-purpose programming language designed for games and tools.</p>
+
+CL++ has static typing with inference, value semantics, modules without headers, a bytecode compiler and register virtual machine, and built-in libraries for mathematics, graphics, UI, audio, files, JSON, and automation.
 
 ```clp
 link @clpp.axiom as Axiom;
@@ -22,25 +24,25 @@ struct Player {
 Player hero = Player("Ada", 100, Vector3(0, 0, 0));
 hero.damage(30);
 hero.position.y += 2.5;
-post(`${hero.name}: ${hero.hp} hp em ${hero.position}`);
+post(`${hero.name}: ${hero.hp} HP at ${hero.position}`);
 ```
 
-```text
-Ada: 70 hp em (0, 2.5, 0)
-```
+## Why CL++ exists
 
-- **Compilada para bytecode** verificado e executada numa VM de registradores.
-- **Tipagem estática com inferência**: erros de tipo aparecem antes de rodar.
-- **Sem cabeçalhos**: cada `.clp` é um módulo; `link` traz funções, tipos e constantes.
-- **Feita para jogos**: `Vector2/3/4` nativos, biblioteca Axiom (interpolação, easing, vetores, ângulos, ruído, cores), corrotinas, `signal`, `observable`, tarefas e threads.
-- **Janela, gráficos, UI e som embutidos** — sem dependências externas: janela nativa (`@clpp.window`), desenho 2D com texto suave, imagens e efeitos (`@clpp.gfx`), widgets em modo imediato (`@clpp.ui`) e uma UI declarativa estilo Roblox (`@clpp.gui`), som (`@clpp.audio`), console (`@clpp.io`), automação de teclado/mouse para macros (`@clpp.input`), JSON (`@clpp.json`) e datas (`@clpp.time`). Veja os capítulos [17](docs/guia/17-janela-e-graficos.md), [18](docs/guia/18-interface.md) e [19](docs/guia/19-audio-io-automacao.md).
-- **Editor completo**: extensão do VS Code com erros ao digitar, autocompletar (inclusive membros herdados e de módulos), hover, ir para definição, renomear, amostras de cor para `0xRRGGBB` e executar com Ctrl+F5.
+Kartz Dev originally wanted a clearer, professional programming experience for Roblox development, inspired by C++ but better suited to that context. CL++ grew into its own general-purpose language with a C++20 implementation, independent modules, a compiler, and a VM. The [about page](https://kartzrbx.github.io/CLPP/guide/00-about/) explains its goals and current uses.
 
-## Instalar
+## What you can make
 
-**Windows:** baixe `clpp.exe` e `clpp-language-<versão>.vsix` em Releases. No VS Code: **Extensões → ⋯ → Instalar do VSIX…**. A extensão já traz o compilador.
+- Games and prototypes with vectors, a native window, 2D drawing, input, audio, and UI.
+- Desktop tools with widgets, file I/O, JSON, dates, and a console.
+- Visible desktop macros and UI automation on supported platforms.
+- Embedded scripts in a C++ application through `clpp_core` and `extern func`.
 
-**A partir do código** (CMake 3.20+, Ninja, compilador C++20):
+## Install
+
+The current C++20 implementation has not yet been published as a versioned release. The existing [Releases](https://github.com/KartzRbx/CLPP/releases) predate it. Build the current source, or download the `clpp-windows` artifact from a successful [CI run](https://github.com/KartzRbx/CLPP/actions/workflows/ci.yml). That artifact contains `clpp.exe` and a VS Code `.vsix`; install the VSIX through **Extensions → … → Install from VSIX**. GitHub may require sign-in to download an Actions artifact.
+
+To build from source, install CMake 3.20+, Ninja, and a C++20 compiler:
 
 ```text
 cmake --preset release
@@ -48,36 +50,30 @@ cmake --build --preset release
 ./build/release/src/clpp examples/hello.clp
 ```
 
-## Documentação
+On Windows, run `.\build\release\src\clpp.exe examples\hello.clp` after the build. Put the executable on your `PATH` to call `clpp` from any directory. On Linux and macOS, point the extension's `clpp.serverPath` setting at the executable or put it on `PATH`.
 
-O [site da documentação](https://kartzrbx.github.io/CLPP/) reúne o guia da linguagem e a referência técnica. O [guia no repositório](docs/README.md) tem 19 capítulos, do primeiro programa a gráficos, interfaces, som e automação, com exemplos que a suíte de testes executa. As mudanças desta revisão estão em [docs/CHANGES.md](docs/CHANGES.md).
+## Documentation
 
-## Desempenho
+The [documentation site](https://kartzrbx.github.io/CLPP/) covers the complete language guide, syntax and grammar references, standard library, editor, performance, and project tutorials. Start with [Getting started](https://kartzrbx.github.io/CLPP/guide/01-getting-started/). The [documentation index](docs/README.md) lists repository source material and examples.
 
-Mediana de 7 execuções, Xeon 2,1 GHz, em segundos ([detalhes](docs/guia/16-desempenho.md)):
+## Performance
 
-| Programa | Antes | Agora | CPython 3.11 |
-| --- | --- | --- | --- |
-| `fib(27)` | 1,605 | 0,095 | 0,031 |
-| laço de 3 milhões | 0,379 | 0,180 | 0,264 |
-| 300 mil chamadas virtuais | 0,595 | 0,109 | 0,035 |
-| 200 mil passos de física | 0,353 | 0,050 | 0,087 |
-| 100 mil templates | 0,034 | 0,023 | 0,024 |
+The compiler verifies bytecode and lowers it to a register VM. Measured optimizations include reusable function frames, fast numeric assignment, indexed reads without copying a whole collection, and specialized integer operations. The [performance chapter](https://kartzrbx.github.io/CLPP/guide/16-performance/) gives the hardware, workloads, timings, and reproduction command. Results are specific to those workloads.
 
-## Estrutura
+## Repository layout
 
-| Pasta | Conteúdo |
+| Path | Contents |
 | --- | --- |
-| `src/core/` | lexer, parser, binder, tipos, codegen, VM, IDE/LSP |
-| `src/stdlib/` | biblioteca padrão nativa |
-| `src/cli/` | executável `clpp` |
-| `include/clpp/` | API C++ para embutir |
-| `tools/vscode/` | extensão do VS Code |
-| `examples/` | programas de exemplo |
-| `benchmarks/` | programas de medição (CL++ e Python) |
-| `tests/` | unitários, regressões, exemplos, stress, LSP, extensão, documentação |
-| `docs/` | guia e referência |
+| `src/core/` | Lexer, parser, type checker, code generation, VM, and language server |
+| `src/stdlib/` | Built-in modules |
+| `src/cli/` | `clpp` executable |
+| `include/clpp/` | C++ embedding API |
+| `tools/vscode/` | VS Code extension |
+| `examples/` | Example programs |
+| `benchmarks/` | CL++ and Python benchmark programs |
+| `tests/` | Unit, regression, stress, LSP, extension, and documentation tests |
+| `docs/` | English guide and reference used to build the website |
 
-## Licença
+## License
 
-Ver [LICENSE](LICENSE).
+See [LICENSE](LICENSE).
