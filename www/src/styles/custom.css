@@ -1,7 +1,13 @@
 :root {
-  --sl-color-accent-low: #3b0764;
-  --sl-color-accent: #7c3aed;
-  --sl-color-accent-high: #c4b5fd;
+  --sl-color-accent-low: #4a3600;
+  --sl-color-accent: #ffcf33;
+  --sl-color-accent-high: #fff0b3;
+}
+
+:root[data-theme='light'] {
+  --sl-color-accent-low: #fff4c2;
+  --sl-color-accent: #8a5c00;
+  --sl-color-accent-high: #523600;
 }
 
 .clpp-ref-quick {

@@ -9,12 +9,15 @@ hero:
     file: ../../assets/logo.png
   actions:
     - text: Get started
-      link: guide/01-comecando/
+      link: guide/01-getting-started/
       icon: right-arrow
       variant: primary
     - text: Standard library
-      link: guide/14-biblioteca-padrao/
+      link: guide/14-standard-library/
       icon: open-book
+    - text: About CL++
+      link: guide/00-about/
+      icon: star
     - text: GitHub
       link: https://github.com/KartzRbx/CLPP
       icon: github
@@ -33,7 +36,7 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
     coroutines, `signal`, `observable`, tasks and threads.
   </Card>
   <Card title="Graphics, UI, audio, automation" icon="laptop">
-    A native window, 2D drawing with smooth text and CPU effects, immediate-mode and declarative
+    A native window, 2D drawing with smooth text and CPU effects, immediate and declarative
     UI, sound, the console, and keyboard/mouse automation — all built in, no dependencies.
   </Card>
   <Card title="A real editor" icon="pencil">
@@ -54,8 +57,18 @@ while (Window.Frame()) {
 }
 ```
 
-The [language guide](guide/01-comecando/) runs from your first program to graphics, UI, sound and
-concurrency; every example in it is executed by the test suite. The
-[standard library](guide/14-biblioteca-padrao/) and chapters
-[17](guide/17-janela-e-graficos/), [18](guide/18-interface/) and
-[19](guide/19-audio-io-automacao/) cover the window, graphics, UI, audio and automation modules.
+The [language guide](guide/01-getting-started/) runs from your first program to graphics, UI, sound and
+concurrency. The
+[standard library](guide/14-standard-library/) and chapters
+[17](guide/17-window-and-graphics/), [18](guide/18-user-interfaces/) and
+[19](guide/19-audio-console-automation/) cover the window, graphics, UI, audio and automation modules.
+
+Read [why CL++ was created](guide/00-about/) and [the measured benchmarks](guide/16-performance/)
+for the language's goals, implementation, and performance.
+
+## Build a complete project
+
+- [Modular combat system](guide/20-modular-combat/): separate data, rules, presentation, and the entry point across `.clp` files.
+- [Account screen](guide/21-account-screen/): render a form, read input, validate it locally, and display feedback with `@clpp.gui`.
+
+For exact syntax, keep the [grammar](reference/ebnf/) and [keywords and operators](reference/keywords/) references nearby while reading the guide.

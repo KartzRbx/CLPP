@@ -104,6 +104,10 @@ if(Python3_Interpreter_FOUND)
            COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/docs/check_docs.py" $<TARGET_FILE:clpp>
                    "${CMAKE_SOURCE_DIR}/docs")
   set_tests_properties("documentation examples" PROPERTIES LABELS docs TIMEOUT 300)
+  add_test(NAME "legacy documentation examples"
+           COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/docs/check_docs.py" $<TARGET_FILE:clpp>
+                   "${CMAKE_SOURCE_DIR}/tests/docs/legacy")
+  set_tests_properties("legacy documentation examples" PROPERTIES LABELS docs TIMEOUT 300)
 endif()
 
 # The VS Code extension, activated against a mocked `vscode` API and the real server.

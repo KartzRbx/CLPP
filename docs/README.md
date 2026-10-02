@@ -1,39 +1,16 @@
-# Documentação do CL++
+# CL++ documentation
 
-## Guia da linguagem
+The [English documentation website](https://kartzrbx.github.io/CLPP/) is generated from this directory. It contains the language guide, syntax and grammar references, standard library, implementation and benchmark notes, and complete project tutorials.
 
-Cada exemplo destes capítulos é executado pela suíte de testes: se a linguagem mudar e um exemplo deixar de produzir a saída mostrada, o build falha.
+## Reading path
 
-1. [Começando](guia/01-comecando.md): instalação, primeiro programa, linha de comando
-2. [Léxico](guia/02-lexico.md): comentários, nomes, palavras-chave, literais, templates
-3. [Variáveis e tipos](guia/03-variaveis-e-tipos.md): `let`, `let mut`, tipos, constantes, semântica de valor, `move`
-4. [Operadores](guia/04-operadores.md): aritmética, lógica, bits, `.:`, ternário, fatias, vetores, precedência
-5. [Controle de fluxo](guia/05-controle-de-fluxo.md): `if`, `while`, `for`, `for … in`, `break`, `continue`, `switch`, `match`
-6. [Funções](guia/06-funcoes.md): parâmetros padrão e nomeados, variádicas, recursão, genéricos, namespaces, lambdas, `extern`
-7. [Structs e herança](guia/07-structs-e-heranca.md): campos, métodos, `self`/`@`, herança simples e múltipla, polimorfismo, `abstract`/`override`/`final`, `private`
-8. [Enums, variants, Option e Result](guia/08-enums-variants-option-result.md): enums com dados, `Option`, `Result`, uniões
-9. [Coleções e textos](guia/09-colecoes-e-textos.md): listas, `array<T>`, dicionários, vetores, buffers, biblioteca de texto
-10. [Módulos](guia/10-modulos.md): `link` sem cabeçalhos, constantes, biblioteca padrão
-11. [Erros](guia/11-erros.md): `try`/`catch`, `report`, `warn`, `pcall`, mensagens
-12. [Concorrência](guia/12-concorrencia.md): `async`/`await`, `parallel`, threads, `atomic`, `mutex`, corrotinas, `actor`
-13. [Eventos](guia/13-eventos.md): `signal` e `observable`
-14. [Biblioteca padrão](guia/14-biblioteca-padrao.md): Axiom (matemática para jogos), Fs, Os, Http
-15. [Ferramentas e editor](guia/15-ferramentas-e-editor.md): CLI, extensão do VS Code, build, testes, embutir em um jogo
-16. [Desempenho](guia/16-desempenho.md): benchmarks, o que foi otimizado e por quê, segurança
-17. [Windows and graphics](guia/17-janela-e-graficos.md): `@clpp.window` (native window, input, the frame loop) and `@clpp.gfx` (2D drawing, text, images, CPU effects)
-18. [User interfaces](guia/18-interface.md): `@clpp.ui` (immediate-mode widgets) and `@clpp.gui` (declarative, Roblox-style)
-19. [Sound, console and automation](guia/19-audio-io-automacao.md): `@clpp.audio`, `@clpp.io`, `@clpp.input` (macros/UI automation), `@clpp.json`, `@clpp.time`, writing with `@clpp.fs`
+1. [About CL++](guide/00-about.md) explains its origin, goals, and uses.
+2. [Getting started](guide/01-getting-started.md) installs the compiler and runs a first program.
+3. Chapters 2–13 explain syntax, types, control flow, modules, errors, concurrency, and events.
+4. [Standard library](guide/14-standard-library.md) and chapters 17–19 cover built-in modules.
+5. [Tools and editor](guide/15-tools-and-editor.md) and [Performance](guide/16-performance.md) cover development and measured optimization.
+6. [Modular combat](guide/20-modular-combat.md) and the [account screen](guide/21-account-screen.md) show complete projects.
 
-## O que mudou nesta revisão
+## Source references
 
-[CHANGES.md](CHANGES.md): correções, recursos novos, editor, desempenho e limitações conhecidas.
-
-## Referência técnica
-
-- [Palavras-chave e operadores](keywords.md)
-- [Lexer](lexer.md)
-- [Gramática (EBNF)](ebnf.md)
-- [Arquitetura do compilador](architecture.md)
-- [CLIR v1](clir-v1.md) e [opcodes](opcodes.md)
-- [Backends](backend-capabilities.md)
-- [Toolchain](toolchain.md)
+The earlier guide is kept under `tests/docs/legacy` solely as executable regression fixtures. Both the current English guide and those fixtures are checked by `tests/docs/check_docs.py`.
