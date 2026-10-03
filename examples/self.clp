@@ -34,6 +34,7 @@ Fighter hero = Fighter("Ada", 100, 100, Vector2(0, 0));
 Fighter target = Fighter("Dummy", 100, 100, Vector2(3, 4));
 
 post(hero.describe());
+
 post(hero.distanceTo(target));
 
 target.hurt(15);
