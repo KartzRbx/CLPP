@@ -40,7 +40,20 @@ Kartz Dev originally wanted a clearer, professional programming experience for R
 
 ## Install
 
-**[CL++ 0.10.0](https://github.com/KartzRbx/CLPP/releases/tag/v0.10.0)** is the current release: the C++20 bytecode compiler, register VM, graphics/UI/audio libraries, and the VS Code extension (`clpp-language-0.10.0.vsix`). On Windows x64, download `clpp.exe` and the `.vsix` from [Releases](https://github.com/KartzRbx/CLPP/releases) and install the extension through **Extensions → … → Install from VSIX**. You can also build from source or download the `clpp-windows` artifact from a successful [CI run](https://github.com/KartzRbx/CLPP/actions/workflows/ci.yml).
+**[CL++ 0.10.0](https://github.com/KartzRbx/CLPP/releases/tag/v0.10.0)** is the current release: the C++20 bytecode compiler, register VM, graphics/UI/audio libraries, and the VS Code extension (`clpp-language-0.10.0.vsix`). The extension bundles a self-contained `clpp.exe` for Windows x64, so on Windows there is nothing else to install.
+
+### Install the VS Code extension
+
+Download `clpp-language-0.10.0.vsix` from [Releases](https://github.com/KartzRbx/CLPP/releases), then install it **inside VS Code** — one of:
+
+- In VS Code (or Cursor): open the **Extensions** panel, click the **⋯** menu at the top, choose **Install from VSIX…**, and pick the file; or
+- From a terminal: `code --install-extension clpp-language-0.10.0.vsix` (use `cursor` instead of `code` for Cursor).
+
+Then reload the window (**Ctrl+Shift+P → Developer: Reload Window**). Open any `.clp` file to check it works.
+
+> **Do not double-click the `.vsix` file.** On machines with Visual Studio installed, Windows opens `.vsix` with the *Visual Studio* VSIX Installer, which refuses it with “one or more extensions are for Visual Studio Code.” That is a Windows file-association quirk, not a problem with the file — always install from inside VS Code as above.
+
+The extension includes the compiler, so you do not need `clpp.exe` separately on Windows x64. If you want the CLI too, download `clpp.exe` from Releases (or the `clpp-windows` artifact from a successful [CI run](https://github.com/KartzRbx/CLPP/actions/workflows/ci.yml)) and put it on your `PATH`. The released and CI-built `clpp.exe` is statically linked, so it runs on a clean Windows machine with no extra DLLs.
 
 To build from source, install CMake 3.20+, Ninja, and a C++20 compiler:
 
