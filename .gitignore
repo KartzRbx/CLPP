@@ -45,3 +45,7 @@ www/.astro/
 www/src/content/docs/guide/
 www/src/content/docs/reference/
 www/sidebar.js
+
+# Generated deploy and release artifacts
+.deploy-gh-pages/
+release-artifacts/
