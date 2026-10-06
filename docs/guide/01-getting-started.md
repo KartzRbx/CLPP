@@ -4,7 +4,7 @@ CL++ is a compiled, general-purpose language designed for games. A `.clp` source
 
 ## Install
 
-Install **[CL++ 0.10.0](https://github.com/KartzRbx/CLPP/releases/tag/v0.10.0)** from GitHub Releases: `clpp.exe` and `clpp-language-0.10.0.vsix` for Windows x64. Install the VSIX through **Extensions → … → Install from VSIX**; the extension bundles the compiler and runs `clpp --lsp` for IntelliSense. On Linux or macOS, build from source (below) or use a `clpp-windows`-style artifact from a successful [CI run](https://github.com/KartzRbx/CLPP/actions/workflows/ci.yml) when available for your platform.
+Install **[CL++ 0.10.1](https://github.com/KartzRbx/CLPP/releases/tag/v0.10.1)** from GitHub Releases. On Windows x64, install `clpp-language-0.10.1.vsix` through **Extensions → … → Install from VSIX**; it bundles the compiler and runs `clpp --lsp` for IntelliSense. Download `clpp.exe` separately only if you also want the command-line tool on your `PATH`. On Linux or macOS, build from source (below).
 
 To build from source, install CMake 3.20+, Ninja, and a C++20 compiler, then run:
 

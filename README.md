@@ -40,14 +40,14 @@ Kartz Dev originally wanted a clearer, professional programming experience for R
 
 ## Install
 
-**[CL++ 0.10.0](https://github.com/KartzRbx/CLPP/releases/tag/v0.10.0)** is the current release: the C++20 bytecode compiler, register VM, graphics/UI/audio libraries, and the VS Code extension (`clpp-language-0.10.0.vsix`). The extension bundles a self-contained `clpp.exe` for Windows x64, so on Windows there is nothing else to install.
+**[CL++ 0.10.1](https://github.com/KartzRbx/CLPP/releases/tag/v0.10.1)** is the current release: the C++20 bytecode compiler, register VM, graphics/UI/audio libraries, and the VS Code extension (`clpp-language-0.10.1.vsix`). The extension bundles a self-contained `clpp.exe` for Windows x64, so on Windows there is nothing else to install.
 
 ### Install the VS Code extension
 
-Download `clpp-language-0.10.0.vsix` from [Releases](https://github.com/KartzRbx/CLPP/releases), then install it **inside VS Code** — one of:
+Download `clpp-language-0.10.1.vsix` from [Releases](https://github.com/KartzRbx/CLPP/releases), then install it **inside VS Code** — one of:
 
 - In VS Code (or Cursor): open the **Extensions** panel, click the **⋯** menu at the top, choose **Install from VSIX…**, and pick the file; or
-- From a terminal: `code --install-extension clpp-language-0.10.0.vsix` (use `cursor` instead of `code` for Cursor).
+- From a terminal: `code --install-extension clpp-language-0.10.1.vsix` (use `cursor` instead of `code` for Cursor).
 
 Then reload the window (**Ctrl+Shift+P → Developer: Reload Window**). Open any `.clp` file to check it works.
 

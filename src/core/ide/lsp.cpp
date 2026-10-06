@@ -489,7 +489,7 @@ class Server {
           {"documentSymbolProvider", true},
           {"semanticTokensProvider",
            {{"legend", {{"tokenTypes", token_types}, {"tokenModifiers", token_modifiers}}}, {"full", true}}}}},
-        {"serverInfo", {{"name", "clpp"}, {"version", "0.10"}}}};
+        {"serverInfo", {{"name", "clpp"}, {"version", "0.10.1"}}}};
   }
 
   void handle_document_request(const std::string& method, const json& id, const json& params, Document& doc) {

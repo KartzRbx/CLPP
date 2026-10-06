@@ -2,7 +2,7 @@
   "name": "clpp-language",
   "displayName": "CL++",
   "description": "CL++ language support: syntax highlighting, IntelliSense (completion, inherited members, linked modules), hover, go to definition, inline errors, quick fixes, rename, outline and formatting — powered by the CL++ compiler itself.",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "publisher": "kartzrbx",
   "license": "MIT",
   "icon": "images/icon.png",

@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
     return 0;
   }
   if (arg == "--version") {
-    std::cout << "clpp 0.10\n";
+    std::cout << "clpp 0.10.1\n";
     return 0;
   }
   if (arg == "--repl") {
