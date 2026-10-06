@@ -11,6 +11,8 @@ post(Axiom.Clamp(150, 0, 100));
 
 Without `as`, the final component of the module name becomes its alias with an initial capital letter. `using Alias.member;` brings a member into the current scope. `import` is also accepted as an import declaration.
 
+File paths in `link` are resolved from the directory of the entry file passed to `clpp`, including links inside imported modules. For example, when running `clpp src/main.clp`, a module at `src/core/game.clp` imports `src/entities/ghost.clp` with `link "./entities/ghost.clp" as Ghost;`. Keep all project links relative to `src` in this setup. Running `clpp src/core/game.clp` directly gives that file a different entry directory, so its project links must be adjusted or the program should be started through `src/main.clp`.
+
 The built-in modules are `@clpp.axiom` (game math), `@clpp.text` (strings), `@clpp.math`, `@clpp.fs` (files), `@clpp.os` (environment), `@clpp.http` (URLs), `@clpp.window` (window and input), `@clpp.gfx` (2D graphics), `@clpp.ui` and `@clpp.gui` (interfaces), `@clpp.audio`, `@clpp.io`, `@clpp.input` (automation), `@clpp.json`, and `@clpp.time`. Their APIs are covered in the [standard library](14-standard-library.md) and the final three guide chapters.
 
 ## Design a module boundary
