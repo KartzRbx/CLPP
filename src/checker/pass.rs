@@ -114,11 +114,7 @@ pub fn check_program_ex(
                     None => func.name.clone(),
                 };
                 if !seen_fn.insert(key.clone()) {
-                    checker.error(
-                        func.line,
-                        1,
-                        format!("duplicate function `{key}`"),
-                    );
+                    checker.error(func.line, 1, format!("duplicate function `{key}`"));
                 }
                 let sig = func_sig(func);
                 checker.functions.insert(key, sig.clone());
@@ -134,7 +130,10 @@ pub fn check_program_ex(
                     Some(owner) => format!("{owner}::{}", func.name),
                     None => func.name.clone(),
                 };
-                checker.functions.entry(key).or_insert_with(|| func_sig(func));
+                checker
+                    .functions
+                    .entry(key)
+                    .or_insert_with(|| func_sig(func));
                 if func.owner.is_none() {
                     checker
                         .functions
@@ -147,11 +146,7 @@ pub fn check_program_ex(
             }
             Item::Decl(decl) if decl.owner.is_none() => {
                 if !seen_decl.insert(decl.name.clone()) {
-                    checker.error(
-                        decl.line,
-                        1,
-                        format!("duplicate name `{}`", decl.name),
-                    );
+                    checker.error(decl.line, 1, format!("duplicate name `{}`", decl.name));
                 }
             }
             Item::Unsupported { line, message, .. } => {
@@ -191,11 +186,7 @@ fn func_sig(func: &Function) -> FuncSig {
     FuncSig {
         params: func.params.len(),
         min_params,
-        param_types: func
-            .params
-            .iter()
-            .map(|p| p.value_type.clone())
-            .collect(),
+        param_types: func.params.iter().map(|p| p.value_type.clone()).collect(),
         return_type: func.return_type.clone(),
         line: func.line,
     }
@@ -379,7 +370,7 @@ impl<'a> Checker<'a> {
                     crate::diag::CLPP0605,
                     line,
                     1,
-                    format!("`{ty}` needs `#include` of its .clh ({lib})"),
+                    format!("`{ty}` needs `link @clpp.libs.{};`", lib.to_lowercase()),
                     "error",
                 ));
             }
@@ -390,7 +381,13 @@ impl<'a> Checker<'a> {
         // CLPP0401: `checker::typed::check_private_named`.
     }
 
-    fn check_enum_exhaustive(&mut self, ty: &Ty, covered: &[String], has_default: bool, line: usize) {
+    fn check_enum_exhaustive(
+        &mut self,
+        ty: &Ty,
+        covered: &[String],
+        has_default: bool,
+        line: usize,
+    ) {
         if has_default {
             return;
         }
@@ -447,16 +444,8 @@ impl<'a> Checker<'a> {
         self.in_method = func.owner.is_some();
         self.current_owner = func.owner.clone();
         if let Some(owner) = &func.owner {
-            self.method_fields = self
-                .owner_fields
-                .get(owner)
-                .cloned()
-                .unwrap_or_default();
-            self.method_methods = self
-                .owner_methods
-                .get(owner)
-                .cloned()
-                .unwrap_or_default();
+            self.method_fields = self.owner_fields.get(owner).cloned().unwrap_or_default();
+            self.method_methods = self.owner_methods.get(owner).cloned().unwrap_or_default();
         } else {
             self.method_fields.clear();
             self.method_methods.clear();
@@ -580,10 +569,7 @@ impl<'a> Checker<'a> {
                 }
                 self.check_enum_exhaustive(&ty, &covered, has_default, self.current_line);
             }
-            Stmt::Match {
-                discriminant,
-                arms,
-            } => {
+            Stmt::Match { discriminant, arms } => {
                 let ty = self.expr_ty(discriminant);
                 let mut covered = Vec::new();
                 let mut has_default = false;
@@ -617,7 +603,11 @@ impl<'a> Checker<'a> {
                 self.loop_depth -= 1;
                 self.in_do_while = saved;
             }
-            Stmt::Try { body, err_name, catch } => {
+            Stmt::Try {
+                body,
+                err_name,
+                catch,
+            } => {
                 self.stmts(body);
                 self.bind(err_name, Ty::String, self.current_line, false);
                 self.stmts(catch);
@@ -683,11 +673,7 @@ impl<'a> Checker<'a> {
     fn bind(&mut self, name: &str, ty: Ty, line: usize, is_param: bool) {
         if let Some(prev) = self.env.get(name) {
             if prev.line != line {
-                self.warn(
-                    line,
-                    1,
-                    format!("`{name}` shadows a previous binding"),
-                );
+                self.warn(line, 1, format!("`{name}` shadows a previous binding"));
             }
         }
         let _ = is_param;
@@ -808,7 +794,13 @@ impl<'a> Checker<'a> {
                     _ => Ty::Unknown,
                 }
             }
-            Expr::Call { object, name, args, type_args, .. } => {
+            Expr::Call {
+                object,
+                name,
+                args,
+                type_args,
+                ..
+            } => {
                 if object.is_none()
                     && self.in_method
                     && self.method_methods.contains(name)
@@ -817,11 +809,7 @@ impl<'a> Checker<'a> {
                     // CLPP0101: `checker::typed::check_bare_method`.
                 }
                 if self.deprecated.contains(name) {
-                    self.warn(
-                        self.current_line,
-                        1,
-                        format!("`{name}` is [[deprecated]]"),
-                    );
+                    self.warn(self.current_line, 1, format!("`{name}` is [[deprecated]]"));
                 }
                 if name == "static_assert" {
                     // CLPP0701: `checker::typed::check_static_assert`.
@@ -948,6 +936,7 @@ impl<'a> Checker<'a> {
             severity: "warning".into(),
             code: None,
             help: None,
+            span: crate::ast::Span::default(),
         });
     }
 
@@ -960,6 +949,7 @@ impl<'a> Checker<'a> {
             severity: "error".into(),
             code: None,
             help: None,
+            span: crate::ast::Span::default(),
         });
     }
 }
@@ -979,7 +969,8 @@ fn parse_ty(raw: &str) -> Ty {
     if cleaned.starts_with("array<") || cleaned.starts_with("vector<") || cleaned == "array" {
         return Ty::Named("array".into());
     }
-    if cleaned.starts_with("dictionary<") || cleaned.starts_with("map<") || cleaned == "dictionary" {
+    if cleaned.starts_with("dictionary<") || cleaned.starts_with("map<") || cleaned == "dictionary"
+    {
         return Ty::Named("dictionary".into());
     }
     match cleaned {

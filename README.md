@@ -10,25 +10,25 @@
 </p>
 
 <p align="center">
-  <a href="https://kartzrbx.github.io/CLPP/"><img src="https://img.shields.io/badge/docs-live-7c3aed?style=flat-square" alt="Docs"></a>
-  <a href="https://github.com/KartzRbx/CLPP/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/KartzRbx/CLPP/ci.yml?branch=main&style=flat-square&label=CI" alt="CI"></a>
+  <a href="https://kartzrbx.github.io/CLPP/luau/"><img src="https://img.shields.io/badge/docs-live-7c3aed?style=flat-square" alt="Docs"></a>
+  <a href="https://github.com/KartzRbx/CLPP/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/KartzRbx/CLPP/ci.yml?branch=luau&style=flat-square&label=CI" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-0ea5e9?style=flat-square" alt="MIT"></a>
   <a href="https://luau.org"><img src="https://img.shields.io/badge/emits-Luau-00a2ff?style=flat-square" alt="Luau"></a>
 </p>
 
 <p align="center">
-  <a href="https://kartzrbx.github.io/CLPP/">Course</a>
+  <a href="https://kartzrbx.github.io/CLPP/luau/">Course</a>
   ·
-  <a href="https://kartzrbx.github.io/CLPP/docs/reference">Reference</a>
+  <a href="https://kartzrbx.github.io/CLPP/luau/docs/reference">Reference</a>
   ·
-  <a href="https://kartzrbx.github.io/CLPP/api/Builtins">API</a>
+  <a href="https://kartzrbx.github.io/CLPP/luau/api/Builtins">API</a>
   ·
   <a href="https://github.com/KartzRbx/Cluaupp">Cluaupp</a>
 </p>
 
 ---
 
-CL++ is the **language**. You write C++-looking source; `clpp` emits one Luau file. [Cluaupp](https://github.com/KartzRbx/Cluaupp) owns engine headers, Rojo, and project `init`.
+CL++ is the **language**. You write C++-looking source; `clpp` emits one Luau file. [Cluaupp](https://github.com/KartzRbx/Cluaupp) owns the engine registry, Rojo, and project `init`.
 
 ```clpp
 link @clpp.roblox;
@@ -45,7 +45,7 @@ void init() {
 
 | File | Becomes |
 | --- | --- |
-| `*.clh` | Header — `struct`, constants, prototypes |
+| `*.clh` | Legacy compatibility input; new modules use `.clp` |
 | `*.clp` | Module implementation |
 | `*.clpp` | Script implementation |
 | `*.server.clpp` | Roblox **Script** |
@@ -70,7 +70,9 @@ CL++ does **not** use `->`.
 
 ## Install
 
-**[Download the Windows installer](https://github.com/KartzRbx/CLPP/releases/latest/download/clpp-setup.exe)** — double-click `clpp-setup.exe`. It puts `clpp` on your machine and installs the editor pack.
+This checkout ships the Rust **Luau compiler 0.8.2**, binary `clpp`. The separate C++20 VM uses `clpp-vm`; 0.10.x VM releases are not compiler updates. The JSON protocol is independently versioned by `api manifest`.
+
+**[Download the Windows installer](https://github.com/KartzRbx/CLPP/releases/download/v0.8.2/clpp-setup.exe)** — double-click `clpp-setup.exe`. It puts `clpp` on your machine and installs the editor pack.
 
 From source:
 
@@ -83,20 +85,21 @@ clpp setup
 clpp compile hello.server.clpp
 clpp build
 clpp api compile          # JSON stdin/stdout — Cluaupp contract
+clpp api serve            # many NDJSON requests in one process
 clpp api complete         # IDE completions from the AST
 clpp fmt hello.server.clpp
 ```
 
 ## Docs
 
-The site is a **user guide** (install, tutorials, style) plus a [cplusplus.com-style reference](https://kartzrbx.github.io/CLPP/docs/reference) and a [specification](https://kartzrbx.github.io/CLPP/docs/spec/compiler) (Pest EBNF, type table, emit). Built with Starlight.
+The site is a **user guide** (install, tutorials, style) plus a [cplusplus.com-style reference](https://kartzrbx.github.io/CLPP/luau/docs/reference) and a [specification](https://kartzrbx.github.io/CLPP/luau/docs/spec/compiler) (Pest EBNF, type table, emit). Built with Starlight.
 
 ```bash
 npm run docs          # local Starlight
 npm run docs:build    # static → www/dist  (gitignored)
 ```
 
-Live: **[kartzrbx.github.io/CLPP](https://kartzrbx.github.io/CLPP/)**.
+Live: **[kartzrbx.github.io/CLPP](https://kartzrbx.github.io/CLPP/luau/)**.
 
 Code fences on the docs site use the language id **clpp** (not `cpp`).
 

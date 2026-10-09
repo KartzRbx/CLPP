@@ -1,0 +1,2 @@
+int absolute(int x) { if (x < 0) { return -x; } else { return x; } }
+void init() { assert(absolute(-4) == 4); }

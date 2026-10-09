@@ -1,0 +1,3 @@
+Result<optional<int>, string> fetch() { return Ok(null); }
+int unwrap(Result<optional<int>, string> value) { match (value) { Ok n => { return n ?? 10; }, Err e => { return -1; }, } }
+void init() { assert(unwrap(fetch()) == 10); }

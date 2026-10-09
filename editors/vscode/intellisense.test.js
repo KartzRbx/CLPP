@@ -17,7 +17,7 @@ function labels(members) {
 }
 
 const source = `
-#include "../shared/PlayerData.clh"
+link "../shared/PlayerData.clh" as PlayerData;
 
 void LeaderstatsServer::PlayerEntered(Player player) {
     Players players = GetService<Players>();
@@ -31,11 +31,11 @@ void LeaderstatsServer::PlayerEntered(Player player) {
 const symbols = engine.indexDocument(source, [playerData]);
 
 assert.strictEqual(symbols.vars.get("Paths").type, "PlayerData");
-assert.ok(symbols.types.PlayerData, "parses PlayerData from the header");
-assert.deepStrictEqual(labels(symbols.types.PlayerData.properties), ["Currencies", "Inventory"]);
+assert.ok(symbols.types.PlayerData, "parses PlayerData from the linked source");
+assert.deepStrictEqual(labels(symbols.types.PlayerData.properties), ["Currencies"]);
 
 const pathsDot = engine.resolve("    Paths.", symbols);
-assert.deepStrictEqual(labels(pathsDot.members), ["Currencies", "Inventory"]);
+assert.deepStrictEqual(labels(pathsDot.members), ["Currencies"]);
 assert.ok(!labels(pathsDot.members).includes("Archivable"), "does not fall back to Instance");
 
 const currenciesDot = engine.resolve("    Paths.Currencies.", symbols);
@@ -45,13 +45,13 @@ const coinsInCall = engine.resolve("    playerData.GetChangedSignal(Paths.Curren
 assert.deepStrictEqual(labels(coinsInCall.members), ["Coins", "Rebirths"]);
 
 const modulePaths = engine.resolve("    DataService.Paths.", symbols);
-assert.deepStrictEqual(labels(modulePaths.members), ["Currencies", "Inventory"]);
+assert.deepStrictEqual(labels(modulePaths.members), ["Currencies"]);
 
 const colonModulePaths = engine.resolve("    DataService:Paths.", symbols);
-assert.deepStrictEqual(labels(colonModulePaths.members), ["Currencies", "Inventory"]);
+assert.deepStrictEqual(labels(colonModulePaths.members), ["Currencies"]);
 
 const serverPaths = engine.resolve("    DataService.Server.Paths.", symbols);
-assert.deepStrictEqual(labels(serverPaths.members), ["Currencies", "Inventory"]);
+assert.deepStrictEqual(labels(serverPaths.members), ["Currencies"]);
 
 const dataMethods = engine.resolve("    playerData.", symbols);
 assert.ok(labels(dataMethods.members).includes("GetChangedSignal"));
@@ -140,7 +140,7 @@ namespace HudMath {
 	Vector2 LerpVector2(Vector2 from, Vector2 to, double alpha);
 }
 `;
-const namespaceSymbols = engine.indexDocument('#include "HudMath.clh"\nvoid init() { HudMath. }', [namespaceHdr]);
+const namespaceSymbols = engine.indexDocument('link "HudMath.clp" as HudMath;\nvoid init() { HudMath. }', [namespaceHdr]);
 assert.ok(namespaceSymbols.types.HudMath, "indexes namespace like struct");
 assert.deepStrictEqual(labels(namespaceSymbols.types.HudMath.methods), ["Lerp", "LerpVector2"]);
 const namespaceDot = engine.resolve("    HudMath.", namespaceSymbols);

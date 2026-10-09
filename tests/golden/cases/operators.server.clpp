@@ -1,0 +1,2 @@
+int calc(int x) { return x * 2 + 1; }
+void init() { assert(calc(4) == 9); string s = "coins=" .: 3; assert(s == "coins=3"); }

@@ -201,6 +201,8 @@ export const sidebar = [
   {
     label: "Specification",
     items: [
+      { label: "Version and contract", slug: "docs/version" },
+      { label: "Host API contract", slug: "docs/api-contract" },
       { label: "Compiler pipeline", slug: "docs/spec/compiler" },
       { label: "Rowan CST", slug: "docs/compiler-architecture" },
       { label: "Type system", slug: "docs/architecture/TYPE_SYSTEM" },

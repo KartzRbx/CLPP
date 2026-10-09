@@ -345,6 +345,8 @@ pub struct CompileContext {
     pub is_header: bool,
     pub script_kind: Option<String>,
     pub libraries: Vec<String>,
+    /// Host-supplied dotted path to Luau libraries.
+    pub lib_root: Option<String>,
     pub requires: Vec<ModuleRequire>,
     /// Expanded line (1-based index into this vec as 0-based) → original source line.
     pub line_map: Vec<usize>,
@@ -399,7 +401,10 @@ pub fn attach_docs(program: &mut Program, comments: &[SourceComment]) {
             }
             _ => continue,
         };
-        let doc = comments.iter().rev().find(|c| c.is_doc && (c.line + 1 == line || c.line == line));
+        let doc = comments
+            .iter()
+            .rev()
+            .find(|c| c.is_doc && (c.line + 1 == line || c.line == line));
         let Some(doc) = doc else { continue };
         match item {
             Item::Function(f) | Item::Proto(f) => f.doc = Some(doc.text.clone()),
@@ -472,7 +477,9 @@ impl Expr {
             Expr::Unary { argument, .. }
             | Expr::Await { argument }
             | Expr::Cast { argument, .. }
-            | Expr::Update { target: argument, .. } => argument.span(),
+            | Expr::Update {
+                target: argument, ..
+            } => argument.span(),
             Expr::Binary { left, .. } => left.span(),
             _ => Span::default(),
         }

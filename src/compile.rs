@@ -1,5 +1,5 @@
 use crate::ast::Program;
-use crate::codegen::luau::emit;
+use crate::codegen::emit::emit_with_map;
 use crate::error::ClppError;
 use crate::parser::{parse, parse_with_diagnostics};
 use crate::preprocess::{is_header, preprocess, remap_line, script_kind, to_luau_path};
@@ -45,7 +45,13 @@ pub fn compile_artifact_with_opts(path: &Path, optimize: bool) -> Result<Compile
 
 pub fn compile_request(request: &CompileRequest) -> Result<CompileArtifact> {
     let path = PathBuf::from(&request.file_name);
-    compile_artifact_source_ex(&request.source, &path, request.strict, request.optimize)
+    compile_with_root(
+        &request.source,
+        &path,
+        request.strict,
+        request.optimize,
+        request.lib_root.as_deref(),
+    )
 }
 
 pub fn compile_artifact_source(
@@ -62,14 +68,68 @@ pub fn compile_artifact_source_ex(
     strict: Option<bool>,
     optimize: Option<bool>,
 ) -> Result<CompileArtifact> {
+    compile_with_root(source, path, strict, optimize, None)
+}
+
+fn compile_with_root(
+    source: &str,
+    path: &Path,
+    strict: Option<bool>,
+    optimize: Option<bool>,
+    lib_root: Option<&str>,
+) -> Result<CompileArtifact> {
+    if let Some(root) = lib_root {
+        if !root.split('.').all(|part| {
+            let mut chars = part.chars();
+            !matches!(
+                part,
+                "and"
+                    | "break"
+                    | "continue"
+                    | "do"
+                    | "else"
+                    | "elseif"
+                    | "end"
+                    | "false"
+                    | "for"
+                    | "function"
+                    | "if"
+                    | "in"
+                    | "local"
+                    | "nil"
+                    | "not"
+                    | "or"
+                    | "repeat"
+                    | "return"
+                    | "then"
+                    | "true"
+                    | "until"
+                    | "while"
+            ) && matches!(chars.next(), Some(c) if c.is_ascii_alphabetic() || c == '_')
+                && chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
+        }) {
+            return Ok(CompileArtifact::fail_with(
+                path.display().to_string(),
+                "invalid libRoot",
+                vec![crate::diag::diag(
+                    crate::diag::CLPP0004,
+                    1,
+                    1,
+                    "libRoot must be a dotted identifier path",
+                    "error",
+                )],
+            ));
+        }
+    }
     let do_opt = optimize_enabled(optimize);
     let file_name = path.display().to_string();
     let (expanded, mut ctx) = match preprocess(source, path) {
         Ok(pair) => pair,
         Err(err) => {
-            return Ok(fail_report(&file_name, err, &[]));
+            return Ok(fail_report(&file_name, err, &[], crate::diag::CLPP0003));
         }
     };
+    ctx.lib_root = lib_root.map(str::to_owned);
     if is_header(path) {
         ctx.is_header = true;
         ctx.is_script = false;
@@ -81,7 +141,14 @@ pub fn compile_artifact_source_ex(
     let (program, parse_diags): (Program, Vec<CompileDiagnostic>) =
         match parse_with_diagnostics(&expanded, &file_name) {
             Ok(pair) => pair,
-            Err(err) => return Ok(fail_report(&file_name, err, &ctx.line_map)),
+            Err(err) => {
+                return Ok(fail_report(
+                    &file_name,
+                    err,
+                    &ctx.line_map,
+                    crate::diag::CLPP0001,
+                ))
+            }
         };
     let mut program = program;
     crate::ast::attach_docs(&mut program, &ctx.comments);
@@ -90,9 +157,79 @@ pub fn compile_artifact_source_ex(
         .into_iter()
         .map(|d| remap_diagnostic(d, &ctx.line_map))
         .collect::<Vec<_>>();
+    for item in &program.items {
+        if let crate::ast::Item::Function(func) = item {
+            let has_try = func.body.iter().any(crate::ast::visit::stmt_has_try)
+                || func
+                    .params
+                    .iter()
+                    .any(|p| p.default.as_ref().is_some_and(crate::ast::visit::has_try));
+            if has_try
+                && !func
+                    .return_type
+                    .as_deref()
+                    .is_some_and(|t| t.starts_with("Result<"))
+            {
+                diagnostics.push(crate::diag::diag(
+                    crate::diag::CLPP1103,
+                    func.line,
+                    func.span.start_col,
+                    &func.name,
+                    "error",
+                ));
+            }
+        } else if let crate::ast::Item::Decl(decl) = item {
+            if decl.value.as_ref().is_some_and(crate::ast::visit::has_try) {
+                diagnostics.push(crate::diag::diag(
+                    crate::diag::CLPP1103,
+                    decl.line,
+                    decl.span.start_col,
+                    "propagation has no enclosing function",
+                    "error",
+                ));
+            }
+        } else if let crate::ast::Item::Destructure { value, .. } = item {
+            if crate::ast::visit::has_try(value) {
+                diagnostics.push(crate::diag::diag(
+                    crate::diag::CLPP1103,
+                    1,
+                    1,
+                    "propagation has no enclosing function",
+                    "error",
+                ));
+            }
+        }
+    }
+    crate::ast::visit::visit_program(&program, &mut |node| {
+        if let crate::ast::visit::NodeRef::Stmt(crate::ast::Stmt::Switch { cases, .. }) = node {
+            if cases
+                .iter()
+                .any(|c| c.values.iter().any(crate::ast::visit::has_try))
+            {
+                let mut diagnostic = crate::diag::diag(
+                    crate::diag::CLPP0002,
+                    1,
+                    1,
+                    "Result propagation cannot occur in a switch case label",
+                    "error",
+                );
+                diagnostic.help = Some(
+                    "unwrap the Result into a local before switch and use a constant case label"
+                        .into(),
+                );
+                diagnostics.push(diagnostic);
+            }
+        }
+        true
+    });
     let mut bound = crate::binder::bind(&program);
     let mut types = crate::session::Session::new().types;
     crate::checker::resolve(&program, &mut bound, &mut types);
+    diagnostics.extend(crate::modules::resolve_linked_symbols(
+        &program,
+        &mut bound.symbols,
+        &mut types,
+    ));
     diagnostics.extend(
         crate::checker::check_unified(&program, &expanded, &ctx.libraries, &bound, &mut types)
             .into_iter()
@@ -105,6 +242,7 @@ pub fn compile_artifact_source_ex(
             .nth(d.line.saturating_sub(1))
             .is_some_and(|l| l.contains("clpp-ignore"))
     });
+    normalize_diagnostics(&mut diagnostics, source);
     let errors: Vec<_> = diagnostics
         .iter()
         .filter(|d| d.severity != "warning")
@@ -122,10 +260,10 @@ pub fn compile_artifact_source_ex(
     } else {
         crate::opt::OptReport::default()
     };
-    let luau = emit(&program, &ctx);
-    let source_map = build_source_map(&luau, &file_name);
+    let (luau, source_map) = emit_with_map(&program, &ctx);
     let kind = script_kind(path);
     Ok(CompileArtifact {
+        contract_version: crate::support::CONTRACT_VERSION.into(),
         ok: true,
         luau,
         file_name,
@@ -162,35 +300,36 @@ fn optimize_enabled(explicit: Option<bool>) -> bool {
     }
 }
 
-fn build_source_map(luau: &str, file_name: &str) -> Vec<crate::support::SourceMapLine> {
-    let file = Path::new(file_name)
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_else(|| file_name.to_string());
-    let mut current = 1usize;
-    let mut out = Vec::new();
-    for (i, line) in luau.lines().enumerate() {
-        let luau_line = i + 1;
-        let trimmed = line.trim_start();
-        if let Some(rest) = trimmed.strip_prefix("-- ") {
-            if let Some((name, num)) = rest.rsplit_once(':') {
-                if Path::new(name).file_name().map(|n| n.to_string_lossy()) == Path::new(&file).file_name().map(|n| n.to_string_lossy())
-                    || name == file
-                    || name.ends_with(&file)
-                {
-                    if let Ok(n) = num.parse::<usize>() {
-                        current = n;
-                    }
-                }
-            }
+/// Normalize legacy checker diagnostics into the public protocol.
+pub(crate) fn normalize_diagnostics(diagnostics: &mut [CompileDiagnostic], source: &str) {
+    for d in diagnostics {
+        d.line = d.line.max(1);
+        d.column = d.column.max(1);
+        if d.code.is_none() {
+            let embedded = d
+                .message
+                .split('[')
+                .nth(1)
+                .and_then(|s| s.split(']').next());
+            let known = embedded.and_then(crate::diag::explain);
+            let code = known.unwrap_or(&crate::diag::CLPP0002);
+            d.code = Some(code.id.into());
+            d.help.get_or_insert_with(|| code.help.into());
         }
-        out.push(crate::support::SourceMapLine {
-            luau_line,
-            clpp_line: current,
-            file: file.clone(),
-        });
+        if d.help.is_none() {
+            d.help = d
+                .code
+                .as_deref()
+                .and_then(crate::diag::explain)
+                .map(|c| c.help.into());
+        }
+        let width = source
+            .lines()
+            .nth(d.line - 1)
+            .map(|s| s.chars().count() + 1)
+            .unwrap_or(d.column);
+        d.span = crate::ast::Span::new(d.line, d.column, d.line, width.max(d.column));
     }
-    out
 }
 
 fn remap_diagnostic(mut diag: CompileDiagnostic, map: &[usize]) -> CompileDiagnostic {
@@ -198,7 +337,12 @@ fn remap_diagnostic(mut diag: CompileDiagnostic, map: &[usize]) -> CompileDiagno
     diag
 }
 
-fn fail_report(file_name: &str, err: miette::Report, map: &[usize]) -> CompileArtifact {
+fn fail_report(
+    file_name: &str,
+    err: miette::Report,
+    map: &[usize],
+    code: crate::diag::Code,
+) -> CompileArtifact {
     let mut diagnostics = Vec::new();
     if let Some(clpp) = err.downcast_ref::<ClppError>() {
         let (line, column) = clpp.line_col();
@@ -209,7 +353,36 @@ fn fail_report(file_name: &str, err: miette::Report, map: &[usize]) -> CompileAr
             severity: "error".into(),
             code: None,
             help: None,
+            span: {
+                let (end_line, end_column) = crate::error::offset_to_line_col(
+                    &clpp.src,
+                    clpp.span.offset() + clpp.span.len(),
+                );
+                crate::ast::Span::new(
+                    remap_line(map, line),
+                    column,
+                    remap_line(map, end_line),
+                    end_column,
+                )
+            },
         });
+    }
+    if diagnostics.is_empty() {
+        diagnostics.push(crate::diag::diag(
+            crate::diag::CLPP0003,
+            1,
+            1,
+            format!("{err:#}"),
+            "error",
+        ));
+    } else {
+        for d in &mut diagnostics {
+            d.code = Some(code.id.into());
+            d.help = Some(code.help.into());
+            if d.span.start_line == 0 {
+                d.span = crate::ast::Span::point(d.line, d.column);
+            }
+        }
     }
     CompileArtifact::fail_with(file_name, format!("{err:#}"), diagnostics)
 }

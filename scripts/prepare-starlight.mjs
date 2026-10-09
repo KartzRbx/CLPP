@@ -101,6 +101,32 @@ function stripMatchingH1(body, title) {
   return body.replace(re, "");
 }
 
+const SITE_BASE = "/CLPP/luau/";
+
+// Markdown is authored relative to source files; the output is a directory URL.
+// Resolve links before copying so /types/ does not accidentally become /intro/types/.
+function resolveDocLinks(body, rel) {
+  const parts = body.split(/(```[\s\S]*?```)/g);
+  return parts.map((part, i) => i % 2 ? part : part.replace(/(!?\[.*?\]\()([^\s)]+)([^)]*\))/g, (all, open, href, close) => {
+    if (/^(?:[a-z]+:|#|\/)/i.test(href)) return all;
+    const [target, fragment] = href.split('#');
+    const source = path.resolve(SRC, path.dirname(rel), target);
+    const candidates = [source, source + ".md", source + ".mdx"];
+    const found = candidates.find(p => fs.existsSync(p));
+    if (!found && path.relative(SRC, source) === "version") return open + SITE_BASE + "docs/version/" + (fragment ? "#" + fragment : "") + close;
+    if (!found) return all;
+    const inside = path.relative(SRC, found);
+    const suffix = fragment ? "#" + fragment : "";
+    if (!inside.startsWith("..") && /\.mdx?$/.test(found) && !SKIP.has(inside)) {
+      return open + SITE_BASE + "docs/" + inside.split(path.sep).join('/').replace(/\.mdx?$/, '') + "/" + suffix + close;
+    }
+    const repo = path.relative(ROOT, found).split(path.sep).join('/');
+    if (repo.startsWith('..')) return all;
+    const kind = fs.statSync(found).isDirectory() ? 'tree' : 'blob';
+    return open + "https://github.com/KartzRbx/CLPP/" + kind + "/v0.8.2/" + repo + suffix + close;
+  })).join('');
+}
+
 function transform(rel, text) {
   const { data, body: rawBody } = parseFile(text);
   let body = rawBody.replace(/className=/g, "class=");
@@ -108,6 +134,7 @@ function transform(rel, text) {
   const title = data.title || heading || path.basename(rel, path.extname(rel));
   body = stripMatchingH1(body, data.title);
   body = mermaidToHtml(body);
+  body = resolveDocLinks(body, rel);
 
   const relPosix = rel.split(path.sep).join("/");
   const slug = `docs/${relPosix.replace(/\.mdx?$/, "")}`;
@@ -144,6 +171,12 @@ function main() {
   fs.rmSync(DEST, { recursive: true, force: true });
   fs.mkdirSync(DEST, { recursive: true });
   copyAssets();
+  const cargo = fs.readFileSync(path.join(ROOT, "Cargo.toml"), "utf8");
+  const version = cargo.match(/^version = "([^"]+)"/m)[1];
+  const support = fs.readFileSync(path.join(ROOT, "src/support.rs"), "utf8");
+  const contract = support.match(/CONTRACT_VERSION: &str = "([^"]+)"/)[1];
+  const versionDoc = ["---", "title: Version and contract", "---", "", "The Rust Luau compiler is **" + version + "** and the JSON contract is **" + contract + "**.", "", "This page is generated from Cargo.toml and src/support.rs on every documentation build. Run clpp api manifest to inspect the installed build. The C++20 VM is a separate product and uses clpp-vm.", ""].join("\n");
+  fs.writeFileSync(path.join(DEST, "version.md"), transform("version.md", versionDoc));
 
   for (const file of walk(SRC)) {
     const rel = path.relative(SRC, file);

@@ -1,0 +1,3 @@
+struct Worker { int get(); };
+int Worker::get() { return 7; }
+void init() { Worker w; auto n = w:get(); assert(n == 7); }

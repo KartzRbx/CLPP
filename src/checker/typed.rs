@@ -80,7 +80,16 @@ pub fn check_typed(
                     );
                 }
                 if let Some(value) = &decl.value {
-                    check_expr(&mut engine, value, decl.line, None, false, 0, false, &mut out);
+                    check_expr(
+                        &mut engine,
+                        value,
+                        decl.line,
+                        None,
+                        false,
+                        0,
+                        false,
+                        &mut out,
+                    );
                 }
             }
             _ => {}
@@ -181,7 +190,12 @@ fn owner_member_names(engine: &Engine<'_>, owner: crate::symbols::SymbolId) -> V
         .symbols
         .members_of(owner)
         .into_iter()
-        .filter_map(|id| engine.symbols.get(id).map(|s| short_member_name(&s.name).to_string()))
+        .filter_map(|id| {
+            engine
+                .symbols
+                .get(id)
+                .map(|s| short_member_name(&s.name).to_string())
+        })
         .collect();
     if let Some(owner_sym) = engine.symbols.get(owner) {
         if let Some(info) = engine.types.struct_info(&owner_sym.name) {
@@ -274,6 +288,7 @@ fn check_at_receiver(
             severity: "error".into(),
             code: None,
             help: None,
+            span: crate::ast::Span::default(),
         });
         return;
     }
@@ -297,6 +312,7 @@ fn check_at_receiver(
         severity: "error".into(),
         code: None,
         help: None,
+        span: crate::ast::Span::default(),
     });
 }
 
@@ -314,6 +330,7 @@ fn check_return_paths(func: &Function, needs_value: bool, out: &mut Vec<CompileD
             severity: "error".into(),
             code: None,
             help: None,
+            span: crate::ast::Span::default(),
         });
     }
     if !always_returns_value(&func.body) {
@@ -324,6 +341,7 @@ fn check_return_paths(func: &Function, needs_value: bool, out: &mut Vec<CompileD
             severity: "error".into(),
             code: None,
             help: None,
+            span: crate::ast::Span::default(),
         });
     }
 }
@@ -336,10 +354,7 @@ fn has_bare_return(stmts: &[Stmt]) -> bool {
             consequent,
             alternate,
             ..
-        } => {
-            has_bare_return(consequent)
-                || alternate.as_ref().is_some_and(|a| has_bare_return(a))
-        }
+        } => has_bare_return(consequent) || alternate.as_ref().is_some_and(|a| has_bare_return(a)),
         Stmt::Guard { body, .. }
         | Stmt::While { body, .. }
         | Stmt::ForEach { body, .. }
@@ -376,6 +391,13 @@ fn always_returns_value(stmts: &[Stmt]) -> bool {
             }
             Stmt::Block(body) | Stmt::Spawn { body, .. } => {
                 if always_returns_value(body) {
+                    ok = true;
+                }
+            }
+            Stmt::Switch { cases, .. } => {
+                if cases.iter().any(|c| c.is_default)
+                    && cases.iter().all(|c| always_returns_value(&c.body))
+                {
                     ok = true;
                 }
             }
@@ -487,6 +509,7 @@ fn walk_stmts(
                         severity: "error".into(),
                         code: None,
                         help: None,
+                        span: crate::ast::Span::default(),
                     });
                 }
             }
@@ -735,10 +758,7 @@ fn walk_stmts(
                     out,
                 );
             }
-            Stmt::Match {
-                discriminant,
-                arms,
-            } => {
+            Stmt::Match { discriminant, arms } => {
                 check_expr(
                     engine,
                     discriminant,
@@ -841,6 +861,7 @@ fn check_expr(
                     severity: "error".into(),
                     code: None,
                     help: None,
+                    span: crate::ast::Span::default(),
                 });
             }
             if name == "GetService" {
@@ -866,6 +887,7 @@ fn check_expr(
                     severity: "error".into(),
                     code: None,
                     help: None,
+                    span: crate::ast::Span::default(),
                 });
             } else if builtins::find(name).is_none()
                 && name != "static_assert"
@@ -909,7 +931,9 @@ fn check_expr(
                 out,
             );
         }
-        Expr::Assign { left, right, line, .. } => {
+        Expr::Assign {
+            left, right, line, ..
+        } => {
             check_const_assign(engine, left, *line, out);
             check_expr(
                 engine,
@@ -942,6 +966,7 @@ fn check_expr(
                         severity: "error".into(),
                         code: None,
                         help: None,
+                        span: crate::ast::Span::default(),
                     });
                 }
             } else if !check_bare_field(engine, name, line, method_owner, out) {
@@ -985,7 +1010,9 @@ fn check_expr(
         | Expr::Await { argument }
         | Expr::Cast { argument, .. }
         | Expr::Try { argument }
-        | Expr::Update { target: argument, .. } => {
+        | Expr::Update {
+            target: argument, ..
+        } => {
             if matches!(expr, Expr::Try { .. }) {
                 let arg_ty = engine.type_of_expr(argument, line);
                 let is_resultish = engine.types.is_result(arg_ty)
@@ -1024,7 +1051,9 @@ fn check_expr(
                 out,
             )
         }
-        Expr::New { args, class_name, .. } => {
+        Expr::New {
+            args, class_name, ..
+        } => {
             if let Some(sig) = resolve_ctor_sig(engine, class_name) {
                 check_call_args(engine, &sig, args, line, out);
             }
@@ -1134,6 +1163,7 @@ fn check_reflect_call(
             severity: "error".into(),
             code: None,
             help: None,
+            span: crate::ast::Span::default(),
         });
         return;
     };
@@ -1145,6 +1175,7 @@ fn check_reflect_call(
             severity: "error".into(),
             code: None,
             help: None,
+            span: crate::ast::Span::default(),
         });
     }
 }
@@ -1187,7 +1218,11 @@ fn check_unknown_ident(
     if clean == "this" || clean == "self" {
         return;
     }
-    if is_bare_global(clean) || builtins::find(clean).is_some() || is_datatype(clean) {
+    if clean == "None"
+        || is_bare_global(clean)
+        || builtins::find(clean).is_some()
+        || is_datatype(clean)
+    {
         return;
     }
     // Owner fields/methods without `@` are CLPP0101/0102, not unknown idents.
@@ -1199,7 +1234,11 @@ fn check_unknown_ident(
     if engine.symbols.lookup_at(line, clean).is_some() {
         return;
     }
-    if engine.symbols.lookup(engine.symbols.file_scope, clean).is_some() {
+    if engine
+        .symbols
+        .lookup(engine.symbols.file_scope, clean)
+        .is_some()
+    {
         return;
     }
     if engine.types.has_struct(clean) {
@@ -1222,6 +1261,7 @@ fn check_unknown_ident(
         severity: "error".into(),
         code: None,
         help: None,
+        span: crate::ast::Span::default(),
     });
 }
 
@@ -1248,6 +1288,7 @@ fn check_const_assign(
             severity: "error".into(),
             code: None,
             help: None,
+            span: crate::ast::Span::default(),
         });
     }
 }
@@ -1259,15 +1300,12 @@ fn check_getservice(
     line: usize,
     out: &mut Vec<CompileDiagnostic>,
 ) {
-    let service = type_args
-        .first()
-        .map(|s| s.as_str())
-        .or_else(|| {
-            args.first().and_then(|a| match a {
-                Expr::String(s) => Some(s.as_str()),
-                _ => None,
-            })
-        });
+    let service = type_args.first().map(|s| s.as_str()).or_else(|| {
+        args.first().and_then(|a| match a {
+            Expr::String(s) => Some(s.as_str()),
+            _ => None,
+        })
+    });
     let Some(service) = service else {
         return;
     };
@@ -1344,10 +1382,7 @@ fn check_member_name(
         diag::CLPP0604,
         line.max(1),
         1,
-        format!(
-            "unknown member `{name}` on {}",
-            engine.types.label(obj_ty)
-        ),
+        format!("unknown member `{name}` on {}", engine.types.label(obj_ty)),
         "error",
     ));
 }
@@ -1366,17 +1401,14 @@ fn resolve_call_sig(
                 .struct_of(obj_ty)
                 .map(|s| s.name.clone())
                 .unwrap_or_else(|| engine.types.label(obj_ty));
-            let min_from_ast =
-                min_params_from_ast(engine.program, Some(&owner_name), name);
+            let min_from_ast = min_params_from_ast(engine.program, Some(&owner_name), name);
             // Synthetic members (signal Connect, array push, …) have empty params —
             // skip arity until the API DB fills them.
             if member.params.is_empty() && min_from_ast.is_none() {
                 return None;
             }
-            if matches!(
-                member.kind,
-                MemberKind::Method | MemberKind::Constructor
-            ) || !member.params.is_empty()
+            if matches!(member.kind, MemberKind::Method | MemberKind::Constructor)
+                || !member.params.is_empty()
             {
                 let min = min_from_ast.unwrap_or_else(|| {
                     member
@@ -1427,7 +1459,9 @@ fn resolve_call_sig(
         });
     }
     // Symbol FunctionType fallback.
-    if let Some(id) = engine.symbols.lookup_at(line, name)
+    if let Some(id) = engine
+        .symbols
+        .lookup_at(line, name)
         .or_else(|| engine.symbols.lookup(engine.symbols.file_scope, name))
     {
         if let Some(sym) = engine.symbols.get(id) {
@@ -1554,15 +1588,8 @@ fn check_generic_call_bounds(
 fn min_params_from_ast(program: &Program, owner: Option<&str>, name: &str) -> Option<usize> {
     for item in &program.items {
         match item {
-            Item::Function(f) | Item::Proto(f)
-                if f.name == name && f.owner.as_deref() == owner =>
-            {
-                return Some(
-                    f.params
-                        .iter()
-                        .take_while(|p| p.default.is_none())
-                        .count(),
-                );
+            Item::Function(f) | Item::Proto(f) if f.name == name && f.owner.as_deref() == owner => {
+                return Some(f.params.iter().take_while(|p| p.default.is_none()).count());
             }
             _ => {}
         }
@@ -1595,6 +1622,7 @@ fn check_call_args(
             severity: "error".into(),
             code: None,
             help: None,
+            span: crate::ast::Span::default(),
         });
     }
     for (i, arg) in args.iter().enumerate() {
@@ -1649,6 +1677,7 @@ fn push_arg_assign(
         severity: "error".into(),
         code: None,
         help: None,
+        span: crate::ast::Span::default(),
     });
 }
 
@@ -1698,14 +1727,13 @@ fn push_assign(
             AssignSite::Flow => "target".into(),
         };
         out.push(CompileDiagnostic {
-            message: format!(
-                "initializing int {who} from float; Luau does not truncate"
-            ),
+            message: format!("initializing int {who} from float; Luau does not truncate"),
             line: line.max(1),
             column: 1,
             severity: "warning".into(),
             code: None,
             help: None,
+            span: crate::ast::Span::default(),
         });
         return;
     }
@@ -1726,13 +1754,7 @@ fn push_assign(
                 types.label(expected)
             ),
         };
-        out.push(diag::diag(
-            diag::CLPP0201,
-            line.max(1),
-            1,
-            detail,
-            "error",
-        ));
+        out.push(diag::diag(diag::CLPP0201, line.max(1), 1, detail, "error"));
         return;
     }
 
@@ -1749,13 +1771,7 @@ fn push_assign(
                 types.label(expected)
             ),
         };
-        out.push(diag::diag(
-            diag::CLPP0202,
-            line.max(1),
-            1,
-            detail,
-            "error",
-        ));
+        out.push(diag::diag(diag::CLPP0202, line.max(1), 1, detail, "error"));
         return;
     }
 
@@ -1789,5 +1805,6 @@ fn push_assign(
         severity: "error".into(),
         code: None,
         help: None,
+        span: crate::ast::Span::default(),
     });
 }

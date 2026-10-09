@@ -1,0 +1,4 @@
+Result<bool, optional<string>> fetch(bool good) { if (good) { return Ok(false); } return Err(null); }
+Result<bool, optional<string>> pass(bool good) { bool value = fetch(good)?; return Ok(value); }
+int inspect(Result<bool, optional<string>> value) { match (value) { Ok n => { return n ? 1 : 2; }, Err e => { return 3; }, } }
+void init() { assert(inspect(pass(true)) == 2); assert(inspect(pass(false)) == 3); }

@@ -1,0 +1,3 @@
+int first(int x) { return second(x); }
+int second(int x) { return x + 1; }
+void init() { assert(first(4) == 5); }

@@ -2,7 +2,9 @@ use clpp::compile_file;
 use std::path::PathBuf;
 
 fn example(rel: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples").join(rel)
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("examples")
+        .join(rel)
 }
 
 #[test]
@@ -20,14 +22,14 @@ fn compile_syntax_features() {
 #[test]
 fn compile_config() {
     let luau = compile_file(&example("shared/config.clp")).expect("compile config");
-    assert!(luau.contains("const STARTING_COINS"));
+    assert!(luau.contains("local STARTING_COINS"));
     assert!(luau.contains("return {"));
 }
 
 #[test]
 fn compile_player_data() {
     let luau = compile_file(&example("shared/PlayerData.clh")).expect("compile PlayerData");
-    assert!(luau.contains("const function PlayerData()"));
+    assert!(luau.contains("function PlayerData.new()"));
     assert!(luau.contains("Coins = 0"));
 }
 

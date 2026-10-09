@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+/// Independently versioned JSON protocol.
+pub const CONTRACT_VERSION: &str = "1.1.0";
+
 pub const LANGUAGE_ID: &str = "clpp";
 pub const LANGUAGE_NAME: &str = "CL++";
 pub const EXTENSIONS: &[&str] = &[
@@ -12,6 +15,8 @@ pub struct CompileDiagnostic {
     pub line: usize,
     pub column: usize,
     pub severity: String,
+    #[serde(default)]
+    pub span: crate::ast::Span,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub code: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -28,6 +33,12 @@ pub struct CompileRequest {
     /// When `Some(false)`, skip RFC 0011 high-level opts (fair baseline D).
     #[serde(default)]
     pub optimize: Option<bool>,
+    #[serde(default, rename = "libRoot", alias = "lib_root")]
+    pub lib_root: Option<String>,
+}
+
+fn default_contract_version() -> String {
+    CONTRACT_VERSION.into()
 }
 
 fn default_file_name() -> String {
@@ -40,6 +51,8 @@ fn default_true() -> bool {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompileArtifact {
+    #[serde(rename = "contractVersion", default = "default_contract_version")]
+    pub contract_version: String,
     pub ok: bool,
     pub luau: String,
     #[serde(rename = "fileName")]
@@ -79,6 +92,12 @@ pub struct CompileArtifact {
 pub struct SourceMapLine {
     #[serde(rename = "luauLine")]
     pub luau_line: usize,
+    #[serde(rename = "luauColumn", default)]
+    pub luau_column: usize,
+    #[serde(rename = "clppColumn", default)]
+    pub clpp_column: usize,
+    #[serde(default)]
+    pub span: crate::ast::Span,
     #[serde(rename = "clppLine")]
     pub clpp_line: usize,
     pub file: String,
@@ -86,7 +105,9 @@ pub struct SourceMapLine {
 
 impl CompileArtifact {
     pub fn fail(file_name: impl Into<String>, error: impl Into<String>) -> Self {
+        let error = error.into();
         Self {
+            contract_version: CONTRACT_VERSION.into(),
             ok: false,
             luau: String::new(),
             file_name: file_name.into(),
@@ -96,8 +117,14 @@ impl CompileArtifact {
             is_header: false,
             rojo_class: "ModuleScript".into(),
             libraries: Vec::new(),
-            error: Some(error.into()),
-            diagnostics: Vec::new(),
+            error: Some(error.clone()),
+            diagnostics: vec![crate::diag::diag(
+                crate::diag::CLPP0002,
+                1,
+                1,
+                error,
+                "error",
+            )],
             source_map: Vec::new(),
             native_hints: Vec::new(),
             specialized: Vec::new(),
@@ -112,6 +139,7 @@ impl CompileArtifact {
         diagnostics: Vec<CompileDiagnostic>,
     ) -> Self {
         Self {
+            contract_version: CONTRACT_VERSION.into(),
             ok: false,
             luau: String::new(),
             file_name: file_name.into(),
@@ -139,6 +167,7 @@ impl Default for CompileDiagnostic {
             line: 1,
             column: 1,
             severity: "error".into(),
+            span: crate::ast::Span::point(1, 1),
             code: None,
             help: None,
         }
@@ -150,6 +179,8 @@ pub struct LanguageManifest {
     pub name: &'static str,
     pub id: &'static str,
     pub version: &'static str,
+    #[serde(rename = "contractVersion")]
+    pub contract_version: &'static str,
     pub extensions: &'static [&'static str],
     pub tags: &'static [FileTag],
     pub builtins: Vec<&'static str>,
@@ -184,6 +215,7 @@ pub fn language_manifest() -> LanguageManifest {
         name: LANGUAGE_NAME,
         id: LANGUAGE_ID,
         version: env!("CARGO_PKG_VERSION"),
+        contract_version: CONTRACT_VERSION,
         extensions: EXTENSIONS,
         tags: &[
             FileTag {

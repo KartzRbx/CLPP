@@ -1,0 +1,6 @@
+int use(optional<int> value) { return value ?? 5; }
+void guarded(optional<int> value) {
+  guard (value != null) else { return; }
+  assert(value != null);
+}
+void init() { assert(use(None) == 5); assert(use(Some(2)) == 2); guarded(None); guarded(Some(2)); }

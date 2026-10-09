@@ -28,7 +28,6 @@ fn expand(
     if !seen.insert(key) {
         return Ok(String::new());
     }
-    let stem = file_stem_name(file_path);
     let mut out = String::new();
     let mut orig_line = 0usize;
     let mut skip = 0i32;
@@ -56,7 +55,11 @@ fn expand(
         if trimmed.starts_with('#') {
             let dir = trimmed.trim_start_matches('#').trim_start();
             if let Some(rest) = strip_prefix_ignore_ascii_case(dir, "if") {
-                if rest.chars().next().map(|c| c.is_whitespace() || c == '(').unwrap_or(false)
+                if rest
+                    .chars()
+                    .next()
+                    .map(|c| c.is_whitespace() || c == '(')
+                    .unwrap_or(false)
                     || rest.is_empty()
                 {
                     let ok = eval_if(rest.trim(), ctx, file_path);
@@ -70,7 +73,8 @@ fn expand(
             }
             if let Some(rest) = strip_prefix_ignore_ascii_case(dir, "ifdef") {
                 let name = rest.trim();
-                let ok = ctx.defines.iter().any(|d| d == name) || builtin_defined(name, ctx, file_path);
+                let ok =
+                    ctx.defines.iter().any(|d| d == name) || builtin_defined(name, ctx, file_path);
                 saw_true.push(ok);
                 if skip > 0 || !ok {
                     skip += 1;
@@ -80,7 +84,8 @@ fn expand(
             }
             if let Some(rest) = strip_prefix_ignore_ascii_case(dir, "ifndef") {
                 let name = rest.trim();
-                let ok = !(ctx.defines.iter().any(|d| d == name) || builtin_defined(name, ctx, file_path));
+                let ok = !(ctx.defines.iter().any(|d| d == name)
+                    || builtin_defined(name, ctx, file_path));
                 saw_true.push(ok);
                 if skip > 0 || !ok {
                     skip += 1;
@@ -140,13 +145,9 @@ fn expand(
         }
         if is_preprocessor_line(trimmed) {
             if let Some(_rest) = preprocessor_payload(trimmed, "include") {
-                return Err(ClppError::at_line(
-                    source,
-                    orig_line,
-                    1,
-                    "use `link`".to_string(),
-                )
-                .into());
+                return Err(
+                    ClppError::at_line(source, orig_line, 1, "use `link`".to_string()).into(),
+                );
             }
             if let Some(rest) = preprocessor_payload(trimmed, "pragma") {
                 apply_pragma(rest, ctx);
@@ -206,7 +207,10 @@ fn split_line_comment(line: &str) -> (String, Option<String>) {
         if c == '/' && i + 1 < chars.len() && chars[i + 1] == '/' {
             let code: String = chars[..i].iter().collect();
             let comment: String = chars[i + 2..].iter().collect();
-            return (code.trim_end().to_string(), Some(comment.trim().to_string()));
+            return (
+                code.trim_end().to_string(),
+                Some(comment.trim().to_string()),
+            );
         }
         i += 1;
     }
@@ -365,18 +369,6 @@ fn apply_pragma(rest: &str, ctx: &mut CompileContext) {
     }
 }
 
-fn angled(rest: &str) -> Option<String> {
-    rest.strip_prefix('<')
-        .and_then(|s| s.strip_suffix('>'))
-        .map(|s| s.trim().to_string())
-}
-
-fn quoted(rest: &str) -> Option<String> {
-    rest.strip_prefix('"')
-        .and_then(|s| s.strip_suffix('"'))
-        .map(|s| s.trim().to_string())
-}
-
 pub fn file_stem_name(path: &Path) -> String {
     let mut name = path
         .file_name()
@@ -451,10 +443,7 @@ fn canonicalize_or(path: &Path) -> PathBuf {
 }
 
 fn builtin_defined(name: &str, ctx: &CompileContext, file_path: &Path) -> bool {
-    let kind = ctx
-        .script_kind
-        .clone()
-        .or_else(|| script_kind(file_path));
+    let kind = ctx.script_kind.clone().or_else(|| script_kind(file_path));
     match name {
         "SERVER" => kind.as_deref() == Some("server"),
         "CLIENT" => kind.as_deref() == Some("client"),

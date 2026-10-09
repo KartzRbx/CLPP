@@ -2,108 +2,354 @@
 //! Used by emit, analysis, and the checker pass — not a second type system.
 
 pub const INSTANCE_TYPES: &[&str] = &[
-    "Instance", "Folder", "Part", "MeshPart", "BasePart", "UnionOperation", "CornerWedgePart",
-    "WedgePart", "TrussPart", "Model", "WorldModel", "Actor", "Player", "Players", "Terrain",
+    "Instance",
+    "Folder",
+    "Part",
+    "MeshPart",
+    "BasePart",
+    "UnionOperation",
+    "CornerWedgePart",
+    "WedgePart",
+    "TrussPart",
+    "Model",
+    "WorldModel",
+    "Actor",
+    "Player",
+    "Players",
+    "Terrain",
     "SpawnLocation",
-    "IntValue", "NumberValue", "StringValue", "BoolValue", "ObjectValue", "CFrameValue",
-    "Vector3Value", "Color3Value", "BrickColorValue", "RayValue", "DoubleConstrainedValue",
+    "IntValue",
+    "NumberValue",
+    "StringValue",
+    "BoolValue",
+    "ObjectValue",
+    "CFrameValue",
+    "Vector3Value",
+    "Color3Value",
+    "BrickColorValue",
+    "RayValue",
+    "DoubleConstrainedValue",
     "IntConstrainedValue",
-    "Humanoid", "HumanoidDescription", "Accessory", "Accoutrement", "Shirt", "Pants",
-    "ShirtGraphic", "BodyColors", "Animation", "Animator", "AnimationTrack",
-    "AnimationController", "Pose", "Keyframe", "KeyframeSequence",
-    "RemoteEvent", "RemoteFunction", "BindableEvent", "BindableFunction", "UnreliableRemoteEvent",
-    "ScreenGui", "SurfaceGui", "BillboardGui", "GuiMain", "Frame", "TextLabel", "TextButton",
-    "TextBox", "ImageLabel", "ImageButton", "ScrollingFrame", "VideoFrame", "ViewportFrame",
-    "CanvasGroup", "UIListLayout", "UIGridLayout", "UIPadding", "UICorner", "UIStroke",
-    "UIGradient", "UIScale", "UIAspectRatioConstraint", "UISizeConstraint",
-    "UITextSizeConstraint", "UIPageLayout", "UIFlexItem",
-    "ProximityPrompt", "ClickDetector", "Seat", "VehicleSeat", "Tool", "Highlight",
-    "SelectionBox", "SelectionSphere", "Attachment", "Bone", "Weld", "WeldConstraint", "Motor",
-    "Motor6D", "RopeConstraint", "RodConstraint", "SpringConstraint", "AlignPosition",
-    "AlignOrientation", "LinearVelocity", "AngularVelocity", "VectorForce", "Torque",
-    "NoCollisionConstraint", "UniversalConstraint", "BallSocketConstraint", "HingeConstraint",
-    "Sound", "SoundGroup", "SoundEffect", "EqualizerSoundEffect", "ReverbSoundEffect",
-    "DistortionSoundEffect", "PitchShiftSoundEffect", "ChorusSoundEffect", "FlangeSoundEffect",
-    "EchoSoundEffect", "CompressorSoundEffect", "Camera", "ParticleEmitter", "Beam", "Trail",
-    "Fire", "Smoke", "Sparkles", "PointLight", "SpotLight", "SurfaceLight", "Atmosphere", "Sky",
-    "Clouds", "BloomEffect", "BlurEffect", "ColorCorrectionEffect", "DepthOfFieldEffect",
+    "Humanoid",
+    "HumanoidDescription",
+    "Accessory",
+    "Accoutrement",
+    "Shirt",
+    "Pants",
+    "ShirtGraphic",
+    "BodyColors",
+    "Animation",
+    "Animator",
+    "AnimationTrack",
+    "AnimationController",
+    "Pose",
+    "Keyframe",
+    "KeyframeSequence",
+    "RemoteEvent",
+    "RemoteFunction",
+    "BindableEvent",
+    "BindableFunction",
+    "UnreliableRemoteEvent",
+    "ScreenGui",
+    "SurfaceGui",
+    "BillboardGui",
+    "GuiMain",
+    "Frame",
+    "TextLabel",
+    "TextButton",
+    "TextBox",
+    "ImageLabel",
+    "ImageButton",
+    "ScrollingFrame",
+    "VideoFrame",
+    "ViewportFrame",
+    "CanvasGroup",
+    "UIListLayout",
+    "UIGridLayout",
+    "UIPadding",
+    "UICorner",
+    "UIStroke",
+    "UIGradient",
+    "UIScale",
+    "UIAspectRatioConstraint",
+    "UISizeConstraint",
+    "UITextSizeConstraint",
+    "UIPageLayout",
+    "UIFlexItem",
+    "ProximityPrompt",
+    "ClickDetector",
+    "Seat",
+    "VehicleSeat",
+    "Tool",
+    "Highlight",
+    "SelectionBox",
+    "SelectionSphere",
+    "Attachment",
+    "Bone",
+    "Weld",
+    "WeldConstraint",
+    "Motor",
+    "Motor6D",
+    "RopeConstraint",
+    "RodConstraint",
+    "SpringConstraint",
+    "AlignPosition",
+    "AlignOrientation",
+    "LinearVelocity",
+    "AngularVelocity",
+    "VectorForce",
+    "Torque",
+    "NoCollisionConstraint",
+    "UniversalConstraint",
+    "BallSocketConstraint",
+    "HingeConstraint",
+    "Sound",
+    "SoundGroup",
+    "SoundEffect",
+    "EqualizerSoundEffect",
+    "ReverbSoundEffect",
+    "DistortionSoundEffect",
+    "PitchShiftSoundEffect",
+    "ChorusSoundEffect",
+    "FlangeSoundEffect",
+    "EchoSoundEffect",
+    "CompressorSoundEffect",
+    "Camera",
+    "ParticleEmitter",
+    "Beam",
+    "Trail",
+    "Fire",
+    "Smoke",
+    "Sparkles",
+    "PointLight",
+    "SpotLight",
+    "SurfaceLight",
+    "Atmosphere",
+    "Sky",
+    "Clouds",
+    "BloomEffect",
+    "BlurEffect",
+    "ColorCorrectionEffect",
+    "DepthOfFieldEffect",
     "SunRaysEffect",
-    "Workspace", "Lighting", "ReplicatedStorage", "ServerStorage", "ServerScriptService",
-    "StarterGui", "StarterPack", "StarterPlayer", "StarterPlayerScripts",
-    "StarterCharacterScripts", "RunService", "UserInputService", "ContextActionService",
-    "TweenService", "Debris", "HttpService", "DataStoreService", "MemoryStoreService",
-    "BadgeService", "MarketplaceService", "TeleportService", "PolicyService", "TextService",
-    "GroupService", "MessagingService", "Teams", "SoundService", "LocalizationService",
-    "GuiService", "VRService", "PathfindingService", "AssetService", "AvatarEditorService",
-    "VoiceChatService", "SocialService", "ProximityPromptService", "CollectionService",
+    "Workspace",
+    "Lighting",
+    "ReplicatedStorage",
+    "ServerStorage",
+    "ServerScriptService",
+    "StarterGui",
+    "StarterPack",
+    "StarterPlayer",
+    "StarterPlayerScripts",
+    "StarterCharacterScripts",
+    "RunService",
+    "UserInputService",
+    "ContextActionService",
+    "TweenService",
+    "Debris",
+    "HttpService",
+    "DataStoreService",
+    "MemoryStoreService",
+    "BadgeService",
+    "MarketplaceService",
+    "TeleportService",
+    "PolicyService",
+    "TextService",
+    "GroupService",
+    "MessagingService",
+    "Teams",
+    "SoundService",
+    "LocalizationService",
+    "GuiService",
+    "VRService",
+    "PathfindingService",
+    "AssetService",
+    "AvatarEditorService",
+    "VoiceChatService",
+    "SocialService",
+    "ProximityPromptService",
+    "CollectionService",
     "PhysicsService",
-    "LocalScript", "ModuleScript", "Script",
+    "LocalScript",
+    "ModuleScript",
+    "Script",
 ];
 
 const DATATYPES: &[&str] = &[
-    "Vector2", "Vector2int16", "Vector3", "Vector3int16", "CFrame", "Matrix3",
-    "UDim", "UDim2", "Rect", "Region3", "Region3int16", "Faces", "Axes",
-    "Color3", "ColorSequence", "ColorSequenceKeypoint", "BrickColor",
-    "NumberRange", "NumberSequence", "NumberSequenceKeypoint",
-    "Ray", "RaycastParams", "RaycastResult", "OverlapParams", "PhysicalProperties",
-    "TweenInfo", "Font", "CatalogSearchParams", "FloatCurveKey", "RotationCurveKey",
-    "Enum", "EnumItem", "Enums", "Random", "DateTime", "PathWaypoint",
-    "DockWidgetPluginGuiInfo", "SharedTable", "RBXScriptSignal", "RBXScriptConnection",
+    "Vector2",
+    "Vector2int16",
+    "Vector3",
+    "Vector3int16",
+    "CFrame",
+    "Matrix3",
+    "UDim",
+    "UDim2",
+    "Rect",
+    "Region3",
+    "Region3int16",
+    "Faces",
+    "Axes",
+    "Color3",
+    "ColorSequence",
+    "ColorSequenceKeypoint",
+    "BrickColor",
+    "NumberRange",
+    "NumberSequence",
+    "NumberSequenceKeypoint",
+    "Ray",
+    "RaycastParams",
+    "RaycastResult",
+    "OverlapParams",
+    "PhysicalProperties",
+    "TweenInfo",
+    "Font",
+    "CatalogSearchParams",
+    "FloatCurveKey",
+    "RotationCurveKey",
+    "Enum",
+    "EnumItem",
+    "Enums",
+    "Random",
+    "DateTime",
+    "PathWaypoint",
+    "DockWidgetPluginGuiInfo",
+    "SharedTable",
+    "RBXScriptSignal",
+    "RBXScriptConnection",
 ];
 
 const METHODS: &[&str] = &[
-    "FindFirstChild", "FindFirstChildOfClass", "FindFirstChildWhichIsA", "WaitForChild",
-    "GetChildren", "GetDescendants", "GetPlayers", "GetPlayerFromCharacter",
-    "GetCharacterFromPlayer", "GetService", "IsA", "IsDescendantOf", "Clone", "Destroy",
-    "ClearAllChildren", "GetAttribute", "SetAttribute", "GetAttributes",
-    "GetAttributeChangedSignal", "GetPropertyChangedSignal", "GetFullName", "PivotTo",
-    "GetPivot", "SetPrimaryPartCFrame",
-    "Connect", "Once", "Disconnect", "Wait", "Fire", "FireServer", "FireClient",
-    "FireAllClients", "Invoke", "InvokeServer", "BindToClose",
-    "Kick", "LoadCharacter", "MoveTo", "ApplyDescription", "GetAppliedDescription",
-    "Add", "Cleanup", "LinkToInstance", "WaitFor", "GetChangedSignal", "Init", "Get", "Set",
-    "Update", "Remove", "OnChange", "AndThen", "Catch", "Finally", "Expect",
+    "FindFirstChild",
+    "FindFirstChildOfClass",
+    "FindFirstChildWhichIsA",
+    "WaitForChild",
+    "GetChildren",
+    "GetDescendants",
+    "GetPlayers",
+    "GetPlayerFromCharacter",
+    "GetCharacterFromPlayer",
+    "GetService",
+    "IsA",
+    "IsDescendantOf",
+    "Clone",
+    "Destroy",
+    "ClearAllChildren",
+    "GetAttribute",
+    "SetAttribute",
+    "GetAttributes",
+    "GetAttributeChangedSignal",
+    "GetPropertyChangedSignal",
+    "GetFullName",
+    "PivotTo",
+    "GetPivot",
+    "SetPrimaryPartCFrame",
+    "Connect",
+    "Once",
+    "Disconnect",
+    "Wait",
+    "Fire",
+    "FireServer",
+    "FireClient",
+    "FireAllClients",
+    "Invoke",
+    "InvokeServer",
+    "BindToClose",
+    "Kick",
+    "LoadCharacter",
+    "MoveTo",
+    "ApplyDescription",
+    "GetAppliedDescription",
+    "Add",
+    "Cleanup",
+    "LinkToInstance",
+    "WaitFor",
+    "GetChangedSignal",
+    "Init",
+    "Get",
+    "Set",
+    "Update",
+    "Remove",
+    "OnChange",
+    "AndThen",
+    "Catch",
+    "Finally",
+    "Expect",
 ];
 
 const LIBRARY_TYPES: &[&str] = &[
-    "Janitor", "Maid", "Promise", "Signal", "Net", "DataService", "DataServiceServer",
-    "DataServiceClient", "Data", "Fusion", "Vide", "Roact", "React", "Cmdr", "Spring", "FormatNumber",
-    "MathUtils", "Module3D", "Zap", "Flamework",
+    "Janitor",
+    "Maid",
+    "Promise",
+    "Signal",
+    "Net",
+    "DataService",
+    "DataServiceServer",
+    "DataServiceClient",
+    "Data",
+    "Fusion",
+    "Vide",
+    "Roact",
+    "React",
+    "Cmdr",
+    "Spring",
+    "FormatNumber",
+    "MathUtils",
+    "Module3D",
+    "Zap",
+    "Flamework",
 ];
 
 const GLOBALS: &[&str] = &[
-    "post", "warn", "report", "print", "error", "game", "workspace", "script",
-    "cout", "cerr", "endl", "tick", "time", "task", "typeof", "type", "tonumber", "tostring",
-    "to_string", "to_number", "to_bool",
-    "pcall", "xpcall", "select", "pairs", "ipairs", "next", "unpack", "rawget", "rawset",
-    "setmetatable", "getmetatable", "assert", "require",
+    "post",
+    "warn",
+    "report",
+    "print",
+    "error",
+    "game",
+    "workspace",
+    "script",
+    "cout",
+    "cerr",
+    "endl",
+    "tick",
+    "time",
+    "task",
+    "typeof",
+    "type",
+    "tonumber",
+    "tostring",
+    "to_string",
+    "to_number",
+    "to_bool",
+    "pcall",
+    "xpcall",
+    "select",
+    "pairs",
+    "ipairs",
+    "next",
+    "unpack",
+    "rawget",
+    "rawset",
+    "setmetatable",
+    "getmetatable",
+    "assert",
+    "require",
 ];
 
 const LUAU_LIBS: &[&str] = &[
-    "task", "table", "string", "math", "coroutine", "utf8", "bit32", "os", "debug",
-    "buffer", "vector", "net",
+    "task",
+    "table",
+    "string",
+    "math",
+    "coroutine",
+    "utf8",
+    "bit32",
+    "os",
+    "debug",
+    "buffer",
+    "vector",
+    "net",
 ];
-
-fn is_pascal_case(s: &str) -> bool {
-    let mut chars = s.chars();
-    let Some(first) = chars.next() else {
-        return false;
-    };
-    if !first.is_uppercase() {
-        return false;
-    }
-    let rest: Vec<char> = chars.collect();
-    if rest.is_empty() {
-        return true;
-    }
-    if rest
-        .iter()
-        .all(|c| c.is_uppercase() || c.is_ascii_digit() || *c == '_')
-    {
-        return false;
-    }
-    rest.iter().any(|c| c.is_lowercase())
-}
 
 pub fn is_datatype(name: &str) -> bool {
     DATATYPES.contains(&name)
@@ -111,7 +357,6 @@ pub fn is_datatype(name: &str) -> bool {
 
 pub fn is_instance_type(name: &str) -> bool {
     INSTANCE_TYPES.contains(&name)
-        || (is_pascal_case(name) && !is_datatype(name) && !is_library_type(name))
 }
 
 pub fn is_method(name: &str) -> bool {
@@ -140,9 +385,7 @@ pub fn is_bare_global(name: &str) -> bool {
 
 pub fn is_signal_type(cpp_type: &str) -> bool {
     let cleaned = cpp_type.trim().trim_end_matches('*').trim();
-    cleaned == "signal"
-        || cleaned.starts_with("signal<")
-        || cleaned.starts_with("Signal<")
+    cleaned == "signal" || cleaned.starts_with("signal<") || cleaned.starts_with("Signal<")
 }
 
 pub fn observable_class(cpp_type: &str) -> &'static str {
@@ -222,7 +465,7 @@ pub fn luau_type(name: Option<&str>) -> Option<String> {
         .trim_end_matches('*')
         .trim()
         .trim_start_matches("const ")
-        .replace("Enum::", "Enum.");
+        .replace("::", ".");
     match cleaned.as_str() {
         "void" => Some("()".into()),
         "int" | "float" | "double" => Some("number".into()),
@@ -230,16 +473,18 @@ pub fn luau_type(name: Option<&str>) -> Option<String> {
         "string" => Some("string".into()),
         "func" => Some("(...any) -> any".into()),
         "auto" => None,
-        other if other == "signal"
-            || other.starts_with("signal<")
-            || other.starts_with("Signal<") =>
+        other
+            if other == "signal"
+                || other.starts_with("signal<")
+                || other.starts_with("Signal<") =>
         {
             Some("RBXScriptSignal".into())
         }
-        other if other.starts_with("LuaArray<")
-            || other.starts_with("vector<")
-            || other.starts_with("array<")
-            || other.starts_with("span<") =>
+        other
+            if other.starts_with("LuaArray<")
+                || other.starts_with("vector<")
+                || other.starts_with("array<")
+                || other.starts_with("span<") =>
         {
             let inner = other
                 .split_once('<')
@@ -262,7 +507,7 @@ pub fn luau_type(name: Option<&str>) -> Option<String> {
             let value_type = luau_type(Some(value)).unwrap_or_else(|| value.to_string());
             Some(format!("{{ [{key_type}]: {value_type} }}"))
         }
-        other if other.starts_with("optional<") => {
+        other if other.starts_with("optional<") || other.starts_with("Option<") => {
             let inner = other
                 .split_once('<')
                 .and_then(|(_, rest)| rest.rsplit_once('>'))
@@ -270,6 +515,27 @@ pub fn luau_type(name: Option<&str>) -> Option<String> {
                 .unwrap_or("any");
             let inner_type = luau_type(Some(inner)).unwrap_or_else(|| inner.to_string());
             Some(format!("{inner_type}?"))
+        }
+        other if other.starts_with("Result<") => {
+            let inner = &other[7..other.len() - 1];
+            let mut depth = 0usize;
+            let split = inner.char_indices().find_map(|(i, c)| {
+                match c {
+                    '<' => depth += 1,
+                    '>' => depth = depth.saturating_sub(1),
+                    ',' if depth == 0 => return Some(i),
+                    _ => {}
+                }
+                None
+            });
+            let (ok, err) = split
+                .map(|i| (&inner[..i], &inner[i + 1..]))
+                .unwrap_or(("any", "any"));
+            let ok = luau_type(Some(ok.trim())).unwrap_or_else(|| "any".into());
+            let err = luau_type(Some(err.trim())).unwrap_or_else(|| "any".into());
+            Some(format!(
+                "{{ tag: \"Ok\", ok: {ok} }} | {{ tag: \"Err\", err: {err} }}"
+            ))
         }
         other => Some(other.to_string()),
     }

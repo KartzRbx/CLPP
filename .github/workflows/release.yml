@@ -1,49 +1,112 @@
-name: Release
+name: Luau compiler release
 
 on:
   push:
-    tags:
-      - "v*"
+    tags: ["v0.8.*"]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Luau release tag matching Cargo.toml (e.g. v0.8.2)"
+        required: true
+        type: string
 
 permissions:
   contents: write
 
 jobs:
+  quality:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: cargo test --workspace --locked
+      - run: node editors/vscode/intellisense.test.js
+      - run: python3 scripts/check_libs.py
+      - name: Validate Luau goldens and documentation
+        run: |
+          curl --fail --location https://github.com/luau-lang/luau/releases/download/0.740/luau-ubuntu.zip -o /tmp/luau.zip
+          mkdir -p /tmp/luau-tools
+          unzip /tmp/luau.zip -d /tmp/luau-tools
+          chmod +x /tmp/luau-tools/luau /tmp/luau-tools/luau-analyze
+          LUAU=/tmp/luau-tools/luau LUAU_ANALYZE=/tmp/luau-tools/luau-analyze node scripts/golden.mjs
+          npm ci
+          npm run docs:build
+          node scripts/check-doc-links.mjs
+
   build:
+    needs: quality
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: windows-latest
-            artifact: clpp.exe
-            setup: clpp-setup.exe
-          - os: ubuntu-latest
-            artifact: clpp
-            setup: clpp-setup
-          - os: macos-latest
-            artifact: clpp
-            setup: clpp-setup
+            target: x86_64-pc-windows-msvc
+            package: clpp-luau-windows-x86_64
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            package: clpp-luau-linux-x86_64
+          - os: macos-14
+            target: x86_64-apple-darwin
+            package: clpp-luau-macos-x86_64
+          - os: macos-14
+            target: aarch64-apple-darwin
+            package: clpp-luau-macos-arm64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - name: Build
-        run: cargo build --release
-      - name: Stage artifacts
-        shell: bash
-        run: |
-          mkdir -p dist
-          if [ -f target/release/clpp.exe ]; then
-            cp target/release/clpp.exe dist/clpp.exe
-            cp target/release/clpp.exe dist/clpp-setup.exe
-          else
-            cp target/release/clpp dist/clpp
-            cp target/release/clpp dist/clpp-setup
-          fi
-      - name: Upload to GitHub Release
-        uses: softprops/action-gh-release@v2
         with:
-          files: dist/*
-          generate_release_notes: true
-          fail_on_unmatched_files: true
+          targets: ${{ matrix.target }}
+      - name: Validate release identity
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          version=$(cargo metadata --no-deps --format-version 1 | python -c 'import json,sys; print(next(p["version"] for p in json.load(sys.stdin)["packages"] if p["name"] == "clpp"))')
+          test "$RELEASE_TAG" = "v$version"
+      - run: cargo build --release --locked --target ${{ matrix.target }}
+      - name: Stage platform package and checksum
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+          PACKAGE: ${{ matrix.package }}
+        run: |
+          mkdir -p dist package
+          if [[ "$TARGET" == *windows* ]]; then
+            cp "target/$TARGET/release/clpp.exe" package/clpp.exe
+            cp package/clpp.exe package/clpp-setup.exe
+            cp package/*.exe dist/
+            (cd package && 7z a "../dist/$PACKAGE.zip" clpp.exe clpp-setup.exe)
+          else
+            cp "target/$TARGET/release/clpp" package/clpp
+            chmod +x package/clpp
+            tar -czf "dist/$PACKAGE.tar.gz" -C package clpp
+          fi
+          python -c 'import hashlib,os,pathlib; d=pathlib.Path("dist"); files=sorted(d.iterdir()); (d/(os.environ["PACKAGE"]+".sha256")).write_text("".join(hashlib.sha256(p.read_bytes()).hexdigest()+"  "+p.name+"\n" for p in files), encoding="utf-8")'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.package }}
+          path: dist/*
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: clpp-luau-*
+          path: dist
+          merge-multiple: true
+      - name: Publish the Luau release without changing the VM latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+          RELEASE_COMMIT: ${{ github.sha }}
+        run: |
+          gh release create "$RELEASE_TAG" dist/* --target "$RELEASE_COMMIT" --latest=false \
+            --title "CL++ Luau compiler $RELEASE_TAG" \
+            --notes "Rust compiler targeting Luau. The CLI is clpp; the C++20 VM is a separate product. Packages include Windows x64, Linux x64, macOS x64 and macOS arm64. See api manifest for compiler and contract versions."

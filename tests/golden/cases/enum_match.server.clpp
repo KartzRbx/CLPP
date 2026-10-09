@@ -1,0 +1,3 @@
+enum class State { Idle, Run };
+int value(State state) { match (state) { Idle => { return 1; }, Run => { return 2; }, } }
+void init() { assert(value(State.Idle) == 1); assert(value(State.Run) == 2); }

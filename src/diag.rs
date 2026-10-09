@@ -9,6 +9,32 @@ pub struct Code {
     pub help: &'static str,
 }
 
+pub const CLPP0001: Code = Code {
+    id: "CLPP0001",
+    title: "syntax error",
+    help: "check the indicated token against the published grammar",
+};
+pub const CLPP0002: Code = Code {
+    id: "CLPP0002",
+    title: "semantic error",
+    help: "correct the declaration or expression at the indicated span",
+};
+pub const CLPP0003: Code = Code {
+    id: "CLPP0003",
+    title: "preprocessing error",
+    help: "check the link path and preprocessor directive",
+};
+pub const CLPP0004: Code = Code {
+    id: "CLPP0004",
+    title: "invalid library root",
+    help: "use a dotted path such as ReplicatedStorage.CluauppLibs",
+};
+pub const CLPP0005: Code = Code {
+    id: "CLPP0005",
+    title: "invalid API request",
+    help: "send one CompileRequest JSON object per line",
+};
+
 pub const CLPP0101: Code = Code {
     id: "CLPP0101",
     title: "method called without receiver",
@@ -67,12 +93,12 @@ pub const CLPP0603: Code = Code {
 pub const CLPP0604: Code = Code {
     id: "CLPP0604",
     title: "unknown member",
-    help: "check the spelling or include the header that declares the type",
+    help: "check the spelling or link the module that declares the type",
 };
 pub const CLPP0605: Code = Code {
     id: "CLPP0605",
-    title: "library type used without its header",
-    help: "add `#include <clpp/libs/….clh>` for this struct",
+    title: "library type used without its link",
+    help: "link @clpp.libs.<library> as <Type>; before using this type",
 };
 pub const CLPP0701: Code = Code {
     id: "CLPP0701",
@@ -82,7 +108,7 @@ pub const CLPP0701: Code = Code {
 pub const CLPP0801: Code = Code {
     id: "CLPP0801",
     title: "module import not found",
-    help: "use a path the quoted-include resolver can find (.clh / .clpp next to this file)",
+    help: "use a link path to a .clp or .clpp module next to this file",
 };
 pub const CLPP0901: Code = Code {
     id: "CLPP0901",
@@ -99,6 +125,12 @@ pub const CLPP1101: Code = Code {
     title: "try (?) on a non-Result value",
     help: "`expr?` requires Result<T,E>; use Ok/Err or remove the operator",
 };
+pub const CLPP1103: Code = Code {
+    id: "CLPP1103",
+    title: "try propagation requires a Result return type",
+    help: "return Result<T,E> from the enclosing function and wrap successful returns in Ok",
+};
+
 pub const CLPP1102: Code = Code {
     id: "CLPP1102",
     title: "non-exhaustive match on Option/Result",
@@ -107,9 +139,9 @@ pub const CLPP1102: Code = Code {
 
 pub fn all() -> &'static [Code] {
     &[
-        CLPP0101, CLPP0102, CLPP0201, CLPP0202, CLPP0301, CLPP0401, CLPP0402, CLPP0501, CLPP0601,
-        CLPP0602, CLPP0603, CLPP0604, CLPP0605, CLPP0701, CLPP0801, CLPP0901, CLPP1001, CLPP1101,
-        CLPP1102,
+        CLPP0001, CLPP0002, CLPP0003, CLPP0004, CLPP0005, CLPP0101, CLPP0102, CLPP0201, CLPP0202,
+        CLPP0301, CLPP0401, CLPP0402, CLPP0501, CLPP0601, CLPP0602, CLPP0603, CLPP0604, CLPP0605,
+        CLPP0701, CLPP0801, CLPP0901, CLPP1001, CLPP1101, CLPP1102, CLPP1103,
     ]
 }
 
@@ -126,7 +158,13 @@ pub fn warning(code: Code, detail: impl std::fmt::Display) -> String {
     format!("warning[{}]: {}: {detail}", code.id, code.title)
 }
 
-pub fn diag(code: Code, line: usize, column: usize, detail: impl std::fmt::Display, severity: &str) -> CompileDiagnostic {
+pub fn diag(
+    code: Code,
+    line: usize,
+    column: usize,
+    detail: impl std::fmt::Display,
+    severity: &str,
+) -> CompileDiagnostic {
     let mut d = CompileDiagnostic {
         message: if severity == "warning" {
             warning(code, detail)
@@ -138,7 +176,9 @@ pub fn diag(code: Code, line: usize, column: usize, detail: impl std::fmt::Displ
         severity: severity.into(),
         code: None,
         help: None,
+        span: crate::ast::Span::default(),
     };
+    d.span = crate::ast::Span::point(d.line, d.column);
     d.code = Some(code.id.into());
     d.help = Some(code.help.into());
     d
@@ -160,7 +200,10 @@ pub fn levenshtein(a: &str, b: &str) -> usize {
     prev[b.len()]
 }
 
-pub fn did_you_mean<'a>(name: &str, candidates: impl IntoIterator<Item = &'a str>) -> Option<String> {
+pub fn did_you_mean<'a>(
+    name: &str,
+    candidates: impl IntoIterator<Item = &'a str>,
+) -> Option<String> {
     let mut best: Option<(&str, usize)> = None;
     for c in candidates {
         let d = levenshtein(name, c);

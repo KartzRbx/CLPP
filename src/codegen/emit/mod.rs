@@ -3,5 +3,5 @@
 mod engine;
 mod helpers;
 
-pub use engine::emit;
+pub use engine::{emit, emit_with_map};
 pub use helpers::map_name;

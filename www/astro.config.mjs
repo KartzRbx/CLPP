@@ -18,7 +18,7 @@ grammar.aliases = ["clp", "clh"];
 
 export default defineConfig({
   site: "https://kartzrbx.github.io",
-  base: "/CLPP/",
+  base: "/CLPP/luau/",
   srcDir: "./src",
   integrations: [
     starlight({

@@ -193,7 +193,10 @@ void F() {
         .expect("Result");
     match types.kind(types.peel_id(alias.type_id)) {
         TypeKind::Union(_) => {}
-        other => panic!("expected union, got {other:?} ({})", types.label(alias.type_id)),
+        other => panic!(
+            "expected union, got {other:?} ({})",
+            types.label(alias.type_id)
+        ),
     }
 }
 
@@ -219,7 +222,10 @@ void init() {
 "#;
     let (parsed, diags) = clpp::parser::parse_for_ide(hud_src, "c.clpp");
     assert!(
-        parsed.items.iter().any(|i| matches!(i, clpp::ast::Item::Class { name, .. } if name == "PlayerHud")),
+        parsed
+            .items
+            .iter()
+            .any(|i| matches!(i, clpp::ast::Item::Class { name, .. } if name == "PlayerHud")),
         "parse_for_ide lost PlayerHud: items={} diags={diags:?}",
         parsed.items.len()
     );
@@ -267,10 +273,17 @@ void init() {
     let (pfile, mut ptypes) = clpp::session::analyze(players_src, "c.clpp");
     let ty = clpp::session::type_prefix(&pfile, &mut ptypes, 4, "    players.");
     let sid = pfile.symbols.lookup_at(4, "players");
-    let declared = sid.and_then(|id| pfile.symbols.get(id).map(|s| format!("{:?} {}", s.declared_type, ptypes.label(s.type_id))));
+    let declared = sid.and_then(|id| {
+        pfile
+            .symbols
+            .get(id)
+            .map(|s| format!("{:?} {}", s.declared_type, ptypes.label(s.type_id)))
+    });
     let pmembers = ptypes.get_members(ty);
     assert!(
-        pmembers.iter().any(|m| m.name == "PlayerAdded" || m.name == "GetPlayers"),
+        pmembers
+            .iter()
+            .any(|m| m.name == "PlayerAdded" || m.name == "GetPlayers"),
         "type={} declared={:?} members={:?}",
         ptypes.label(ty),
         declared,
@@ -284,7 +297,9 @@ void init() {
     })
     .items;
     assert!(
-        players.iter().any(|i| i.label == "PlayerAdded" || i.label == "GetPlayers"),
+        players
+            .iter()
+            .any(|i| i.label == "PlayerAdded" || i.label == "GetPlayers"),
         "{:?}",
         players.iter().map(|i| i.label.clone()).collect::<Vec<_>>()
     );
@@ -366,9 +381,9 @@ void F(Player player, Instance existing) {
     let program = parse(src, "c.clpp").expect("parse generic/as");
     let has_generic = program.items.iter().any(|item| match item {
         clpp::ast::Item::Function(f) => f.body.iter().any(|s| match s {
-            clpp::ast::Stmt::Expr(clpp::ast::Expr::Call { type_args, name, .. }) => {
-                name == "FindFirstChild" && type_args.iter().any(|t| t == "Folder")
-            }
+            clpp::ast::Stmt::Expr(clpp::ast::Expr::Call {
+                type_args, name, ..
+            }) => name == "FindFirstChild" && type_args.iter().any(|t| t == "Folder"),
             _ => false,
         }),
         _ => false,
@@ -376,16 +391,21 @@ void F(Player player, Instance existing) {
     assert!(has_generic, "FindFirstChild<Folder> not parsed");
     let has_as = program.items.iter().any(|item| match item {
         clpp::ast::Item::Function(f) => f.body.iter().any(|s| match s {
-            clpp::ast::Stmt::Expr(clpp::ast::Expr::Cast { kind, value_type, .. }) => {
-                kind == "as" && value_type == "Folder"
-            }
+            clpp::ast::Stmt::Expr(clpp::ast::Expr::Cast {
+                kind, value_type, ..
+            }) => kind == "as" && value_type == "Folder",
             _ => false,
         }),
         _ => false,
     });
     assert!(has_as, "as Folder not parsed");
     let (file, mut types) = session::analyze(src, "c.clpp");
-    let ty = session::type_prefix(&file, &mut types, 3, "    player.FindFirstChild<Folder>(\"x\")");
+    let ty = session::type_prefix(
+        &file,
+        &mut types,
+        3,
+        "    player.FindFirstChild<Folder>(\"x\")",
+    );
     assert!(
         types.label(ty).contains("Folder"),
         "expected Folder, got {}",
@@ -406,7 +426,8 @@ fn doc_comment_lands_on_symbol() {
     let hud = file.symbols.struct_named("MainFrame").expect("MainFrame");
     let doc = file.symbols.get(hud).and_then(|s| s.doc.clone());
     assert!(
-        doc.as_deref().is_some_and(|d| d.contains("coins on the hud")),
+        doc.as_deref()
+            .is_some_and(|d| d.contains("coins on the hud")),
         "doc={doc:?}"
     );
 }
@@ -453,9 +474,19 @@ void init() {
         column: 7,
     })
     .items;
-    assert!(folder.iter().any(|i| i.label == "Name"), "{:?}", folder.iter().map(|i| i.label.clone()).collect::<Vec<_>>());
-    assert!(folder.iter().any(|i| i.label == "Destroy"), "Destroy missing");
-    assert!(folder.iter().any(|i| i.label == "FindFirstChild"), "FindFirstChild missing");
+    assert!(
+        folder.iter().any(|i| i.label == "Name"),
+        "{:?}",
+        folder.iter().map(|i| i.label.clone()).collect::<Vec<_>>()
+    );
+    assert!(
+        folder.iter().any(|i| i.label == "Destroy"),
+        "Destroy missing"
+    );
+    assert!(
+        folder.iter().any(|i| i.label == "FindFirstChild"),
+        "FindFirstChild missing"
+    );
 
     let sig_src = r#"
 void init() {
@@ -507,7 +538,11 @@ void init() {
         column: 7,
     })
     .items;
-    assert!(items.iter().any(|i| i.label == "X"), "{:?}", items.iter().map(|i| i.label.clone()).collect::<Vec<_>>());
+    assert!(
+        items.iter().any(|i| i.label == "X"),
+        "{:?}",
+        items.iter().map(|i| i.label.clone()).collect::<Vec<_>>()
+    );
     assert!(
         !items.iter().any(|i| i.label == "Destroy"),
         "Destroy leaked onto user struct: {:?}",
@@ -546,10 +581,17 @@ fn player_kick_and_intvalue_and_vector3() {
     let members = types.get_members(player);
     assert!(members.iter().any(|m| m.name == "Kick"), "Kick missing");
     assert!(members.iter().any(|m| m.name == "Name"), "Name missing");
-    assert!(members.iter().any(|m| m.name == "Destroy"), "Destroy missing");
+    assert!(
+        members.iter().any(|m| m.name == "Destroy"),
+        "Destroy missing"
+    );
     let iv_id = types.nominal("IntValue");
     let iv = types.get_members(iv_id);
-    assert!(iv.iter().any(|m| m.name == "Value"), "{:?}", iv.iter().map(|m| m.name.clone()).collect::<Vec<_>>());
+    assert!(
+        iv.iter().any(|m| m.name == "Value"),
+        "{:?}",
+        iv.iter().map(|m| m.name.clone()).collect::<Vec<_>>()
+    );
     let v3_id = types.nominal("Vector3");
     let v3 = types.get_members(v3_id);
     assert!(v3.iter().any(|m| m.name == "X"), "Vector3.X missing");
@@ -564,7 +606,7 @@ fn quoted_include_imports_exported_symbols() {
     std::fs::write(&header, "struct Wallet { int Coins; };\n").expect("header");
     std::fs::write(
         &consumer,
-        "#include \"PlayerData.clh\"\nvoid init() {\n    Wallet w;\n    w.\n}\n",
+        "link \"./PlayerData.clh\" as Wallet;\nvoid init() {\n    Wallet w;\n    w.\n}\n",
     )
     .expect("consumer");
     let src = std::fs::read_to_string(&consumer).expect("read");
@@ -663,9 +705,9 @@ void F(Player player) {
 "#;
     let file = session.check_source(src, "ret.clpp");
     assert!(
-        file.diagnostics.iter().any(|d| {
-            d.code.as_deref() == Some("CLPP0201") || d.message.contains("optional")
-        }),
+        file.diagnostics
+            .iter()
+            .any(|d| { d.code.as_deref() == Some("CLPP0201") || d.message.contains("optional") }),
         "{:?}",
         file.diagnostics
     );
@@ -686,22 +728,11 @@ fn language_session_has_no_roblox_prelude() {
 }
 
 #[test]
-fn parses_named_import() {
-    let src = r#"import { Wallet, PlayerData as Data } from "./PlayerData.clh";
-void init() {}
-"#;
-    let program = parse(src, "t.clpp").expect("parse");
-    match &program.items[0] {
-        clpp::ast::Item::Import { names, module, .. } => {
-            assert_eq!(names.len(), 2);
-            assert_eq!(names[0].name, "Wallet");
-            assert!(names[0].alias.is_none());
-            assert_eq!(names[1].name, "PlayerData");
-            assert_eq!(names[1].alias.as_deref(), Some("Data"));
-            assert_eq!(module, "./PlayerData.clh");
-        }
-        other => panic!("expected Import, got {other:?}"),
-    }
+fn foreign_import_is_rejected_with_original_link_suggestion() {
+    let (_, diagnostics) =
+        clpp::parser::parse_with_diagnostics("import { Wallet } from \"./Wallet.clp\";", "t.clpp")
+            .unwrap();
+    assert!(diagnostics.iter().any(|d| d.message.contains("link")));
 }
 
 #[test]
@@ -713,7 +744,7 @@ fn named_import_imports_exported_symbols() {
     std::fs::write(&header, "struct Wallet { int Coins; };\n").expect("header");
     std::fs::write(
         &consumer,
-        "import { Wallet } from \"./PlayerData.clh\";\nvoid init() {\n    Wallet w;\n    w.\n}\n",
+        "link \"./PlayerData.clh\" as Wallet;\nvoid init() {\n    Wallet w;\n    w.\n}\n",
     )
     .expect("consumer");
     let src = std::fs::read_to_string(&consumer).expect("read");
@@ -740,7 +771,7 @@ fn import_alias_binds_local_name() {
     std::fs::write(&header, "struct Wallet { int Coins; };\n").expect("header");
     std::fs::write(
         &consumer,
-        "import { Wallet as Purse } from \"./PlayerData.clh\";\nvoid init() {\n    Purse w;\n    w.\n}\n",
+        "link \"./PlayerData.clh\" as Purse;\nvoid init() {\n    Purse w;\n    w.\n}\n",
     )
     .expect("consumer");
     let src = std::fs::read_to_string(&consumer).expect("read");
@@ -756,4 +787,15 @@ fn import_alias_binds_local_name() {
         "alias Purse should resolve Wallet members: {:?}",
         items.iter().map(|i| i.label.clone()).collect::<Vec<_>>()
     );
+}
+#[test]
+fn parses_original_link_alias() {
+    let program = parse("link \"./PlayerData.clp\" as Data;", "t.clpp").expect("parse");
+    match &program.items[0] {
+        clpp::ast::Item::Import { names, module, .. } => {
+            assert_eq!(names[0].local_name(), "Data");
+            assert_eq!(module, "./PlayerData.clp");
+        }
+        other => panic!("expected link, got {other:?}"),
+    }
 }

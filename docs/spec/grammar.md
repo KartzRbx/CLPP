@@ -5,7 +5,7 @@ description: EBNF of the slice the CL++ parser accepts. Not ISO C++.
 
 # Grammar (subset)
 
-EBNF of the slice the lexer/parser must accept. This is not ISO C++. The running grammar is Pest (`src/parser/grammar.pest`).
+A readable outline of accepted syntax. The [exact generated grammar](grammar.generated) is the source of truth; removed import/include productions are recognized only to issue a diagnostic teaching `link`. This is not ISO C++. The running grammar is Pest (`src/parser/grammar.pest`).
 
 ```mermaid
 flowchart LR
@@ -15,9 +15,9 @@ flowchart LR
 ```
 
 ```
-translation-unit = { include | pragma | using-skip | declaration } ;
+translation-unit = { link | pragma | declaration } ;
 
-include = "#include" ( "<" path ">" | '"' path '"' ) ;
+link = "link" ( "@" ident { "." ident } | string ) [ "as" ident ] ";" ;
 pragma  = "#pragma" ( "once" | "strict" | "nostrict" | "nstrict" | "nonstrict" | "native" | "optimize" [ 0 | 1 | 2 ] ) ;
 
 declaration =
