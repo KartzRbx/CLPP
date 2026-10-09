@@ -30,11 +30,11 @@ int main(int argc, char* argv[]) {
   SetConsoleCP(CP_UTF8);
 #endif
   const auto print_help = [](std::ostream& out) {
-    out << "Usage: clpp <script.clp> [args...]\n";
-    out << "       clpp --repl\n";
-    out << "       clpp --lsp\n";
-    out << "       clpp --help\n";
-    out << "       clpp --version\n";
+    out << "Usage: clpp-vm <script.clp> [args...]\n";
+    out << "       clpp-vm --repl\n";
+    out << "       clpp-vm --lsp\n";
+    out << "       clpp-vm --help\n";
+    out << "       clpp-vm --version\n";
   };
   if (argc < 2) {
     print_help(std::cerr);
@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
     return 0;
   }
   if (arg == "--version") {
-    std::cout << "clpp 0.10.1\n";
+    std::cout << "clpp-vm 0.10.1\n";
     return 0;
   }
   if (arg == "--repl") {

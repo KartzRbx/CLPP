@@ -63,7 +63,7 @@ jobs:
 
       - name: Benchmarks
         if: matrix.preset == 'release'
-        run: python benchmarks/run.py build/release/src/clpp --runs 5 --markdown >> "$GITHUB_STEP_SUMMARY"
+        run: python benchmarks/run.py build/release/src/clpp-vm --runs 5 --markdown >> "$GITHUB_STEP_SUMMARY"
 
   windows-package:
     name: Windows exe + VS Code extension
@@ -76,16 +76,16 @@ jobs:
           tar xf llvm-mingw.tar.xz
           echo "LLVM_MINGW=$PWD/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64" >> "$GITHUB_ENV"
           sudo apt-get update && sudo apt-get install -y ninja-build
-      - name: Cross-compile clpp.exe
+      - name: Cross-compile clpp-vm.exe
         run: |
           cmake -S . -B build-win -G Ninja -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/llvm-mingw-x86_64.cmake -DCLPP_BUILD_TESTS=OFF
           cmake --build build-win --target clpp
       - name: Package the extension
-        run: python3 tools/vscode/package_vsix.py --exe build-win/src/clpp.exe
+        run: python3 tools/vscode/package_vsix.py --exe build-win/src/clpp-vm.exe
       - uses: actions/upload-artifact@v4
         with:
-          name: clpp-windows
+          name: clpp-vm-windows
           path: |
-            build-win/src/clpp.exe
+            build-win/src/clpp-vm.exe
             dist/*.vsix

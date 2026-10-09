@@ -3,7 +3,7 @@ name: Docs site
 on:
   push:
     branches: [main]
-    paths: ["docs/**", "www/**", "tools/vscode/syntaxes/**", ".github/workflows/pages.yml"]
+    paths: ["docs/**", "www/**", "tools/vscode/syntaxes/**", ".github/workflows/pages.yml", "scripts/compose-luau-docs.mjs"]
   workflow_dispatch:
 
 permissions:
@@ -29,6 +29,19 @@ jobs:
       - name: Build
         working-directory: www
         run: npm run build
+      - name: Check out the independent Luau compiler release
+        uses: actions/checkout@v4
+        with:
+          ref: v0.8.2
+          path: compiler-docs
+      - name: Build the Luau compiler documentation
+        working-directory: compiler-docs
+        run: |
+          npm ci --no-audit --no-fund
+          npm run docs:build
+          node scripts/check-doc-links.mjs
+      - name: Compose both products and redirects for legacy Luau links
+        run: node scripts/compose-luau-docs.mjs
       - uses: actions/upload-pages-artifact@v3
         with:
           path: www/dist

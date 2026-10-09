@@ -1,3 +1,5 @@
+> Product identity: this C++20 register VM builds **clpp-vm** (Windows: **clpp-vm.exe**). The Rust compiler that emits Luau retains **clpp**. Both can be on PATH together. The published 0.10.1 assets predate this rename and must be configured with an explicit path until a renamed release is published. No language syntax changes accompany the binary rename.
+
 <p align="center">
   <img src="assets/brand/clpp-256.png" width="128" alt="CL++ logo">
 </p>
@@ -53,17 +55,17 @@ Then reload the window (**Ctrl+Shift+P → Developer: Reload Window**). Open any
 
 > **Do not double-click the `.vsix` file.** On machines with Visual Studio installed, Windows opens `.vsix` with the *Visual Studio* VSIX Installer, which refuses it with “one or more extensions are for Visual Studio Code.” That is a Windows file-association quirk, not a problem with the file — always install from inside VS Code as above.
 
-The extension includes the compiler, so you do not need `clpp.exe` separately on Windows x64. If you want the CLI too, download `clpp.exe` from Releases (or the `clpp-windows` artifact from a successful [CI run](https://github.com/KartzRbx/CLPP/actions/workflows/ci.yml)) and put it on your `PATH`. The released and CI-built `clpp.exe` is statically linked, so it runs on a clean Windows machine with no extra DLLs.
+The extension includes the compiler, so you do not need `clpp.exe` separately on Windows x64. For the legacy 0.10.1 CLI, download `clpp.exe` from Releases (or the `clpp-vm-windows` artifact from a successful [CI run](https://github.com/KartzRbx/CLPP/actions/workflows/ci.yml)) and put it on your `PATH`. The released `clpp.exe` and CI-built `clpp-vm.exe` are statically linked, so it runs on a clean Windows machine with no extra DLLs.
 
 To build from source, install CMake 3.20+, Ninja, and a C++20 compiler:
 
 ```text
 cmake --preset release
 cmake --build --preset release
-./build/release/src/clpp examples/hello.clp
+./build/release/src/clpp-vm examples/hello.clp
 ```
 
-On Windows, run `.\build\release\src\clpp.exe examples\hello.clp` after the build. Put the executable on your `PATH` to call `clpp` from any directory. On Linux and macOS, point the extension's `clpp.serverPath` setting at the executable or put it on `PATH`.
+On Windows, run `.\build\release\src\clpp-vm.exe examples\hello.clp` after the build. Put the executable on your `PATH` to call `clpp-vm` from any directory. On Linux and macOS, point the extension's `clpp.serverPath` setting at the executable or put it on `PATH`.
 
 ## Documentation
 
