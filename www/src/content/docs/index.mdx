@@ -1,13 +1,13 @@
 ---
 title: CL++
-description: An industrial language for Roblox. Compiles to Luau with a lossless Rust compiler.
+description: The Rust CL++ compiler targets Luau. Syntax, types and a versioned host API.
 template: splash
 hero:
   title: CL++
-  tagline: An industrial language for Roblox. A Rust compiler with a lossless CST emits Luau.
+  tagline: The Rust compiler emits Luau. The C++20 VM is a separate product.
   actions:
     - text: Install
-      link: docs/install
+      link: /CLPP/luau/docs/install
       icon: rocket
       variant: primary
     - text: Syntax
@@ -23,19 +23,19 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
 <CardGrid stagger>
   <Card title="Modules" icon="puzzle">
     The only module form is `link` — `@clpp`, `@game`, or a relative path.
-    Read [Modules](docs/modules).
+    Read [Modules](/CLPP/luau/docs/modules).
   </Card>
   <Card title="Compiler" icon="setting">
-    Cargo workspace, rowan CST, error recovery, and an LSP that still completes on a broken line.
-    Read [Rowan CST](docs/compiler-architecture).
+    Pest parser, two-pass binding, type checking, Luau emission, and IDE recovery. The rowan replacement is experimental.
+    Read [Rowan CST](/CLPP/luau/docs/compiler-architecture).
   </Card>
   <Card title="Safety" icon="approve-check">
-    `CLUAU_AUTH` and `CLUAU_PAR` run in the type checker. The editor underlines them while you type.
-    Read [Safety](docs/safety).
+    The shipped checker validates assignments, calls, members and exhaustive matches. Additional AUTH/PAR analysis lives in the experimental workspace crates.
+    Read [Safety](/CLPP/luau/docs/safety).
   </Card>
   <Card title="Comparison" icon="list-format">
     How CL++ sits next to Luau, roblox-ts, and C++ on Roblox.
-    Read [Comparison](docs/comparison).
+    Read [Comparison](/CLPP/luau/docs/comparison).
   </Card>
 </CardGrid>
 
@@ -58,10 +58,10 @@ void Session::Bind(Player player) {
     Combat.Start(player);
 }
 
-@server
+[[server]]
 void Save(Session session);
 
-@client
+[[client]]
 void OpenHud(Session session);
 
 void init() {
@@ -75,15 +75,16 @@ void init() {
 }
 ```
 
-`link @clpp…` is the standard library. `link @game…` is a Rojo DataModel path and becomes `GetService` plus `require`. `@server` / `@client` are checked against the file tag. A Client file that calls `Save` is `CLUAU_AUTH001`, and the compiler does not emit Luau.
+`link @clpp…` is the standard library. `link @game…` is a Rojo DataModel path and becomes `GetService` plus `require`. `[[server]]` / `[[client]]` annotate the execution context. Runtime guards are emitted when the module file has no server/client tag.
 
 ## Pipeline
 
 <pre class="mermaid">
 flowchart LR
-  src[".clpp source"] --> cst["rowan CST"]
-  cst --> ty["clpp_ty AUTH and PAR"]
-  ty --> luau["Luau"]
+  src[".clpp source"] --> ast["Pest / AST"]
+  ast --> bind["Two-pass binding"]
+  bind --> ty["Type checker"]
+  ty --> luau["Luau emitter"]
   luau --> rojo["Rojo / Cluaupp"]
   cst --> lsp["LSP completion"]
 </pre>
@@ -97,5 +98,5 @@ CL++ is the language and the compiler. [Cluaupp](https://github.com/KartzRbx/Clu
 | `player.Name` / `player.Kick()` | property / instance method |
 | `@this` / `@janitor` | receiver and field inside `Class::Method` |
 | `players.PlayerAdded~>Connect` | Janitor connection |
-| `link "./Wallet.clh" as Wallet` | language module |
+| `link "./Wallet.clp" as Wallet` | language module |
 | `Player player` | instance of class Player |

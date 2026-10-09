@@ -1,0 +1,2 @@
+link @clpp.libs.roster as Roster;
+void init() { auto roster = new Roster(); }

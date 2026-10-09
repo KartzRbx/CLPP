@@ -67,15 +67,13 @@ void F(Player* player) {
 
 #[test]
 fn json_diagnostics_on_type_error() {
-    let art = compile_artifact_source(
-        "void F() { int n = \"x\"; }",
-        Path::new("bad.clp"),
-        None,
-    )
-    .expect("artifact");
+    let art = compile_artifact_source("void F() { int n = \"x\"; }", Path::new("bad.clp"), None)
+        .expect("artifact");
     assert!(!art.ok);
     assert!(
-        art.diagnostics.iter().any(|d| d.message.contains("cannot initialize")),
+        art.diagnostics
+            .iter()
+            .any(|d| d.message.contains("cannot initialize")),
         "got {:?}",
         art.diagnostics
     );
@@ -84,7 +82,7 @@ fn json_diagnostics_on_type_error() {
 
 #[test]
 fn diagnostic_const_reassign_and_include_keep_source_line() {
-    let src = "#include <clpp/roblox.clh>\n\nvoid F() {\n\tconst int n = 1;\n\tn = 2;\n}\n";
+    let src = "link @clpp.roblox;\n\nvoid F() {\n\tconst int n = 1;\n\tn = 2;\n}\n";
     let art = compile_artifact_source(src, Path::new("const.clp"), None).expect("artifact");
     assert!(!art.ok);
     let found = art
@@ -101,7 +99,7 @@ fn diagnostic_const_reassign_and_include_keep_source_line() {
 
 #[test]
 fn diagnostic_wrong_type_after_includes() {
-    let src = "#include <clpp/roblox.clh>\n\nvoid F() {\n\tint n = \"x\";\n}\n";
+    let src = "link @clpp.roblox;\n\nvoid F() {\n\tint n = \"x\";\n}\n";
     let art = compile_artifact_source(src, Path::new("type.clp"), None).expect("artifact");
     assert!(!art.ok);
     let found = art
@@ -177,7 +175,10 @@ void F() {
 "#,
     )
     .expect("cleanup after . and ~>");
-    assert!(luau.contains(":Once(") || luau.contains("Once"), "got: {luau}");
+    assert!(
+        luau.contains(":Once(") || luau.contains("Once"),
+        "got: {luau}"
+    );
 }
 
 #[test]
@@ -201,7 +202,10 @@ void F(Player* player) {
     assert!(luau.contains("pcall"), "protected : call, got: {luau}");
     assert!(luau.contains("FindFirstChild"), "got: {luau}");
     assert!(luau.contains("PlayerAdded:Connect"), "got: {luau}");
-    assert!(!luau.contains("janitor:Add") && !luau.contains("__janitor:Add"), "manual ::Connect, got: {luau}");
+    assert!(
+        !luau.contains("janitor:Add") && !luau.contains("__janitor:Add"),
+        "manual ::Connect, got: {luau}"
+    );
 }
 
 #[test]
@@ -263,7 +267,10 @@ void Service::Tick() {
 "#,
     )
     .expect("@this emit");
-    assert!(luau.contains("self.janitor:Add(self, \"Destroy\")"), "got: {luau}");
+    assert!(
+        luau.contains("self.janitor:Add(self, \"Destroy\")"),
+        "got: {luau}"
+    );
     assert!(luau.contains("self.janitor:Cleanup()"), "got: {luau}");
     assert!(!luau.contains("@this"), "got: {luau}");
 }
@@ -349,7 +356,10 @@ void F() {
     )
     .expect("pcall");
     assert!(luau.contains("local success, erromessage"), "got: {luau}");
-    assert!(luau.contains("return true, \"Deu erro prq sim\""), "got: {luau}");
+    assert!(
+        luau.contains("return true, \"Deu erro prq sim\""),
+        "got: {luau}"
+    );
 }
 
 #[test]
@@ -386,47 +396,57 @@ void F() {
 }
 
 #[test]
-fn header_emits_type_and_ctor() {
+fn module_emits_type_and_ctor() {
     let art = compile_artifact_source(
         r#"
 struct Leaderstats {
     Janitor janitor = new Janitor();
     Player PegarJogador(string NomeDoJogador);
 };
+Player Leaderstats::PegarJogador(string NomeDoJogador) { return GetService<Players>().GetPlayers()[0]; }
 "#,
-        Path::new("Leaderstats.clh"),
+        Path::new("Leaderstats.clp"),
         None,
     )
     .expect("header");
     assert!(art.ok, "{:?}", art.error);
-    assert!(art.luau.contains("export type Leaderstats"), "got: {}", art.luau);
+    assert!(
+        art.luau.contains("export type Leaderstats"),
+        "got: {}",
+        art.luau
+    );
     assert!(art.luau.contains("PegarJogador"), "got: {}", art.luau);
-    assert!(art.luau.contains("const function Leaderstats"), "got: {}", art.luau);
+    assert!(
+        art.luau.contains("function Leaderstats"),
+        "got: {}",
+        art.luau
+    );
 }
 
 #[test]
-fn header_void_methods_export_unit_return() {
+fn module_void_methods_emit_valid_signatures() {
     let art = compile_artifact_source(
         r#"
 struct CurrenciesClient {
     const void PathUpdate(Instance inst, double NewValue);
     const void init();
 };
+const void CurrenciesClient::PathUpdate(Instance inst, double NewValue) { post(NewValue); }
+const void CurrenciesClient::init() {}
 "#,
-        Path::new("CurrenciesClient.clh"),
+        Path::new("CurrenciesClient.clp"),
         None,
     )
     .expect("header");
     assert!(art.ok, "{:?}", art.error);
     assert!(
-        art.luau.contains(
-            "PathUpdate: (self: CurrenciesClient, inst: Instance, NewValue: number) -> ()"
-        ),
+        art.luau
+            .contains("function CurrenciesClient:PathUpdate(inst: Instance, NewValue: number)"),
         "got: {}",
         art.luau
     );
     assert!(
-        art.luau.contains("init: (self: CurrenciesClient) -> ()"),
+        art.luau.contains("function CurrenciesClient:init()"),
         "got: {}",
         art.luau
     );
@@ -461,7 +481,7 @@ fn quoted_include_searches_src() {
     std::fs::create_dir_all(&server).unwrap();
     let from = server.join("Main.server.clpp");
     let src = r#"
-#include "src/ReplicatedStorage/Shareds/PlayerData.clp"
+link "src/ReplicatedStorage/Shareds/PlayerData.clp" as PlayerData;
 void F() { post("ok"); }
 "#;
     let art = compile_artifact_source(src, &from, None).expect("include");
@@ -473,4 +493,3 @@ void F() { post("ok"); }
         art.luau
     );
 }
-

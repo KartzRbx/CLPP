@@ -5,7 +5,7 @@ CL++ is the **language** (syntax, semantics, OOP): a C++-inspired subset aimed a
 ## Goals
 
 1. Write like C++ (types, `struct`, `new`, `GetService<T>`), with our own operators: `.` property/instance method, `:` type/protected call, `::` static/manual Connect, `~>` Janitor, `.:` concatenation.
-2. Emit modern Luau (`local`, `const`, `Instance.new`, `game:GetService`).
+2. Emit modern Luau (`local`, `Instance.new`, `game:GetService`).
 3. One input file becomes one output file (Rojo infers Script / LocalScript / ModuleScript from the name).
 4. Own extensions: `.clh`, `.clp`, `.clpp` — not `.h` / `.cpp`.
 5. Language modules use `link` ([modules](../modules)).

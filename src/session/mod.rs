@@ -6,8 +6,8 @@ use crate::checker::{self, Engine};
 use crate::parser::{parse, parse_for_ide};
 use crate::platform;
 use crate::preprocess::preprocess;
-use crate::symbols::SymbolDatabase;
 use crate::support::CompileDiagnostic;
+use crate::symbols::SymbolDatabase;
 use crate::types::{StructMember, TypeDatabase, TypeId};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
@@ -94,9 +94,8 @@ impl Session {
 
     fn build(&mut self, source: &str, path: &str, hash: u64) -> CheckedFile {
         let file_path = Path::new(path);
-        let (expanded, ctx) = preprocess(source, file_path).unwrap_or_else(|_| {
-            (source.to_string(), CompileContext::default())
-        });
+        let (expanded, mut ctx) = preprocess(source, file_path)
+            .unwrap_or_else(|_| (source.to_string(), CompileContext::default()));
         let (program, mut diagnostics) = match parse(&expanded, path) {
             Ok(p) => (p, Vec::new()),
             Err(_) => parse_for_ide(&expanded, path),
@@ -108,18 +107,26 @@ impl Session {
         }
         let mut program = program;
         crate::ast::attach_docs(&mut program, &ctx.comments);
-        if let Ok(check) = crate::checker::check_program_ex(&program, &expanded, &ctx.libraries) {
-            diagnostics.extend(check);
-        }
+        crate::modules::attach_named_requires(&program, file_path, &mut ctx);
         let mut bound = binder::bind(&program);
         checker::resolve(&program, &mut bound, &mut self.types);
-        diagnostics.extend(checker::check_typed(
+        diagnostics.extend(crate::modules::resolve_linked_symbols(
             &program,
+            &mut bound.symbols,
+            &mut self.types,
+        ));
+        diagnostics.extend(checker::check_unified(
+            &program,
+            &expanded,
+            &ctx.libraries,
             &bound,
             &mut self.types,
-            &expanded,
         ));
-        let mut file = CheckedFile {
+        for diagnostic in &mut diagnostics {
+            diagnostic.line = crate::preprocess::remap_line(&ctx.line_map, diagnostic.line);
+        }
+        crate::compile::normalize_diagnostics(&mut diagnostics, source);
+        let file = CheckedFile {
             path: path.to_string(),
             hash,
             source: source.to_string(),
@@ -128,9 +135,6 @@ impl Session {
             ctx,
             diagnostics,
         };
-        let mut seen = HashSet::new();
-        crate::modules::import_requires(&mut file, &mut self.types, &mut seen);
-        crate::modules::import_named(&mut file, &mut self.types, &mut seen);
         let deps: HashSet<String> = file
             .ctx
             .requires
@@ -170,7 +174,12 @@ impl Session {
         self.files.get(path)
     }
 
-    pub fn get_symbol(&self, path: &str, line: usize, name: &str) -> Option<&crate::symbols::Symbol> {
+    pub fn get_symbol(
+        &self,
+        path: &str,
+        line: usize,
+        name: &str,
+    ) -> Option<&crate::symbols::Symbol> {
         let file = self.files.get(path)?;
         let id = file.symbols.lookup_at(line, name)?;
         file.symbols.get(id)
@@ -194,7 +203,11 @@ impl Session {
         name: &str,
     ) -> Option<(String, usize, usize)> {
         let sym = self.get_symbol(path, line, name)?;
-        Some((path.to_string(), sym.span.start_line.max(1), sym.span.start_col.max(1)))
+        Some((
+            path.to_string(),
+            sym.span.start_line.max(1),
+            sym.span.start_col.max(1),
+        ))
     }
 
     pub fn get_diagnostics(&self, path: &str) -> &[CompileDiagnostic] {
@@ -219,7 +232,12 @@ impl<'a> CompilerApi<'a> {
         self.session.check_source(source, path)
     }
 
-    pub fn get_symbol(&self, path: &str, line: usize, name: &str) -> Option<&crate::symbols::Symbol> {
+    pub fn get_symbol(
+        &self,
+        path: &str,
+        line: usize,
+        name: &str,
+    ) -> Option<&crate::symbols::Symbol> {
         self.session.get_symbol(path, line, name)
     }
 
@@ -280,7 +298,12 @@ pub fn analyze(source: &str, path: &str) -> (CheckedFile, TypeDatabase) {
     (file, session.types)
 }
 
-pub fn members_of(file: &CheckedFile, types: &mut TypeDatabase, line: usize, prefix: &str) -> Vec<StructMember> {
+pub fn members_of(
+    file: &CheckedFile,
+    types: &mut TypeDatabase,
+    line: usize,
+    prefix: &str,
+) -> Vec<StructMember> {
     let mut engine = Engine {
         program: &file.program,
         symbols: &file.symbols,
@@ -312,7 +335,12 @@ pub fn type_at(file: &CheckedFile, types: &mut TypeDatabase, line: usize, name: 
     engine.type_of_name_flow(line, name)
 }
 
-pub fn type_prefix(file: &CheckedFile, types: &mut TypeDatabase, line: usize, prefix: &str) -> TypeId {
+pub fn type_prefix(
+    file: &CheckedFile,
+    types: &mut TypeDatabase,
+    line: usize,
+    prefix: &str,
+) -> TypeId {
     let mut engine = Engine {
         program: &file.program,
         symbols: &file.symbols,

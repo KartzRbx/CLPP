@@ -5,7 +5,11 @@ use std::path::Path;
 
 fn compile(src: &str) -> (bool, String, Vec<String>, Vec<String>) {
     let art = compile_artifact_source(src, Path::new("option_result.clpp"), None).expect("compile");
-    let codes: Vec<String> = art.diagnostics.iter().filter_map(|d| d.code.clone()).collect();
+    let codes: Vec<String> = art
+        .diagnostics
+        .iter()
+        .filter_map(|d| d.code.clone())
+        .collect();
     let msgs: Vec<String> = art.diagnostics.iter().map(|d| d.message.clone()).collect();
     (art.ok, art.luau, codes, msgs)
 }
@@ -17,8 +21,8 @@ Result<int, string> f(bool ok) {
   if (ok) { return Ok(1); }
   return Err("no");
 }
-int g(bool ok) {
-  return f(ok)?;
+Result<int, string> g(bool ok) {
+  return Ok(f(ok)?);
 }
 "#;
     let (ok, luau, codes, msgs) = compile(src);
@@ -115,8 +119,8 @@ int mix(int cond) {
     assert!(ok, "ternary: {codes:?} {msgs:?}\n{luau}");
 
     let try_only = r#"
-int unwrap(Result<int, string> r) {
-  return r?;
+Result<int, string> unwrap(Result<int, string> r) {
+  return Ok(r?);
 }
 "#;
     let (ok, luau, codes, msgs) = compile(try_only);
@@ -133,10 +137,10 @@ int mix(int cond) {
     assert!(ok, "ret_ternary: {codes:?} {msgs:?}\n{luau}");
 
     let both = r#"
-int mix(int cond, Result<int, string> r) {
+Result<int, string> mix(int cond, Result<int, string> r) {
   int a = cond ? 2 : 3;
   int b = r?;
-  return cond ? a : b;
+  return Ok(cond ? a : b);
 }
 "#;
     let (ok, luau, codes, msgs) = compile(both);

@@ -1,16 +1,11 @@
-name: Docs
-
+name: Luau documentation validation
 on:
   push:
-    branches: [main]
+    branches: [luau, "codex/**"]
+    paths: ["docs/**", "www/**", "scripts/**", "Cargo.toml", "src/support.rs", ".github/workflows/docs.yml"]
   workflow_dispatch:
-
 permissions:
-  contents: write
-
-# GitHub Pages must use branch `gh-pages` and folder `/` (repo root on that
-# branch). Starlight builds to www/dist with base `/CLPP/`.
-
+  contents: read
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -18,13 +13,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
-      - name: Install and build Starlight
-        run: |
-          npm install
-          npm run docs:build
-      - name: Deploy GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+          node-version: "22"
+      - run: npm ci
+      - run: npm run docs:build
+      - run: node scripts/check-doc-links.mjs
+      - uses: actions/upload-artifact@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./www/dist
+          name: luau-documentation
+          path: www/dist
+# The VM Pages workflow composes this site under /CLPP/luau/ before deploying.

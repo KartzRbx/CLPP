@@ -1,6 +1,5 @@
-//! Module graph: `import { Name } from "path"` is the canonical CL++ import (010).
-//! Quoted `#include "Other.clh"` (different stem) still resolves the same way for
-//! Cluaupp / legacy sources; prefer named `import` in new code.
+//! Module interfaces and dependency graphs for the original link syntax.
+//! Legacy import helper names are internal; no import keyword is accepted.
 
 use crate::ast::{ImportName, Item, ModuleRequire, Program};
 use crate::parser::{parse, parse_for_ide};
@@ -66,7 +65,14 @@ pub fn detect_cycles(root: &str, edges: &[(String, String)]) -> Vec<(String, Str
         on_stack.remove(node);
         stack.pop();
     }
-    dfs(root, &adj, &mut stack, &mut on_stack, &mut seen, &mut cycles);
+    dfs(
+        root,
+        &adj,
+        &mut stack,
+        &mut on_stack,
+        &mut seen,
+        &mut cycles,
+    );
     cycles
 }
 
@@ -145,6 +151,22 @@ pub fn import_named(file: &mut CheckedFile, types: &mut TypeDatabase, seen: &mut
 }
 
 pub fn attach_named_requires(program: &Program, from: &Path, ctx: &mut crate::ast::CompileContext) {
+    for item in &program.items {
+        if let Item::Import { module, .. } = item {
+            if let Some(lib) = module.strip_prefix("@clpp.libs.") {
+                let lib = crate::names::lib_from_include(&format!("clpp/libs/{lib}.clh"))
+                    .unwrap_or_else(|| {
+                        let mut c = lib.chars();
+                        c.next()
+                            .map(|x| x.to_uppercase().to_string() + c.as_str())
+                            .unwrap_or_default()
+                    });
+                if !ctx.libraries.contains(&lib) {
+                    ctx.libraries.push(lib);
+                }
+            }
+        }
+    }
     for req in named_requires(program, from) {
         if ctx.requires.iter().any(|r| r.to_file == req.to_file) {
             continue;
@@ -156,11 +178,20 @@ pub fn attach_named_requires(program: &Program, from: &Path, ctx: &mut crate::as
 pub fn named_requires(program: &Program, from: &Path) -> Vec<ModuleRequire> {
     let mut out = Vec::new();
     for item in &program.items {
-        let Item::Import { module, .. } = item else {
+        let Item::Import { module, names, .. } = item else {
             continue;
         };
         if module.starts_with('@') {
-            let name = module.rsplit(['.', '/']).next().unwrap_or("module").to_string();
+            let name = names
+                .first()
+                .map(|n| n.local_name().to_string())
+                .unwrap_or_else(|| {
+                    module
+                        .rsplit(['.', '/'])
+                        .next()
+                        .unwrap_or("module")
+                        .to_string()
+                });
             out.push(ModuleRequire {
                 name,
                 from_file: from.to_string_lossy().into_owned(),
@@ -173,7 +204,10 @@ pub fn named_requires(program: &Program, from: &Path) -> Vec<ModuleRequire> {
         };
         let stem = file_stem_name(&resolved);
         out.push(ModuleRequire {
-            name: stem,
+            name: names
+                .first()
+                .map(|n| n.local_name().to_string())
+                .unwrap_or(stem),
             from_file: from.to_string_lossy().into_owned(),
             to_file: resolved.to_string_lossy().into_owned(),
         });
@@ -262,8 +296,10 @@ fn merge_exports(
         }
         let type_id = if sym.owner.is_none()
             && insert_name != sym.name
-            && matches!(sym.kind, SymbolKind::Struct | SymbolKind::Enum | SymbolKind::TypeAlias)
-        {
+            && matches!(
+                sym.kind,
+                SymbolKind::Struct | SymbolKind::Enum | SymbolKind::TypeAlias
+            ) {
             types.define_alias(insert_name, sym.type_id)
         } else {
             sym.type_id
@@ -283,4 +319,206 @@ fn merge_exports(
             dst.doc = sym.doc.clone();
         }
     }
+}
+
+/// Resolve the original link syntax from source interfaces, with a full graph cycle check.
+pub fn resolve_linked_symbols(
+    program: &Program,
+    symbols: &mut crate::symbols::SymbolDatabase,
+    types: &mut TypeDatabase,
+) -> Vec<crate::support::CompileDiagnostic> {
+    fn load(
+        program: &Program,
+        symbols: &mut crate::symbols::SymbolDatabase,
+        types: &mut TypeDatabase,
+        stack: &mut Vec<String>,
+        cache: &mut HashMap<String, (Program, crate::symbols::SymbolDatabase)>,
+        diagnostics: &mut Vec<crate::support::CompileDiagnostic>,
+    ) {
+        for item in &program.items {
+            let Item::Import {
+                names,
+                module,
+                line,
+                ..
+            } = item
+            else {
+                continue;
+            };
+            if module.starts_with('@') {
+                continue;
+            }
+            let Some(resolved) = resolve_quoted_include(module, Path::new(&program.file_name))
+            else {
+                diagnostics.push(crate::diag::diag(
+                    crate::diag::CLPP0801,
+                    *line,
+                    1,
+                    format!("link not found: {module}"),
+                    "error",
+                ));
+                continue;
+            };
+            let key = resolved
+                .canonicalize()
+                .unwrap_or_else(|_| resolved.clone())
+                .to_string_lossy()
+                .into_owned();
+            if stack.contains(&key) {
+                diagnostics.push(crate::diag::diag(
+                    crate::diag::CLPP1001,
+                    *line,
+                    1,
+                    format!("link cycle: {} -> {key}", stack.join(" -> ")),
+                    "error",
+                ));
+                continue;
+            }
+            let child = if let Some(child) = cache.get(&key) {
+                child.clone()
+            } else {
+                let source = match std::fs::read_to_string(&resolved) {
+                    Ok(s) => s,
+                    Err(err) => {
+                        diagnostics.push(crate::diag::diag(
+                            crate::diag::CLPP0801,
+                            *line,
+                            1,
+                            err,
+                            "error",
+                        ));
+                        continue;
+                    }
+                };
+                let (expanded, _) = match preprocess(&source, &resolved) {
+                    Ok(p) => p,
+                    Err(err) => {
+                        diagnostics.push(crate::diag::diag(
+                            crate::diag::CLPP0801,
+                            *line,
+                            1,
+                            err,
+                            "error",
+                        ));
+                        continue;
+                    }
+                };
+                let (child, parse_diags) =
+                    match crate::parser::parse_with_diagnostics(&expanded, &key) {
+                        Ok(p) => p,
+                        Err(err) => {
+                            diagnostics.push(crate::diag::diag(
+                                crate::diag::CLPP0801,
+                                *line,
+                                1,
+                                err,
+                                "error",
+                            ));
+                            continue;
+                        }
+                    };
+                diagnostics.extend(parse_diags);
+                let mut bound = crate::binder::bind(&child);
+                crate::checker::resolve(&child, &mut bound, types);
+                stack.push(key.clone());
+                load(&child, &mut bound.symbols, types, stack, cache, diagnostics);
+                stack.pop();
+                diagnostics.extend(crate::checker::check_unified(
+                    &child,
+                    &expanded,
+                    &[],
+                    &bound,
+                    types,
+                ));
+                let entry = (child, bound.symbols);
+                cache.insert(key.clone(), entry.clone());
+                entry
+            };
+            let alias = names.first().map(|n| n.local_name()).unwrap_or("Module");
+            let exports: Vec<_> = child
+                .1
+                .symbols
+                .iter()
+                .filter(|s| {
+                    s.owner.is_none()
+                        && matches!(
+                            s.kind,
+                            SymbolKind::Struct
+                                | SymbolKind::Enum
+                                | SymbolKind::Function
+                                | SymbolKind::Variable
+                                | SymbolKind::TypeAlias
+                        )
+                })
+                .collect();
+            let runtime_exports: Vec<_> = exports
+                .iter()
+                .filter(|s| s.kind != SymbolKind::TypeAlias)
+                .collect();
+            let single_class =
+                runtime_exports.len() == 1 && runtime_exports[0].kind == SymbolKind::Struct;
+            let module_ty = if single_class {
+                types.define_alias(alias, runtime_exports[0].type_id)
+            } else {
+                let ty = types.define_struct(alias, Vec::new());
+                for export in exports {
+                    let (kind, params, ret) = match types.peel(export.type_id) {
+                        crate::types::TypeKind::Function(ft) => (
+                            crate::types::MemberKind::Method,
+                            ft.params
+                                .iter()
+                                .enumerate()
+                                .map(|(i, t)| (format!("arg{i}"), *t))
+                                .collect(),
+                            ft.ret,
+                        ),
+                        _ => (crate::types::MemberKind::Field, Vec::new(), export.type_id),
+                    };
+                    types.add_member(
+                        alias,
+                        crate::types::StructMember {
+                            name: export.name.clone(),
+                            type_id: ret,
+                            kind,
+                            params,
+                            is_static: true,
+                            doc: export.doc.clone(),
+                        },
+                    );
+                }
+                ty
+            };
+            let sid = symbols
+                .lookup(symbols.file_scope, alias)
+                .unwrap_or_else(|| {
+                    symbols.alloc(
+                        alias.into(),
+                        SymbolKind::Module,
+                        Some(alias.into()),
+                        crate::ast::Span::point(*line, 1),
+                        symbols.file_scope,
+                        None,
+                    )
+                });
+            if let Some(sym) = symbols.get_mut(sid) {
+                sym.type_id = module_ty;
+                sym.declared_type = Some(alias.into());
+            }
+        }
+    }
+    let key = Path::new(&program.file_name)
+        .canonicalize()
+        .unwrap_or_else(|_| Path::new(&program.file_name).to_path_buf())
+        .to_string_lossy()
+        .into_owned();
+    let mut diagnostics = Vec::new();
+    load(
+        program,
+        symbols,
+        types,
+        &mut vec![key],
+        &mut HashMap::new(),
+        &mut diagnostics,
+    );
+    diagnostics
 }

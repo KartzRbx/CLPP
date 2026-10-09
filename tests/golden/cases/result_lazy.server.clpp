@@ -1,0 +1,4 @@
+Result<int, string> fetch(bool good) { if (good) { return Ok(8); } return Err("error"); }
+Result<int, string> select(bool pick) { int value = pick ? (fetch(true)?) : (fetch(false)?); return Ok(value); }
+int inspect(Result<int, string> value) { match (value) { Ok n => { return n; }, Err e => { return -1; }, } }
+void init() { assert(inspect(select(true)) == 8); assert(inspect(select(false)) == -1); }

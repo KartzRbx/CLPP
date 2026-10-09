@@ -14,7 +14,7 @@ use clpp::support::{language_manifest, CompileArtifact, CompileRequest};
 use clpp::watch::watch_dir;
 use miette::{IntoDiagnostic, Result};
 use std::fs;
-use std::io::{self, Read, Write};
+use std::io::{self, BufRead, Read, Write};
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -66,9 +66,7 @@ enum Commands {
     /// Environment report (include roots, luau-lsp, Rojo)
     Doctor,
     /// Explain a CLPP#### diagnostic
-    Explain {
-        code: String,
-    },
+    Explain { code: String },
     /// Compile every CL++ source under a directory
     Build {
         #[arg(default_value = ".")]
@@ -115,6 +113,8 @@ enum ApiCommand {
         #[arg(short, long)]
         file: Option<PathBuf>,
     },
+    /// Compile one JSON request per line until stdin closes (NDJSON).
+    Serve,
     /// Language metadata
     Manifest,
     /// Completions at a 1-based line/column. JSON stdin: PositionRequest
@@ -141,6 +141,31 @@ enum ApiCommand {
     WorkspaceSymbols,
     /// Code actions / quickfix
     Actions,
+}
+
+fn run_api_serve() -> Result<()> {
+    let stdin = io::stdin();
+    let mut stdout = io::BufWriter::new(io::stdout().lock());
+    for line in stdin.lock().lines() {
+        let line = line.into_diagnostic()?;
+        if line.trim().is_empty() {
+            continue;
+        }
+        let artifact = match serde_json::from_str::<CompileRequest>(&line) {
+            Ok(request) => compile_request(&request).unwrap_or_else(|err| {
+                CompileArtifact::fail(&request.file_name, format!("{err:#}"))
+            }),
+            Err(err) => CompileArtifact::fail_with(
+                "input.clpp",
+                err.to_string(),
+                vec![clpp::diag::diag(clpp::diag::CLPP0005, 1, 1, err, "error")],
+            ),
+        };
+        serde_json::to_writer(&mut stdout, &artifact).into_diagnostic()?;
+        writeln!(stdout).into_diagnostic()?;
+        stdout.flush().into_diagnostic()?;
+    }
+    Ok(())
 }
 
 fn main() -> Result<()> {
@@ -177,23 +202,17 @@ fn main() -> Result<()> {
             let report = doctor::report();
             print_json(&report)?;
         }
-        Commands::Explain { code } => {
-            match diag::explain(&code) {
-                Some(c) => {
-                    println!("{}: {}", c.id, c.title);
-                    println!("{}", c.help);
-                }
-                None => {
-                    eprintln!("unknown code {code}");
-                    std::process::exit(1);
-                }
+        Commands::Explain { code } => match diag::explain(&code) {
+            Some(c) => {
+                println!("{}: {}", c.id, c.title);
+                println!("{}", c.help);
             }
-        }
-        Commands::Build {
-            root,
-            output,
-            json,
-        } => {
+            None => {
+                eprintln!("unknown code {code}");
+                std::process::exit(1);
+            }
+        },
+        Commands::Build { root, output, json } => {
             let written = build_dir(&root, &output)?;
             if json {
                 print_json(&serde_json::json!({
@@ -218,6 +237,7 @@ fn main() -> Result<()> {
                         file_name: path.display().to_string(),
                         strict: None,
                         optimize: None,
+                        lib_root: None,
                     }
                 } else {
                     let mut buf = String::new();
@@ -232,11 +252,15 @@ fn main() -> Result<()> {
                         }
                     }
                     Err(err) => {
-                        print_json(&CompileArtifact::fail(&request.file_name, format!("{err:#}")))?;
+                        print_json(&CompileArtifact::fail(
+                            &request.file_name,
+                            format!("{err:#}"),
+                        ))?;
                         std::process::exit(1);
                     }
                 }
             }
+            ApiCommand::Serve => run_api_serve()?,
             ApiCommand::Manifest => print_json(&language_manifest())?,
             ApiCommand::Complete => {
                 let req = read_position()?;
@@ -303,7 +327,9 @@ fn main() -> Result<()> {
             if write {
                 fs::write(&file, formatted).into_diagnostic()?;
             } else {
-                io::stdout().write_all(formatted.as_bytes()).into_diagnostic()?;
+                io::stdout()
+                    .write_all(formatted.as_bytes())
+                    .into_diagnostic()?;
             }
         }
         Commands::Watch { root, output } => watch_dir(&root, &output)?,
@@ -373,7 +399,9 @@ fn run_compile(
                 map_path.set_file_name(format!("{name}.map"));
                 fs::write(map_path, map_json).into_diagnostic()?;
             } else {
-                io::stdout().write_all(art.luau.as_bytes()).into_diagnostic()?;
+                io::stdout()
+                    .write_all(art.luau.as_bytes())
+                    .into_diagnostic()?;
             }
             if check && art.ok {
                 run_luau_check(&art.luau)?;
@@ -382,7 +410,10 @@ fn run_compile(
         }
         Err(err) => {
             if json {
-                print_json(&CompileArtifact::fail(file.display().to_string(), format!("{err:#}")))?;
+                print_json(&CompileArtifact::fail(
+                    file.display().to_string(),
+                    format!("{err:#}"),
+                ))?;
                 std::process::exit(1);
             }
             Err(err)

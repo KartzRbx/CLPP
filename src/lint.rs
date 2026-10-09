@@ -25,7 +25,12 @@ pub fn all() -> &'static [Lint] {
     &[UNUSED_LOCAL, SHADOWING]
 }
 
-pub fn to_diag(lint: Lint, line: usize, column: usize, detail: impl std::fmt::Display) -> CompileDiagnostic {
+pub fn to_diag(
+    lint: Lint,
+    line: usize,
+    column: usize,
+    detail: impl std::fmt::Display,
+) -> CompileDiagnostic {
     CompileDiagnostic {
         message: format!("warning[{}]: {detail}", lint.name),
         line: line.max(1),
@@ -33,6 +38,7 @@ pub fn to_diag(lint: Lint, line: usize, column: usize, detail: impl std::fmt::Di
         severity: lint.level.into(),
         code: Some(lint.name.into()),
         help: Some(lint.help.into()),
+        span: crate::ast::Span::default(),
     }
 }
 

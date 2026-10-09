@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, "codex/**", luau]
   pull_request:
 
 jobs:
@@ -19,7 +19,31 @@ jobs:
         with:
           node-version: "20"
       - run: node editors/vscode/intellisense.test.js
-      - run: cargo test
+      - run: cargo test --workspace
       - name: Check libs.json vs headers
         shell: bash
         run: python3 scripts/check_libs.py || python scripts/check_libs.py
+
+  golden-luau:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: cargo build --locked
+      - name: Install pinned official Luau tools
+        run: |
+          curl --fail --location https://github.com/luau-lang/luau/releases/download/0.740/luau-ubuntu.zip -o /tmp/luau.zip
+          mkdir -p /tmp/luau-tools
+          unzip /tmp/luau.zip -d /tmp/luau-tools
+          chmod +x /tmp/luau-tools/luau /tmp/luau-tools/luau-analyze
+      - name: Check golden output, strict types and runtime behavior
+        env:
+          LUAU_ANALYZE: /tmp/luau-tools/luau-analyze
+          LUAU: /tmp/luau-tools/luau
+        run: node scripts/golden.mjs
+      - run: npm ci
+      - run: npm run docs:build
+      - run: node scripts/check-doc-links.mjs

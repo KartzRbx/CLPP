@@ -1,0 +1,4 @@
+struct HelloServer { int value = 1; HelloServer(); int Greet(); };
+void HelloServer::HelloServer() { @value = 7; }
+int HelloServer::Greet() { return @value; }
+void init() { HelloServer hello; assert(hello.Greet() == 7); }

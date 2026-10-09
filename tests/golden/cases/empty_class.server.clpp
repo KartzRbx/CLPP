@@ -1,0 +1,2 @@
+struct Empty {};
+void init() { Empty a; Empty b; assert(a != b); }

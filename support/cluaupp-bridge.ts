@@ -3,7 +3,7 @@
  * This file is the reference implementation contract for a separate Cluaupp package.
  */
 
-import type { CompileArtifact } from "../cluaupp";
+import type { CompileArtifact } from "./cluaupp";
 
 /** Apply selective @native only for hinted function names (never blanket). */
 export function applyNativeHints(luau: string, artifact: CompileArtifact): string {

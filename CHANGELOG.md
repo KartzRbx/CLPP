@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.2 — Luau compiler stability
+
+- Preserve the original syntax and `link` module form.
+- Emit valid Luau locals, class tables, .new constructors and automatic instantiation.
+- Configurable libRoot; emission-time source map with line/column and span.
+- Versioned JSON contract and persistent `clpp api serve` NDJSON.
+- Correct Result propagation, tagged results and exhaustive match emission.
+- Exact golden output, strict Luau analysis and runtime checks in CI.
+- Platform-specific compiler packages; separate VM binary identity.
+
+
 ## 0.8.1
 
 - Editor grammar highlights `import { Name } from "…"`, including `from` / `as` and the module path. Completions list `import`, `from`, and `as`.

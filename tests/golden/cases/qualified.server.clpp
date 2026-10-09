@@ -1,0 +1,2 @@
+link @clpp.libs.hive as Hive;
+void init() { auto world = Hive.HiveWorld.new_(); }

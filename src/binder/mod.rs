@@ -114,15 +114,24 @@ fn bind_item_decl(db: &mut SymbolDatabase, file: ScopeId, item: &Item) {
                 );
             }
         }
-        Item::Unsupported { .. } | Item::Import { .. } => {}
+        Item::Import { names, span, .. } => {
+            for name in names {
+                db.alloc(
+                    name.local_name().into(),
+                    SymbolKind::Module,
+                    Some(name.local_name().into()),
+                    *span,
+                    file,
+                    None,
+                );
+            }
+        }
+        Item::Unsupported { .. } => {}
     }
 }
 
 fn bind_decl(db: &mut SymbolDatabase, scope: ScopeId, decl: &Decl) {
-    let owner = decl
-        .owner
-        .as_ref()
-        .and_then(|name| db.struct_named(name));
+    let owner = decl.owner.as_ref().and_then(|name| db.struct_named(name));
     let kind = if owner.is_some() {
         SymbolKind::Field
     } else {
@@ -133,7 +142,11 @@ fn bind_decl(db: &mut SymbolDatabase, scope: ScopeId, decl: &Decl) {
         kind,
         decl.value_type.clone(),
         decl.span,
-        if owner.is_some() { db.file_scope } else { scope },
+        if owner.is_some() {
+            db.file_scope
+        } else {
+            scope
+        },
         owner,
     );
     if let Some(sym) = db.get_mut(id) {
@@ -151,10 +164,7 @@ fn bind_decl(db: &mut SymbolDatabase, scope: ScopeId, decl: &Decl) {
 }
 
 fn bind_func_sig(db: &mut SymbolDatabase, file: ScopeId, func: &Function) {
-    let owner = func
-        .owner
-        .as_ref()
-        .and_then(|name| db.struct_named(name));
+    let owner = func.owner.as_ref().and_then(|name| db.struct_named(name));
     let kind = if func.name == func.owner.as_deref().unwrap_or("") {
         SymbolKind::Constructor
     } else if owner.is_some() {
@@ -203,10 +213,7 @@ fn bind_item_body(db: &mut SymbolDatabase, file: ScopeId, item: &Item) {
 }
 
 fn bind_func_body(db: &mut SymbolDatabase, file: ScopeId, func: &Function) {
-    let owner = func
-        .owner
-        .as_ref()
-        .and_then(|name| db.struct_named(name));
+    let owner = func.owner.as_ref().and_then(|name| db.struct_named(name));
     let mut span = if func.span.end_line == 0 {
         Span::new(func.line, 1, func.line.max(1), 1)
     } else {
@@ -370,7 +377,10 @@ fn bind_stmt(db: &mut SymbolDatabase, scope: ScopeId, owner: Option<SymbolId>, s
             }
             bind_stmts(db, bscope, owner, body);
         }
-        Stmt::Switch { discriminant, cases } => {
+        Stmt::Switch {
+            discriminant,
+            cases,
+        } => {
             bind_expr(db, scope, owner, discriminant);
             for case in cases {
                 let cspan = stmts_span(stmt.span(), &case.body);
@@ -442,7 +452,9 @@ fn bind_expr(db: &mut SymbolDatabase, scope: ScopeId, owner: Option<SymbolId>, e
         | Expr::Await { argument }
         | Expr::Cast { argument, .. }
         | Expr::Try { argument }
-        | Expr::Update { target: argument, .. } => bind_expr(db, scope, owner, argument),
+        | Expr::Update {
+            target: argument, ..
+        } => bind_expr(db, scope, owner, argument),
         Expr::Binary { left, right, .. }
         | Expr::Assign { left, right, .. }
         | Expr::Coalesce { left, right }
@@ -510,10 +522,6 @@ fn bind_expr(db: &mut SymbolDatabase, scope: ScopeId, owner: Option<SymbolId>, e
                 }
             }
         }
-        Expr::Null
-        | Expr::Bool(_)
-        | Expr::Number(_)
-        | Expr::String(_)
-        | Expr::Ident(_) => {}
+        Expr::Null | Expr::Bool(_) | Expr::Number(_) | Expr::String(_) | Expr::Ident(_) => {}
     }
 }

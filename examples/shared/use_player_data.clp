@@ -1,9 +1,9 @@
-// Language-only consumer: named import (not #include) for modules.
-import { Wallet, PlayerData as Data } from "./PlayerData.clh";
+// The original link syntax binds the module namespace.
+link "./PlayerData.clh" as Data;
 
 void Demo() {
-    Wallet w;
-    w.Coins = 10;
-    Data d;
-    d.Currencies.Coins = w.Coins;
+    auto wallet = Data.Wallet.new_();
+    wallet.Coins = 10;
+    auto data = Data.PlayerData.new_();
+    data.Currencies.Coins = wallet.Coins;
 }

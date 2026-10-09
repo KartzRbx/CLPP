@@ -7,7 +7,6 @@ pub use pass::{check_program, check_program_ex};
 pub use typed::check_typed;
 
 /// Name-table pass (`pass`) + TypeId validation (`typed`). Prefer typed; dedupe overlaps.
-
 use crate::ast::{Expr, Function, Item, Program, Stmt};
 use crate::binder::BoundFile;
 use crate::support::CompileDiagnostic;
@@ -27,10 +26,8 @@ pub fn check_unified(
         Ok(d) => d,
         Err(_) => Vec::new(),
     };
-    let typed_keys: std::collections::HashSet<(usize, Option<String>)> = typed
-        .iter()
-        .map(|d| (d.line, d.code.clone()))
-        .collect();
+    let typed_keys: std::collections::HashSet<(usize, Option<String>)> =
+        typed.iter().map(|d| (d.line, d.code.clone())).collect();
     for d in pass {
         let key = (d.line, d.code.clone());
         // Skip pass type-assign noise when typed already spoke on that line with a code.
@@ -59,7 +56,9 @@ pub fn resolve(program: &Program, bound: &mut BoundFile, types: &mut TypeDatabas
     // 1. Register structs / enums / aliases by name.
     for item in &program.items {
         match item {
-            Item::Class { name, type_params, .. } => {
+            Item::Class {
+                name, type_params, ..
+            } => {
                 types.define_struct(name, Vec::new());
                 if let Some(info) = types.struct_mut(name) {
                     info.type_params = type_params.iter().map(|p| p.name.clone()).collect();
@@ -78,7 +77,9 @@ pub fn resolve(program: &Program, bound: &mut BoundFile, types: &mut TypeDatabas
     // 2. Bases.
     for item in &program.items {
         if let Item::Class {
-            name, parent: Some(parent), ..
+            name,
+            parent: Some(parent),
+            ..
         } = item
         {
             let base = types.nominal(parent);
@@ -93,15 +94,12 @@ pub fn resolve(program: &Program, bound: &mut BoundFile, types: &mut TypeDatabas
         }
     }
     // 3. Fill symbol type_ids from declared strings.
-    let ids: Vec<SymbolId> = bound
-        .symbols
-        .symbols
-        .iter()
-        .map(|s| s.id)
-        .collect();
+    let ids: Vec<SymbolId> = bound.symbols.symbols.iter().map(|s| s.id).collect();
     for id in ids {
         let (declared, kind, name, owner) = {
-            let Some(sym) = bound.symbols.get(id) else { continue };
+            let Some(sym) = bound.symbols.get(id) else {
+                continue;
+            };
             (
                 sym.declared_type.clone(),
                 sym.kind,
@@ -132,8 +130,7 @@ pub fn resolve(program: &Program, bound: &mut BoundFile, types: &mut TypeDatabas
                     if let Some(tp_sid) = bound.symbols.lookup(scope, d) {
                         if tp_sid != id {
                             if let Some(tp) = bound.symbols.get(tp_sid) {
-                                if tp.kind == SymbolKind::TypeParam
-                                    && tp.type_id != TypeId::UNKNOWN
+                                if tp.kind == SymbolKind::TypeParam && tp.type_id != TypeId::UNKNOWN
                                 {
                                     tp.type_id
                                 } else {
@@ -162,7 +159,9 @@ pub fn resolve(program: &Program, bound: &mut BoundFile, types: &mut TypeDatabas
     // 4. Populate StructInfo members from symbols.
     for sym in &bound.symbols.symbols {
         let Some(owner) = sym.owner else { continue };
-        let Some(owner_sym) = bound.symbols.get(owner) else { continue };
+        let Some(owner_sym) = bound.symbols.get(owner) else {
+            continue;
+        };
         if owner_sym.kind != SymbolKind::Struct && owner_sym.kind != SymbolKind::Enum {
             continue;
         }
@@ -259,26 +258,25 @@ fn method_params(
 
 fn seed_constructors(program: &Program, types: &mut TypeDatabase) {
     for item in &program.items {
-        if let Item::Class { name, .. } = item {
-            if types
-                .struct_info(name)
-                .map(|s| s.members.iter().any(|m| m.kind == MemberKind::Constructor))
-                .unwrap_or(false)
-            {
-                continue;
-            }
-            let instance = types.nominal("Instance");
-            let parent = types.optional(instance);
-            let ret = types.nominal(name);
+        let Item::Class { name, .. } = item else {
+            continue;
+        };
+        let declared = types
+            .struct_info(name)
+            .and_then(|s| s.members.iter().find(|m| m.kind == MemberKind::Constructor))
+            .cloned();
+        let ret = types.nominal(name);
+        let params = declared.map(|m| m.params).unwrap_or_default();
+        for spelling in [name.as_str(), "new", "new_", "New"] {
             types.add_member(
                 name,
                 StructMember {
-                    name: name.clone(),
+                    name: spelling.into(),
                     type_id: ret,
                     kind: MemberKind::Constructor,
-                    params: vec![("parent".into(), parent)],
+                    params: params.clone(),
                     is_static: true,
-                    doc: Some("new".into()),
+                    doc: Some("constructor".into()),
                 },
             );
         }
@@ -443,9 +441,11 @@ impl<'a> Engine<'a> {
                 };
                 self.types.optional(ty)
             }
-            Expr::Unary { argument, .. } | Expr::Await { argument } | Expr::Update { target: argument, .. } => {
-                self.type_of_expr(argument, line)
-            }
+            Expr::Unary { argument, .. }
+            | Expr::Await { argument }
+            | Expr::Update {
+                target: argument, ..
+            } => self.type_of_expr(argument, line),
             Expr::Try { argument } => {
                 let inner = self.type_of_expr(argument, line);
                 if let Some((ok, _)) = self.types.unwrap_result_labels(inner) {
@@ -575,14 +575,13 @@ pub fn narrow_from_source(
             break;
         }
         let t = raw.trim();
-        let guard_hit = t.contains(&format!("guard ({name}"))
-            || t.contains(&format!("guard({name}"));
+        let guard_hit =
+            t.contains(&format!("guard ({name}")) || t.contains(&format!("guard({name}"));
         if guard_hit {
             saw_exiting_guard = true;
             guard_else_depth = 1;
         }
-        let if_hit = t.contains(&format!("if ({name}"))
-            || t.contains(&format!("if({name}"));
+        let if_hit = t.contains(&format!("if ({name}")) || t.contains(&format!("if({name}"));
         if if_hit {
             in_narrowing_if = true;
             if_then_depth = 1;
@@ -676,7 +675,9 @@ fn walk_flow(
     for stmt in stmts {
         match stmt {
             Stmt::Guard { test, body } => {
-                let in_else = body.iter().any(|s| s.span().contains_line(line) || s.line() == line);
+                let in_else = body
+                    .iter()
+                    .any(|s| s.span().contains_line(line) || s.line() == line);
                 if in_else {
                     walk_flow(types, body, line, name, ty);
                     return true;
@@ -705,7 +706,9 @@ fn walk_flow(
                     return true;
                 }
                 if let Some(alt) = alternate {
-                    let in_else = alt.iter().any(|s| s.span().contains_line(line) || s.line() == line);
+                    let in_else = alt
+                        .iter()
+                        .any(|s| s.span().contains_line(line) || s.line() == line);
                     if in_else {
                         walk_flow(types, alt, line, name, ty);
                         return true;
@@ -744,17 +747,15 @@ fn walk_flow(
 }
 
 fn stmt_exits(stmts: &[Stmt]) -> bool {
-    stmts.iter().any(|s| matches!(s, Stmt::Return(_) | Stmt::Break | Stmt::Continue))
+    stmts
+        .iter()
+        .any(|s| matches!(s, Stmt::Return(_) | Stmt::Break | Stmt::Continue))
 }
 
 fn guard_narrows(test: &Expr, name: &str) -> bool {
     match test {
         Expr::Ident(n) => n == name,
-        Expr::Binary {
-            op,
-            left,
-            right,
-        } if op == "!=" => {
+        Expr::Binary { op, left, right } if op == "!=" => {
             (matches!(left.as_ref(), Expr::Ident(n) if n == name)
                 && matches!(right.as_ref(), Expr::Null))
                 || (matches!(right.as_ref(), Expr::Ident(n) if n == name)
@@ -794,11 +795,7 @@ fn isa_narrow(test: &Expr, name: &str) -> Option<String> {
 }
 
 /// Completion / hover helper: type the expression to the left of `.` / `~>` / `::`.
-pub fn type_of_prefix(
-    engine: &mut Engine,
-    line: usize,
-    prefix: &str,
-) -> TypeId {
+pub fn type_of_prefix(engine: &mut Engine, line: usize, prefix: &str) -> TypeId {
     let trimmed = prefix.trim_end();
     let object = strip_trailing_access(trimmed);
     if object.is_empty() {
@@ -844,11 +841,7 @@ fn type_of_chain(engine: &mut Engine, line: usize, expr: &str) -> TypeId {
         }
     }
     if let Some(rest) = expr.strip_prefix("new ") {
-        let name = rest
-            .split('(')
-            .next()
-            .unwrap_or(rest)
-            .trim();
+        let name = rest.split('(').next().unwrap_or(rest).trim();
         return engine.types.nominal(name);
     }
     if let Some(rest) = expr.strip_prefix('@') {

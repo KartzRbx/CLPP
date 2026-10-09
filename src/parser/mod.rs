@@ -41,6 +41,7 @@ pub fn parse_for_ide(source: &str, file_name: &str) -> (Program, Vec<CompileDiag
                 severity: "error".into(),
                 code: None,
                 help: None,
+                span: crate::ast::Span::default(),
             });
             let patched = patch_incomplete_access(source);
             if patched != source {
@@ -182,9 +183,10 @@ fn format_parse_error(err: &pest::error::Error<Rule>) -> String {
         if names.iter().any(|n| n.contains("ident")) {
             return "expected a name after the type, e.g. const int coins = 0;".into();
         }
-        if names.iter().any(|n| {
-            n.contains("assign_op") || n.contains("postfix") || n.contains("cmp_op")
-        }) {
+        if names
+            .iter()
+            .any(|n| n.contains("assign_op") || n.contains("postfix") || n.contains("cmp_op"))
+        {
             return "syntax error — missing ';', a bad operator, or an unexpected token".into();
         }
     }
@@ -214,12 +216,16 @@ fn parse_item(pair: Pair<Rule>, diagnostics: &mut Vec<CompileDiagnostic>) -> Vec
         Rule::using_namespace => {
             let line = inner.line_col().0;
             diagnostics.push(CompileDiagnostic {
-                message: crate::diag::message(crate::diag::CLPP0301, "`using namespace` is not in CL++"),
+                message: crate::diag::message(
+                    crate::diag::CLPP0301,
+                    "`using namespace` is not in CL++",
+                ),
                 line,
                 column: 1,
                 severity: "error".into(),
                 code: Some("CLPP0301".into()),
                 help: Some(crate::diag::CLPP0301.help.into()),
+                span: crate::ast::Span::default(),
             });
             vec![Item::Unsupported {
                 kind: "using namespace".into(),
@@ -236,7 +242,10 @@ fn parse_item(pair: Pair<Rule>, diagnostics: &mut Vec<CompileDiagnostic>) -> Vec
                 column: 1,
                 severity: "error".into(),
                 code: Some("CLPP0801".into()),
-                help: Some("write `link \"./path\" as Name;`, `link @clpp…`, or `link @game…`".into()),
+                help: Some(
+                    "write `link \"./path\" as Name;`, `link @clpp…`, or `link @game…`".into(),
+                ),
+                span: crate::ast::Span::default(),
             });
             vec![Item::Unsupported {
                 kind: "import".into(),
@@ -248,12 +257,16 @@ fn parse_item(pair: Pair<Rule>, diagnostics: &mut Vec<CompileDiagnostic>) -> Vec
         Rule::namespace_item => {
             let line = inner.line_col().0;
             diagnostics.push(CompileDiagnostic {
-                message: crate::diag::message(crate::diag::CLPP0301, "`namespace` is not in CL++ — use a struct or a module file"),
+                message: crate::diag::message(
+                    crate::diag::CLPP0301,
+                    "`namespace` is not in CL++ — use a struct or a module file",
+                ),
                 line,
                 column: 1,
                 severity: "error".into(),
                 code: Some("CLPP0301".into()),
                 help: Some(crate::diag::CLPP0301.help.into()),
+                span: crate::ast::Span::default(),
             });
             let mut items = vec![Item::Unsupported {
                 kind: "namespace".into(),
@@ -278,7 +291,10 @@ fn parse_item(pair: Pair<Rule>, diagnostics: &mut Vec<CompileDiagnostic>) -> Vec
                     column: 1,
                     severity: "error".into(),
                     code: Some("CLPP0801".into()),
-                    help: Some("write `link \"./path\" as Name;`, `link @clpp…`, or `link @game…`".into()),
+                    help: Some(
+                        "write `link \"./path\" as Name;`, `link @clpp…`, or `link @game…`".into(),
+                    ),
+                    span: crate::ast::Span::default(),
                 });
                 vec![Item::Unsupported {
                     kind: "include".into(),
@@ -301,12 +317,16 @@ fn parse_item(pair: Pair<Rule>, diagnostics: &mut Vec<CompileDiagnostic>) -> Vec
                 "extern"
             };
             diagnostics.push(CompileDiagnostic {
-                message: crate::diag::message(crate::diag::CLPP0301, format!("`{kind}` is not in CL++")),
+                message: crate::diag::message(
+                    crate::diag::CLPP0301,
+                    format!("`{kind}` is not in CL++"),
+                ),
                 line,
                 column: 1,
                 severity: "error".into(),
                 code: Some("CLPP0301".into()),
                 help: Some(crate::diag::CLPP0301.help.into()),
+                span: crate::ast::Span::default(),
             });
             vec![Item::Unsupported {
                 kind: kind.into(),
@@ -348,36 +368,6 @@ fn parse_link(pair: Pair<Rule>) -> Item {
         line: span.start_line,
         span,
     }
-}
-
-fn parse_import(pair: Pair<Rule>) -> Item {
-    let span = pair_span(&pair);
-    let mut names = Vec::new();
-    let mut module = String::new();
-    for inner in pair.into_inner() {
-        match inner.as_rule() {
-            Rule::import_binding => names.push(parse_import_binding(inner)),
-            Rule::string => module = inner.as_str().trim_matches('"').to_string(),
-            _ => {}
-        }
-    }
-    Item::Import {
-        names,
-        module,
-        line: span.start_line,
-        span,
-    }
-}
-
-fn parse_import_binding(pair: Pair<Rule>) -> crate::ast::ImportName {
-    let mut idents = pair
-        .into_inner()
-        .filter(|p| p.as_rule() == Rule::ident)
-        .map(|p| p.as_str().to_string())
-        .collect::<Vec<_>>();
-    let name = idents.remove(0);
-    let alias = idents.pop();
-    crate::ast::ImportName { name, alias }
 }
 
 fn parse_using(pair: Pair<Rule>) -> Item {
@@ -452,7 +442,11 @@ fn parse_field_destructure_parts(pair: Pair<Rule>) -> (Vec<String>, Expr) {
     (names, value)
 }
 
-fn parse_struct(pair: Pair<Rule>, nested_owner: Option<&str>, diagnostics: &mut Vec<CompileDiagnostic>) -> Vec<Item> {
+fn parse_struct(
+    pair: Pair<Rule>,
+    nested_owner: Option<&str>,
+    diagnostics: &mut Vec<CompileDiagnostic>,
+) -> Vec<Item> {
     let span = pair_span(&pair);
     let mut items = Vec::new();
     let mut name = "_anon".to_string();
@@ -485,7 +479,9 @@ fn parse_struct(pair: Pair<Rule>, nested_owner: Option<&str>, diagnostics: &mut 
                         .map(TypeParam::unbound),
                 );
             }
-            Rule::struct_member => items.extend(parse_struct_member(inner, &name, &mut vis, diagnostics)),
+            Rule::struct_member => {
+                items.extend(parse_struct_member(inner, &name, &mut vis, diagnostics))
+            }
             _ => {}
         }
     }
@@ -652,7 +648,10 @@ fn parse_function(pair: Pair<Rule>) -> Item {
     let (owner, name) = if names.len() >= 2 {
         (Some(names[0].clone()), names[1].clone())
     } else {
-        (None, names.first().cloned().unwrap_or_else(|| "anon".into()))
+        (
+            None,
+            names.first().cloned().unwrap_or_else(|| "anon".into()),
+        )
     };
     let func = Function {
         name,
@@ -729,7 +728,11 @@ fn parse_destructure_parts(pair: Pair<Rule>) -> (Vec<String>, Expr) {
 }
 
 fn parse_type(pair: Pair<Rule>) -> String {
-    pair.as_str().split_whitespace().collect::<String>().trim_end_matches('*').to_string()
+    pair.as_str()
+        .split_whitespace()
+        .collect::<String>()
+        .trim_end_matches('*')
+        .to_string()
 }
 
 fn parse_template_param(pair: Pair<Rule>) -> TypeParam {
@@ -792,11 +795,21 @@ fn parse_stmt(pair: Pair<Rule>) -> Stmt {
         Rule::for_stmt => parse_for(inner),
         Rule::while_stmt => parse_while(inner),
         Rule::spawn_stmt => Stmt::Spawn {
-            body: parse_block(inner.into_inner().find(|p| p.as_rule() == Rule::block).expect("spawn block")),
+            body: parse_block(
+                inner
+                    .into_inner()
+                    .find(|p| p.as_rule() == Rule::block)
+                    .expect("spawn block"),
+            ),
             parallel: false,
         },
         Rule::parallel_stmt => Stmt::Spawn {
-            body: parse_block(inner.into_inner().find(|p| p.as_rule() == Rule::block).expect("parallel block")),
+            body: parse_block(
+                inner
+                    .into_inner()
+                    .find(|p| p.as_rule() == Rule::block)
+                    .expect("parallel block"),
+            ),
             parallel: true,
         },
         Rule::return_stmt => {
@@ -829,7 +842,11 @@ fn parse_stmt(pair: Pair<Rule>) -> Stmt {
         }
         Rule::var_decl => Stmt::Decl(parse_var_decl(inner, None)),
         Rule::expr_stmt => {
-            let expr = inner.into_inner().next().map(parse_expr).unwrap_or(Expr::Null);
+            let expr = inner
+                .into_inner()
+                .next()
+                .map(parse_expr)
+                .unwrap_or(Expr::Null);
             Stmt::Expr(expr)
         }
         Rule::block => Stmt::Block(parse_block(inner)),
@@ -847,11 +864,7 @@ fn parse_if(pair: Pair<Rule>) -> Stmt {
             _ => {}
         }
     }
-    let consequent = stmts
-        .first()
-        .cloned()
-        .map(stmt_as_list)
-        .unwrap_or_default();
+    let consequent = stmts.first().cloned().map(stmt_as_list).unwrap_or_default();
     let alternate = stmts.get(1).cloned().map(stmt_as_list);
     Stmt::If {
         test,
@@ -883,10 +896,7 @@ fn parse_match(pair: Pair<Rule>) -> Stmt {
             _ => {}
         }
     }
-    Stmt::Match {
-        discriminant,
-        arms,
-    }
+    Stmt::Match { discriminant, arms }
 }
 
 fn parse_match_arm(pair: Pair<Rule>) -> crate::ast::MatchArm {
@@ -1106,7 +1116,11 @@ fn parse_var_like(pair: Pair<Rule>) -> Decl {
 
 fn parse_switch(pair: Pair<Rule>) -> Stmt {
     let mut inner = pair.into_inner();
-    let discriminant = parse_expr(inner.next().expect("switch disc"));
+    let discriminant = parse_expr(
+        inner
+            .find(|p| p.as_rule() == Rule::expr)
+            .expect("switch disc"),
+    );
     let mut cases = Vec::new();
     let mut pending: Option<SwitchCase> = None;
     for clause in inner {
@@ -1447,7 +1461,9 @@ fn parse_atom(pair: Pair<Rule>) -> Expr {
             "true" => Expr::Bool(true),
             "false" => Expr::Bool(false),
             "null" | "nullptr" => Expr::Null,
-            other if other.starts_with('"') || other.starts_with('\'') || other.starts_with('`') => {
+            other
+                if other.starts_with('"') || other.starts_with('\'') || other.starts_with('`') =>
+            {
                 Expr::String(unquote(other))
             }
             _ => parse_atom_or_inner(pair),
@@ -1628,7 +1644,11 @@ fn parse_init_list(pair: Pair<Rule>) -> Expr {
             Rule::init_suf | Rule::init_list | Rule::init_body => {
                 match current.into_inner().next() {
                     Some(inner) => current = inner,
-                    None => return Expr::ArrayLit { elements: Vec::new() },
+                    None => {
+                        return Expr::ArrayLit {
+                            elements: Vec::new(),
+                        }
+                    }
                 }
             }
             Rule::designated_fields => {
@@ -1660,9 +1680,7 @@ fn parse_dict_pairs(pair: Pair<Rule>) -> Vec<(Expr, Expr)> {
     pair.into_inner()
         .filter(|p| p.as_rule() == Rule::dict_pair)
         .map(|field| {
-            let mut inner = field
-                .into_inner()
-                .filter(|p| p.as_rule() == Rule::expr);
+            let mut inner = field.into_inner().filter(|p| p.as_rule() == Rule::expr);
             let key = inner.next().map(parse_expr).unwrap_or(Expr::Null);
             let value = inner.next().map(parse_expr).unwrap_or(Expr::Null);
             (key, value)
@@ -1675,7 +1693,10 @@ fn parse_designated(pair: Pair<Rule>) -> Vec<(String, Expr)> {
         .filter(|p| p.as_rule() == Rule::designated_field)
         .map(|field| {
             let mut inner = field.into_inner();
-            let name = inner.next().map(|p| p.as_str().to_string()).unwrap_or_default();
+            let name = inner
+                .next()
+                .map(|p| p.as_str().to_string())
+                .unwrap_or_default();
             let value = inner.next().map(parse_expr).unwrap_or(Expr::Null);
             (name, value)
         })

@@ -1,0 +1,4 @@
+struct Base { int value = 3; int get(); };
+int Base::get() { return @value; }
+struct Derived : Base {};
+void init() { Derived d; assert(d.get() == 3); }

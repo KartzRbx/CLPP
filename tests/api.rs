@@ -20,6 +20,7 @@ void init() {
         file_name: "hello.server.clpp".into(),
         strict: None,
         optimize: None,
+        lib_root: None,
     })
     .expect("compile");
     assert!(art.ok, "{:?}", art.diagnostics);

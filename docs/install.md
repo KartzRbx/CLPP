@@ -8,7 +8,7 @@ Download the installer, run it, and CL++ is on your machine: the `clpp` compiler
 
 <div class="clpp-download">
 
-[Download CL++ installer for Windows](https://github.com/KartzRbx/CLPP/releases/latest/download/clpp-setup.exe)
+[Download CL++ installer for Windows](https://github.com/KartzRbx/CLPP/releases/download/v0.8.2/clpp-setup.exe)
 
 </div>
 
@@ -18,6 +18,18 @@ Download the installer, run it, and CL++ is on your machine: the `clpp` compiler
 4. Reload the editor window.
 
 That is the full path: the site gives you the installer; the installer installs the language.
+
+## Linux and macOS
+
+Download the package for your platform from the [Luau compiler 0.8.2 release](https://github.com/KartzRbx/CLPP/releases/tag/v0.8.2):
+
+| Platform | Package |
+| --- | --- |
+| Linux x64 | `clpp-luau-linux-x86_64.tar.gz` |
+| macOS Intel | `clpp-luau-macos-x86_64.tar.gz` |
+| macOS Apple Silicon | `clpp-luau-macos-arm64.tar.gz` |
+
+Extract the archive and put `clpp` on PATH. Verify with `clpp api manifest`: the compiler version and `contractVersion` are separate SemVer values. The 0.10.x C++20 VM is a separate product with a separate binary.
 
 ## From the command line
 

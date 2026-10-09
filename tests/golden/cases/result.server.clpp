@@ -1,0 +1,4 @@
+Result<int, string> fetch(bool good) { if (good) { return Ok(4); } return Err("failed"); }
+Result<int, string> doubled(bool good) { int n = fetch(good)?; return Ok(n * 2); }
+int unwrap(Result<int, string> value) { match (value) { Ok n => { return n; }, Err e => { return -1; }, } }
+void init() { assert(unwrap(doubled(true)) == 8); assert(unwrap(doubled(false)) == -1); }

@@ -1,0 +1,2 @@
+int unwrap(optional<int> value) { match (value) { Some n => { return n; }, None => { return 0; }, } }
+void init() { assert(unwrap(Some(3)) == 3); assert(unwrap(None) == 0); }

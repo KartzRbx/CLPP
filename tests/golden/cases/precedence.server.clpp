@@ -1,0 +1,1 @@
+void init() { int n = (1 + 2) * 3; assert(n == 9); bool value = !(true || false); assert(!value); int difference = 9 - (3 - 1); assert(difference == 7); }
