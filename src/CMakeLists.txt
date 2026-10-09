@@ -102,6 +102,8 @@ add_library(clpp_core INTERFACE)
 target_link_libraries(clpp_core INTERFACE clpp_tools clpp_vm clpp_compiler clpp_front clpp_std)
 
 add_executable(clpp cli/main.cpp)
+# The C++20 VM is a separate product from the Rust/Luau compiler.
+set_target_properties(clpp PROPERTIES OUTPUT_NAME "clpp-vm")
 if(WIN32)
   enable_language(RC)
   target_sources(clpp PRIVATE cli/clpp.rc)  # icon + version info in Explorer

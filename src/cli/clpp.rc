@@ -1,4 +1,4 @@
-// Windows resources for clpp.exe: application icon and version information.
+// Windows resources for clpp-vm.exe: application icon and version information.
 #include <winver.h>
 
 1 ICON "../../assets/brand/clpp.ico"
@@ -16,9 +16,9 @@ BEGIN
       VALUE "CompanyName", "CL++"
       VALUE "FileDescription", "CL++ compiler, VM and language server"
       VALUE "FileVersion", "0.10.1"
-      VALUE "InternalName", "clpp"
-      VALUE "OriginalFilename", "clpp.exe"
-      VALUE "ProductName", "CL++"
+      VALUE "InternalName", "clpp-vm"
+      VALUE "OriginalFilename", "clpp-vm.exe"
+      VALUE "ProductName", "CL++ VM"
       VALUE "ProductVersion", "0.10.1"
     END
   END

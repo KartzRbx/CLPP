@@ -1,3 +1,5 @@
+The VM extension discovers `clpp-vm` / `clpp-vm.exe`; it never selects the Rust/Luau `clpp` binary from PATH. Legacy 0.10.1 packages still use the old filename and need an explicit serverPath.
+
 # CL++ for Visual Studio Code
 
 Language support for **CL++** (`.clp`), powered by the CL++ compiler itself (`clpp --lsp`): the editor sees exactly what the compiler sees.
@@ -15,7 +17,7 @@ Language support for **CL++** (`.clp`), powered by the CL++ compiler itself (`cl
 
 ## Requirements
 
-The extension ships with `clpp.exe` for Windows x64. On other systems install CL++ and make sure `clpp` is on `PATH`, or set **`clpp.serverPath`**.
+The extension ships with `clpp-vm.exe` for Windows x64. On other systems install CL++ and make sure `clpp-vm` is on `PATH`, or set **`clpp.serverPath`**.
 
 ## Commands
 

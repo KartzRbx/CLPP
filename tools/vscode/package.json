@@ -1,6 +1,6 @@
 {
   "name": "clpp-language",
-  "displayName": "CL++",
+  "displayName": "CL++ VM",
   "description": "CL++ language support: syntax highlighting, IntelliSense (completion, inherited members, linked modules), hover, go to definition, inline errors, quick fixes, rename, outline and formatting — powered by the CL++ compiler itself.",
   "version": "0.10.1",
   "publisher": "kartzrbx",
@@ -40,7 +40,7 @@
         "clpp.serverPath": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Path to `clpp` / `clpp.exe`. Empty: the binary bundled with the extension, then `PATH`, then `%LOCALAPPDATA%\\Programs\\CLPP\\clpp.exe`."
+          "markdownDescription": "Path to `clpp-vm` / `clpp-vm.exe`. Empty: the binary bundled with the extension, then `PATH`, then `%LOCALAPPDATA%\\Programs\\CLPP-VM\\clpp-vm.exe`."
         }
       }
     },
