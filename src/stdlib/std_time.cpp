@@ -4,6 +4,8 @@
 #include "stdlib/host.hpp"
 
 #include <chrono>
+#include <cmath>
+#include <limits>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
@@ -61,6 +63,8 @@ CLPP_NATIVE(time_sleep) {
     return false;
   }
   const double milliseconds = args[0].number;
+  if (!std::isfinite(milliseconds) || milliseconds > std::numeric_limits<int>::max())
+    return fail(error, "Time.Sleep: duration outside native range");
   if (milliseconds > 0) {
     std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(milliseconds));
   }
@@ -148,33 +152,33 @@ CLPP_NATIVE(fs_make_dir) {
 
 constexpr std::string_view kTimeSource = R"clp(<< @clpp.time: clocks, sleeping and the local date.
 
-func Now() -> float { return time::Now(); }
-func Clock() -> float { return time::Clock(); }
-func Sleep(float milliseconds) { time::Sleep(milliseconds); }
-func Format(string pattern) -> string { return time::Format(pattern); }
-func Date() -> string { return time::Format("%Y-%m-%d"); }
-func TimeOfDay() -> string { return time::Format("%H:%M:%S"); }
-func Year() -> int { return time::Part(0); }
-func Month() -> int { return time::Part(1); }
-func Day() -> int { return time::Part(2); }
-func Hour() -> int { return time::Part(3); }
-func Minute() -> int { return time::Part(4); }
-func Second() -> int { return time::Part(5); }
-func Weekday() -> int { return time::Part(6); }
-func DayOfYear() -> int { return time::Part(7); }
+export float Now() { return time::Now(); }
+export float Clock() { return time::Clock(); }
+export void Sleep(float milliseconds) { time::Sleep(milliseconds); }
+export string Format(string pattern) { return time::Format(pattern); }
+export string Date() { return time::Format("%Y-%m-%d"); }
+export string TimeOfDay() { return time::Format("%H:%M:%S"); }
+export number Year() { return time::Part(0); }
+export number Month() { return time::Part(1); }
+export number Day() { return time::Part(2); }
+export number Hour() { return time::Part(3); }
+export number Minute() { return time::Part(4); }
+export number Second() { return time::Part(5); }
+export number Weekday() { return time::Part(6); }
+export number DayOfYear() { return time::Part(7); }
 )clp";
 
 constexpr std::string_view kFsSource = R"clp(<< @clpp.fs: files. Paths containing ".." are refused, and code inside actor(...) cannot use files.
 
-func read(string path) -> string { return fs::read(path); }
-func size(string path) -> int { return fs::size(path); }
-func list(string path) { return fs::list(path); }
-func write(string path, string text) -> bool { return fs::Write(path, text, 0); }
-func append(string path, string text) -> bool { return fs::Write(path, text, 1); }
-func exists(string path) -> bool { return fs::Exists(path, 0); }
-func isDir(string path) -> bool { return fs::Exists(path, 1); }
-func remove(string path) -> bool { return fs::Remove(path); }
-func makeDir(string path) -> bool { return fs::MakeDir(path); }
+export string read(string path) { return fs::read(path); }
+export number size(string path) { return fs::size(path); }
+export array<string> list(string path) { return fs::list(path); }
+export bool write(string path, string text) { return fs::Write(path, text, 0); }
+export bool append(string path, string text) { return fs::Write(path, text, 1); }
+export bool exists(string path) { return fs::Exists(path, 0); }
+export bool isDir(string path) { return fs::Exists(path, 1); }
+export bool remove(string path) { return fs::Remove(path); }
+export bool makeDir(string path) { return fs::MakeDir(path); }
 )clp";
 
 }  // namespace

@@ -5,7 +5,7 @@
 A condição fica entre parênteses e o corpo entre chaves (as chaves são obrigatórias, mesmo com um só comando).
 
 ```clp
-let hp = 35;
+const auto hp = 35;
 if (hp <= 0) {
   post("derrotado");
 } else if (hp < 50) {
@@ -26,7 +26,8 @@ Uma condição é verdadeira quando é `true`, um número diferente de zero ou u
 Declara uma variável que só existe dentro do `if` e testa o seu valor.
 
 ```clp
-if (let bonus = 5) {
+const auto bonus = 5;
+if (bonus != 0) {
   post("bônus de " .: bonus);
 }
 ```
@@ -40,7 +41,7 @@ bônus de 5
 Repete enquanto a condição for verdadeira.
 
 ```clp
-let mut countdown = 3;
+auto countdown = 3;
 while (countdown > 0) {
   post(countdown);
   countdown--;
@@ -67,13 +68,13 @@ já!
 | um dicionário | cada chave |
 
 ```clp
-for (let i in 3) {
+for (auto i in 3) {
   post("volta " .: i);
 }
-for (let item in list("espada", "escudo")) {
+for (auto item in list("espada", "escudo")) {
   post(item);
 }
-for (let letter in "olá") {
+for (auto letter in "olá") {
   post(letter);
 }
 ```
@@ -94,7 +95,7 @@ l
 `for (início; condição; passo)`, para quando você precisa controlar o contador.
 
 ```clp
-for (let mut i = 10; i > 0; i = i - 4) {
+for (auto i = 10; i > 0; i = i - 4) {
   post(i);
 }
 ```
@@ -110,7 +111,7 @@ for (let mut i = 10; i > 0; i = i - 4) {
 `break` sai do laço. `continue` pula para a próxima volta. Os dois funcionam em `while`, `for … in` e `for` no estilo C.
 
 ```clp
-for (let i in 10) {
+for (auto i in 10) {
   if (i % 2 == 0) {
     continue;
   }
@@ -133,7 +134,7 @@ for (let i in 10) {
 Compara um valor com cada `case`. Não existe "cair" para o próximo caso: cada caso termina sozinho. `break` dentro do `switch` é aceito e sai dele. `default` pega o resto.
 
 ```clp
-let key = 2;
+const auto key = 2;
 switch (key) {
   case 1: post("pular"); break;
   case 2: post("correr"); break;
@@ -150,12 +151,12 @@ correr
 `match` é a forma mais poderosa de decisão. Cada braço é `padrão ~> comando;`. O primeiro padrão que combina é executado.
 
 ```clp
-let score = 85;
+const auto score = 85;
 match (score) {
-  100 ~> post("perfeito");
-  _ guard score >= 80 ~> post("ótimo");
-  _ guard score >= 50 ~> post("bom");
-  _ ~> post("tente de novo");
+  100 => post("perfeito");
+  _ guard score >= 80 => post("ótimo");
+  _ guard score >= 50 => post("bom");
+  _ => post("tente de novo");
 }
 ```
 
@@ -170,12 +171,12 @@ match (score) {
 Com enums, o compilador exige que **todos os casos** sejam tratados (ou que exista `_`). Assim, ao criar um caso novo, o compilador mostra cada `match` que precisa ser atualizado.
 
 ```clp
-enum State { Idle, Running, Jumping }
-let state = State.Running;
+enum class State { Idle, Running, Jumping }
+const auto state = State::Running;
 match (state) {
-  Idle ~> post("parado");
-  Running ~> post("correndo");
-  Jumping ~> post("no ar");
+  State::Idle => post("parado");
+  State::Running => post("correndo");
+  State::Jumping => post("no ar");
 }
 ```
 
@@ -184,11 +185,11 @@ correndo
 ```
 
 ```clp erro
-enum State { Idle, Running, Jumping }
-let state = State.Idle;
+enum class State { Idle, Running, Jumping }
+const auto state = State::Idle;
 match (state) {
-  Idle ~> post("parado");
-  Running ~> post("correndo");
+  State::Idle => post("parado");
+  State::Running => post("correndo");
 }
 ```
 

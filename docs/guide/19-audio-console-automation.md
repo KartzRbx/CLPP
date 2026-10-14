@@ -5,6 +5,10 @@ automation. Each is a module imported with `link @clpp.<name>`.
 
 ## `@clpp.audio`: sound
 
+All arguments are required: Tone takes frequency, seconds and wave; Sweep takes start/end frequency, seconds and wave; Play takes sound, volume, pan, pitch and loop. For example, use `Audio.Tone(440, 0.1, "sine")` and `Audio.Play(sound, 1, 0, 1, false)`.
+
+The execution owns its decoded sounds, voices, mixer thread and audio device. After the program and its workers finish, the VM stops playback, joins the mixer thread, closes the device and frees sample/voice storage, including after an unhandled error. Sound and voice handles must not be reused in a later execution. Use Stop or StopAll to stop playback earlier; ending a lexical block does not release these handles.
+
 Sounds are decoded once into 44.1 kHz stereo and mixed in software; on Windows the mix goes to the
 default device through `waveOut` (no extra DLLs). Without a device — other systems for now,
 `CLPP_HEADLESS`, or no sound card — everything still works except that nothing is heard, so
@@ -12,13 +16,13 @@ programs and tests behave the same. `Audio.SaveWav` writes any sound to a `.wav`
 
 ```clp
 link @clpp.audio as Audio;
-let coin = Audio.Sweep(880, 1760, 0.12, "square");   << a rising arcade "coin"
-let note = Audio.Tone(440, 0.3);                     << a 440 Hz sine for 0.3 s
+number coin = Audio.Sweep(880, 1760, 0.12, "square");   << a rising arcade "coin"
+number note = Audio.Tone(440, 0.3, "sine");                     << a 440 Hz sine for 0.3 s
 post(Audio.Duration(coin) > 0);
 post(Audio.SaveWav(note, "note.wav"));
 ```
 
-```saida
+```output
 true
 true
 ```
@@ -35,14 +39,46 @@ true
 | `Audio.MasterVolume(v)`, `Audio.Available()`, `Audio.Playing()` | master gain, device present, voices playing |
 | `Audio.Duration(sound)`, `Audio.SaveWav(sound, path)` | length in seconds, export to WAV |
 
-```clp trecho
+```clp target fragment
 link @clpp.audio as Audio;
-let music = Audio.Load("theme.wav");
-let voice = Audio.Play(music, volume: 0.6, loop: true);
-let shot = Audio.Tone(220, 0.08, "square");
+number music = Audio.Load("theme.wav");
+number voice = Audio.Play(music, 0.6, 0, 1, true);
+number shot = Audio.Tone(220, 0.08, "square");
 << later, on an event:
-Audio.Play(shot, pan: -0.3);
+Audio.Play(shot, 1, -0.3, 1, false);
 Audio.SetVolume(voice, 0.3);
+```
+
+## Audio validation
+
+Time.Sleep and Input.Wait reject non-finite durations and positive delays beyond
+2,147,483,647 milliseconds. Input coordinates are checked against native signed
+32-bit ranges before desktop operations; relative movement also checks the
+resulting position, and scrolling checks its scaled wheel delta.
+
+Audio sound/voice handles are validated before native integer conversions.
+Unknown or out-of-range sound handles fail in Play, Duration and SaveWav.
+Stopping an unknown voice remains harmless, and IsPlaying returns false.
+Numeric playback/control arguments and tone parameters must be finite. Tone
+frequencies must stay within the 44,100 Hz sample rate in either direction;
+synthesis duration remains bounded to 60 seconds.
+
+## Typed JSON values
+
+Json.ParseValue returns a recursive Json.Value. Its Type discriminator is Json.Kind::Null, Boolean, Integer, Decimal, Text, Array or Object. Read the matching Boolean, Integer, Decimal or Text field, Items array, or Entries dictionary. Inactive fields have neutral defaults; inspect Type before selecting a payload. Json.StringifyValue preserves booleans, signed 64-bit integers and decimal categories (including 1.0 and negative zero). It rejects cycles, excessive nesting and invalid payloads. Integer overflow and malformed Unicode surrogate escapes fail parsing with positions. The older Parse/Get APIs remain explicitly dynamic compatibility interfaces.
+
+```clp
+link @clpp.json as Json;
+auto value = Json.ParseValue("{\"enabled\":true,\"score\":9007199254740993}");
+post(value.Entries["enabled"].Boolean);
+post(value.Entries["score"].Integer);
+post(Json.StringifyValue(value));
+```
+
+```output
+true
+9007199254740993
+{"enabled":true,"score":9007199254740993}
 ```
 
 ## `@clpp.io`: the console
@@ -54,12 +90,13 @@ color and cursor calls write nothing, so logs stay clean.
 ```clp
 link @clpp.io as Io;
 Io.Print("Loading");
-for (let dot in 3) { Io.Print("."); }
+number dot = 0;
+for (dot = 0; dot < 3; dot += 1) { Io.Print("."); }
 Io.Print("\n");
 post("done");
 ```
 
-```saida
+```output
 Loading...
 done
 ```
@@ -79,13 +116,14 @@ done
 Color names: `black red green yellow blue magenta cyan white`, their `bright*` variants, and
 `bold` / `underline`. A colored progress bar in the terminal:
 
-```clp trecho
+```clp target fragment
 link @clpp.io as Io;
-func bar(float fraction) {
+void bar(float fraction) {
   Io.ClearLine();
   Io.Color("green");
-  let filled = fraction * 20;
-  for (let i in 20) { Io.Print(i < filled ? "█" : "·"); }
+  float filled = fraction * 20;
+  number i = 0;
+  for (i = 0; i < 20; i += 1) { Io.Print(i < filled ? "█" : "·"); }
   Io.Reset();
   Io.Print(" " .: (fraction * 100) .: "%");
 }
@@ -99,12 +137,12 @@ pyautogui. Everything acts **visibly** in your own session: the cursor moves whe
 and keys go to the focused window. Every function is refused inside `actor(...)`. Windows is the
 full implementation; other systems report that a call is not supported yet.
 
-```clp trecho
+```clp target fragment
 link @clpp.input as Input;
 post(Input.ScreenWidth() .: "x" .: Input.ScreenHeight());
 post(Input.MouseX() .: ", " .: Input.MouseY());
-let color = Input.Pixel(10, 10);     << the screen pixel at (10, 10), 0xRRGGBB
-Input.ClickAt(color >= 0 ? 100 : 0, 100);
+number color = Input.Pixel(10, 10);     << the screen pixel at (10, 10), 0xRRGGBB
+Input.ClickAt(color >= 0 ? 100 : 0, 100, 0);
 ```
 
 | Function | Does |
@@ -125,7 +163,7 @@ Input.ClickAt(color >= 0 ? 100 : 0, 100);
 
 A small macro — open Run, type a command, press Enter:
 
-```clp trecho
+```clp fragment
 link @clpp.input as Input;
 Input.Hotkey("win+r");
 Input.Wait(300);
@@ -135,31 +173,30 @@ Input.Press("enter");
 
 Reading a pixel to wait for something on screen, then clicking it:
 
-```clp trecho
+```clp target fragment
 link @clpp.input as Input;
 while (Input.Pixel(500, 400) != 0x2ECC71) {   << wait for the button to turn green
   Input.Wait(50);
 }
-Input.ClickAt(500, 400);
+Input.ClickAt(500, 400, 0);
 ```
 
 ## `@clpp.json`: JSON
 
-Objects become dictionaries, arrays become lists, and `Get`/`Set`/`Has` reach into a value by a
-dotted path.
+Objects become dictionaries and arrays become lists. `Get` and `Has` accept a dotted path. `Set` changes a direct key or index and returns a changed copy; it does not traverse a dotted path. JSON null and booleans retain distinct runtime values. Use ParseValue/StringifyValue above for the dedicated typed representation, including exact integer and decimal categories; Parse/Get remain explicitly dynamic APIs.
 
 ```clp
 link @clpp.json as Json;
-let data = Json.Parse("{\"name\": \"Ada\", \"hp\": 90, \"items\": [\"sword\", \"map\"]}");
+auto data = Json.Parse("{\"name\": \"Ada\", \"hp\": 90, \"items\": [\"sword\", \"map\"]}");
 post(data["name"]);
 post(Json.Get(data, "items.1"));
 post(Json.Has(data, "pos"));
-let mut save = Json.Object();
-save = Json.Set(save, "level", 7);
-post(Json.Stringify(save));
+auto save = Json.Object();
+auto updatedSave = Json.Set(save, "level", 7);
+post(Json.Stringify(updatedSave));
 ```
 
-```saida
+```output
 Ada
 map
 false
@@ -176,11 +213,11 @@ false
 
 JSON pairs with `@clpp.fs` to load and save data files:
 
-```clp trecho
+```clp fragment
 link @clpp.json as Json;
 link @clpp.fs as Fs;
-let config = Json.Parse(Fs.read("config.json"));
-let volume = Json.Get(config, "audio.volume");
+auto config = Json.Parse(Fs.read("config.json"));
+auto volume = Json.Get(config, "audio.volume");
 Fs.write("save.json", Json.Pretty(Json.Set(Json.Object(), "score", 1200)));
 ```
 
@@ -193,7 +230,7 @@ post(Time.Clock() >= 0);      << seconds since the program started (monotonic)
 post(Time.Year() >= 2024);
 ```
 
-```saida
+```output
 true
 true
 true
@@ -217,7 +254,7 @@ Fs.append("greeting.txt", " world");
 post(Fs.read("greeting.txt"));
 ```
 
-```saida
+```output
 true
 hello
 true

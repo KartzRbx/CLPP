@@ -8,6 +8,8 @@
 
 namespace clpp::stdlib::text {
 
+void reset();
+
 struct FontChoice {
   std::string family{"Segoe UI"};
   bool bold{false};

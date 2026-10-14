@@ -1,33 +1,32 @@
-abstract struct Animal {
-  private int secret;
-  func reveal() { return self.secret; }
-  abstract func speak() {}
+abstract def Animal {
+  private number secret;
+  number reveal() { return @this.secret; }
+  abstract number speak();
 }
-struct Dog : Animal {
-  int bones;
-  override func speak() { return self.bones; }
+def Dog : Animal {
+  number bones;
+  override number speak() { return @this.bones; }
 }
-struct Flyer { int lift; }
-struct Runner { int pace; }
-struct Hero : Flyer, Runner { int power; }
-struct Box<T> { T item; }
-enum Msg { Text(string), Num(int) }
-func id<T>(T value) { return value; }
-Dog pet = Dog(9, 4);
+def Flyer { number lift; }
+abstract def Runner { abstract number Pace(); }
+def Hero : Flyer, Runner { number pace; number power; number Pace() { return @this.pace; } }
+def Box<T> { T item; }
+enum class MsgKind { Text, Num } def Msg { MsgKind Kind; string Text = ""; number Num = 0; }
+template <typename T> T id(T value) { return value; }
+Dog pet = Dog { secret = 9, bones = 4 };
 post(pet.reveal());
 post(pet.speak());
-Hero hero = Hero(3, 4, 5);
+Hero hero = Hero { lift = 3, pace = 4, power = 5 };
 post(hero.lift);
 post(hero.power);
-Box<int> box = Box<int>(8);
+Box<number> box = Box<number> { item = 8 };
 post(box.item);
-post(id<int>(3));
-Msg note = Msg.Text("hi");
-match (note) { Text(s) ~> post(s); Num(n) ~> post(n); }
-Option<int> item = Some(6);
-match (item) { Some(v) ~> post(v); None ~> post(0); }
-Result<int, string> bad = Err("no");
-match (bad) { Ok(v) ~> post(v); Err(e) ~> post(e); }
-let x = 1;
-if (1) { let x = 2; post(x); }
+post(id<number>(3));
+Msg note = Msg { Kind = MsgKind::Text, Text = "hi" };
+match (note.Kind) { MsgKind::Text => post(note.Text); MsgKind::Num => post(note.Num); }
+optional<number> item = 6;
+if (item != null) { post(item); } else { post(0); }
+try { report("no"); } catch (error) { post(error); }
+const auto x = 1;
+if (1) { const auto x = 2; post(x); }
 post(x);

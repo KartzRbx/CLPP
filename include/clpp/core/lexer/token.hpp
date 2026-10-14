@@ -27,9 +27,8 @@ enum class TokenType {
 
   // Types & values
   KwVoid,
-  KwInt,
+  KwNumber,
   KwFloat,
-  KwDouble,
   KwString,
   KwBool,
   KwAuto,
@@ -40,16 +39,19 @@ enum class TokenType {
   KwFalse,
 
   // Declarations
+  KwTemplate,
+  KwTypename,
+  KwDef,
+  KwExport,
   KwStruct,
   KwConst,
   KwStatic,
+  KwStaticCast,
   KwConstexpr,
   KwNew,
   KwLink,
   KwAs,
   KwFrom,
-  KwLet,
-  KwMut,
   KwJoin,
   KwThread,
   KwAtomic,
@@ -60,14 +62,17 @@ enum class TokenType {
   KwImport,
   KwUsing,
   KwEnum,
+  KwClass,
   KwExtern,
   KwAbstract,
   KwOverride,
+  KwPragma,
   KwPrivate,
 
   // Control flow
   KwIf,
   KwElse,
+  KwDo,
   KwWhile,
   KwFor,
   KwIn,
@@ -169,11 +174,9 @@ enum class TokenType {
   Ampersand,
   Caret,
   BitNot,
-  Mode,
 
   SignalConnect,
 
-  DocComment,
 };
 
 struct Token {

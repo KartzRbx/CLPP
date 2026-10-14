@@ -1,0 +1,7 @@
+/target/
+/extension.wasm
+/grammars/
+/grammar/node_modules/
+/grammar/src/*
+!/grammar/src/scanner.c
+

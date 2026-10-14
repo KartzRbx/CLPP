@@ -49,23 +49,23 @@ int main() {
         ok = expect_output(mark + "post(" + std::to_string(n) + " + 2 * 3);\n", std::to_string(n + 6) + "\n");
         break;
       case 1:
-        ok = expect_output(mark + "let mut x = " + std::to_string(n) + ";\nx = x + 1;\npost(x);\n",
+        ok = expect_output(mark + "auto x = " + std::to_string(n) + ";\nx = x + 1;\npost(x);\n",
                            std::to_string(n + 1) + "\n");
         break;
       case 2: {
         const int limit = n % 5;
         const int sum = limit * (limit - 1) / 2;
-        ok = expect_output(mark + "let mut s = 0;\nfor (let i in " + std::to_string(limit) +
+        ok = expect_output(mark + "auto s = 0;\nfor (auto i in " + std::to_string(limit) +
                                ") { s = s + i; }\npost(s);\n",
                            std::to_string(sum) + "\n");
         break;
       }
       case 3:
-        ok = expect_output(mark + "constexpr x = " + std::to_string(n) + " + 2;\npost(x);\n",
+        ok = expect_output(mark + "constexpr number x = " + std::to_string(n) + " + 2;\npost(x);\n",
                            std::to_string(n + 2) + "\n");
         break;
       case 4:
-        ok = expect_fail(mark + "constexpr x = name;\n");
+        ok = expect_fail(mark + "constexpr number x = name;\n");
         break;
       case 5:
         ok = expect_output(mark + "post(Vector2(" + std::to_string(n) + ", " + std::to_string(n + 1) + ")[1]);\n",
@@ -89,40 +89,40 @@ int main() {
         ok = expect_output(mark + "auto x = " + std::to_string(n) + ";\npost(x);\n", std::to_string(n) + "\n");
         break;
       case 11:
-        ok = expect_output(mark + "observable x = " + std::to_string(n) + ";\nx = x + 1;\npost(x);\n",
+        ok = expect_output(mark + "observable number x = " + std::to_string(n) + ";\nx = x + 1;\npost(x);\n",
                            std::to_string(n + 1) + "\n");
         break;
       case 12:
-        ok = expect_output(mark + "enum Color { Red, Green }\nlet color = " +
-                               std::string(n % 2 == 0 ? "Color.Red" : "Color.Green") +
-                               ";\nmatch (color) { Red ~> post(0); Green ~> post(1); }\n",
+        ok = expect_output(mark + "enum class Color { Red, Green }\nconst auto color = " +
+                               std::string(n % 2 == 0 ? "Color::Red" : "Color::Green") +
+                               ";\nmatch (color) { Red => post(0); Green => post(1); }\n",
                            std::string(n % 2 == 0 ? "0\n" : "1\n"));
         break;
       case 13:
-        ok = expect_fail(mark + "let x = " + std::to_string(n) + ";\nx = 1;\n");
+        ok = expect_fail(mark + "const auto x = " + std::to_string(n) + ";\nx = 1;\n");
         break;
       case 14:
-        ok = expect_output(mark + "signal ping;\nfunc show(int x) { post(x); }\nping ~> show;\nping(" +
+        ok = expect_output(mark + "signal<number> ping;\nvoid show(number x) { post(x); }\nping~>Connect(show);\nping(" +
                                std::to_string(n) + ");\n",
                            std::to_string(n) + "\n");
         break;
       case 15:
-        ok = expect_output(mark + "struct Point { int x; int y; }\npost(new Point(" + std::to_string(n) +
-                               ", 1).x);\n",
+        ok = expect_output(mark + "def Point { number x; number y; }\npost(Point { x = " + std::to_string(n) +
+                               ", y = 1 }.x);\n",
                            std::to_string(n) + "\n");
         break;
       case 16:
-        ok = expect_output(mark + "@flag = " + std::to_string(n) + ";\npost(@this::flag);\n", std::to_string(n) + "\n");
+        ok = expect_output(mark + "number flag = " + std::to_string(n) + ";\npost(flag);\n", std::to_string(n) + "\n");
         break;
       case 17: {
         const int extra = n % 3;
-        ok = expect_output(mark + "let mut total = 0;\nfor (let mut k = 0; k < 3; k += 1) { total = total + k; }\npost(total + " +
+        ok = expect_output(mark + "auto total = 0;\nfor (auto k = 0; k < 3; k += 1) { total = total + k; }\npost(total + " +
                                std::to_string(extra) + ");\n",
                            std::to_string(3 + extra) + "\n");
         break;
       }
       case 18:
-        ok = expect_output(mark + "import @clpp.math as Math;\nusing Math.abs;\npost(abs(0 - " + std::to_string(n + 1) +
+        ok = expect_output(mark + "link @clpp.math as Math;\n\npost(Math.abs(0 - " + std::to_string(n + 1) +
                                "));\n",
                            std::to_string(n + 1) + "\n");
         break;

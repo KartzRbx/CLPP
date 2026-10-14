@@ -11,11 +11,13 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
 option(CLPP_BUILD_TESTS "Build Catch2 unit tests" ON)
 option(CLPP_SANITIZE_ADDRESS "Enable AddressSanitizer (Clang/GCC/MSVC)" OFF)
+option(CLPP_SANITIZE_UNDEFINED "Enable UndefinedBehaviorSanitizer (Clang/GCC)" OFF)
 option(CLPP_ENABLE_CLANG_TIDY "Run clang-tidy during compilation" OFF)
 
 include(CompilerWarnings)
 include(Sanitizers)
 include(ClangTidy)
+include(GNUInstallDirs)
 
 add_subdirectory(src)
 
@@ -23,3 +25,11 @@ if(CLPP_BUILD_TESTS)
   enable_testing()
   add_subdirectory(tests)
 endif()
+
+install(FILES LICENSE DESTINATION ${CMAKE_INSTALL_DATADIR}/clpp COMPONENT Runtime)
+set(CPACK_PACKAGE_NAME "clpp")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(CPACK_PACKAGE_VENDOR "KartzRbx")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+set(CPACK_GENERATOR "ZIP")
+include(CPack)

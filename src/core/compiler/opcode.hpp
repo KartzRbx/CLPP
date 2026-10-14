@@ -89,13 +89,36 @@ enum class Opcode : std::uint8_t {
   SetField = 82,  // [object, value] -> [object with field `extra` replaced]
   SetIndex = 83,  // [object, index, value] -> [object with the element replaced]
   Over = 84,      // [a, b] -> [a, b, a]
-  MarkSelf = 85,  // in a method that changes self: remember the final self for the caller
-  SelfBack = 86,  // after a method call on a variable: write the changed self back into local `imm`
   ListPush = 87,    // local `imm` (a list) gets [value] appended
   ListPop = 88,     // [] -> [last element of local `imm`], removed
   ListInsert = 89,  // [index, value] -> [], inserted into local `imm`
   ListRemove = 90,  // [index or key] -> [removed element], from local `imm` (list or dictionary)
   Host = 91,        // like Axiom: imm = (arity << 8) | id into the host library registry (window, gfx, ui, json...)
+  ConvertNumber = 92,
+  ConvertFloat = 93,
+  ConvertOptionalFloat = 94,
+  Freeze = 95,
+  PushItem = 96,
+  PopItem = 97,
+  InsertItem = 98,
+  RemoveItem = 99,
+  MakeClosure = 100,
+  Invoke = 101,
+  InvokeThread = 102,
+  BoxLocal = 103,
+  LoadCell = 104,
+  StoreCell = 105,
+  ClearCell = 106,
+  RawLoad = 107,
+  Observe = 108,
+  Globals = 109,
+  LoadGlobal = 110,
+  StoreGlobal = 111,
+  InitGlobal = 112,
+  InitConstGlobal = 113,
+  RawGlobal = 114,
+  MakeBoundMethod = 115,
+  Event = 116,
 };
 
 }  // namespace clpp::compiler

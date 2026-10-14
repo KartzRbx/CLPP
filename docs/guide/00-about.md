@@ -1,25 +1,30 @@
 # About CL++
 
-## Why CL++ was created
+CL++ is a language for games and tools. Its author wants readable typed code, data definitions, composable game logic, and useful compiler feedback. A beginner should be able to read the syntax before learning any library.
 
-Kartz Dev wanted a language closer to the needs of software development while retaining a professional structure. The initial idea was to bring a C++-like programming experience to Roblox development, but C++ syntax and workflow did not fit that setting well. CL++ began as an original language with clearer syntax and the capabilities needed for serious programs. Its current implementation is a general-purpose compiler and virtual machine with game-oriented libraries.
+## What kind of language is it?
+
+CL++ is a general-purpose, high-level, multiparadigm language with static typing, inference, and its own VM. It has an imperative and procedural foundation, with object, event and functional facilities in the language design. Event-driven programming is an option for applications, not the only execution style. CL++ is not a markup language; declaring a UI through a library is still programming in CL++.
+
+The [handbook introduction](../handbook/00-o-que-e-o-clpp.md) explains this classification and separates current compiler support from pending features.
+
+## Language first
+
+The target language uses typed variables, `const` for fixed values, `def` for types, functions with their return type before the name, typed loops, and `.clp` modules without headers. The author's handwritten Combat program is the reference for this writing style.
+
+Start with [Learn CL++ from zero](00-language-tour.md), then follow the separate lessons for declarations, operators, flow, functions, types, and modules. The [syntax map](../reference/syntax.md) and [lexer reference](../reference/lexer.md) explain the writing rules directly.
 
 ## What you can build
 
-- **Games and prototypes:** vectors, math helpers, frame loops, drawing, input, sound, and UI are available from built-in modules.
-- **Desktop tools:** use windows, widgets, JSON, files, and console I/O for editors, utilities, and data tools.
-- **Automation:** drive keyboard and mouse actions, inspect screen pixels, and combine them with file and JSON operations.
-- **Embedded scripting:** a C++ host can compile CL++ modules, supply a module loader, and expose host functions.
-- **Learning and experimentation:** readable syntax, explicit control flow, a REPL, and editor diagnostics make small programs easy to inspect.
+- Game logic: movement, combat, abilities, state machines, and events.
+- Playable prototypes: windows, drawing, input, UI, and sound.
+- Desktop tools: forms, files, JSON, and console operations.
+- Automation and embedded applications where host facilities are available.
 
-## How it works
+The [standard library](14-standard-library.md) explains the existing APIs separately from language syntax. Complete project chapters show how the intended language organizes application code.
 
-The compiler reads `.clp` modules, checks names and types, emits verified bytecode, and runs it on a register virtual machine. The language supports type inference, value semantics, structs with inheritance, pattern matching, tasks, events, and a standard library. The compiler also powers the VS Code language server, so editor feedback uses the same analysis as command-line compilation.
+## A compiler update is pending
 
-CL++ aims to make common game and tool code concise without hiding control flow or type errors. Use value types when independent copies are useful; use `move` for large values you want to transfer. Use the built-in graphics and UI modules for self-contained apps. For a workload needing native libraries or engine integration, embed the core library and expose host functions through `extern func`.
+The current repository uses C++20, bytecode, and a VM, but portions of its public syntax still reflect an older design. This site documents the author's target language first. Target specification blocks do not count as passing executable tests; they do not claim the complete example already runs. See [Implementation status](../reference/status.md).
 
-## Performance and reliability
-
-The VM reuses function frames, handles numeric values efficiently, avoids unnecessary copies for indexed reads, and specializes integer arithmetic. Bytecode verification, bounds checks, recursion limits, and sanitizer testing address common failures. See [Performance](16-performance.md) for measured workloads, hardware, and reproduction steps; the published numbers describe specific benchmarks rather than a universal speed comparison.
-
-Start with [Getting started](01-getting-started.md), then use the rest of the guide as a path from syntax to real applications.
+The VM's existing historical benchmarks are described in [Performance](16-performance.md). They do not measure a compiler implementation of all the target syntax.

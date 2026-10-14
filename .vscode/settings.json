@@ -11,6 +11,7 @@
   "clangd.arguments": [
     "--background-index",
     "--clang-tidy",
+    "--query-driver=C:/msys64/ucrt64/bin/g++.exe,C:/msys64/ucrt64/bin/gcc.exe",
     "--header-insertion=iwyu"
   ],
 
@@ -19,6 +20,6 @@
   },
 
   "[clpp]": {
-    "editor.semanticHighlighting.enabled": false
+    "editor.semanticHighlighting.enabled": true
   }
 }

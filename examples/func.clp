@@ -1,4 +1,4 @@
-func three() {
+number three() {
     return 1 + 2;
 }
 

@@ -1,3 +1,3 @@
-func add(a, b) {
+export number add(number a, number b) {
   return a + b;
 }

@@ -67,7 +67,7 @@ int main() {
   failures += run_feature("unary", [](const int i) {
     const int n = i % 97;
     if (i % 2 == 0) {
-      return expect_output("let x = " + std::to_string(n + 1) + ";\npost(-x);\n", "-" + std::to_string(n + 1) + "\n");
+      return expect_output("const auto x = " + std::to_string(n + 1) + ";\npost(-x);\n", "-" + std::to_string(n + 1) + "\n");
     }
     return expect_output("post(!" + std::to_string(n % 2) + ");\n", std::string(n % 2 == 0 ? "1\n" : "0\n"));
   });
@@ -76,19 +76,19 @@ int main() {
     const int base = i % 20;
     const int op = i % 5;
     if (op == 0) {
-      return expect_output("let mut x = " + std::to_string(base) + ";\nx += 3;\npost(x);\n", std::to_string(base + 3) + "\n");
+      return expect_output("auto x = " + std::to_string(base) + ";\nx += 3;\npost(x);\n", std::to_string(base + 3) + "\n");
     }
     if (op == 1) {
-      return expect_output("let mut x = " + std::to_string(base + 5) + ";\nx -= 2;\npost(x);\n",
+      return expect_output("auto x = " + std::to_string(base + 5) + ";\nx -= 2;\npost(x);\n",
                            std::to_string(base + 3) + "\n");
     }
     if (op == 2) {
-      return expect_output("let mut x = " + std::to_string(base) + ";\nx *= 2;\npost(x);\n", std::to_string(base * 2) + "\n");
+      return expect_output("auto x = " + std::to_string(base) + ";\nx *= 2;\npost(x);\n", std::to_string(base * 2) + "\n");
     }
     if (op == 3) {
-      return expect_output("let mut x = " + std::to_string(base * 2) + ";\nx /= 2;\npost(x);\n", std::to_string(base) + "\n");
+      return expect_output("auto x = " + std::to_string(base * 2) + ";\nx /= 2;\npost(x);\n", std::to_string(base) + "\n");
     }
-    return expect_output("let mut x = " + std::to_string(base + 5) + ";\nx %= 5;\npost(x);\n",
+    return expect_output("auto x = " + std::to_string(base + 5) + ";\nx %= 5;\npost(x);\n",
                          std::to_string((base + 5) % 5) + "\n");
   });
 
@@ -108,7 +108,7 @@ int main() {
   failures += run_feature("for", [](const int i) {
     const int extra = i % 3;
     return expect_output(
-        "let mut total = 0;\nfor (let mut k = 0; k < 4; k += 1) { total = total + k; }\npost(total + " +
+        "auto total = 0;\nfor (auto k = 0; k < 4; k += 1) { total = total + k; }\npost(total + " +
             std::to_string(extra) + ");\n",
         std::to_string(6 + extra) + "\n");
   });
@@ -116,7 +116,7 @@ int main() {
   failures += run_feature("break", [](const int i) {
     const int stop = i % 7;
     return expect_output(
-        "let mut seen = 0;\nlet mut k = 0;\nwhile (k < 20) {\n  if (k == " + std::to_string(stop) +
+        "auto seen = 0;\nauto k = 0;\nwhile (k < 20) {\n  if (k == " + std::to_string(stop) +
             ") { break; }\n  seen = seen + 1;\n  k = k + 1;\n}\npost(seen);\n",
         std::to_string(stop) + "\n");
   });
@@ -125,7 +125,7 @@ int main() {
     const int arm = i % 4;
     const int expected = arm == 0 ? 10 : arm == 1 ? 20 : arm == 2 ? 30 : 40;
     return expect_output(
-        "let m = " + std::to_string(arm) +
+        "const auto m = " + std::to_string(arm) +
             ";\nswitch (m) {\n  case 0: post(10); break; post(99);\n  case 1: post(20); break; post(99);\n"
             "  case 2: post(30); break; post(99);\n  default: post(40); break; post(99);\n}\n",
         std::to_string(expected) + "\n");
@@ -133,10 +133,10 @@ int main() {
 
   failures += run_feature("const", [](const int i) {
     if (i % 5 == 0) {
-      return expect_fail("const x = 1;\nx = " + std::to_string(i) + ";\n");
+      return expect_fail("const auto x = 1;\nx = " + std::to_string(i) + ";\n");
     }
     const int n = i % 97;
-    return expect_output("const x = " + std::to_string(n) + ";\npost(x);\n", std::to_string(n) + "\n");
+    return expect_output("const auto x = " + std::to_string(n) + ";\npost(x);\n", std::to_string(n) + "\n");
   });
 
   failures += run_feature("os", [](const int i) {

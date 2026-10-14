@@ -71,11 +71,11 @@ bool std_apply(const std::uint8_t id, const Value* args, const std::uint8_t arit
       return bad(error);
     }
     std::string joined;
-    for (std::size_t index = 0; index < args[0].fields.size(); ++index) {
+    for (std::size_t index = 0; index < args[0].field_count(); ++index) {
       if (index != 0) {
         joined += args[1].text;
       }
-      const Value& part = args[0].fields[index];
+      const Value& part = args[0].field(index);
       joined += part.is_string() ? part.text : part.is_number() ? format_plain(part.number) : std::string{};
     }
     out = Value::string_of(std::move(joined));
@@ -139,7 +139,7 @@ bool std_apply(const std::uint8_t id, const Value* args, const std::uint8_t arit
     const bool hit = part.size() <= text.size() &&
                      (id == 9 ? text.compare(0, part.size(), part) == 0
                               : text.compare(text.size() - part.size(), part.size(), part) == 0);
-    out = Value::number_of(hit ? 1 : 0);
+    out = Value::boolean_of(hit);
     return true;
   }
   if (id == 11) {  // repeat(text, count)
@@ -199,7 +199,7 @@ bool std_apply(const std::uint8_t id, const Value* args, const std::uint8_t arit
     if (arity != 2 || !args[1].is_string()) {
       return bad(error);
     }
-    out = Value::number_of(text.find(args[1].text) == std::string::npos ? 0 : 1);
+    out = Value::boolean_of(text.find(args[1].text) != std::string::npos);
     return true;
   }
   if (id == 4) {

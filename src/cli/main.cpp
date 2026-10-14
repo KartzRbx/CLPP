@@ -31,6 +31,7 @@ int main(int argc, char* argv[]) {
 #endif
   const auto print_help = [](std::ostream& out) {
     out << "Usage: clpp <script.clp> [args...]\n";
+    out << "       clpp --check <script.clp>\n";
     out << "       clpp --repl\n";
     out << "       clpp --lsp\n";
     out << "       clpp --help\n";
@@ -41,7 +42,9 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  const std::string_view arg = argv[1];
+  const bool check_only = std::string_view(argv[1]) == "--check";
+  if (check_only && argc < 3) { print_help(std::cerr); return 1; }
+  const std::string_view arg = argv[check_only ? 2 : 1];
   if (arg == "--help") {
     print_help(std::cout);
     return 0;
@@ -86,6 +89,7 @@ int main(int argc, char* argv[]) {
     }
     return 1;
   }
+  if (check_only) return 0;
 
   clpp::VirtualMachine vm;
   vm.set_output(std::cout);

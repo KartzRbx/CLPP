@@ -1,0 +1,13 @@
+{
+  "name": "tree-sitter-clpp",
+  "version": "0.1.0",
+  "private": true,
+  "devDependencies": {
+    "jsonc-parser": "3.3.1",
+    "tree-sitter-cli": "0.25.10"
+  },
+  "scripts": {
+    "generate": "tree-sitter generate --abi 15",
+    "test": "tree-sitter test"
+  }
+}

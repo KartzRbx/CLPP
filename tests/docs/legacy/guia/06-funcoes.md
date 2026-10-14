@@ -3,7 +3,7 @@
 ## Declarar e chamar
 
 ```clp
-func add(int a, int b) -> int {
+number add(number a, number b) {
   return a + b;
 }
 post(add(2, 3));
@@ -13,16 +13,16 @@ post(add(2, 3));
 5
 ```
 
-- Os tipos dos parâmetros (`int a`) e do retorno (`-> int`) são opcionais. Sem eles, o compilador infere o que puder.
+- Os tipos dos parâmetros (`number a`) e do retorno (`-> number`) são opcionais. Sem eles, o compilador infere o que puder.
 - Funções podem ser declaradas depois de serem usadas: não existe declaração antecipada nem arquivo de cabeçalho.
 - `-> void` (ou nada) indica que a função não devolve valor.
 
 ```clp
 post(square(7));   << usada antes da declaração
 
-func square(int n) -> int { return n * n; }
+number square(number n) { return n * n; }
 
-func log(string message) -> void {
+void log(string message) {
   post("[log] " .: message);
 }
 log("pronto");
@@ -36,7 +36,7 @@ log("pronto");
 O compilador confere que toda função com tipo de retorno devolve um valor em todos os caminhos, e avisa código inalcançável depois de um `return`.
 
 ```clp erro
-func sign(int n) -> int {
+number sign(number n) {
   if (n > 0) { return 1; }
 }
 ```
@@ -45,14 +45,14 @@ func sign(int n) -> int {
 missing return
 ```
 
-## Parâmetros com valor padrão
+## Argumentos explícitos
 
 ```clp
-func greet(string name = "mundo", string mark = "!") -> string {
+string greet(string name, string mark) {
   return "olá, " .: name .: mark;
 }
-post(greet());
-post(greet("Ada"));
+post(greet("mundo", "!"));
+post(greet("Ada", "!"));
 ```
 
 ```saida
@@ -60,16 +60,16 @@ olá, mundo!
 olá, Ada!
 ```
 
-## Argumentos nomeados
+## Argumentos posicionais
 
-Qualquer argumento pode ser passado pelo nome, em qualquer ordem. Combina bem com valores padrão: você passa só o que muda.
+Forneça todos os argumentos na ordem dos parâmetros. Chamadas com argumentos nomeados e valores padrão em parâmetros são rejeitadas. Para opções, use campos com valores padrão em def.
 
 ```clp
-func spawnEnemy(string kind = "slime", int level = 1, float speed = 1.0) {
+void spawnEnemy(string kind, number level, float speed) {
   post(kind .: " nv" .: level .: " vel " .: speed);
 }
-spawnEnemy(level: 5);
-spawnEnemy(speed: 2.5, kind: "lobo");
+spawnEnemy("slime", 5, 1.0);
+spawnEnemy("lobo", 1, 2.5);
 ```
 
 ```saida
@@ -82,9 +82,9 @@ lobo nv1 vel 2.5
 `...` recebe qualquer quantidade de argumentos como uma lista.
 
 ```clp
-func total(... values) {
-  let mut sum = 0;
-  for (let v in values) {
+number total(any ... values) {
+  auto sum = 0;
+  for (auto v in values) {
     sum = sum + v;
   }
   return sum;
@@ -103,7 +103,7 @@ post(total());
 A pilha de chamadas aguenta recursão profunda (o limite padrão é 200 000 chamadas). Passando do limite, o erro é capturável, não um travamento.
 
 ```clp
-func factorial(int n) -> int {
+number factorial(number n) {
   if (n <= 1) { return 1; }
   return n * factorial(n - 1);
 }
@@ -119,10 +119,12 @@ post(factorial(10));
 Devolva uma lista e desmonte-a com `let (a, b) = …`.
 
 ```clp
-func minMax(int a, int b) {
-  return a < b ? list(a, b) : list(b, a);
+array<number> minMax(number a, number b) {
+  return a < b ? array<number>(a, b) : array<number>(b, a);
 }
-let (low, high) = minMax(9, 4);
+const auto limits = minMax(9, 4);
+const auto low = limits[0];
+const auto high = limits[1];
 post(low .: " " .: high);
 ```
 
@@ -132,19 +134,17 @@ post(low .: " " .: high);
 
 ## Genéricos
 
-Um parâmetro de tipo entre `< >` deixa a mesma função servir para vários tipos. `where` restringe quais tipos são aceitos.
+Um parâmetro formal em `template <typename T>` preserva o tipo escolhido na chamada. Operações sobre `T` precisam ser válidas para todos os tipos aceitos; comparação numérica sem restrição não é garantida.
 
 ```clp
-func maxOf<T>(T a, T b) -> T {
-  return a > b ? a : b;
-}
-post(maxOf<int>(3, 9));
-post(maxOf<float>(2.5, 1.5));
+template <typename T>
+T Identity(T value) { return value; }
+post(Identity<number>(9));
+post(Identity<float>(2.5));
 
-func onlyInt<T>(T value) where T: int {
-  return value;
-}
-post(onlyInt<int>(7));
+template <typename T : number>
+T OnlyInt(T value) { return value; }
+post(OnlyInt<number>(7));
 ```
 
 ```saida
@@ -153,15 +153,17 @@ post(onlyInt<int>(7));
 7
 ```
 
-## Namespaces
+## Funções em módulos
 
-Agrupam funções relacionadas sob um nome.
+Agrupe funções em um arquivo e exporte as que devem ser públicas.
+
+```clp file=physics.clp
+export float gravity() { return 9.8; }
+export float fallSpeed(float seconds) { return 9.8 * seconds; }
+```
 
 ```clp
-namespace Physics {
-  func gravity() -> float { return 9.8; }
-  func fallSpeed(float seconds) -> float { return 9.8 * seconds; }
-}
+link "./physics.clp" as Physics;
 post(Physics.gravity());
 post(Physics.fallSpeed(2));
 ```
@@ -173,24 +175,24 @@ post(Physics.fallSpeed(2));
 
 ## Lambdas
 
-`(parâmetro => expressão)` é uma função curta, escrita no lugar onde é usada.
+Uma lambda usa `func(parâmetro) -> Tipo { corpo }` e pode ser chamada no lugar onde é escrita.
 
 ```clp
-post((x => x * x)(6));
+post((func(number x) -> number { return x * x; })(6));
 ```
 
 ```saida
 36
 ```
 
-Hoje uma lambda é chamada no ponto em que é escrita; guardar uma função em variável ou passá-la como argumento ainda não é suportado. Para callbacks, use `signal` e `OnChange` (capítulo 13), que aceitam funções nomeadas e funções anônimas.
+Callbacks podem ser guardados em variáveis, passados como argumentos e retornados, com assinaturas verificadas.
 
 ## Funções externas
 
-`extern func` declara uma função nativa fornecida pelo programa que embute o CL++ (por exemplo, o motor do jogo). Alguns nomes já vêm prontos, como `strlen`.
+`extern number strlen(string value);` declara uma função nativa fornecida pelo programa que embute o CL++ (por exemplo, o motor do jogo). Alguns nomes já vêm prontos, como `strlen`.
 
 ```clp
-extern func strlen(string s);
+extern number strlen(string s);
 post(strlen("CL++"));
 ```
 
@@ -198,13 +200,13 @@ post(strlen("CL++"));
 4
 ```
 
-## Funções estáticas e atributos
+## Funções de arquivo
 
-`static func` é aceito para quem vem de C++ e se comporta como uma função comum. Atributos entre `[[ ]]` marcam o comando seguinte para ferramentas e backends (por exemplo `[[server]]`) e não mudam o resultado do programa.
+Funções de arquivo usam retorno antes do nome. Não há modificador estático ignorado nem atributos entre colchetes.
 
 ```clp
-static func show(int x) { post(x); }
-[[server]]
+void show(number x) { post(x); }
+
 show(3);
 ```
 

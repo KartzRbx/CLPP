@@ -23,7 +23,7 @@ int main() {
     }
   }
   for (int i = 0; i < 200; ++i) {
-    std::istringstream in("int x = \"v" + std::to_string(i) + "\";\nexit\n");
+    std::istringstream in("number x = \"v" + std::to_string(i) + "\";\nexit\n");
     std::ostringstream out;
     std::ostringstream err;
     if (clpp::run_repl(in, out, err) != 0 || !out.str().empty()) {

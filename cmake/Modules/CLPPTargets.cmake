@@ -1,4 +1,17 @@
 function(clpp_configure_target target)
   clpp_set_compiler_warnings(${target})
   clpp_apply_sanitizers(${target})
+  if(WIN32)
+    # LLVM/MinGW defaults to a smaller stack than our supported bounded parser
+    # depth needs. Instrumented frames need extra room; limits stay unchanged.
+    set(clpp_stack_bytes 8388608)
+    if(CLPP_SANITIZE_ADDRESS OR CLPP_SANITIZE_UNDEFINED)
+      set(clpp_stack_bytes 33554432)
+    endif()
+    if(MSVC)
+      target_link_options(${target} PRIVATE "/STACK:${clpp_stack_bytes}")
+    else()
+      target_link_options(${target} PRIVATE "-Wl,--stack,${clpp_stack_bytes}")
+    endif()
+  endif()
 endfunction()

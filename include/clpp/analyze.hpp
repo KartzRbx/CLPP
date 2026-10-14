@@ -25,7 +25,7 @@ struct ModuleInfo {
     std::string display;  // literal as written
     SourceLocation location{};
   };
-  std::vector<Constant> constants;  // `const NAME = literal;` / `let NAME = literal;` at module level
+  std::vector<Constant> constants;  // `const Type NAME = literal;` / `const auto NAME = literal;` at module level
 };
 
 struct AnalysisResult {

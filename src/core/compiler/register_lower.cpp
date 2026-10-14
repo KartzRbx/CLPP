@@ -23,6 +23,9 @@ using Insn = compiler::bytecode::Instruction;
     case RegOp::Div:
     case RegOp::Mod:
     case RegOp::Concat:
+    case RegOp::ConvertNumber:
+    case RegOp::ConvertFloat:
+    case RegOp::ConvertOptionalFloat:
     case RegOp::Not:
     case RegOp::Eq:
     case RegOp::NotEq:
@@ -197,6 +200,36 @@ RegChunk lower_registers(const BytecodeChunk& chunk) {
         emitted = push_ad(RegOp::LoadK, sp, insn.imm);
         alias[static_cast<std::size_t>(sp)] = -1;
         break;
+      case compiler::Opcode::Globals:
+        emitted = push_ad(RegOp::Globals, 0, insn.imm); clear_alias(); break;
+      case compiler::Opcode::LoadGlobal:
+      case compiler::Opcode::RawGlobal:
+        emitted = push_ad(insn.op == compiler::Opcode::LoadGlobal ? RegOp::LoadGlobal : RegOp::RawGlobal, sp, insn.imm); kill(sp); break;
+      case compiler::Opcode::StoreGlobal:
+      case compiler::Opcode::InitGlobal:
+      case compiler::Opcode::InitConstGlobal:
+        emitted = push_ad(insn.op == compiler::Opcode::StoreGlobal ? RegOp::StoreGlobal :
+                          insn.op == compiler::Opcode::InitGlobal ? RegOp::InitGlobal : RegOp::InitConstGlobal, sp - 1, insn.imm);
+        clear_alias(); break;
+      case compiler::Opcode::Observe:
+        emitted = push_abc(RegOp::Observe, sp - 2, resolve(sp - 2), resolve(sp - 1)); kill(sp - 2); break;
+      case compiler::Opcode::MakeClosure:
+        emitted = push_ad(RegOp::MakeClosure, sp - 1, insn.imm); kill(sp - 1); break;
+      case compiler::Opcode::MakeBoundMethod:
+        emitted = push_ad(RegOp::MakeBoundMethod, sp - 1, insn.imm); kill(sp - 1); break;
+      case compiler::Opcode::Invoke:
+      case compiler::Opcode::InvokeThread:
+        emitted = push_ad(insn.op == compiler::Opcode::Invoke ? RegOp::Invoke : RegOp::InvokeThread,
+                          sp - insn.imm - 1, insn.imm); clear_alias(); break;
+      case compiler::Opcode::BoxLocal:
+        emitted = push_ad(RegOp::BoxLocal, insn.imm, 0); kill(insn.imm); break;
+      case compiler::Opcode::ClearCell:
+        emitted = push_ad(RegOp::ClearCell, insn.imm, 0); break;
+      case compiler::Opcode::LoadCell:
+        emitted = push_abc(RegOp::LoadCell, sp, insn.imm, 0); kill(sp); break;
+      case compiler::Opcode::StoreCell:
+        emitted = push_abc(RegOp::StoreCell, insn.imm, resolve(sp - 1), 0); clear_alias(); break;
+      case compiler::Opcode::RawLoad:
       case compiler::Opcode::LoadLocal:
         emitted = push_abc(RegOp::Move, sp, resolve(insn.imm), 0);
         if (emitted && sp < 256) {
@@ -205,9 +238,9 @@ RegChunk lower_registers(const BytecodeChunk& chunk) {
         break;
       case compiler::Opcode::StoreLocal:
         emitted = push_abc(RegOp::Move, insn.imm, resolve(sp - 1), 0);
-        if (insn.imm < 256) {
-          alias[insn.imm] = -1;
-        }
+        // Earlier stack values hold snapshots of the old local. Once the local
+        // changes, use their physical copies instead of resolving back to it.
+        kill(insn.imm);
         break;
       case compiler::Opcode::Dup:
         emitted = push_abc(RegOp::Move, sp, resolve(sp - 1), 0);
@@ -233,13 +266,6 @@ RegChunk lower_registers(const BytecodeChunk& chunk) {
         kill(sp - 3);
         kill(sp - 2);
         kill(sp - 1);
-        break;
-      case compiler::Opcode::MarkSelf:
-        emitted = push_abc(RegOp::MarkSelf, 0, 0, 0);
-        break;
-      case compiler::Opcode::SelfBack:
-        emitted = push_abc(RegOp::SelfBack, insn.imm, 0, 0);
-        kill(insn.imm);
         break;
       // The list lives in the variable's own register and is changed in place.
       case compiler::Opcode::ListPush:
@@ -348,6 +374,25 @@ RegChunk lower_registers(const BytecodeChunk& chunk) {
           alias[static_cast<std::size_t>(sp - 2)] = -1;
         }
         break;
+      case compiler::Opcode::PushItem:
+        emitted = push_abc(RegOp::ListPush, resolve(sp - 2), resolve(sp - 1), 0); break;
+      case compiler::Opcode::PopItem:
+        emitted = push_abc(RegOp::PopItem, sp - 1, resolve(sp - 1), 0); kill(sp - 1); break;
+      case compiler::Opcode::InsertItem:
+        emitted = push_abc(RegOp::ListInsert, resolve(sp - 3), resolve(sp - 2), resolve(sp - 1)); break;
+      case compiler::Opcode::RemoveItem:
+        emitted = push_abc(RegOp::RemoveItem, sp - 2, resolve(sp - 2), resolve(sp - 1)); kill(sp - 2); break;
+      case compiler::Opcode::Freeze:
+        emitted = push_abc(RegOp::Freeze, resolve(sp - 1), 0, 0);
+        break;
+      case compiler::Opcode::ConvertNumber:
+      case compiler::Opcode::ConvertFloat:
+      case compiler::Opcode::ConvertOptionalFloat:
+        emitted = push_abc(insn.op == compiler::Opcode::ConvertNumber ? RegOp::ConvertNumber :
+                           insn.op == compiler::Opcode::ConvertOptionalFloat ? RegOp::ConvertOptionalFloat : RegOp::ConvertFloat,
+                           sp - 1, resolve(sp - 1), 0);
+        kill(sp - 1);
+        break;
       case compiler::Opcode::Not:
         emitted = push_abc(RegOp::Not, sp - 1, resolve(sp - 1), 0);
         if (sp >= 1 && sp - 1 < 256) {
@@ -448,7 +493,7 @@ RegChunk lower_registers(const BytecodeChunk& chunk) {
         kill(sp - 1);
         break;
       case compiler::Opcode::Actor:
-        emitted = push_ad(RegOp::Actor, resolve(sp - 1), insn.imm);
+        emitted = push_ad(RegOp::Actor, sp - 1, insn.imm);
         kill(sp - 1);
         break;
       case compiler::Opcode::CCall:
@@ -514,8 +559,10 @@ RegChunk lower_registers(const BytecodeChunk& chunk) {
       case compiler::Opcode::Axiom:
       case compiler::Opcode::Std:
       case compiler::Opcode::Host:
+      case compiler::Opcode::Event:
         emitted = push_abc(insn.op == compiler::Opcode::Std    ? RegOp::Std
-                           : insn.op == compiler::Opcode::Host ? RegOp::Host
+                            : insn.op == compiler::Opcode::Host ? RegOp::Host
+                            : insn.op == compiler::Opcode::Event ? RegOp::Event
                                                                : RegOp::Axiom,
                            sp - static_cast<int>(insn.imm >> 8), static_cast<int>(insn.imm >> 8),
                            static_cast<int>(insn.imm & 0xFF));

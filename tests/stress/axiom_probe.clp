@@ -1,10 +1,10 @@
 link @clpp.Axion as Axiom;
-let mut i = 0;
-let mut bad = 0;
-let mut sum = 0;
+auto i = 0;
+auto bad = 0;
+auto sum = 0;
 while (i < 150000) {
-  let mut x = i % 100;
-  let mut c = Axiom.Clamp(x, 0, 10);
+  auto x = i % 100;
+  auto c = Axiom.Clamp(x, 0, 10);
   sum = sum + c;
   if (x <= 10) { if (c != x) { bad = bad + 1; } }
   if (x > 10) { if (c != 10) { bad = bad + 1; } }

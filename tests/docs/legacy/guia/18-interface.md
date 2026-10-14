@@ -21,9 +21,9 @@ link @clpp.gfx as Gfx;
 link @clpp.ui as Ui;
 
 Window.Open("Settings", 360, 320);
-let mut volume = 60.0;
-let mut music = true;
-let mut name = "Ada";
+auto volume = 60.0;
+auto music = true;
+auto name = "Ada";
 
 while (Window.Frame()) {
   Gfx.Clear(Ui.Background());
@@ -65,8 +65,8 @@ link @clpp.gfx as Gfx;
 link @clpp.ui as Ui;
 
 Window.Open("t", 200, 120);
-let mut clicks = 0;
-for (let frame in 4) {
+auto clicks = 0;
+for (auto frame in 4) {
   if (frame == 1) { Window.SimulateMouse(40, 40, true); }
   if (frame == 2) { Window.SimulateMouse(40, 40, false); }
   Window.Frame();
@@ -95,19 +95,19 @@ link @clpp.gui as Gui;
 Window.Open("Menu", 800, 500);
 while (Window.Frame()) {
   Gfx.Gradient(0, 0, 800, 500, 0x1A1530, 0x0D0D14);
-  Gui.Render(Gui.Screen(children: list(
-    Gui.Frame(id: "menu", title: "Main menu", anchor: "center", width: 340, appear: "pop", children: list(
-      Gui.Text(text: "My Game", size: 30, bold: true, align: "center"),
-      Gui.Text(text: "A tiny demo", muted: true, align: "center"),
-      Gui.Button(id: "play", text: "Play", style: "primary"),
-      Gui.Slider(id: "volume", text: "Volume", value: 70),
-      Gui.Toggle(id: "music", text: "Music", value: true),
-      Gui.Row(children: list(
-        Gui.Button(id: "options", text: "Options", grow: true),
-        Gui.Button(id: "quit", text: "Quit", style: "danger", grow: true)
-      ))
-    ))
-  )));
+  Gui.Render(Gui.Screen(Gui.ScreenOptions {children = list(
+    Gui.Frame(Gui.FrameOptions {id = "menu", title = "Main menu", anchor = "center", width = 340, appear = "pop", children = list(
+      Gui.Text(Gui.TextOptions {text = "My Game", size = 30, bold = true, align = "center"}),
+      Gui.Text(Gui.TextOptions {text = "A tiny demo", muted = true, align = "center"}),
+      Gui.Button(Gui.ButtonOptions {id = "play", text = "Play", style = "primary"}),
+      Gui.Slider(Gui.SliderOptions {id = "volume", text = "Volume", value = 70}),
+      Gui.Toggle(Gui.ToggleOptions {id = "music", text = "Music", value = true}),
+      Gui.Row(Gui.RowOptions {children = list(
+        Gui.Button(Gui.ButtonOptions {id = "options", text = "Options", grow = true}),
+        Gui.Button(Gui.ButtonOptions {id = "quit", text = "Quit", style = "danger", grow = true})
+      )})
+    )})
+  )}));
   if (Gui.Clicked("play")) { post("play"); }
   if (Gui.Clicked("quit")) { Window.Close(); }
 }
@@ -117,7 +117,7 @@ while (Window.Frame()) {
 
 | Constructor | Is |
 | --- | --- |
-| `Gui.Screen(children: ...)` | the root, filling the canvas |
+| `Gui.Screen(Gui.ScreenOptions { children = ... })` | the root, filling the canvas |
 | `Gui.Frame(...)` | a card with optional title, drag, shadow and `glass` blur |
 | `Gui.Row(...)` / `Gui.Column(...)` | horizontal / vertical layout containers |
 | `Gui.Text(...)` | a label (`size`, `bold`, `muted`, `color`, `align`) |
@@ -125,10 +125,10 @@ while (Window.Frame()) {
 | `Gui.Toggle` / `Gui.Checkbox(...)` | a switch / checkbox |
 | `Gui.Slider(...)` | a slider (`min`, `max`, `value`, `step`) |
 | `Gui.TextBox(...)` | a text field (`placeholder`) |
-| `Gui.Choice(...)` | a segmented choice (`options: "A\|B\|C"`) |
+| `Gui.Choice(...)` | a segmented choice (`options = "A\|B\|C"`) |
 | `Gui.Progress(...)` | a progress bar |
 | `Gui.Image(...)` | a PNG/BMP, by `path` or image handle |
-| `Gui.Spacer(size)`, `Gui.Divider()` | spacing helpers |
+| `Gui.Spacer(Gui.SpacerOptions { size = ... })`, `Gui.Divider()` | spacing helpers |
 
 Common properties: `id` (its identity and how you read its state), `anchor` (`"center"`,
 `"top-right"`, …), `x`/`y` (offset), `width`/`height`, `padding`, `gap`, `visible`, and `appear`
@@ -156,23 +156,23 @@ link @clpp.window as Window;
 link @clpp.gfx as Gfx;
 link @clpp.gui as Gui;
 
-signal startGame;
-func onStart() { post("starting"); }
-startGame ~> onStart;
+signal<> startGame;
+void onStart() { post("starting"); }
+startGame~>Connect(onStart);
 
 Window.Open("menu", 300, 200);
-for (let frame in 4) {
+for (auto frame in 4) {
   if (frame == 2) { Window.SimulateMouse(150, 100, true); }
   if (frame == 3) { Window.SimulateMouse(150, 100, false); }
   Window.Frame();
   Gfx.Clear(0x101018);
-  Gui.Render(Gui.Screen(children: list(
-    Gui.Button(id: "play", text: "Play", anchor: "center", width: 120)
-  )));
-  for (let e in Gui.Events()) {
+  Gui.Render(Gui.Screen(Gui.ScreenOptions {children = list(
+    Gui.Button(Gui.ButtonOptions {id = "play", text = "Play", anchor = "center", width = 120})
+  )}));
+  for (auto e in Gui.Events()) {
     match (e) {
-      "play" ~> startGame();
-      _ ~> post("other: " .: e);
+      "play" => startGame::Fire();
+      _ => post("other: " .: e);
     }
   }
 }

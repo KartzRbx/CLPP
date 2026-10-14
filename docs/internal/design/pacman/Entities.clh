@@ -1,0 +1,106 @@
+// =====================================================================
+// Entities.clh  —  HEADER = API PÚBLICA
+//
+// [NOVO] Todo `def` declarado em um .clh é EXPORTADO automaticamente.
+// Quem faz `link "Entities.clh"` recebe todos estes tipos, sem
+// `import type` e sem palavra `export`.
+//
+// Legenda dos comentários neste projeto de exemplo:
+//   [NOVO]       recurso proposto, ainda não existe no compilador
+//   [VERIFICAR]  forma deduzida da documentação, confirmar no grammar.pest
+// =====================================================================
+
+pragma strict;
+
+// ---------------------------------------------------------------------
+// 1) def como FORMA DE DADOS  (substitui `struct`)
+//    Campos podem ter valor padrão. [NOVO]
+// ---------------------------------------------------------------------
+def Vec2 {
+    int X = 0;
+    int Y = 0;
+}
+
+// ---------------------------------------------------------------------
+// 2) def como ALIAS / UNION
+//    Union de literais: o compilador sabe que Tile só pode ser um destes
+//    quatro valores, então `match` sobre Tile exige todos. [VERIFICAR:
+//    unions aceitam literais?]
+// ---------------------------------------------------------------------
+def Tile = "." | "o" | "#" | " ";
+
+def Score = int;                          // alias simples
+
+// enum continua existindo (já está na linguagem, exaustividade CLPP0501)
+enum class Dir { Up, Down, Left, Right }
+
+// ---------------------------------------------------------------------
+// 3) def como TIPO DE FUNÇÃO de primeira classe  [NOVO]
+//    Resolve o problema do `func` virar `(...any) -> any`.
+// ---------------------------------------------------------------------
+def Predicate     = (Vec2) -> bool;
+def ScoreListener = (Score, Vec2) -> void;
+
+// ---------------------------------------------------------------------
+// 4) def GENÉRICO  [NOVO]
+// ---------------------------------------------------------------------
+def Grid<T> {
+    int Width  = 0;
+    int Height = 0;
+    array<T> Cells;
+}
+
+// ---------------------------------------------------------------------
+// 5) def com HERANÇA (IS-A, checado como já é hoje com struct)
+// ---------------------------------------------------------------------
+def Entity {
+    Vec2 Pos;
+    Dir  Facing = Dir::Right;
+    int  StepMs = 150;
+}
+
+def Pacman : Entity {
+    optional<Dir> Queued;                 // null = nenhum comando pendente
+    int Lives = 3;
+    Score Points = 0;
+}
+
+def Ghost : Entity {
+    bool Frightened = false;
+}
+
+def Fruit {
+    Vec2  Pos;
+    Score Points = 100;
+    bool  Active = false;
+}
+
+def GameState {
+    Grid<Tile>  Maze;
+    Pacman      Player;
+    array<Ghost> Ghosts;
+    Fruit       Bonus;
+    int         Remaining  = 0;
+    float       PowerTimer = 0.0;
+    bool        Won        = false;
+}
+
+// ---------------------------------------------------------------------
+// PROTÓTIPOS (implementação em Maze.clp, como em C++)
+// ---------------------------------------------------------------------
+Vec2 Delta(Dir dir);
+bool SamePos(Vec2 a, Vec2 b);             // == em tabelas Luau compara referência!
+bool IsWall(Grid<Tile> maze, Vec2 at);
+Score Consume(Grid<Tile> maze, Vec2 at);  // devolve os pontos ganhos
+void Tick(GameState state, float dt);
+void OnScore(ScoreListener listener);
+
+template <typename T>
+optional<T> GridTryAt(Grid<T> grid, Vec2 at);
+
+template <typename T>
+T GridAt(Grid<T> grid, Vec2 at);
+
+// @parallel: o checker garante que não há atribuição (CLUAU_PAR001)
+@parallel
+int Manhattan(Vec2 a, Vec2 b);

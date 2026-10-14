@@ -13,17 +13,19 @@ press):
 
 Both read input from `@clpp.window`, so `Window.Simulate*` drives them in tests.
 
+Declarative GUI constructors take one explicit options object, such as `Gui.Text(Gui.TextOptions { text = "Hello" })` or `Gui.Frame(Gui.FrameOptions {})`. Each constructor has its corresponding exported `NameOptions` data type; configuration defaults belong to its fields. Screen, Frame, Row and Column options have fresh `children` lists. Function parameters have no defaults. Query, Render and Set operations keep their explicit arguments.
+
 ## Immediate mode: `@clpp.ui`
 
-```clp trecho
+```clp
 link @clpp.window as Window;
 link @clpp.gfx as Gfx;
 link @clpp.ui as Ui;
 
 Window.Open("Settings", 360, 320);
-let mut volume = 60.0;
-let mut music = true;
-let mut name = "Ada";
+float volume = 60.0;
+bool music = true;
+string name = "Ada";
 
 while (Window.Frame()) {
   Gfx.Clear(Ui.Background());
@@ -65,8 +67,9 @@ link @clpp.gfx as Gfx;
 link @clpp.ui as Ui;
 
 Window.Open("t", 200, 120);
-let mut clicks = 0;
-for (let frame in 4) {
+number clicks = 0;
+number frame = 0;
+for (frame = 0; frame < 4; frame += 1) {
   if (frame == 1) { Window.SimulateMouse(40, 40, true); }
   if (frame == 2) { Window.SimulateMouse(40, 40, false); }
   Window.Frame();
@@ -76,7 +79,7 @@ for (let frame in 4) {
 post(clicks);
 ```
 
-```saida
+```output
 1
 ```
 
@@ -87,7 +90,7 @@ functions — and render it every frame. Interactive elements keep their state b
 frames (the slider's value, the toggle, the text box): the property
 you pass is only the *starting* value.
 
-```clp trecho
+```clp
 link @clpp.window as Window;
 link @clpp.gfx as Gfx;
 link @clpp.gui as Gui;
@@ -95,19 +98,19 @@ link @clpp.gui as Gui;
 Window.Open("Menu", 800, 500);
 while (Window.Frame()) {
   Gfx.Gradient(0, 0, 800, 500, 0x1A1530, 0x0D0D14);
-  Gui.Render(Gui.Screen(children: list(
-    Gui.Frame(id: "menu", title: "Main menu", anchor: "center", width: 340, appear: "pop", children: list(
-      Gui.Text(text: "My Game", size: 30, bold: true, align: "center"),
-      Gui.Text(text: "A tiny demo", muted: true, align: "center"),
-      Gui.Button(id: "play", text: "Play", style: "primary"),
-      Gui.Slider(id: "volume", text: "Volume", value: 70),
-      Gui.Toggle(id: "music", text: "Music", value: true),
-      Gui.Row(children: list(
-        Gui.Button(id: "options", text: "Options", grow: true),
-        Gui.Button(id: "quit", text: "Quit", style: "danger", grow: true)
-      ))
-    ))
-  )));
+  Gui.Render(Gui.Screen(Gui.ScreenOptions {children = list(
+    Gui.Frame(Gui.FrameOptions {id = "menu", title = "Main menu", anchor = "center", width = 340, appear = "pop", children = list(
+      Gui.Text(Gui.TextOptions {text = "My Game", size = 30, bold = true, align = "center"}),
+      Gui.Text(Gui.TextOptions {text = "A tiny demo", muted = true, align = "center"}),
+      Gui.Button(Gui.ButtonOptions {id = "play", text = "Play", style = "primary"}),
+      Gui.Slider(Gui.SliderOptions {id = "volume", text = "Volume", value = 70}),
+      Gui.Toggle(Gui.ToggleOptions {id = "music", text = "Music", value = true}),
+      Gui.Row(Gui.RowOptions {children = list(
+        Gui.Button(Gui.ButtonOptions {id = "options", text = "Options", grow = true}),
+        Gui.Button(Gui.ButtonOptions {id = "quit", text = "Quit", style = "danger", grow = true})
+      )})
+    )})
+  )}));
   if (Gui.Clicked("play")) { post("play"); }
   if (Gui.Clicked("quit")) { Window.Close(); }
 }
@@ -117,7 +120,7 @@ while (Window.Frame()) {
 
 | Constructor | Is |
 | --- | --- |
-| `Gui.Screen(children: ...)` | the root, filling the canvas |
+| `Gui.Screen(Gui.ScreenOptions { children = ... })` | the root, filling the canvas |
 | `Gui.Frame(...)` | a card with optional title, drag, shadow and `glass` blur |
 | `Gui.Row(...)` / `Gui.Column(...)` | horizontal / vertical layout containers |
 | `Gui.Text(...)` | a label (`size`, `bold`, `muted`, `color`, `align`) |
@@ -125,10 +128,10 @@ while (Window.Frame()) {
 | `Gui.Toggle` / `Gui.Checkbox(...)` | a switch / checkbox |
 | `Gui.Slider(...)` | a slider (`min`, `max`, `value`, `step`) |
 | `Gui.TextBox(...)` | a text field (`placeholder`) |
-| `Gui.Choice(...)` | a segmented choice (`options: "A\|B\|C"`) |
+| `Gui.Choice(...)` | a segmented choice (`options = "A\|B\|C"`) |
 | `Gui.Progress(...)` | a progress bar |
 | `Gui.Image(...)` | a PNG/BMP, by `path` or image handle |
-| `Gui.Spacer(size)`, `Gui.Divider()` | spacing helpers |
+| `Gui.Spacer(Gui.SpacerOptions { size = ... })`, `Gui.Divider()` | spacing helpers |
 
 Common properties: `id` (its identity and how you read its state), `anchor` (`"center"`,
 `"top-right"`, …), `x`/`y` (offset), `width`/`height`, `padding`, `gap`, `visible`, and `appear`
@@ -149,43 +152,48 @@ After `Gui.Render`, ask by `id`:
 | `Gui.Events()` | the list of ids that fired this frame |
 | `Gui.SetValue/SetOn/SetText/SetSelected(id, …)` | change an element's state from code |
 
-`Gui.Events()` pairs naturally with `match` and with `signal` (chapter 13) to wire a menu:
+`Gui.Events()` pairs naturally with `match` and with `signal` (chapter 13) to wire a menu. The next example uses typed functions, managed subscriptions and `=>` match arms:
 
 ```clp
 link @clpp.window as Window;
 link @clpp.gfx as Gfx;
 link @clpp.gui as Gui;
 
-signal startGame;
-func onStart() { post("starting"); }
-startGame ~> onStart;
+signal<> startGame;
+void onStart() { post("starting"); }
+startGame~>Connect(onStart);
 
 Window.Open("menu", 300, 200);
-for (let frame in 4) {
+number frame = 0;
+for (frame = 0; frame < 4; frame += 1) {
   if (frame == 2) { Window.SimulateMouse(150, 100, true); }
   if (frame == 3) { Window.SimulateMouse(150, 100, false); }
   Window.Frame();
   Gfx.Clear(0x101018);
-  Gui.Render(Gui.Screen(children: list(
-    Gui.Button(id: "play", text: "Play", anchor: "center", width: 120)
-  )));
-  for (let e in Gui.Events()) {
+  Gui.Render(Gui.Screen(Gui.ScreenOptions {children = list(
+    Gui.Button(Gui.ButtonOptions {id = "play", text = "Play", anchor = "center", width = 120})
+  )}));
+  auto events = Gui.Events();
+  number eventIndex = 0;
+  while (eventIndex < len(events)) {
+    string e = events[eventIndex];
+    eventIndex += 1;
     match (e) {
-      "play" ~> startGame();
-      _ ~> post("other: " .: e);
+      "play" => startGame::Fire();
+      _ => post("other: " .: e);
     }
   }
 }
 ```
 
-```saida
+```output
 starting
 ```
 
 ### When to use which
 
 - A debug panel, a tool, a quick options screen that mirrors your own variables → **`@clpp.ui`**:
-  the widget returns the value, you keep it in a `let mut`.
+  the widget returns the value, you keep it in a typed variable that can be reassigned.
 - A menu or app screen with many elements, entrance animations and ids wired to signals →
   **`@clpp.gui`**: describe the tree, read `Gui.Clicked` / `Gui.Value`.
 

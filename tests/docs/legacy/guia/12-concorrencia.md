@@ -14,12 +14,12 @@ Jogos fazem muitas coisas "ao mesmo tempo": carregar recursos, rodar IA, animar,
 Uma função `async` pode ser iniciada com `spawn`, que devolve uma `task` imediatamente. `await` espera a tarefa terminar e entrega o resultado.
 
 ```clp
-async func loadAsset(string name) {
+async string loadAsset(string name) {
   return "carregado: " .: name;
 }
 
-task map = spawn loadAsset("mapa");
-task music = spawn loadAsset("música");
+task<string> map = spawn loadAsset("mapa");
+task<string> music = spawn loadAsset("música");
 post(await map);
 post(await music);
 ```
@@ -32,7 +32,7 @@ carregado: música
 `await` direto numa chamada `async` inicia e espera de uma vez:
 
 ```clp
-async func twice(int x) { return x * 2; }
+async number twice(number x) { return x * 2; }
 post(await twice(21));
 ```
 
@@ -45,11 +45,11 @@ post(await twice(21));
 `parallel(...)` inicia todas as chamadas `async`, espera todas e devolve a lista de resultados, na ordem.
 
 ```clp
-async func cost(int units) { return units * 15; }
-let results = parallel(cost(2), cost(5), cost(1));
+async number cost(number units) { return units * 15; }
+const auto results = parallel(cost(2), cost(5), cost(1));
 post(results);
-let mut total = 0;
-for (let r in results) { total += r; }
+auto total = 0;
+for (auto r in results) { total += r; }
 post(total);
 ```
 
@@ -63,13 +63,13 @@ post(total);
 `thread f(args)` roda a função numa thread do sistema operacional. `join(t)` espera e devolve o resultado.
 
 ```clp
-func simulate(int steps) {
-  let mut x = 0;
-  for (let i in steps) { x += i; }
+number simulate(number steps) {
+  auto x = 0;
+  for (auto i in steps) { x += i; }
   return x;
 }
-let a = thread simulate(1000);
-let b = thread simulate(10);
+const auto a = thread simulate(1000);
+const auto b = thread simulate(10);
 post(join(a) + join(b));
 ```
 
@@ -83,17 +83,17 @@ Cada thread tem a própria memória: os argumentos são copiados para ela. Para 
 
 ```clp
 atomic hits = 0;
-let gate = mutex();
+const auto gate = mutex();
 
-func record(counter, lockId) {
+number record(number counter, number lockId) {
   lock(lockId);
   fetch_add(counter, 1);
   unlock(lockId);
   return 1;
 }
 
-let t1 = thread record(hits, gate);
-let t2 = thread record(hits, gate);
+const auto t1 = thread record(hits, gate);
+const auto t2 = thread record(hits, gate);
 join(t1);
 join(t2);
 post(atomic_load(hits));
@@ -116,7 +116,7 @@ post(atomic_load(hits));
 `actor(f, valor)` roda `f` isolada do resto do programa (sem acesso a arquivos, rede ou estado global) e devolve o resultado. Útil para executar lógica de terceiros, como mods.
 
 ```clp
-func score(int kills) { return kills * 100; }
+number score(number kills) { return kills * 100; }
 post(actor(score, 7));
 ```
 
@@ -129,12 +129,12 @@ post(actor(score, 7));
 Uma corrotina é uma função que pode pausar (`coroutine.yield(valor)`) e ser retomada depois (`coroutine.resume(co)`). Tudo acontece na mesma thread, sem concorrência real, o que a torna segura para lógica de jogo passo a passo.
 
 ```clp
-func cutscene() {
+string cutscene() {
   coroutine.yield("câmera se aproxima");
   coroutine.yield("o herói fala");
   return "fim";
 }
-let scene = coroutine.create(cutscene);
+const auto scene = coroutine.create(cutscene);
 post(coroutine.resume(scene));
 post(coroutine.resume(scene));
 post(coroutine.resume(scene));
@@ -151,7 +151,7 @@ fim
 `task.defer(f)` agenda `f` para rodar quando o programa principal terminar o que está fazendo.
 
 ```clp
-func cleanup() { post("limpeza"); }
+void cleanup() { post("limpeza"); }
 task.defer(cleanup);
 post("quadro atual");
 ```

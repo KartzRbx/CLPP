@@ -7,10 +7,10 @@ Gfx.Canvas(480, 300);
 Gfx.Gradient(0, 0, 480, 300, 0x1B1033, 0x0C0C16);
 
 << a ring of circles, colored around the hue wheel
-for (let i in 12) {
-  let angle = Axiom.Rad(i * 30);
-  let x = 240 + Axiom.Cos(angle) * 90;
-  let y = 150 + Axiom.Sin(angle) * 90;
+for (auto i in 12) {
+  const auto angle = Axiom.Rad(i * 30);
+  const auto x = 240 + Axiom.Cos(angle) * 90;
+  const auto y = 150 + Axiom.Sin(angle) * 90;
   Gfx.Circle(x, y, 16, Gfx.Hsv(i * 30, 0.7, 1));
 }
 

@@ -18,6 +18,8 @@
 #include <fstream>
 #include <iterator>
 #include <mutex>
+#include <limits>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -69,7 +71,7 @@ struct Mixer {
   HWAVEOUT out{nullptr};
 #endif
 
-  ~Mixer() {
+  void reset() {
     running = false;
     if (thread.joinable()) {
       thread.join();
@@ -78,9 +80,15 @@ struct Mixer {
     if (out != nullptr) {
       waveOutReset(out);
       waveOutClose(out);
+      out = nullptr;
     }
 #endif
+    const std::lock_guard<std::mutex> lock(mutex);
+    std::vector<Sound>().swap(sounds);
+    std::vector<Voice>().swap(voices);
+    master = 1; started = false; device = false;
   }
+  ~Mixer() { reset(); }
 };
 
 Mixer& mixer() {
@@ -342,13 +350,17 @@ void write_le(std::ofstream& out, const std::uint32_t value, const int bytes) {
   }
 }
 
+[[nodiscard]] std::optional<std::size_t> handle_index(const double id, const std::size_t count) {
+  if (!std::isfinite(id) || id < 1 || id > std::numeric_limits<int>::max() ||
+      std::trunc(id) != id || id > static_cast<double>(count)) return std::nullopt;
+  const auto index = static_cast<std::size_t>(id) - 1;
+  return index < count ? std::optional<std::size_t>{index} : std::nullopt;
+}
+
 [[nodiscard]] Voice* voice_at(const double id) {
   Mixer& m = mixer();
-  const auto index = static_cast<long long>(id) - 1;
-  if (index < 0 || static_cast<std::size_t>(index) >= m.voices.size()) {
-    return nullptr;
-  }
-  return &m.voices[static_cast<std::size_t>(index)];
+  const auto index = handle_index(id, m.voices.size());
+  return index ? &m.voices[*index] : nullptr;
 }
 
 #define CLPP_NATIVE(name) bool name(const Value* args, const std::uint8_t arity, Value& out, std::string& error)
@@ -379,21 +391,30 @@ CLPP_NATIVE(audio_tone) {  // (from Hz, to Hz, seconds, wave)
   if (arity != 4 || !args[0].is_number() || !args[1].is_number() || !args[2].is_number() || !args[3].is_string()) {
     return fail(error, "Audio.Tone: expected (frequency, seconds, wave)");
   }
+  for (std::size_t index = 0; index < 3; ++index)
+    if (!std::isfinite(args[index].number)) return fail(error, "Audio.Tone: arguments must be finite");
+  if (std::abs(args[0].number) > kRate || std::abs(args[1].number) > kRate)
+    return fail(error, "Audio.Tone: frequency exceeds sample rate");
   out = Value::number_of(add_sound(synthesize(args[0].number, args[1].number, args[2].number, args[3].text)));
   return true;
 }
 
 CLPP_NATIVE(audio_play) {  // (sound, volume, pan, pitch, loop) -> voice
-  if (!numbers(args, arity, error, "Audio.Play")) {
-    return false;
-  }
+  if (arity != 5 || !args[4].is_boolean() || !numbers(args, 4, error, "Audio.Play"))
+    return fail(error, "Audio.Play: expected numeric sound/volume/pan/pitch and bool loop");
+  for (std::size_t index = 1; index < 4; ++index)
+    if (!std::isfinite(args[index].number)) return fail(error, "Audio.Play: arguments must be finite");
+  if (!std::isfinite(args[0].number) || args[0].number < 1 ||
+      args[0].number > std::numeric_limits<int>::max() || std::trunc(args[0].number) != args[0].number)
+    return fail(error, "Audio.Play: invalid sound handle");
   ensure_started();
   Mixer& m = mixer();
   const std::lock_guard<std::mutex> lock(m.mutex);
-  const auto sound = static_cast<int>(args[0].number);
-  if (sound <= 0 || static_cast<std::size_t>(sound) > m.sounds.size()) {
-    return fail(error, "Audio.Play: invalid sound handle " + std::to_string(sound));
+  const auto sound_index = handle_index(args[0].number, m.sounds.size());
+  if (!sound_index) {
+    return fail(error, "Audio.Play: invalid sound handle");
   }
+  const auto sound = static_cast<int>(*sound_index + 1);
   Voice voice{sound, 0, std::max(0.0, args[1].number), std::clamp(args[2].number, -1.0, 1.0),
               std::clamp(args[3].number, 0.05, 8.0), args[4].number != 0, true};
   if (!m.device) {
@@ -412,9 +433,12 @@ CLPP_NATIVE(audio_play) {  // (sound, volume, pan, pitch, loop) -> voice
 }
 
 CLPP_NATIVE(audio_voice) {  // (voice, which, value): 0 stop, 1 volume, 2 pan, 3 pitch, 4 is playing
-  if (!numbers(args, arity, error, "Audio voice")) {
+  if (arity != 3 || !numbers(args, arity, error, "Audio voice")) {
     return false;
   }
+  if (!std::isfinite(args[1].number) || std::trunc(args[1].number) != args[1].number ||
+      args[1].number < 0 || args[1].number > 4 || !std::isfinite(args[2].number))
+    return fail(error, "Audio voice: invalid operation or non-finite value");
   Mixer& m = mixer();
   const std::lock_guard<std::mutex> lock(m.mutex);
   Voice* voice = voice_at(args[0].number);
@@ -444,8 +468,10 @@ CLPP_NATIVE(audio_voice) {  // (voice, which, value): 0 stop, 1 volume, 2 pan, 3
 }
 
 CLPP_NATIVE(audio_global) {  // (which, value): 0 stop all, 1 master volume, 2 device available, 3 voices playing
-  (void)arity;
-  (void)error;
+  if (arity != 2 || !numbers(args, arity, error, "Audio control")) return false;
+  if (!std::isfinite(args[0].number) || std::trunc(args[0].number) != args[0].number ||
+      args[0].number < 0 || args[0].number > 3 || !std::isfinite(args[1].number))
+    return fail(error, "Audio control: invalid operation or non-finite value");
   Mixer& m = mixer();
   const std::lock_guard<std::mutex> lock(m.mutex);
   switch (static_cast<int>(num(args[0]))) {
@@ -474,11 +500,11 @@ CLPP_NATIVE(audio_duration) {
   }
   Mixer& m = mixer();
   const std::lock_guard<std::mutex> lock(m.mutex);
-  const auto sound = static_cast<std::size_t>(std::max(0.0, args[0].number));
-  if (sound == 0 || sound > m.sounds.size()) {
+  const auto sound = handle_index(args[0].number, m.sounds.size());
+  if (!sound) {
     return fail(error, "Audio.Duration: invalid sound handle");
   }
-  out = Value::number_of(static_cast<double>(m.sounds[sound - 1].frames()) / kRate);
+  out = Value::number_of(static_cast<double>(m.sounds[*sound].frames()) / kRate);
   return true;
 }
 
@@ -491,11 +517,11 @@ CLPP_NATIVE(audio_save) {  // (sound, path)
   }
   Mixer& m = mixer();
   const std::lock_guard<std::mutex> lock(m.mutex);
-  const auto sound = static_cast<std::size_t>(std::max(0.0, args[0].number));
-  if (sound == 0 || sound > m.sounds.size()) {
+  const auto sound = handle_index(args[0].number, m.sounds.size());
+  if (!sound) {
     return fail(error, "Audio.SaveWav: invalid sound handle");
   }
-  const std::vector<float>& samples = m.sounds[sound - 1].samples;
+  const std::vector<float>& samples = m.sounds[*sound].samples;
   std::ofstream file(args[1].text, std::ios::binary);
   const auto data_size = static_cast<std::uint32_t>(samples.size() * 2);
   file.write("RIFF", 4);
@@ -523,24 +549,26 @@ CLPP_NATIVE(audio_save) {  // (sound, path)
 constexpr std::string_view kAudioSource = R"clp(<< @clpp.audio: WAV files and synthesized tones, mixed in software (44.1 kHz stereo).
 << Silent but fully working without a sound device (headless runs, tests).
 
-func Load(string path) -> int { return audio::Load(path); }
-func Tone(float frequency, float seconds, string wave = "sine") -> int { return audio::Tone(frequency, frequency, seconds, wave); }
-func Sweep(float startHz, float endHz, float seconds, string wave = "square") -> int { return audio::Tone(startHz, endHz, seconds, wave); }
-func Play(int sound, float volume = 1, float pan = 0, float pitch = 1, bool loop = false) -> int { return audio::Play(sound, volume, pan, pitch, loop); }
-func Stop(int voice) { audio::Voice(voice, 0, 0); }
-func SetVolume(int voice, float volume) { audio::Voice(voice, 1, volume); }
-func SetPan(int voice, float pan) { audio::Voice(voice, 2, pan); }
-func SetPitch(int voice, float pitch) { audio::Voice(voice, 3, pitch); }
-func IsPlaying(int voice) -> bool { return audio::Voice(voice, 4, 0); }
-func StopAll() { audio::Global(0, 0); }
-func MasterVolume(float volume) { audio::Global(1, volume); }
-func Available() -> bool { return audio::Global(2, 0); }
-func Playing() -> int { return audio::Global(3, 0); }
-func Duration(int sound) -> float { return audio::Duration(sound); }
-func SaveWav(int sound, string path) -> bool { return audio::SaveWav(sound, path); }
+export number Load(string path) { return audio::Load(path); }
+export number Tone(float frequency, float seconds, string wave) { return audio::Tone(frequency, frequency, seconds, wave); }
+export number Sweep(float startHz, float endHz, float seconds, string wave) { return audio::Tone(startHz, endHz, seconds, wave); }
+export number Play(number sound, float volume, float pan, float pitch, bool loop) { return audio::Play(sound, volume, pan, pitch, loop); }
+export void Stop(number voice) { audio::Voice(voice, 0, 0); }
+export void SetVolume(number voice, float volume) { audio::Voice(voice, 1, volume); }
+export void SetPan(number voice, float pan) { audio::Voice(voice, 2, pan); }
+export void SetPitch(number voice, float pitch) { audio::Voice(voice, 3, pitch); }
+export bool IsPlaying(number voice) { return audio::Voice(voice, 4, 0); }
+export void StopAll() { audio::Global(0, 0); }
+export void MasterVolume(float volume) { audio::Global(1, volume); }
+export bool Available() { return audio::Global(2, 0); }
+export number Playing() { return audio::Global(3, 0); }
+export float Duration(number sound) { return audio::Duration(sound); }
+export bool SaveWav(number sound, string path) { return audio::SaveWav(sound, path); }
 )clp";
 
 }  // namespace
+
+void reset_audio() { mixer().reset(); }
 
 void add_audio(std::vector<Entry>& table) {
   table.insert(table.end(), {

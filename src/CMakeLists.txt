@@ -7,7 +7,7 @@ find_package(Threads REQUIRED)
 #
 #   clpp_std       stdlib natives (leaf: depends only on the public Value type)
 #   clpp_front     lexer, parser, binder, type checker, analyze_program
-#   clpp_compiler  stack bytecode (CLIR v1), verifiers, register lowering, Luau text backend
+#   clpp_compiler  stack bytecode (CLIR v1), verifiers, register lowering
 #   clpp_vm        register VM and GC
 #   clpp_tools     IDE queries, LSP server, REPL
 #
@@ -16,6 +16,11 @@ find_package(Threads REQUIRED)
 # registration table so the core can be embedded without the stdlib.
 
 set(CLPP_PUBLIC_INCLUDES "${CMAKE_SOURCE_DIR}/include" "${CMAKE_SOURCE_DIR}/src")
+
+add_library(clpp_value STATIC core/vm/shared_heap.cpp)
+target_include_directories(clpp_value PUBLIC ${CLPP_PUBLIC_INCLUDES})
+target_link_libraries(clpp_value PUBLIC Threads::Threads)
+clpp_configure_target(clpp_value)
 
 add_library(clpp_std STATIC
   stdlib/std_io.cpp
@@ -38,6 +43,7 @@ add_library(clpp_std STATIC
   stdlib/std_time.cpp
 )
 target_include_directories(clpp_std PUBLIC ${CLPP_PUBLIC_INCLUDES})
+target_link_libraries(clpp_std PUBLIC clpp_value)
 if(WIN32)
   # @clpp.window talks to Win32 directly: no extra DLLs ship with clpp.exe.
   target_link_libraries(clpp_std PRIVATE user32 gdi32 winmm)
@@ -60,8 +66,6 @@ add_library(clpp_compiler STATIC
   core/compiler/bytecode_verifier.cpp
   core/compiler/stack_verifier.cpp
   core/compiler/clir_io.cpp
-  core/compiler/luau_emit.cpp
-  core/compiler/backend.cpp
   core/compiler/codegen.cpp
   core/compiler/register_lower.cpp
 )
@@ -108,3 +112,4 @@ if(WIN32)
 endif()
 target_link_libraries(clpp PRIVATE clpp_core)
 clpp_configure_target(clpp)
+install(TARGETS clpp RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT Runtime)

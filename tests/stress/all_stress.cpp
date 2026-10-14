@@ -14,7 +14,7 @@ namespace {
 
 const clpp::ModuleLoader kModules = [](const std::string_view path) -> std::optional<std::string> {
   if (path == "./m.clp") {
-    return std::string("func add(a, b) { return a + b; }\n");
+    return std::string("number add(number a, number b) { return a + b; }\n");
   }
   return std::nullopt;
 };
@@ -74,11 +74,11 @@ int main() {
         ok = expect_output(mark + "post(" + std::to_string(n) + " + 2 * 3);\n", std::to_string(n + 6) + "\n");
         break;
       case 1:
-        ok = expect_output(mark + "let mut x = " + std::to_string(n) + ";\nx = x + 1;\npost(x);\n",
+        ok = expect_output(mark + "auto x = " + std::to_string(n) + ";\nx = x + 1;\npost(x);\n",
                            std::to_string(n + 1) + "\n");
         break;
       case 2:
-        ok = expect_output(mark + "let mut total = 0;\nlet mut k = 1;\nwhile (k <= 4) {\n  total = total + k;\n  k = k + 1;\n}\npost(total + " +
+        ok = expect_output(mark + "auto total = 0;\nauto k = 1;\nwhile (k <= 4) {\n  total = total + k;\n  k = k + 1;\n}\npost(total + " +
                                std::to_string(n % 3) + ");\n",
                            std::to_string(10 + (n % 3)) + "\n");
         break;
@@ -95,7 +95,7 @@ int main() {
         }
         break;
       case 5:
-        ok = expect_output(mark + "func add(a, b) { return a + b; }\npost(add(" + std::to_string(n) + ", 1));\n",
+        ok = expect_output(mark + "number add(number a, number b) { return a + b; }\npost(add(" + std::to_string(n) + ", 1));\n",
                            std::to_string(n + 1) + "\n");
         break;
       case 6:
@@ -103,23 +103,23 @@ int main() {
                            std::to_string(n) + "\n");
         break;
       case 7:
-        ok = expect_output(mark + "int x = " + std::to_string(n) + ";\npost(x);\n", std::to_string(n) + "\n");
+        ok = expect_output(mark + "number x = " + std::to_string(n) + ";\npost(x);\n", std::to_string(n) + "\n");
         break;
       case 8:
-        ok = expect_output(mark + "struct Point { int x; int y; }\nPoint p = Point(" + std::to_string(n) +
-                               ", 1);\npost(p.x + p.y);\n",
+        ok = expect_output(mark + "def Point { number x; number y; }\nPoint p = Point { x = " + std::to_string(n) +
+                               ", y = 1 };\npost(p.x + p.y);\n",
                            std::to_string(n + 1) + "\n");
         break;
       case 9:
-        ok = expect_output(mark + "enum Color { Red, Green, Blue }\nlet n = " + std::to_string(n % 3) +
-                               ";\nmatch (n) {\n  0 ~> post(Color.Red);\n  1 ~> post(Color.Green);\n  _ ~> post(Color.Blue);\n}\n",
+        ok = expect_output(mark + "enum class Color { Red, Green, Blue }\nconst auto n = " + std::to_string(n % 3) +
+                               ";\nmatch (n) {\n  0 => post(Color::Red);\n  1 => post(Color::Green);\n  _ => post(Color::Blue);\n}\n",
                            std::to_string(n % 3) + "\n");
         break;
       case 10:
-        ok = expect_output(mark + "let n = " + std::to_string(n) + ";\npost(`n=${n}`);\n", "n=" + std::to_string(n) + "\n");
+        ok = expect_output(mark + "const auto n = " + std::to_string(n) + ";\npost(`n=${n}`);\n", "n=" + std::to_string(n) + "\n");
         break;
       case 11:
-        ok = expect_output(mark + "@coins = " + std::to_string(n) + ";\n@this.coins = @coins + 1;\npost(@coins);\n",
+        ok = expect_output(mark + "number coins = " + std::to_string(n) + ";\ncoins = coins + 1;\npost(coins);\n",
                            std::to_string(n + 1) + "\n");
         break;
       case 12:
@@ -127,22 +127,22 @@ int main() {
                            std::to_string(n + 1) + "\n");
         break;
       case 13:
-        ok = expect_output(mark + "let n = " + std::to_string(n % 3) +
-                               ";\nmatch (n) {\n  0 ~> post(10);\n  1 ~> post(20);\n  _ guard n > 1 ~> post(30);\n}\n",
+        ok = expect_output(mark + "const auto n = " + std::to_string(n % 3) +
+                               ";\nmatch (n) {\n  0 => post(10);\n  1 => post(20);\n  _ guard n > 1 => post(30);\n}\n",
                            std::string(n % 3 == 0 ? "10\n" : n % 3 == 1 ? "20\n" : "30\n"));
         break;
       case 14:
-        ok = expect_output(mark + "async func add(a, b) { return a + b; }\npost(await add(" + std::to_string(n) +
+        ok = expect_output(mark + "async number add(number a, number b) { return a + b; }\npost(await add(" + std::to_string(n) +
                                ", 1));\n",
                            std::to_string(n + 1) + "\n");
         break;
       case 15:
-        ok = expect_output(mark + "async func add(a, b) { return a + b; }\ntask job = spawn add(" + std::to_string(n) +
+        ok = expect_output(mark + "async number add(number a, number b) { return a + b; }\ntask<number> job = spawn add(" + std::to_string(n) +
                                ", 1);\npost(await job);\n",
                            std::to_string(n + 1) + "\n");
         break;
       case 16:
-        ok = expect_output(mark + "async func add(a, b) { return a + b; }\npost(parallel(add(" + std::to_string(n) +
+        ok = expect_output(mark + "async number add(number a, number b) { return a + b; }\npost(parallel(add(" + std::to_string(n) +
                                ", 1), add(" + std::to_string(n) + ", 2)));\n",
                            std::to_string((n + 1) + (n + 2)) + "\n");
         break;
@@ -182,13 +182,13 @@ int main() {
       case 24: {
         const int kind = i % 5;
         if (kind == 0) {
-          ok = expect_fail(mark + "int x = \"v" + std::to_string(i) + "\";\n");
+          ok = expect_fail(mark + "number x = \"v" + std::to_string(i) + "\";\n");
         } else if (kind == 1) {
           ok = expect_fail(mark + "post(missing" + std::to_string(i) + ");\n");
         } else if (kind == 2) {
-          ok = expect_fail(mark + "func id(a) { return a; }\npost(id());\n");
+          ok = expect_fail(mark + "number id(number a) { return a; }\npost(id());\n");
         } else if (kind == 3) {
-          ok = expect_fail(mark + "match (\"z" + std::to_string(i) + "\") { 1 ~> post(1); }\n");
+          ok = expect_fail(mark + "match (\"z" + std::to_string(i) + "\") { 1 => post(1); }\n");
         } else {
           ok = expect_fail(mark + "link \"./missing" + std::to_string(i) + ".clp\" as M;\npost(1);\n");
         }

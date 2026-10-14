@@ -52,6 +52,19 @@ bool g_end_of_input = false;
 
 // Same text post() prints.
 [[nodiscard]] std::string format_value(const Value& value, const bool nested = false) {
+  if (value.is_boolean()) return value.number != 0 ? "true" : "false";
+  static thread_local std::vector<const void*> path;
+  struct Guard { std::vector<const void*>& path; bool active; ~Guard() { if (active) path.pop_back(); } };
+  if (value.is_struct() && std::find(path.begin(), path.end(), value.identity()) != path.end()) return "<cycle>";
+  if (path.size() >= 128) return "<depth limit>";
+  const bool active = value.is_struct();
+  if (active) path.push_back(value.identity());
+  const Guard guard{path, active};
+
+  if (value.is_integer()) return std::to_string(value.integer);
+  if (value.is_null()) {
+    return "null";
+  }
   if (value.is_string()) {
     return nested ? "\"" + value.text + "\"" : value.text;
   }
@@ -65,21 +78,21 @@ bool g_end_of_input = false;
     }
     return text + ")";
   }
-  if (value.is_struct() && value.number == 65534 && value.fields.size() == 1) {
-    return format_value(value.fields[0], nested);
+  if (value.is_struct() && value.number == 65534 && value.field_count() == 1) {
+    return format_value(value.field(0), nested);
   }
   if (value.is_struct()) {
     const bool dictionary = value.number == 65535;
     const bool list = value.number == 0;
     std::string text = dictionary ? "{" : list ? "[" : "(";
-    for (std::size_t index = 0; index < value.fields.size(); index += dictionary ? 2 : 1) {
+    for (std::size_t index = 0; index < value.field_count(); index += dictionary ? 2 : 1) {
       if (index != 0) {
         text += ", ";
       }
-      if (dictionary && index + 1 < value.fields.size()) {
-        text += format_value(value.fields[index]) + ": " + format_value(value.fields[index + 1], true);
+      if (dictionary && index + 1 < value.field_count()) {
+        text += format_value(value.field(index)) + ": " + format_value(value.field(index + 1), true);
       } else {
-        text += format_value(value.fields[index], true);
+        text += format_value(value.field(index), true);
       }
     }
     return text + (dictionary ? "}" : list ? "]" : ")");
@@ -436,29 +449,29 @@ CLPP_NATIVE(io_is_terminal) {
 
 constexpr std::string_view kIoSource = R"clp(<< @clpp.io: the console. Colors and cursor calls do nothing when the output is not a terminal.
 
-func Print(value) { io::Print(value, 0); }
-func PrintError(value) { io::Print(value, 1); }
-func ReadLine() -> string { return io::ReadLine(""); }
-func Prompt(string question) -> string { return io::ReadLine(question); }
-func ReadNumber(string question) -> float { return io::ReadNumber(question); }
-func ReadAll() -> string { return io::ReadAll(); }
-func EndOfInput() -> bool { return io::EndOfInput(); }
-func ReadKey() -> string { return io::ReadKey(); }
-func KeyAvailable() -> bool { return io::KeyAvailable(); }
-func Color(string name) { io::Color(name, 0); }
-func Background(string name) { io::Color(name, 1); }
-func ColorRgb(int r, int g, int b) { io::Rgb(r, g, b, 0); }
-func BackgroundRgb(int r, int g, int b) { io::Rgb(r, g, b, 1); }
-func Reset() { io::Control(0, 0, 0); }
-func Clear() { io::Control(1, 0, 0); }
-func MoveTo(int column, int row) { io::Control(2, column, row); }
-func HideCursor() { io::Control(3, 0, 0); }
-func ShowCursor() { io::Control(4, 0, 0); }
-func ClearLine() { io::Control(5, 0, 0); }
-func Title(string text) { io::Title(text); }
-func Columns() -> int { return io::Size(0); }
-func Rows() -> int { return io::Size(1); }
-func IsTerminal() -> bool { return io::IsTerminal(); }
+export void Print(any value) { io::Print(value, 0); }
+export void PrintError(any value) { io::Print(value, 1); }
+export string ReadLine() { return io::ReadLine(""); }
+export string Prompt(string question) { return io::ReadLine(question); }
+export float ReadNumber(string question) { return io::ReadNumber(question); }
+export string ReadAll() { return io::ReadAll(); }
+export bool EndOfInput() { return io::EndOfInput(); }
+export string ReadKey() { return io::ReadKey(); }
+export bool KeyAvailable() { return io::KeyAvailable(); }
+export void Color(string name) { io::Color(name, 0); }
+export void Background(string name) { io::Color(name, 1); }
+export void ColorRgb(number r, number g, number b) { io::Rgb(r, g, b, 0); }
+export void BackgroundRgb(number r, number g, number b) { io::Rgb(r, g, b, 1); }
+export void Reset() { io::Control(0, 0, 0); }
+export void Clear() { io::Control(1, 0, 0); }
+export void MoveTo(number column, number row) { io::Control(2, column, row); }
+export void HideCursor() { io::Control(3, 0, 0); }
+export void ShowCursor() { io::Control(4, 0, 0); }
+export void ClearLine() { io::Control(5, 0, 0); }
+export void Title(string text) { io::Title(text); }
+export number Columns() { return io::Size(0); }
+export number Rows() { return io::Size(1); }
+export bool IsTerminal() { return io::IsTerminal(); }
 )clp";
 
 }  // namespace

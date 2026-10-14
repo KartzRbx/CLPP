@@ -1,0 +1,9 @@
+[
+  { "token_type": "type", "token_modifiers": ["defaultLibrary"], "style": ["type.builtin", "type"] },
+  { "token_type": "struct", "style": ["type"] },
+  { "token_type": "typeParameter", "style": ["type"] },
+  { "token_type": "parameter", "style": ["variable.parameter", "variable"] },
+  { "token_type": "property", "style": ["property", "variable"] },
+  { "token_type": "method", "style": ["function"] },
+  { "token_type": "namespace", "style": ["variable"] }
+]

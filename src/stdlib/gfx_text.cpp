@@ -46,7 +46,10 @@ struct Face {
   int ascent{0};
   int line_height{0};
   std::unordered_map<std::uint32_t, Glyph> glyphs;
+  ~Face() { if (font) DeleteObject(font); }
 };
+HDC g_dc = nullptr;
+std::map<std::tuple<std::string, bool, int>, std::unique_ptr<Face>> g_faces;
 
 [[nodiscard]] std::wstring widen(const std::string& text) {
   if (text.empty()) {
@@ -59,13 +62,13 @@ struct Face {
 }
 
 HDC memory_dc() {
-  static HDC dc = CreateCompatibleDC(nullptr);
-  return dc;
+  if (!g_dc) g_dc = CreateCompatibleDC(nullptr);
+  return g_dc;
 }
 
-// One face per (family, bold, pixel size); never freed (a program uses a handful).
+// One face per (family, bold, pixel size), released at root execution completion.
 Face* face_for(const FontChoice& choice, const int size) {
-  static std::map<std::tuple<std::string, bool, int>, std::unique_ptr<Face>> faces;
+  auto& faces = g_faces;
   const auto key = std::make_tuple(choice.family, choice.bold, size);
   const auto found = faces.find(key);
   if (found != faces.end()) {
@@ -135,6 +138,15 @@ void each_codepoint(const std::string_view text, const std::function<void(std::u
 }
 
 }  // namespace
+
+void reset() {
+  const std::lock_guard<std::mutex> lock(g_mutex);
+#ifdef _WIN32
+  if (g_dc) { DeleteDC(g_dc); g_dc = nullptr; }
+  g_faces.clear();
+#endif
+  g_choice = FontChoice{};
+}
 
 FontChoice& choice() { return g_choice; }
 

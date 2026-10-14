@@ -1,49 +1,79 @@
 ---
 title: CL++
-description: A compiled, general-purpose language made for games — with a built-in window, 2D graphics, UI, audio and automation, and no external dependencies.
+description: Build playable prototypes and desktop tools with static types, header-free modules, built-in graphics, UI, audio, and a compiler-powered editor.
 template: splash
 editUrl: false
 hero:
-  tagline: A compiled, general-purpose language made for games. Static types with inference, no headers, and a built-in window, 2D graphics, UI, audio and automation.
+  tagline: Build playable prototypes and desktop tools with one language. Static types, header-free modules, and built-in graphics, UI, and audio take you from code to something you can use.
   image:
     file: ../../assets/logo.png
   actions:
-    - text: Get started
-      link: guide/01-getting-started/
-      icon: right-arrow
+    - text: Install CL++
+      link: https://github.com/KartzRbx/CLPP/releases
+      icon: download
       variant: primary
+    - text: Learn CL++
+      link: handbook/00-o-que-e-o-clpp/
+      icon: right-arrow
     - text: Standard library
       link: guide/14-standard-library/
       icon: open-book
-    - text: About CL++
-      link: guide/00-about/
-      icon: star
     - text: GitHub
       link: https://github.com/KartzRbx/CLPP
       icon: github
       variant: minimal
 ---
 
-import { Card, CardGrid } from "@astrojs/starlight/components";
+import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
+import logo from "../../assets/logo.png";
 
-<CardGrid stagger>
-  <Card title="Compiled and typed" icon="rocket">
-    Each `.clp` file compiles to verified bytecode and runs on a register VM. Static typing with
-    inference catches mistakes before the program runs — no headers, no forward declarations.
+<p className="clpp-product-promise">Write game logic, draw a scene, or build an app screen. CL++ brings the language, runtime, libraries, and editor support together.</p>
+
+<CardGrid>
+  <LinkCard title="Learn CL++ from zero" description="Understand declarations, symbols, functions, types, and modules before the APIs." href="/CLPP/guide/00-language-tour/" />
+  <LinkCard title="Complete syntax reference" description="Separate lessons for the lexer, comments, literals, punctuation, and every language topic." href="/CLPP/reference/syntax/" />
+</CardGrid>
+
+:::caution[Language specification and compiler status]
+This site teaches the author's CL++ syntax. The current compiler is still being aligned with it. Examples marked **target syntax** are not yet guaranteed to run. [Check implementation status](/CLPP/reference/status/).
+:::
+
+## Complete language handbook
+
+[Read the complete handbook](/CLPP/handbook/00-o-que-e-o-clpp/) · [Types grouped under def](/CLPP/handbook/07-def-e-tipos/) · [Language tour](/CLPP/guide/00-language-tour/)
+
+## Read the language before the library
+
+[Declarations](/CLPP/guide/03-variables-and-types/) · [Operators](/CLPP/guide/04-operators/) · [Control flow](/CLPP/guide/05-control-flow/) · [Functions](/CLPP/guide/06-functions/) · [Data definitions](/CLPP/guide/07-structs-and-inheritance/) · [Modules](/CLPP/guide/10-modules/)
+
+## Why build with CL++?
+
+<CardGrid>
+  <Card title="Keep game code organized" icon="document">
+    <img src={logo.src} width="40" height="40" alt="" className="clpp-card-logo" />
+    Static types with inference and independent `.clp` modules keep data and behavior clear.
+    No headers or required `main()` function. [Learn the module system](/CLPP/guide/10-modules/).
   </Card>
-  <Card title="Made for games" icon="star">
-    Native `Vector2/3/4`, the Axiom math library (interpolation, easing, angles, noise, colors),
-    coroutines, `signal`, `observable`, tasks and threads.
+  <Card title="Build playable systems" icon="star">
+    <img src={logo.src} width="40" height="40" alt="" className="clpp-card-logo" />
+    Organize movement, combat, and game state with typed data and explicit functions. The full project uses target syntax awaiting compiler alignment.
+    [Build a modular combat system](/CLPP/guide/20-modular-combat/).
   </Card>
-  <Card title="Graphics, UI, audio, automation" icon="laptop">
-    A native window, 2D drawing with smooth text and CPU effects, immediate and declarative
-    UI, sound, the console, and keyboard/mouse automation — all built in, no dependencies.
+  <Card title="Get something on screen" icon="laptop">
+    <img src={logo.src} width="40" height="40" alt="" className="clpp-card-logo" />
+    Open a window, draw in 2D, add widgets, and play audio with the built-in modules.
+    [Try graphics and input](/CLPP/guide/17-window-and-graphics/).
   </Card>
-  <Card title="A real editor" icon="pencil">
-    A VS Code extension powered by the compiler itself: errors while you type, completion with
-    inherited and module members, hover, go to definition, rename and color swatches.
+  <Card title="Catch mistakes while you work" icon="pencil">
+    <img src={logo.src} width="40" height="40" alt="" className="clpp-card-logo" />
+    The existing VS Code extension provides compiler diagnostics, completion, hover, and navigation; target syntax support requires the compiler update.
+    The Windows x64 extension includes the compiler. [Set up your editor](/CLPP/guide/15-tools-and-editor/).
   </Card>
 </CardGrid>
+
+## Your first window
+
+Save as `window.clp`, then run `clpp window.clp` or press **Ctrl+F5** in VS Code.
 
 ```clp
 link @clpp.gfx as Gfx;
@@ -57,18 +87,29 @@ while (Window.Frame()) {
 }
 ```
 
-The [language guide](guide/01-getting-started/) runs from your first program to graphics, UI, sound and
-concurrency. The
-[standard library](guide/14-standard-library/) and chapters
-[17](guide/17-window-and-graphics/), [18](guide/18-user-interfaces/) and
-[19](guide/19-audio-console-automation/) cover the window, graphics, UI, audio and automation modules.
-
-Read [why CL++ was created](guide/00-about/) and [the measured benchmarks](guide/16-performance/)
-for the language's goals, implementation, and performance.
+[Graphics and input](/CLPP/guide/17-window-and-graphics/) · [UI](/CLPP/guide/18-user-interfaces/) · [Audio](/CLPP/guide/19-audio-console-automation/)
 
 ## Build a complete project
 
-- [Modular combat system](guide/20-modular-combat/): separate data, rules, presentation, and the entry point across `.clp` files.
-- [Account screen](guide/21-account-screen/): render a form, read input, validate it locally, and display feedback with `@clpp.gui`.
+<CardGrid>
+  <LinkCard title="Modular combat system" description="Split data, rules, and presentation across .clp modules." href="/CLPP/guide/20-modular-combat/" />
+  <LinkCard title="Account screen" description="Build a form with input, validation, and visual feedback." href="/CLPP/guide/21-account-screen/" />
+</CardGrid>
 
-For exact syntax, keep the [grammar](reference/ebnf/) and [keywords and operators](reference/keywords/) references nearby while reading the guide.
+<details>
+  <summary>How CL++ runs your code</summary>
+
+Each `.clp` file compiles to verified bytecode and runs on the CL++ register VM.
+Read [about the language](/CLPP/guide/00-about/), check the [grammar](/CLPP/reference/ebnf/),
+or reproduce the [measured benchmarks](/CLPP/guide/16-performance/).
+
+</details>
+
+<div className="clpp-start-banner">
+  <img src={logo.src} width="64" height="64" alt="CL++" />
+  <div>
+    <strong>Start with one .clp file.</strong>
+    <p>Install the editor extension, write a program, and run it. No headers.</p>
+    <a href="/CLPP/guide/01-getting-started/">Get started →</a>
+  </div>
+</div>

@@ -14,11 +14,16 @@
 #include "clpp/ide.hpp"
 #include "clpp/semantic.hpp"
 #include "clpp/stdlib.hpp"
+#include "clpp/core/lexer/lexer.hpp"
 #include "core/compiler/analyze.hpp"
 
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <iomanip>
+#include <sstream>
 #include <exception>
 #include <filesystem>
 #include <fstream>
@@ -26,6 +31,7 @@
 #include <iterator>
 #include <map>
 #include <optional>
+#include <set>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -146,6 +152,15 @@ class Server {
         send_error(nullptr, kInvalidRequest, "expected an object");
         continue;
       }
+      const bool valid_id = !message.contains("id") || message["id"].is_null() ||
+          message["id"].is_string() || message["id"].is_number_integer();
+      const bool valid_params = !message.contains("params") || message["params"].is_null() ||
+          message["params"].is_object() || message["params"].is_array();
+      if (!message.contains("jsonrpc") || message["jsonrpc"] != "2.0" || !valid_id || !valid_params ||
+          (message.contains("method") && !message["method"].is_string())) {
+        send_error(valid_id && message.contains("id") ? message["id"] : json(), kInvalidRequest, "invalid JSON-RPC request");
+        continue;
+      }
       const json id = message.contains("id") ? message["id"] : json();
       const std::string method = message.value("method", "");
       const json params = message.contains("params") ? message["params"] : json::object();
@@ -169,10 +184,22 @@ class Server {
   // --- transport -----------------------------------------------------------------------------
 
   bool read_message(std::string& body) {
+    constexpr std::size_t kMaximumHeaderBytes = 16 * 1024;
+    constexpr std::size_t kMaximumMessageBytes = 64 * 1024 * 1024;
     std::size_t length = 0;
+    std::size_t header_bytes = 0;
+    bool saw_length = false;
     bool any_header = false;
     std::string line;
-    while (std::getline(m_in, line)) {
+    while (m_in) {
+      line.clear();
+      char character = 0;
+      while (m_in.get(character)) {
+        if (++header_bytes > kMaximumHeaderBytes) return false;
+        if (character == '\n') break;
+        line.push_back(character);
+      }
+      if (!m_in) return false;
       if (!line.empty() && line.back() == '\r') {
         line.pop_back();
       }
@@ -190,10 +217,17 @@ class Server {
       std::string name = line.substr(0, colon);
       std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
       if (name == "content-length") {
-        try {
-          length = static_cast<std::size_t>(std::stoul(line.substr(colon + 1)));
-        } catch (...) {
-          length = 0;
+        if (saw_length) return false;
+        saw_length = true;
+        std::string_view value(line.data() + colon + 1, line.size() - colon - 1);
+        while (!value.empty() && (value.front() == ' ' || value.front() == '\t')) value.remove_prefix(1);
+        while (!value.empty() && (value.back() == ' ' || value.back() == '\t')) value.remove_suffix(1);
+        if (value.empty()) return false;
+        for (const char digit : value) {
+          if (digit < '0' || digit > '9') return false;
+          const auto part = static_cast<std::size_t>(digit - '0');
+          if (length > (kMaximumMessageBytes - part) / 10) return false;
+          length = length * 10 + part;
         }
       }
     }
@@ -334,9 +368,12 @@ class Server {
 
   void publish(const Document& doc) {
     const AnalysisResult analysis = analyze_program(doc.text, loader_for(doc.uri));
-    const Info info = build(analysis, doc, 1, 1);
     json diagnostics = json::array();
-    for (const Diagnostic& diagnostic : info.diagnostics) {
+    // Publishing errors must not construct completions, hover or references.
+    // Retain the IDE's one diagnostic per source position policy.
+    std::set<std::pair<std::uint32_t, std::uint32_t>> positions;
+    for (const Diagnostic& diagnostic : analysis.diagnostics) {
+      if (!positions.emplace(diagnostic.location.line, diagnostic.location.column).second) continue;
       const std::uint32_t line = std::max<std::uint32_t>(diagnostic.location.line, 1);
       const std::uint32_t column = std::max<std::uint32_t>(diagnostic.location.column, 1);
       json item{{"range", range(doc.text, line, column, static_cast<std::uint32_t>(diagnostic.span.size()))},
@@ -450,7 +487,8 @@ class Server {
         method == "textDocument/references" || method == "textDocument/rename" ||
         method == "textDocument/prepareRename" || method == "textDocument/semanticTokens/full" ||
         method == "textDocument/formatting" || method == "textDocument/foldingRange" ||
-        method == "textDocument/codeAction" || method == "textDocument/documentHighlight") {
+        method == "textDocument/codeAction" || method == "textDocument/documentHighlight" ||
+        method == "textDocument/documentColor" || method == "textDocument/colorPresentation") {
       Document* doc = document(params);
       if (doc == nullptr) {
         reply(id, nullptr);
@@ -482,6 +520,7 @@ class Server {
           {"definitionProvider", true},
           {"referencesProvider", true},
           {"documentHighlightProvider", true},
+          {"colorProvider", true},
           {"renameProvider", {{"prepareProvider", true}}},
           {"foldingRangeProvider", true},
           {"codeActionProvider", {{"codeActionKinds", json::array({"quickfix"})}}},
@@ -494,8 +533,40 @@ class Server {
 
   void handle_document_request(const std::string& method, const json& id, const json& params, Document& doc) {
     const std::string& text = doc.text;
-    const AnalysisResult analysis = analyze_program(text, loader_for(doc.uri));
-
+    // Color previews are lexical and remain available while the program is incomplete.
+    if (method == "textDocument/documentColor") {
+      json colors = json::array();
+      Lexer lexer(text);
+      for (const auto& token : lexer.tokenize().tokens) {
+        if (token.type != TokenType::IntLiteral || token.lexeme.size() < 3 ||
+            token.lexeme[0] != '0' || (token.lexeme[1] != 'x' && token.lexeme[1] != 'X')) continue;
+        std::string digits;
+        for (const char c : token.lexeme.substr(2)) if (c != '_') digits.push_back(c);
+        if (digits.size() != 6 && digits.size() != 8) continue;
+        std::uint32_t packed = 0;
+        for (const char c : digits) packed = (packed << 4) | static_cast<std::uint32_t>(hex_value(c));
+        colors.push_back(json{{"range", range(text, token.location.line, token.location.column,
+                                                static_cast<std::uint32_t>(token.lexeme.size()))},
+          {"color", {{"red", ((packed >> 16) & 255) / 255.0}, {"green", ((packed >> 8) & 255) / 255.0},
+                     {"blue", (packed & 255) / 255.0}, {"alpha", (255 - ((packed >> 24) & 255)) / 255.0}}}});
+      }
+      reply(id, colors); return;
+    }
+    if (method == "textDocument/colorPresentation") {
+      const auto& color = params.at("color");
+      const auto byte = [&](const char* component) {
+        const double value = color.at(component).get<double>();
+        return static_cast<std::uint32_t>(std::lround(std::clamp(value, 0.0, 1.0) * 255));
+      };
+      const std::uint32_t transparency = 255 - byte("alpha");
+      const std::uint32_t packed = (transparency << 24) | (byte("red") << 16) | (byte("green") << 8) | byte("blue");
+      std::ostringstream literal;
+      literal << "0x" << std::uppercase << std::hex << std::setfill('0')
+              << std::setw(transparency == 0 ? 6 : 8) << packed;
+      reply(id, json::array({json{{"label", literal.str()},
+          {"textEdit", {{"range", params.at("range")}, {"newText", literal.str()}}}}}));
+      return;
+    }
     if (method == "textDocument/semanticTokens/full") {
       const std::vector<std::uint32_t> data = encode_semantic_tokens(semantic_tokens(text, loader_for(doc.uri)), text);
       reply(id, json{{"data", data}});
@@ -511,6 +582,7 @@ class Server {
                                   {"newText", formatted}}}));
       return;
     }
+    const AnalysisResult analysis = analyze_program(text, loader_for(doc.uri));
     if (method == "textDocument/foldingRange") {
       json ranges = json::array();
       std::vector<int> open;
@@ -541,27 +613,26 @@ class Server {
         if (diagnostic.value("message", "") != "cannot assign to immutable binding") {
           continue;
         }
-        // Find the `let name` that declares the assigned binding and offer `let mut name`.
+        // Resolve the declaration, so a shadowed name cannot change a different binding.
         const auto [line, column] = to_compiler(text, diagnostic.at("range").at("start"));
-        std::string name;
-        for (const Token& token : analysis.tokens) {
-          if (token.location.line == line && token.location.column == column) {
-            name = std::string(token.lexeme);
-          }
-        }
-        for (std::size_t index = 0; index + 1 < analysis.tokens.size() && !name.empty(); ++index) {
-          const Token& keyword = analysis.tokens[index];
-          const Token& target = analysis.tokens[index + 1];
-          if (keyword.type == TokenType::KwLet && target.lexeme == name) {
-            json edit{{"range", range(text, target.location.line, target.location.column, 0)}, {"newText", "mut "}};
-            edit["range"]["end"] = edit["range"]["start"];
-            actions.push_back(json{{"title", "Make '" + name + "' mutable (let mut)"},
-                                   {"kind", "quickfix"},
-                                   {"diagnostics", json::array({diagnostic})},
-                                   {"isPreferred", true},
+        const Info declaration = build_info_for(analysis, text, line, column);
+        if (!declaration.has_definition || !declaration.definition_path.empty()) continue;
+        for (std::size_t index = 0; index < analysis.tokens.size(); ++index) {
+          const Token& target = analysis.tokens[index];
+          if (target.location.line != declaration.definition.line ||
+              target.location.column != declaration.definition.column) continue;
+          for (std::size_t prefix = index; prefix > 0;) {
+            const Token& token = analysis.tokens[--prefix];
+            if (token.type == TokenType::Semicolon || token.type == TokenType::OpenBrace ||
+                token.type == TokenType::CloseBrace) break;
+            if (token.type != TokenType::KwConst) continue;
+            json edit{{"range", range(text, token.location.line, token.location.column, 5)}, {"newText", ""}};
+            actions.push_back(json{{"title", "Make '" + std::string(target.lexeme) + "' mutable (remove const)"},
+                                   {"kind", "quickfix"}, {"diagnostics", json::array({diagnostic})},
                                    {"edit", {{"changes", {{doc.uri, json::array({edit})}}}}}});
             break;
           }
+          break;
         }
       }
       reply(id, actions);
@@ -737,7 +808,7 @@ class Server {
       return json{{"name", name}, {"detail", detail}, {"kind", kind}, {"range", where}, {"selectionRange", where}};
     };
     for (const parser::StructDecl& decl : program.structs) {
-      if (imported_type(decl.name) || decl.name_location.line == 0) {
+      if (decl.imported || imported_type(decl.name) || decl.name_location.line == 0) {
         continue;
       }
       json entry = symbol(decl.name, decl.base.empty() ? "struct" : "struct : " + decl.base, 23, decl.name_location);
@@ -758,7 +829,7 @@ class Server {
       symbols.push_back(std::move(entry));
     }
     for (const parser::EnumDecl& decl : program.enums) {
-      if (imported_type(decl.name) || decl.name_location.line == 0) {
+      if (decl.imported || imported_type(decl.name) || decl.name_location.line == 0) {
         continue;
       }
       json entry = symbol(decl.name, "enum", 10, decl.name_location);
@@ -776,8 +847,8 @@ class Server {
       symbols.push_back(symbol(function.name, "func", 12, function.name_location));
     }
     for (const parser::Stmt& stmt : program.statements) {
-      if (stmt.kind == parser::Stmt::Kind::Let && stmt.name_location.line != 0) {
-        symbols.push_back(symbol(stmt.name, stmt.declared_type.empty() ? "let" : stmt.declared_type,
+      if (stmt.kind == parser::Stmt::Kind::VariableDecl && stmt.name_location.line != 0) {
+        symbols.push_back(symbol(stmt.name, stmt.declared_type.empty() ? "auto" : stmt.declared_type,
                                  stmt.immutable ? 14 : 13, stmt.name_location));
       }
     }

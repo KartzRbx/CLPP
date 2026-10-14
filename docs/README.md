@@ -1,16 +1,22 @@
 # CL++ documentation
 
-The [English documentation website](https://kartzrbx.github.io/CLPP/) is generated from this directory. It contains the language guide, syntax and grammar references, standard library, implementation and benchmark notes, and complete project tutorials.
+The website teaches the author's CL++ language, then its libraries. It is generated from every Markdown page in guide/, handbook/, and reference/. Internal design material is not published.
+
+## Complete language handbook
+
+The fifteen chapters in [handbook/](handbook/) incorporate the author's language specification, with the confirmed corrections: no headers, output through post/warn/report, named initialization with `Field = value` without a leading dot, and def grouping the type forms. All published explanations are in English. The CL++ VM is the only official execution target. A transpiler written in CL++ may generate Luau as an application use case; that does not make Luau a compiler backend.
 
 ## Reading path
 
-1. [About CL++](guide/00-about.md) explains its origin, goals, and uses.
-2. [Getting started](guide/01-getting-started.md) installs the compiler and runs a first program.
-3. Chapters 2–13 explain syntax, types, control flow, modules, errors, concurrency, and events.
-4. [Standard library](guide/14-standard-library.md) and chapters 17–19 cover built-in modules.
-5. [Tools and editor](guide/15-tools-and-editor.md) and [Performance](guide/16-performance.md) cover development and measured optimization.
-6. [Modular combat](guide/20-modular-combat.md) and the [account screen](guide/21-account-screen.md) show complete projects.
+1. [Learn CL++ from zero](guide/00-language-tour.md): read a source file, a declaration, a condition, a function, and a data definition.
+2. [Implementation status](reference/status.md): understand executable examples versus author-defined target examples.
+3. [Syntax map](reference/syntax.md): find every topic independently.
+4. [Lexer](reference/lexer.md), [comments](reference/comments.md), [names](reference/identifiers.md), [literals](reference/literals.md), and [punctuation](reference/punctuation.md).
+5. Guide chapters 3–13: declarations, expressions, flow, functions, definitions, types, collections, modules, errors, concurrency, and events.
+6. Library chapters and complete projects after the language fundamentals.
 
-## Source references
+## Validation
 
-The earlier guide is kept under `tests/docs/legacy` solely as executable regression fixtures. Both the current English guide and those fixtures are checked by `tests/docs/check_docs.py`.
+`npm --prefix www run build` checks website content policy, generates all pages and navigation, and builds Astro/Starlight. The policy rejects obsolete declaration syntax in published CL++ blocks and checks repository Markdown links.
+
+`tests/docs/check_docs.py` compiles executable examples and checks expected output/errors. `clp target` blocks specify pending language work and are counted separately, never as passing compiler tests. Historical regression documentation under `tests/docs/legacy` is not the public language specification.

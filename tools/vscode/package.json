@@ -50,7 +50,7 @@
         "editor.suggestOnTriggerCharacters": true,
         "editor.wordBasedSuggestions": "off",
         "editor.tabSize": 2,
-        "editor.semanticHighlighting.enabled": false
+        "editor.semanticHighlighting.enabled": true
       }
     }
   }

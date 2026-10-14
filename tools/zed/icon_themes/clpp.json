@@ -1,0 +1,13 @@
+{
+  "$schema": "https://zed.dev/schema/icon_themes/v0.3.0.json",
+  "name": "CL++ Icons",
+  "author": "KartzRbx",
+  "themes": [
+    {
+      "name": "CL++ Icons",
+      "appearance": "dark",
+      "file_suffixes": { "clp": "clpp" },
+      "file_icons": { "clpp": { "path": "./icons/clpp.svg" } }
+    }
+  ]
+}

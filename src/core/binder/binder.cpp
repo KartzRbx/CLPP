@@ -1,12 +1,16 @@
 #include "core/binder/binder.hpp"
 
 #include "clpp/stdlib.hpp"
+#include "clpp/numeric.hpp"
+#include "core/typechecker/solver.hpp"
+#include "core/compiler/module_types.hpp"
 
 #include <algorithm>
 #include <cstdint>
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <unordered_set>
 #include <vector>
 
 namespace clpp::binder {
@@ -20,6 +24,8 @@ struct Local {
   bool constant{false};
   std::string value;
   bool observable{false};
+  std::string optional_origin;
+  bool global{false};
 };
 
 struct FuncRef {
@@ -34,16 +40,22 @@ struct FuncRef {
   bool is_final{false};
   std::uint16_t extern_id{0};
   std::string return_type;
+  std::vector<std::string> type_params;
+  std::size_t owner_type_param_count{0};
 };
 
 // The functions of the program being bound, so `make().field` can find make's return type.
 thread_local const std::vector<FuncRef>* g_bound_functions = nullptr;
+thread_local const parser::Function* active_function = nullptr;
+thread_local std::vector<Local>* module_globals = nullptr;
 
 struct StructRef {
   std::string name;
   std::vector<std::string> fields;
   std::vector<std::string> field_owners;
   std::vector<std::string> field_types;
+  std::vector<std::string> type_params;
+  std::vector<std::shared_ptr<parser::Expr>> field_defaults;
   std::vector<char> private_fields;
   std::vector<std::string> method_names;
   std::vector<std::uint16_t> vtable;
@@ -52,30 +64,50 @@ struct StructRef {
 };
 
 struct EnumRef {
+  bool scoped{false};
   std::string name;
   std::vector<std::string> variants;
-  std::vector<std::string> payload_types;
 };
 
-struct VariantRef {
-  std::string name;
-  std::uint16_t index{0};
-};
 
-std::vector<VariantRef>* active_variants = nullptr;
-std::vector<std::vector<std::uint16_t>>* active_listeners = nullptr;
-const std::string* active_owner = nullptr;
-parser::Program* active_program = nullptr;
+thread_local std::vector<std::vector<std::uint16_t>>* active_listeners = nullptr;
+thread_local const std::string* active_owner = nullptr;
+thread_local parser::Program* active_program = nullptr;
+thread_local std::vector<const parser::Expr*> pending_defaults;
+thread_local std::vector<const parser::Expr*> bound_defaults;
 
 [[nodiscard]] parser::Expr clone_expr(const parser::Expr& expr) {
   parser::Expr copy;
   copy.kind = expr.kind;
   copy.value = expr.value;
+  copy.default_scope = expr.default_scope;
   copy.number = expr.number;
+  copy.integer = expr.integer; copy.exact_integer = expr.exact_integer;
+  copy.numeric_promotion = expr.numeric_promotion;
   copy.float_literal = expr.float_literal;
   copy.bool_literal = expr.bool_literal;
   copy.null_literal = expr.null_literal;
   copy.slot = expr.slot;
+  copy.global = expr.global;
+  copy.span = expr.span;
+  copy.location = expr.location;
+  copy.enum_literal = expr.enum_literal;
+  copy.named_initializer = expr.named_initializer;
+  copy.scoped_member = expr.scoped_member;
+  copy.async_call = expr.async_call;
+  copy.signal_call = expr.signal_call;
+  copy.thread_call = expr.thread_call;
+  copy.extern_call = expr.extern_call;
+  copy.int_specialized = expr.int_specialized;
+  copy.bool_left = expr.bool_left;
+  copy.bool_right = expr.bool_right;
+  copy.virtual_call = expr.virtual_call;
+  copy.missing = expr.missing;
+  copy.runtime_op = expr.runtime_op;
+  copy.targets = expr.targets;
+  copy.arg_names = expr.arg_names;
+  copy.postfix = expr.postfix;
+
   if (expr.left != nullptr) {
     copy.left = std::make_unique<parser::Expr>(clone_expr(*expr.left));
   }
@@ -86,6 +118,34 @@ parser::Program* active_program = nullptr;
     copy.args.push_back(clone_expr(arg));
   }
   return copy;
+}
+
+void narrow_optional(const parser::Expr& condition, const bool truth, std::vector<Local>& locals) {
+  if (condition.kind == parser::Expr::Kind::Not && condition.left != nullptr) {
+    narrow_optional(*condition.left, !truth, locals);
+    return;
+  }
+  if (((condition.kind == parser::Expr::Kind::And && truth) ||
+       (condition.kind == parser::Expr::Kind::Or && !truth)) && condition.left != nullptr && condition.right != nullptr) {
+    narrow_optional(*condition.left, truth, locals);
+    narrow_optional(*condition.right, truth, locals);
+    return;
+  }
+  if (condition.kind != parser::Expr::Kind::Eq && condition.kind != parser::Expr::Kind::NotEq) return;
+  if (condition.left == nullptr || condition.right == nullptr) return;
+  const parser::Expr* name = condition.left.get();
+  const parser::Expr* value = condition.right.get();
+  if (name->null_literal) std::swap(name, value);
+  if (name->kind != parser::Expr::Kind::Name || !value->null_literal ||
+      ((condition.kind == parser::Expr::Kind::NotEq) != truth)) return;
+  for (auto local = locals.rbegin(); local != locals.rend(); ++local) {
+    if (local->name != name->value) continue;
+    if (local->type_name.starts_with("optional<") && local->type_name.back() == '>') {
+      local->optional_origin = local->type_name;
+      local->type_name = local->type_name.substr(9, local->type_name.size() - 10);
+    }
+    break;
+  }
 }
 
 [[nodiscard]] std::string bare_type(std::string_view name) {
@@ -105,42 +165,15 @@ parser::Program* active_program = nullptr;
   return false;
 }
 
-[[nodiscard]] const VariantRef* find_variant_type(const std::string_view name) {
-  if (active_variants == nullptr) {
-    return nullptr;
-  }
-  for (const VariantRef& decl : *active_variants) {
-    if (decl.name == name) {
-      return &decl;
-    }
-  }
-  return nullptr;
-}
 
 [[nodiscard]] bool is_builtin_type(const std::string_view name) {
-  return name.empty() || name == "int" || name == "float" || name == "double" || name == "string" || name == "bool" ||
+  return name.empty() || name == "number" || name == "float" || name == "float" || name == "string" || name == "bool" ||
          name == "void" || name == "Vector2" || name == "Vector3" || name == "Vector4" || name == "buffer" ||
          name == "task";
 }
 
-struct SignalBind {
-  std::string name;
-  std::vector<std::uint16_t> targets;
-};
 
-std::vector<SignalBind>* active_signals = nullptr;
 
-[[nodiscard]] SignalBind* find_signal(const std::string_view name) {
-  if (active_signals == nullptr) {
-    return nullptr;
-  }
-  for (SignalBind& signal : *active_signals) {
-    if (signal.name == name) {
-      return &signal;
-    }
-  }
-  return nullptr;
-}
 
 [[nodiscard]] int find_local(const std::vector<Local>& locals, const std::string_view name) {
   for (std::size_t index = locals.size(); index > 0; --index) {
@@ -158,6 +191,15 @@ std::vector<SignalBind>* active_signals = nullptr;
     }
   }
   return nullptr;
+}
+
+[[nodiscard]] const Local* expression_local(const std::vector<Local>& locals, const parser::Expr& expr) {
+  if (expr.global) {
+    for (auto local = locals.rbegin(); local != locals.rend(); ++local)
+      if (local->global && local->name == expr.value) return &*local;
+    return nullptr;
+  }
+  return find_local_entry(locals, expr.value);
 }
 
 [[nodiscard]] int native_id(const std::string_view name, const std::size_t arity) {
@@ -297,78 +339,173 @@ std::vector<SignalBind>* active_signals = nullptr;
   return -1;
 }
 
+void bind_stmts(std::vector<parser::Stmt>&, std::vector<Local>&, const std::vector<FuncRef>&,
+                const std::vector<StructRef>&, const std::vector<EnumRef>&, std::size_t&, std::vector<Diagnostic>&);
+
+
+// Establish type ownership before inference queries build anonymous signatures.
+void record_lexical_stmts(const std::vector<parser::Stmt>& body, parser::Program& program,
+                          const std::vector<FuncRef>& functions, std::uint16_t owner);
+void record_lexical_expr(const parser::Expr& expr, parser::Program& program,
+                         const std::vector<FuncRef>& functions, const std::uint16_t owner) {
+  if (expr.kind == parser::Expr::Kind::Closure) {
+    const auto index = find_func(functions, expr.value);
+    if (index >= 0 && static_cast<std::size_t>(index) < program.functions.size()) {
+      auto& nested = program.functions[index];
+      if (nested.anonymous) {
+        nested.lexical_parent = owner;
+        record_lexical_stmts(nested.body, program, functions, nested.index);
+      }
+    }
+  }
+  if (expr.left) record_lexical_expr(*expr.left, program, functions, owner);
+  if (expr.right) record_lexical_expr(*expr.right, program, functions, owner);
+  for (const auto& arg : expr.args) record_lexical_expr(arg, program, functions, owner);
+}
+void record_lexical_stmts(const std::vector<parser::Stmt>& body, parser::Program& program,
+                          const std::vector<FuncRef>& functions, const std::uint16_t owner) {
+  for (const auto& stmt : body) {
+    record_lexical_expr(stmt.expr, program, functions, owner);
+    record_lexical_expr(stmt.place, program, functions, owner);
+    record_lexical_expr(stmt.type_expr, program, functions, owner);
+    record_lexical_stmts(stmt.init, program, functions, owner);
+    record_lexical_stmts(stmt.then_body, program, functions, owner);
+    record_lexical_stmts(stmt.else_body, program, functions, owner);
+    record_lexical_stmts(stmt.step, program, functions, owner);
+    for (const auto& arm : stmt.arms) {
+      record_lexical_expr(arm.pattern, program, functions, owner);
+      record_lexical_expr(arm.guard, program, functions, owner);
+      record_lexical_stmts(arm.body, program, functions, owner);
+    }
+  }
+}
+
+// Find lexical free names before introducing hidden capture parameters. A shadow only
+// takes effect after its initializer; nested lambdas inherit the surrounding scope.
+bool closure_uses(const std::vector<parser::Stmt>& body, const std::string& name,
+                  std::vector<std::string> shadows);
+bool closure_expr_uses(const parser::Expr& expr, const std::string& name,
+                       const std::vector<std::string>& shadows) {
+  const bool hidden = std::find(shadows.begin(), shadows.end(), name) != shadows.end();
+  if (!hidden && ((expr.kind == parser::Expr::Kind::SelfField && name == "@this") || (expr.kind == parser::Expr::Kind::Name && expr.value == name) ||
+      (expr.kind == parser::Expr::Kind::Call && (expr.value == name || expr.value.starts_with(name + "."))))) return true;
+  if (expr.kind == parser::Expr::Kind::Closure && active_program) {
+    for (const auto& nested : active_program->functions) if (nested.name == expr.value) {
+      auto scope = shadows; scope.insert(scope.end(), nested.params.begin(), nested.params.end());
+      if (closure_uses(nested.body, name, std::move(scope))) return true;
+    }
+  }
+  if (expr.left && closure_expr_uses(*expr.left, name, shadows)) return true;
+  if (expr.right && closure_expr_uses(*expr.right, name, shadows)) return true;
+  for (const auto& arg : expr.args) if (closure_expr_uses(arg, name, shadows)) return true;
+  return false;
+}
+bool closure_uses(const std::vector<parser::Stmt>& body, const std::string& name,
+                  std::vector<std::string> shadows) {
+  for (const auto& stmt : body) {
+    if (stmt.kind == parser::Stmt::Kind::SelfAssign && name == "@this" &&
+        std::find(shadows.begin(), shadows.end(), name) == shadows.end()) return true;
+    if ((stmt.kind == parser::Stmt::Kind::Assign || stmt.kind == parser::Stmt::Kind::PlaceAssign) &&
+        stmt.name == name && std::find(shadows.begin(), shadows.end(), name) == shadows.end()) return true;
+    if (closure_expr_uses(stmt.expr, name, shadows) || closure_expr_uses(stmt.place, name, shadows) ||
+        closure_expr_uses(stmt.type_expr, name, shadows)) return true;
+    auto nested_scope = shadows;
+    for (const auto& init : stmt.init) {
+      if (closure_expr_uses(init.expr, name, nested_scope)) return true;
+      if (init.kind == parser::Stmt::Kind::VariableDecl) nested_scope.push_back(init.name);
+    }
+    if (stmt.kind == parser::Stmt::Kind::For || stmt.kind == parser::Stmt::Kind::ForIn) nested_scope.push_back(stmt.name);
+    if (closure_uses(stmt.then_body, name, nested_scope) || closure_uses(stmt.step, name, nested_scope) ||
+        closure_uses(stmt.else_body, name, shadows)) return true;
+    for (const auto& arm : stmt.arms) {
+      auto arm_scope = shadows; if (!arm.bind_name.empty()) arm_scope.push_back(arm.bind_name);
+      if (closure_expr_uses(arm.pattern, name, shadows) || closure_expr_uses(arm.guard, name, arm_scope) ||
+          closure_uses(arm.body, name, arm_scope)) return true;
+    }
+    if (stmt.kind == parser::Stmt::Kind::VariableDecl) shadows.push_back(stmt.name);
+  }
+  return false;
+}
+
 void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::vector<FuncRef>& functions,
                const std::vector<StructRef>& structs, const std::vector<EnumRef>& enums,
-               std::vector<Diagnostic>& diagnostics);
+               std::vector<Diagnostic>& diagnostics, const std::string& expected = {});
+
+// Defaults resolve once in the declaration scope, never in a caller's locals.
+[[nodiscard]] bool bind_default(parser::Expr& expr, const std::vector<FuncRef>& functions,
+                                 const std::vector<StructRef>& structs, const std::vector<EnumRef>& enums,
+                                 std::vector<Diagnostic>& diagnostics, const std::string& expected,
+                                 const std::string& owner) {
+  if (std::find(bound_defaults.begin(), bound_defaults.end(), &expr) != bound_defaults.end()) return true;
+  if (std::find(pending_defaults.begin(), pending_defaults.end(), &expr) != pending_defaults.end()) {
+    diagnostics.push_back(Diagnostic{expr.location, expr.span, "recursive field default"});
+    return false;
+  }
+  pending_defaults.push_back(&expr);
+  const auto* previous = active_function;
+  const auto* previous_owner = active_owner;
+  parser::Function context; context.index = 65535; context.type_owner = owner;
+  for (const auto& data : structs) if (data.name == owner) context.type_params = data.type_params;
+  active_function = &context; active_owner = &owner;
+  const std::vector<Local> definition_scope = module_globals ? *module_globals : std::vector<Local>{};
+  bind_expr(expr, definition_scope, functions, structs, enums, diagnostics, expected);
+  active_function = previous; active_owner = previous_owner;
+  pending_defaults.pop_back();
+  bound_defaults.push_back(&expr);
+  return true;
+}
+
+[[nodiscard]] std::string inferred_type(const parser::Expr& expr, const std::vector<Local>& locals,
+                                        const std::vector<StructRef>& structs);
+
+[[nodiscard]] std::string member_owner_spelling(const std::string& type, const std::vector<StructRef>& structs,
+                                               const std::string& member = {}) {
+  const parser::Function* owner = active_function;
+  for (std::size_t depth = 0; owner && owner->anonymous && active_program &&
+       owner->lexical_parent < active_program->functions.size() && depth < active_program->functions.size(); ++depth)
+    owner = &active_program->functions[owner->lexical_parent];
+  const bool formal = owner != nullptr &&
+      std::find(owner->type_params.begin(), owner->type_params.end(), type) != owner->type_params.end();
+  if ((!formal && find_struct(structs, bare_type(type)) != nullptr) || active_program == nullptr) return type;
+  return typechecker::member_owner_type(*active_program, type, active_function, member).value_or(type);
+}
 
 [[nodiscard]] int struct_index_of(const parser::Expr& expr, const std::vector<Local>& locals,
-                                  const std::vector<StructRef>& structs) {
+                                  const std::vector<StructRef>& structs, const std::string& member = {}) {
   if (expr.kind == parser::Expr::Kind::Construct) {
     return static_cast<int>(expr.slot);
   }
   if (expr.kind == parser::Expr::Kind::Name) {
-    const Local* local = find_local_entry(locals, expr.value);
+    const Local* local = expression_local(locals, expr);
     if (local == nullptr) {
       return -1;
     }
-    const StructRef* decl = find_struct(structs, bare_type(local->type_name));
+    const StructRef* decl = find_struct(structs, bare_type(member_owner_spelling(local->type_name, structs, member)));
     if (decl == nullptr) {
       return -1;
     }
     return static_cast<int>(decl->index);
   }
-  if (expr.kind == parser::Expr::Kind::Call && g_bound_functions != nullptr) {
-    // heal(f).hp: the struct the called function returns
-    for (const FuncRef& function : *g_bound_functions) {
-      if (function.name == expr.value && !function.return_type.empty()) {
-        const StructRef* decl = find_struct(structs, bare_type(function.return_type));
-        return decl == nullptr ? -1 : static_cast<int>(decl->index);
-      }
-    }
-    return -1;
+  if ((expr.kind == parser::Expr::Kind::Call || expr.kind == parser::Expr::Kind::Invoke || expr.kind == parser::Expr::Kind::Await) && g_bound_functions != nullptr) {
+    const StructRef* decl = find_struct(structs, bare_type(member_owner_spelling(inferred_type(expr, locals, structs), structs, member)));
+    return decl == nullptr ? -1 : static_cast<int>(decl->index);
   }
   if (expr.kind == parser::Expr::Kind::Member && expr.left != nullptr) {
-    // p.stats.hp: the struct of `p.stats` is the declared type of the field `stats`.
-    const int parent = struct_index_of(*expr.left, locals, structs);
-    if (parent < 0) {
-      return -1;
-    }
-    for (const StructRef& owner : structs) {
-      if (owner.index != static_cast<std::uint16_t>(parent)) {
-        continue;
-      }
-      for (std::size_t field = 0; field < owner.fields.size() && field < owner.field_types.size(); ++field) {
-        if (owner.fields[field] == expr.value) {
-          const StructRef* decl = find_struct(structs, bare_type(owner.field_types[field]));
-          return decl == nullptr ? -1 : static_cast<int>(decl->index);
-        }
-      }
-    }
-    return -1;
+    const StructRef* decl = find_struct(structs, bare_type(member_owner_spelling(inferred_type(expr, locals, structs), structs, member)));
+    return decl == nullptr ? -1 : static_cast<int>(decl->index);
   }
-  if (expr.kind == parser::Expr::Kind::Index && expr.left != nullptr && expr.left->kind == parser::Expr::Kind::Name) {
-    // team[1].hp with `array<Stats> team` or `list<Stats> team`: the element type.
-    const Local* local = find_local_entry(locals, expr.left->value);
-    if (local == nullptr) {
-      return -1;
-    }
-    const std::string& type = local->type_name;
-    const std::size_t open = type.find('<');
-    if (open == std::string::npos || type.back() != '>' ||
-        (type.compare(0, open, "array") != 0 && type.compare(0, open, "list") != 0)) {
-      return -1;
-    }
-    const StructRef* decl = find_struct(structs, type.substr(open + 1, type.size() - open - 2));
+  if (expr.kind == parser::Expr::Kind::Index) {
+    const StructRef* decl = find_struct(structs, bare_type(member_owner_spelling(inferred_type(expr, locals, structs), structs, member)));
     return decl == nullptr ? -1 : static_cast<int>(decl->index);
   }
   return -1;
 }
 
-// Inside a method, `@hp` / `@this.hp` / `@this::hp` name a field of self (when self has one);
-// elsewhere `@name` keeps meaning the shared self table.
+// Method receiver bindings are named @this internally, which cannot collide with
+// a plain source identifier. Legacy @field handling remains a separate cleanup.
 [[nodiscard]] bool self_has_field(const std::vector<Local>& locals, const std::vector<StructRef>& structs,
                                   const std::string& field) {
-  const Local* self = find_local_entry(locals, "self");
+  const Local* self = find_local_entry(locals, "@this");
   if (self == nullptr) {
     return false;
   }
@@ -379,7 +516,7 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
 [[nodiscard]] parser::Expr self_member(const std::string& field, const std::string_view span, const SourceLocation location) {
   parser::Expr receiver;
   receiver.kind = parser::Expr::Kind::Name;
-  receiver.value = "self";
+  receiver.value = "@this";
   receiver.span = span;
   receiver.location = location;
   parser::Expr member;
@@ -391,39 +528,188 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
   return member;
 }
 
+// Bind evidence first so an earlier lambda can use a later ordinary argument's type.
+void bind_arguments(parser::Expr& expr, const std::vector<Local>& locals, const std::vector<FuncRef>& functions,
+                    const std::vector<StructRef>& structs, const std::vector<EnumRef>& enums,
+                    std::vector<Diagnostic>& diagnostics) {
+  std::vector<bool> deferred(expr.args.size(), false);
+  for (std::size_t index = 0; index < expr.args.size(); ++index) {
+    deferred[index] = expr.args[index].kind == parser::Expr::Kind::Closure ||
+        (expr.args[index].kind == parser::Expr::Kind::MakeList && expr.args[index].value == "$array_initializer");
+    if (!deferred[index]) bind_expr(expr.args[index], locals, functions, structs, enums, diagnostics);
+  }
+  std::vector<std::string> expected;
+  if (active_program && std::any_of(deferred.begin(), deferred.end(), [](bool value) { return value; })) {
+    std::vector<typechecker::LocalType> types;
+    for (const auto& local : locals) types.push_back({local.name, local.type_name, local.global});
+    expected = typechecker::argument_types(*active_program, expr, types, active_function);
+  }
+  for (std::size_t index = 0; index < expr.args.size(); ++index)
+    if (deferred[index]) bind_expr(expr.args[index], locals, functions, structs, enums, diagnostics,
+                                index < expected.size() ? expected[index] : std::string{});
+}
+
+// Resolve methods from the receiver's declared type, independent of its expression shape.
+void bind_method(parser::Expr& expr, parser::Expr receiver, const std::vector<Local>& locals,
+                 const std::vector<FuncRef>& functions, const std::vector<StructRef>& structs,
+                 const std::vector<EnumRef>& enums, std::vector<Diagnostic>& diagnostics) {
+  if (expr.thread_call) { diagnostics.push_back(Diagnostic{expr.location, expr.span, "extract a method callback before using thread"}); return; }
+  bind_expr(receiver, locals, functions, structs, enums, diagnostics);
+  const int type_index = struct_index_of(receiver, locals, structs, bare_type(expr.value));
+  const StructRef* type = type_index < 0 ? nullptr : struct_at(structs, static_cast<std::uint16_t>(type_index));
+  if (type == nullptr) {
+    diagnostics.push_back(Diagnostic{expr.location, expr.span, "unknown receiver type"});
+    return;
+  }
+  const auto generic = expr.value.find('<');
+  const std::string supplied = generic == std::string::npos ? std::string{} : expr.value.substr(generic);
+  const auto method = std::find(type->method_names.begin(), type->method_names.end(), bare_type(expr.value));
+  const std::size_t slot = static_cast<std::size_t>(method - type->method_names.begin());
+  const FuncRef* target = nullptr;
+  if (method != type->method_names.end() && slot < type->vtable.size()) {
+    for (const FuncRef& symbol : functions) {
+      if (symbol.index == type->vtable[slot]) { target = &symbol; break; }
+    }
+  }
+  if (target == nullptr) {
+    diagnostics.push_back(Diagnostic{expr.location, expr.span, "undefined function"});
+    return;
+  }
+  const std::string owner = target->name.substr(0, target->name.rfind('.'));
+  if (target->is_private && (active_owner == nullptr || *active_owner != owner)) {
+    diagnostics.push_back(Diagnostic{expr.location, expr.span, "private member"});
+    return;
+  }
+  if (expr.args.size() + 1 != target->arity) {
+    diagnostics.push_back(Diagnostic{expr.location, expr.span, "wrong number of arguments"});
+    return;
+  }
+  expr.args.insert(expr.args.begin(), std::move(receiver));
+  expr.virtual_call = true;
+  expr.slot = static_cast<std::uint16_t>(slot);
+  expr.value = target->name + supplied;
+  expr.async_call = target->is_async;
+  bind_arguments(expr, locals, functions, structs, enums, diagnostics);
+}
+
 void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::vector<FuncRef>& functions,
                const std::vector<StructRef>& structs, const std::vector<EnumRef>& enums,
-               std::vector<Diagnostic>& diagnostics) {
+               std::vector<Diagnostic>& diagnostics, const std::string& expected) {
+  if (expr.kind == parser::Expr::Kind::MakeList && expr.value == "$array_initializer") {
+    const auto type = active_program ? typechecker::array_initializer_type(*active_program, expected, active_function) : std::nullopt;
+    if (!type) {
+      diagnostics.push_back(Diagnostic{expr.location, expr.span, "array initializer requires an explicit array type context"});
+      return;
+    }
+    expr.value = *type;
+    bind_arguments(expr, locals, functions, structs, enums, diagnostics);
+    return;
+  }
+  if ((expr.kind == parser::Expr::Kind::And || expr.kind == parser::Expr::Kind::Or) &&
+      expr.left != nullptr && expr.right != nullptr) {
+    bind_expr(*expr.left, locals, functions, structs, enums, diagnostics);
+    auto right_locals = locals;
+    narrow_optional(*expr.left, expr.kind == parser::Expr::Kind::And, right_locals);
+    bind_expr(*expr.right, right_locals, functions, structs, enums, diagnostics);
+    return;
+  }
   if (expr.kind == parser::Expr::Kind::SelfField && self_has_field(locals, structs, expr.value)) {
     expr = self_member(expr.value, expr.span, expr.location);
   }
   if (expr.kind == parser::Expr::Kind::Update) {
+    if (!expr.left || expr.left->kind != parser::Expr::Kind::Name) {
+      diagnostics.push_back(Diagnostic{expr.location, expr.span, "update requires a mutable binding"}); return;
+    }
     if (expr.left != nullptr) {
+      const auto* binding = expr.left->kind == parser::Expr::Kind::Name ? find_local_entry(locals, expr.left->value) : nullptr;
+      if (binding && binding->constant) diagnostics.push_back(Diagnostic{expr.location, expr.span, "cannot assign to immutable binding"});
       bind_expr(*expr.left, locals, functions, structs, enums, diagnostics);
       expr.slot = expr.left->slot;
+      expr.global = expr.left->global;
       expr.value = expr.left->value;
     }
     return;
   }
-  if (expr.kind == parser::Expr::Kind::Name && expr.value == "None") {
-    expr.kind = parser::Expr::Kind::Construct;
-    expr.payload_ctor = true;
-    expr.slot = 65534;
-    parser::Expr tag;
-    tag.kind = parser::Expr::Kind::Number;
-    parser::Expr filler;
-    filler.kind = parser::Expr::Kind::Number;
-    expr.args.push_back(std::move(tag));
-    expr.args.push_back(std::move(filler));
+  if (expr.kind == parser::Expr::Kind::Closure) {
+    const int index = find_func(functions, bare_type(expr.value));
+    if (expr.virtual_call && expr.left) { bind_expr(*expr.left, locals, functions, structs, enums, diagnostics); return; }
+    if (index < 0 || active_program == nullptr) {
+      diagnostics.push_back(Diagnostic{expr.location, expr.span, "undefined callback"}); return;
+    }
+    expr.slot = static_cast<std::uint16_t>(index);
+    auto& function = active_program->functions[index];
+    if (!function.anonymous || function.closure_bound) return;
+    if (const auto parameters = typechecker::callback_parameters(*active_program, expected, active_function);
+        parameters && parameters->size() == function.params.size()) {
+      for (std::size_t param = 0; param < function.params.size(); ++param)
+        if (function.param_types[param].empty()) function.param_types[param] = (*parameters)[param];
+    }
+    function.closure_bound = true;
+    function.lexical_parent = active_function ? active_function->index : 65535;
+    if (active_function) function.type_owner = active_function->type_owner;
+    std::vector<Local> scope = module_globals ? *module_globals : std::vector<Local>{};
+    std::size_t next = function.params.size();
+    for (std::size_t i = 0; i < function.params.size(); ++i) {
+      scope.push_back(Local{function.params[i], static_cast<std::uint16_t>(i), function.param_types[i]});
+    }
+    for (auto it = locals.rbegin(); it != locals.rend(); ++it) {
+      if (it->global || (find_local_entry(scope, it->name) && !find_local_entry(scope, it->name)->global) || !closure_uses(function.body, it->name, function.params)) continue;
+      const auto capture_type = !it->constant && !it->optional_origin.empty() ? it->optional_origin : it->type_name;
+      parser::Capture capture{it->name, capture_type, it->slot, it->constant};
+      capture.source_scope = active_function ? active_function->index + 1u : 0u;
+      capture.origin_slot = it->slot;
+      if (active_function && it->slot >= active_function->params.size() &&
+          it->slot < active_function->params.size() + active_function->captures.size()) {
+        const auto& origin = active_function->captures[it->slot - active_function->params.size()];
+        capture.source_scope = origin.source_scope; capture.origin_slot = origin.origin_slot;
+      }
+      function.captures.push_back(std::move(capture));
+      auto captured = *it; captured.type_name = capture_type; captured.slot = static_cast<std::uint16_t>(next++); scope.push_back(std::move(captured));
+      auto& boxed = active_function ? const_cast<parser::Function*>(active_function)->boxed_slots : active_program->boxed_slots;
+      if (std::find(boxed.begin(), boxed.end(), it->slot) == boxed.end()) boxed.push_back(it->slot);
+      function.boxed_slots.push_back(static_cast<std::uint16_t>(next - 1));
+      expr.targets.push_back(it->slot);
+    }
+    const auto* previous = active_function;
+    active_function = &function;
+    bind_stmts(function.body, scope, functions, structs, enums, next, diagnostics);
+    active_function = previous;
+    function.local_count = static_cast<std::uint16_t>(next);
     return;
   }
+  if (expr.kind == parser::Expr::Kind::Invoke) {
+    if (expr.left) bind_expr(*expr.left, locals, functions, structs, enums, diagnostics);
+    bind_arguments(expr, locals, functions, structs, enums, diagnostics);
+    return;
+  }
+  if (expr.kind == parser::Expr::Kind::Event) { bind_arguments(expr, locals, functions, structs, enums, diagnostics); return; }
   if (expr.kind == parser::Expr::Kind::Name) {
+    if (expr.global) return;  // Definition defaults retain their lexical binding when cloned.
+    const auto dot = expr.value.find('.');
+    if (dot != std::string::npos && find_local(locals, expr.value.substr(0, dot)) >= 0) {
+      auto receiver = std::make_unique<parser::Expr>(); receiver->kind = parser::Expr::Kind::Name;
+      receiver->value = expr.value.substr(0, dot); receiver->span = expr.span; receiver->location = expr.location;
+      expr.value = expr.value.substr(dot + 1); expr.kind = parser::Expr::Kind::Member; expr.left = std::move(receiver);
+      bind_expr(expr, locals, functions, structs, enums, diagnostics); return;
+    }
     const int slot = find_local(locals, expr.value);
     if (slot < 0) {
+      const auto name = bare_type(expr.value);
+      const int function = find_func(functions, name);
+      if (function >= 0) {
+        const auto count = std::count_if(functions.begin(), functions.end(), [&](const FuncRef& candidate) { return candidate.name == name; });
+        if (count != 1 || functions[function].is_extern ||
+            functions[function].is_private || functions[function].is_abstract || name.find('.') != std::string::npos ||
+            (!functions[function].type_params.empty() && expr.value.find('<') == std::string::npos)) {
+          diagnostics.push_back(Diagnostic{expr.location, expr.span, "callback requires an unambiguous explicitly specialized function"}); return;
+        }
+        expr.kind = parser::Expr::Kind::Closure; expr.slot = static_cast<std::uint16_t>(function); return;
+      }
       diagnostics.push_back(Diagnostic{expr.location, expr.span, "undefined name"});
       return;
     }
     expr.slot = static_cast<std::uint16_t>(slot);
+    expr.global = find_local_entry(locals, expr.value)->global;
     return;
   }
   if (expr.kind == parser::Expr::Kind::String || expr.kind == parser::Expr::Kind::Number ||
@@ -444,8 +730,8 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
     const Local* local = find_local_entry(locals, expr.left->value);
     if (local == nullptr) {
       diagnostics.push_back(Diagnostic{expr.left->location, expr.left->span, "undefined name"});
-    } else if (local->constant) {
-      diagnostics.push_back(Diagnostic{expr.left->location, expr.left->span, "cannot move"});
+    } else if (local->constant || local->global) {
+      diagnostics.push_back(Diagnostic{expr.left->location, expr.left->span, local->global && !local->constant ? "cannot move from shared module binding" : "cannot move"});
     } else {
       expr.slot = local->slot;
       expr.value = local->name;
@@ -458,12 +744,6 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
     bind_expr(*expr.right, locals, functions, structs, enums, diagnostics);
     // Either side is a struct value: a variable, a constructor call (Money(150)) or a field (a.wallet).
     const auto struct_name = [&](const parser::Expr& side) -> std::string {
-      if (side.kind == parser::Expr::Kind::Name) {
-        const Local* local = find_local_entry(locals, side.value);
-        if (local != nullptr && !is_builtin_type(local->type_name)) {
-          return local->type_name;
-        }
-      }
       const int index = struct_index_of(side, locals, structs);
       if (index >= 0) {
         for (const StructRef& candidate : structs) {
@@ -507,6 +787,79 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
     return;
   }
   if (expr.kind == parser::Expr::Kind::Call) {
+    if (bare_type(expr.value) == "signal" && !expr.left) {
+      expr.kind = parser::Expr::Kind::Event; expr.runtime_op = 0;
+      bind_arguments(expr, locals, functions, structs, enums, diagnostics); return;
+    }
+    if (!expr.left) {
+      const auto separator = expr.value.find("::");
+      if (separator != std::string::npos && find_local(locals, expr.value.substr(0, separator)) >= 0) {
+        auto receiver = std::make_unique<parser::Expr>(); receiver->kind = parser::Expr::Kind::Name;
+        receiver->value = expr.value.substr(0, separator); receiver->span = expr.span; receiver->location = expr.location;
+        expr.value = expr.value.substr(separator + 2); expr.left = std::move(receiver);
+      }
+    }
+    if (expr.left) {
+      const Local* observable = expr.left->kind == parser::Expr::Kind::Name ? find_local_entry(locals, expr.left->value) : nullptr;
+      if (observable && observable->observable && expr.value == "OnChange") {
+        if (expr.args.size() != 1) {
+          diagnostics.push_back(Diagnostic{expr.location, expr.span, "wrong number of arguments"}); return;
+        }
+        bind_expr(expr.args[0], locals, functions, structs, enums, diagnostics, "(" + observable->type_name + ")->void");
+        expr.kind = parser::Expr::Kind::Observe; expr.slot = observable->slot; expr.global = observable->global;
+        expr.value = observable->type_name; expr.left.reset(); return;
+      }
+      auto receiver_type = inferred_type(*expr.left, locals, structs);
+      if (active_program) receiver_type = typechecker::resource_type(*active_program, receiver_type, active_function).value_or(receiver_type);
+      const bool signal = receiver_type.starts_with("signal<");
+      const bool connection = receiver_type == "connection";
+      std::uint8_t operation = 255;
+      if (signal && expr.value == "Connect") operation = 1;
+      if (signal && expr.value == "Once") operation = 5;
+      if (signal && expr.value == "Fire") operation = 2;
+      if (signal && expr.value == "$ManagedConnect") operation = 9;
+      if (signal && expr.value == "Clear") operation = 10;
+      if (signal && expr.value == "Wait") operation = 11;
+      if (connection && expr.value == "Disconnect") operation = 3;
+      if (connection && expr.value == "Connected") operation = 4;
+      if (operation != 255) {
+        bind_expr(*expr.left, locals, functions, structs, enums, diagnostics);
+        expr.args.insert(expr.args.begin(), std::move(*expr.left)); expr.left.reset();
+        expr.kind = parser::Expr::Kind::Event; expr.runtime_op = operation;
+        bind_arguments(expr, locals, functions, structs, enums, diagnostics); return;
+      }
+      if (signal || connection || expr.value == "$ManagedConnect") {
+        diagnostics.push_back(Diagnostic{expr.location, expr.span, "unknown event or connection operation"}); return;
+      }
+    }
+    if (!expr.named_initializer && expr.left == nullptr && find_local(locals, expr.value) >= 0) {
+      auto callee = std::make_unique<parser::Expr>();
+      callee->kind = parser::Expr::Kind::Name; callee->value = expr.value;
+      callee->span = expr.span; callee->location = expr.location;
+      expr.kind = parser::Expr::Kind::Invoke; expr.left = std::move(callee);
+      bind_expr(expr, locals, functions, structs, enums, diagnostics); return;
+    }
+    if (expr.named_initializer && find_struct(structs, bare_type(expr.value)) == nullptr) {
+      diagnostics.push_back(Diagnostic{expr.location, expr.span, "named initializer requires a data type"});
+      return;
+    }
+    if (expr.left != nullptr) {
+      const int object = struct_index_of(*expr.left, locals, structs, expr.value);
+      if (object >= 0) {
+        const auto& data = structs[object];
+        const auto field = std::find(data.fields.begin(), data.fields.end(), expr.value);
+        if (field != data.fields.end()) {
+          auto member = std::make_unique<parser::Expr>(); member->kind = parser::Expr::Kind::Member;
+          member->value = expr.value; member->span = expr.span; member->location = expr.location;
+          member->left = std::move(expr.left); expr.left = std::move(member); expr.kind = parser::Expr::Kind::Invoke;
+          bind_expr(expr, locals, functions, structs, enums, diagnostics); return;
+        }
+      }
+      parser::Expr receiver = std::move(*expr.left);
+      expr.left.reset();
+      bind_method(expr, std::move(receiver), locals, functions, structs, enums, diagnostics);
+      return;
+    }
     const auto take_function = [&](const std::size_t argument, const std::uint16_t expected_arity) -> int {
       if (argument >= expr.args.size() || expr.args[argument].kind != parser::Expr::Kind::Name) {
         diagnostics.push_back(Diagnostic{expr.location, expr.span, "undefined function"});
@@ -518,6 +871,15 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
         return -1;
       }
       for (const FuncRef& symbol : functions) {
+        if (symbol.index == static_cast<std::uint16_t>(index) && symbol.is_abstract) {
+          diagnostics.push_back(Diagnostic{expr.location, expr.span, "abstract method requires virtual dispatch"});
+          return -1;
+        }
+        if (symbol.index == static_cast<std::uint16_t>(index) && symbol.is_private &&
+            (active_owner == nullptr || *active_owner != symbol.name.substr(0, symbol.name.rfind('.')))) {
+          diagnostics.push_back(Diagnostic{expr.location, expr.span, "private member"});
+          return -1;
+        }
         if (symbol.index == static_cast<std::uint16_t>(index) && symbol.arity != expected_arity) {
           diagnostics.push_back(Diagnostic{expr.location, expr.span, "wrong number of arguments"});
           return -1;
@@ -531,19 +893,12 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
       const std::string owner = expr.value.substr(0, expr.value.size() - on_change.size());
       const Local* local = find_local_entry(locals, owner);
       if (local != nullptr && local->observable) {
-        const int index = take_function(0, 1);
-        if (index < 0) {
-          return;
+        if (expr.args.size() != 1) {
+          diagnostics.push_back(Diagnostic{expr.location, expr.span, "wrong number of arguments"}); return;
         }
-        if (active_listeners != nullptr) {
-          if (active_listeners->size() <= local->slot) {
-            active_listeners->resize(static_cast<std::size_t>(local->slot) + 1);
-          }
-          (*active_listeners)[local->slot].push_back(static_cast<std::uint16_t>(index));
-        }
-        expr.kind = parser::Expr::Kind::Number;
-        expr.number = 0;
-        expr.args.clear();
+        bind_expr(expr.args[0], locals, functions, structs, enums, diagnostics, "(" + local->type_name + ")->void");
+        expr.kind = parser::Expr::Kind::Observe; expr.slot = local->slot; expr.global = local->global;
+        expr.value = local->type_name;
         return;
       }
     }
@@ -582,106 +937,38 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
         return;
       }
       expr.runtime_op = 5;
+      for (const auto& function : functions) if (function.index == static_cast<std::uint16_t>(index) && function.is_async) {
+        diagnostics.push_back(Diagnostic{expr.location, expr.span, "actor requires a synchronous entry function; await async tasks inside it"});
+        return;
+      }
       expr.slot = static_cast<std::uint16_t>(index);
       expr.args.erase(expr.args.begin());
       bind_expr(expr.args[0], locals, functions, structs, enums, diagnostics);
       return;
     }
     if (bare_type(expr.value) == "array" || bare_type(expr.value) == "dictionary") {
-      for (parser::Expr& arg : expr.args) {
-        bind_expr(arg, locals, functions, structs, enums, diagnostics);
-      }
       if (bare_type(expr.value) == "dictionary") {
         expr.slot = 65535;
       }
       expr.kind = parser::Expr::Kind::MakeList;
-      return;
-    }
-    if ((expr.value == "Some" || expr.value == "Ok" || expr.value == "Err") && expr.args.size() == 1) {
-      bind_expr(expr.args[0], locals, functions, structs, enums, diagnostics);
-      parser::Expr payload = std::move(expr.args[0]);
-      parser::Expr tag;
-      tag.kind = parser::Expr::Kind::Number;
-      tag.number = expr.value == "Err" ? 0 : 1;
-      expr.kind = parser::Expr::Kind::Construct;
-      expr.payload_ctor = true;
-      expr.slot = expr.value == "Some" ? 65534 : 65533;
-      expr.args.clear();
-      expr.args.push_back(std::move(tag));
-      expr.args.push_back(std::move(payload));
-      return;
-    }
-    if (expr.value == "None" && expr.args.empty()) {
-      expr.kind = parser::Expr::Kind::Name;
-      expr.value = "None";
-      bind_expr(expr, locals, functions, structs, enums, diagnostics);
+      bind_arguments(expr, locals, functions, structs, enums, diagnostics);
       return;
     }
     const std::size_t dot = expr.value.find('.');
     if (dot != std::string::npos) {
       const std::string owner = expr.value.substr(0, dot);
       const std::string method = expr.value.substr(dot + 1);
-      if (const EnumRef* enumeration = find_enum(enums, owner); enumeration != nullptr) {
-        const int variant = find_variant(*enumeration, method);
-        if (variant >= 0 && variant < static_cast<int>(enumeration->payload_types.size()) &&
-            !enumeration->payload_types[static_cast<std::size_t>(variant)].empty() && expr.args.size() == 1) {
-          bind_expr(expr.args[0], locals, functions, structs, enums, diagnostics);
-          parser::Expr payload = std::move(expr.args[0]);
-          parser::Expr tag;
-          tag.kind = parser::Expr::Kind::Number;
-          tag.number = static_cast<double>(variant);
-          expr.kind = parser::Expr::Kind::Construct;
-          expr.payload_ctor = true;
-          expr.slot = static_cast<std::uint16_t>(enumeration - enums.data());
-          expr.args.clear();
-          expr.args.push_back(std::move(tag));
-          expr.args.push_back(std::move(payload));
-          return;
-        }
-      }
       const Local* local = find_local_entry(locals, owner);
-      const StructRef* type = local == nullptr ? nullptr : find_struct(structs, local->type_name);
+      const StructRef* type = local == nullptr ? nullptr : find_struct(structs, bare_type(member_owner_spelling(local->type_name, structs, bare_type(method))));
       if (type != nullptr && method.find('.') == std::string::npos) {
-        int slot = -1;
-        for (std::size_t index = 0; index < type->method_names.size(); ++index) {
-          if (type->method_names[index] == method) {
-            slot = static_cast<int>(index);
-            break;
-          }
-        }
-        const FuncRef* target = nullptr;
-        if (slot >= 0 && static_cast<std::size_t>(slot) < type->vtable.size()) {
-          for (const FuncRef& symbol : functions) {
-            if (symbol.index == type->vtable[static_cast<std::size_t>(slot)]) {
-              target = &symbol;
-              break;
-            }
-          }
-        }
-        if (target == nullptr) {
-          diagnostics.push_back(Diagnostic{expr.location, expr.span, "undefined function"});
-          return;
-        }
-        if (target->is_private && (active_owner == nullptr || *active_owner != owner)) {
-          diagnostics.push_back(Diagnostic{expr.location, expr.span, "private member"});
-          return;
-        }
-        if (expr.args.size() + 1 != target->arity) {
-          diagnostics.push_back(Diagnostic{expr.location, expr.span, "wrong number of arguments"});
-          return;
-        }
         parser::Expr receiver;
         receiver.kind = parser::Expr::Kind::Name;
         receiver.value = owner;
         receiver.span = expr.span;
         receiver.location = expr.location;
-        expr.args.insert(expr.args.begin(), std::move(receiver));
-        expr.virtual_call = true;
-        expr.slot = static_cast<std::uint16_t>(slot);
-        expr.value = target->name;
-        for (parser::Expr& arg : expr.args) {
-          bind_expr(arg, locals, functions, structs, enums, diagnostics);
-        }
+        expr.value = method;
+        expr.left = std::make_unique<parser::Expr>(std::move(receiver));
+        bind_expr(expr, locals, functions, structs, enums, diagnostics);
         return;
       }
     }
@@ -704,22 +991,16 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
         diagnostics.push_back(Diagnostic{expr.location, expr.span, "wrong number of arguments"});
         return;
       }
-      if (expr.args[0].kind != parser::Expr::Kind::Name) {
-        diagnostics.push_back(Diagnostic{expr.location, expr.span, expr.value + " needs a list variable as its first argument"});
-        return;
-      }
-      const Local* target = find_local_entry(locals, expr.args[0].value);
-      if (target == nullptr) {
-        diagnostics.push_back(Diagnostic{expr.args[0].location, expr.args[0].span, "undefined name"});
-        return;
-      }
-      if (target->constant) {
+      const parser::Expr* root = &expr.args[0];
+      while ((root->kind == parser::Expr::Kind::Member || root->kind == parser::Expr::Kind::Index) && root->left) root = root->left.get();
+      const Local* target = root->kind == parser::Expr::Kind::Name ? find_local_entry(locals, root->value) : nullptr;
+      if (target != nullptr && target->constant) {
         diagnostics.push_back(Diagnostic{expr.args[0].location, expr.args[0].span,
-                                         "cannot assign to immutable binding (declare it with let mut or a type)"});
+                                         "cannot assign to immutable binding (declare it with auto or a type)"});
         return;
       }
       expr.kind = parser::Expr::Kind::ListMut;
-      expr.slot = target->slot;
+      expr.slot = expr.args[0].kind == parser::Expr::Kind::Name && target != nullptr && !target->global ? target->slot : 65535;
       expr.number = op;
       for (parser::Expr& arg : expr.args) {
         bind_expr(arg, locals, functions, structs, enums, diagnostics);
@@ -764,55 +1045,30 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
       }
       return;
     }
-    if (SignalBind* signal = find_signal(expr.value); signal != nullptr) {
-      expr.signal_call = true;
-      expr.targets = signal->targets;
-      for (parser::Expr& arg : expr.args) {
-        bind_expr(arg, locals, functions, structs, enums, diagnostics);
-      }
-      return;
-    }
-    if (const VariantRef* variant = find_variant_type(expr.value); variant != nullptr) {
-      if (expr.args.size() != 1) {
-        diagnostics.push_back(Diagnostic{expr.location, expr.span, "wrong number of arguments"});
-      }
-      expr.kind = parser::Expr::Kind::Construct;
-      expr.variant_ctor = true;
-      expr.slot = variant->index;
-      for (parser::Expr& arg : expr.args) {
-        bind_expr(arg, locals, functions, structs, enums, diagnostics);
-      }
-      return;
-    }
     const StructRef* constructed = find_struct(structs, bare_type(expr.value));
     if (constructed != nullptr) {
+      if (!expr.named_initializer) {
+        diagnostics.push_back(Diagnostic{expr.location, expr.span,
+            "data values use Type { Field = value }; positional constructors are not supported"});
+        return;
+      }
       if (constructed->is_abstract) {
         diagnostics.push_back(Diagnostic{expr.location, expr.span, "abstract type"});
       }
-      // Player(hp: 5, name: "Ada"): named arguments are put in field order.
-      bool any_named = false;
-      for (const std::string& name : expr.arg_names) {
-        any_named = any_named || !name.empty();
-      }
-      if (any_named && expr.args.size() == constructed->fields.size()) {
+      // Named field initializers are checked and put in definition order.
+      {
         std::vector<parser::Expr> ordered(constructed->fields.size());
         std::vector<char> filled(constructed->fields.size(), 0);
-        std::size_t positional = 0;
         bool ok = true;
         for (std::size_t index = 0; index < expr.args.size() && ok; ++index) {
           const std::string name = index < expr.arg_names.size() ? expr.arg_names[index] : std::string{};
-          std::size_t slot = positional;
-          if (!name.empty()) {
-            const int field = find_field(*constructed, name);
-            if (field < 0) {
-              diagnostics.push_back(Diagnostic{expr.location, expr.span, "unknown field: " + name});
-              ok = false;
-              break;
-            }
-            slot = static_cast<std::size_t>(field);
-          } else {
-            ++positional;
+          const int field = find_field(*constructed, name);
+          if (field < 0) {
+            diagnostics.push_back(Diagnostic{expr.location, expr.span, "unknown field: " + name});
+            ok = false;
+            break;
           }
+          const std::size_t slot = static_cast<std::size_t>(field);
           if (slot >= ordered.size() || filled[slot] != 0) {
             diagnostics.push_back(Diagnostic{expr.location, expr.span, "field given twice"});
             ok = false;
@@ -821,9 +1077,27 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
           ordered[slot] = std::move(expr.args[index]);
           filled[slot] = 1;
         }
+        for (std::size_t field = 0; field < filled.size() && ok; ++field) {
+          if (filled[field] != 0) continue;
+          if (field < constructed->field_defaults.size() && constructed->field_defaults[field] != nullptr) {
+            const auto* declaration = find_struct(structs, constructed->field_owners[field]);
+            const auto declared_field = declaration ? find_field(*declaration, constructed->fields[field]) : -1;
+            const auto& expected = declared_field >= 0 ? declaration->field_types[declared_field] : constructed->field_types[field];
+            if (!bind_default(*constructed->field_defaults[field], functions, structs, enums, diagnostics, expected, constructed->field_owners[field])) return;
+            ordered[field] = clone_expr(*constructed->field_defaults[field]);
+            if (active_program) {
+              const auto owner = typechecker::default_owner_type(*active_program, expr.value, constructed->field_owners[field], active_function);
+              if (!owner) { diagnostics.push_back(Diagnostic{expr.location, expr.span, "cannot specialize field default owner"}); return; }
+              ordered[field].default_scope = *owner;
+            }
+          } else {
+            diagnostics.push_back(Diagnostic{expr.location, expr.span, "missing required field: " + constructed->fields[field]});
+            ok = false;
+          }
+        }
         if (ok) {
           expr.args = std::move(ordered);
-          expr.arg_names.clear();
+          expr.arg_names = constructed->fields;
         }
       }
       if (expr.args.size() != constructed->fields.size()) {
@@ -858,6 +1132,13 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
         if (target == nullptr) {
           diagnostics.push_back(
               Diagnostic{expr.location, expr.span, named ? "wrong number of arguments" : "undefined function"});
+        } else if (target->is_abstract) {
+          diagnostics.push_back(Diagnostic{expr.location, expr.span, "abstract method requires virtual dispatch"});
+          return;
+        } else if (target->is_private &&
+                   (active_owner == nullptr || *active_owner != target->name.substr(0, target->name.rfind('.')))) {
+          diagnostics.push_back(Diagnostic{expr.location, expr.span, "private member"});
+          return;
         } else if (target->is_extern) {
           expr.extern_call = true;
           expr.slot = target->extern_id;
@@ -904,7 +1185,7 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
           if (definition->variadic && slot + 1 >= arity) {
             break;
           }
-          if (slot >= arity) {
+          if (slot >= arity || filled[slot] != 0) {
             failed = true;
             break;
           }
@@ -930,12 +1211,7 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
           if (filled[slot] != 0) {
             continue;
           }
-          if (slot < definition->has_default.size() && definition->has_default[slot] != 0) {
-            ordered[slot] = clone_expr(definition->defaults[slot]);
-            filled[slot] = 1;
-          } else {
-            failed = true;
-          }
+          failed = true;
         }
         if (failed) {
           diagnostics.push_back(Diagnostic{expr.location, expr.span, "wrong number of arguments"});
@@ -945,9 +1221,7 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
         }
       }
     }
-    for (parser::Expr& arg : expr.args) {
-      bind_expr(arg, locals, functions, structs, enums, diagnostics);
-    }
+    bind_arguments(expr, locals, functions, structs, enums, diagnostics);
     return;
   }
   if (expr.kind == parser::Expr::Kind::Member) {
@@ -960,6 +1234,10 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
     if (expr.left != nullptr && expr.left->kind == parser::Expr::Kind::Name) {
       const EnumRef* enumeration = find_enum(enums, expr.left->value);
       if (enumeration != nullptr) {
+        if (enumeration->scoped && !expr.scoped_member) {
+          diagnostics.push_back(Diagnostic{expr.location, expr.span, "enum case requires ::"});
+          return;
+        }
         const int variant = find_variant(*enumeration, expr.value);
         if (variant < 0) {
           diagnostics.push_back(Diagnostic{expr.location, expr.span, "unknown variant"});
@@ -975,14 +1253,41 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
         return;
       }
     }
+    if (expr.scoped_member) {
+      diagnostics.push_back(Diagnostic{expr.location, expr.span, "scoped member requires an enum type"});
+      return;
+    }
     if (expr.left != nullptr) {
       bind_expr(*expr.left, locals, functions, structs, enums, diagnostics);
     }
-    const int struct_index = expr.left == nullptr ? -1 : struct_index_of(*expr.left, locals, structs);
+    if (expr.left && active_program && expr.value == "Connected" &&
+        typechecker::resource_type(*active_program, inferred_type(*expr.left, locals, structs), active_function).value_or("") == "connection") {
+      expr.args.push_back(std::move(*expr.left)); expr.left.reset(); expr.kind = parser::Expr::Kind::Event; expr.runtime_op = 4; return;
+    }
+    const int struct_index = expr.left == nullptr ? -1 : struct_index_of(*expr.left, locals, structs, bare_type(expr.value));
     if (struct_index >= 0) {
       const StructRef* decl = struct_at(structs, static_cast<std::uint16_t>(struct_index));
       const int field = decl == nullptr ? -1 : find_field(*decl, expr.value);
       if (field < 0) {
+        if (decl != nullptr) {
+          const auto method = std::find(decl->method_names.begin(), decl->method_names.end(), bare_type(expr.value));
+          if (method != decl->method_names.end()) {
+            const auto slot = static_cast<std::size_t>(method - decl->method_names.begin());
+            const FuncRef* target = nullptr;
+            if (slot < decl->vtable.size()) for (const auto& candidate : functions)
+              if (candidate.index == decl->vtable[slot]) { target = &candidate; break; }
+            if (target == nullptr) { diagnostics.push_back(Diagnostic{expr.location, expr.span, "undefined method"}); return; }
+            const auto owner = target->name.substr(0, target->name.rfind('.'));
+            if (target->is_private && (active_owner == nullptr || *active_owner != owner)) {
+              diagnostics.push_back(Diagnostic{expr.location, expr.span, "private member"}); return;
+            }
+            const auto open = expr.value.find('<');
+            const auto supplied = open == std::string::npos ? std::string{} : expr.value.substr(open);
+            expr.kind = parser::Expr::Kind::Closure; expr.virtual_call = true;
+            expr.slot = static_cast<std::uint16_t>(slot); expr.value = target->name + supplied;
+            return;
+          }
+        }
         diagnostics.push_back(Diagnostic{expr.location, expr.span, "unknown field"});
       } else {
         expr.slot = static_cast<std::uint16_t>(field);
@@ -1043,19 +1348,21 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
       out << expr.number;
       return out.str();
     }
-    return std::to_string(static_cast<long long>(expr.number));
+    if (expr.exact_integer) return std::to_string(expr.integer);
+    const auto integer = numeric::from_float(expr.number);
+    return integer ? std::to_string(*integer) : std::string{};
   }
   if (expr.kind == parser::Expr::Kind::String) {
     return "\"" + expr.value + "\"";
   }
   if (expr.kind == parser::Expr::Kind::Name) {
-    const Local* local = find_local_entry(locals, expr.value);
+    const Local* local = expression_local(locals, expr);
     if (local != nullptr) {
       return local->value;
     }
   }
   if (expr.kind == parser::Expr::Kind::Construct) {
-    std::string text = expr.value + "(";
+    std::string text = expr.value + " { ";
     for (std::size_t index = 0; index < expr.args.size(); ++index) {
       const std::string part = literal_text(expr.args[index], locals);
       if (part.empty()) {
@@ -1064,41 +1371,135 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
       if (index != 0) {
         text += ", ";
       }
+      if (index < expr.arg_names.size()) text += expr.arg_names[index] + " = ";
       text += part;
     }
-    text += ")";
+    text += " }";
     return text;
   }
   return {};
 }
 
-[[nodiscard]] std::string inferred_type(const parser::Expr& expr, const std::vector<Local>& locals) {
+// Preserve the concrete arguments of a receiver when looking up its fields.
+[[nodiscard]] std::string specialized_type_name(const std::vector<std::string>& parameters, const std::string& receiver,
+                                                 const std::string& field) {
+  if (parameters.empty()) return field;
+  const auto open = receiver.find('<');
+  if (open == std::string::npos || receiver.back() != '>') return {};
+  std::vector<std::string> arguments;
+  std::size_t start = open + 1;
+  int depth = 0;
+  bool quoted = false;
+  for (std::size_t i = start; i < receiver.size(); ++i) {
+    if (receiver[i] == '"' && (i == 0 || receiver[i - 1] != '\\')) quoted = !quoted;
+    if (quoted) continue;
+    if ((receiver[i] == ',' && depth == 0) || i == receiver.size() - 1) {
+      std::string argument = receiver.substr(start, i - start);
+      const auto first = argument.find_first_not_of(' ');
+      const auto last = argument.find_last_not_of(' ');
+      arguments.push_back(first == std::string::npos ? std::string{} : argument.substr(first, last - first + 1));
+      start = i + 1;
+    } else if (receiver[i] == '<') ++depth;
+    else if (receiver[i] == '>') --depth;
+  }
+  if (arguments.size() != parameters.size()) return {};
+  module_types::Map mapping;
+  for (std::size_t index = 0; index < parameters.size(); ++index) mapping.push_back({parameters[index], arguments[index]});
+  std::string result = field;
+  module_types::annotation(result, mapping);
+  return result;
+}
+
+[[nodiscard]] std::string semantic_expression_type(const parser::Expr& expr, const std::vector<Local>& locals) {
+  if (active_program == nullptr) return {};
+  std::vector<typechecker::LocalType> types;
+  for (const auto& local : locals) types.push_back({local.name, local.type_name, local.global});
+  const auto result = typechecker::expression_type(*active_program, expr, types, active_function);
+  return result.value_or(std::string{});
+}
+
+[[nodiscard]] std::string inferred_type(const parser::Expr& expr, const std::vector<Local>& locals,
+                                        const std::vector<StructRef>& structs) {
   if (expr.kind == parser::Expr::Kind::Construct && !expr.value.empty()) {
     return expr.value;
   }
   if (expr.kind == parser::Expr::Kind::Name) {
-    const Local* local = find_local_entry(locals, expr.value);
+    const Local* local = expression_local(locals, expr);
     if (local != nullptr) {
       return local->type_name;
     }
   }
+  if (expr.kind == parser::Expr::Kind::Await && expr.left != nullptr &&
+      expr.left->kind == parser::Expr::Kind::Call && g_bound_functions != nullptr && expr.left->async_call) {
+    for (const FuncRef& function : *g_bound_functions) {
+      if (function.name == bare_type(expr.left->value) && function.index == expr.left->slot) {
+        return function.type_params.empty() || (function.owner_type_param_count == 0 && expr.left->value.find('<') != std::string::npos)
+            ? specialized_type_name(function.type_params, expr.left->value, function.return_type)
+            : semantic_expression_type(expr, locals);
+      }
+    }
+  }
+  if (expr.kind == parser::Expr::Kind::Call && g_bound_functions != nullptr &&
+      !expr.async_call && !expr.thread_call && !expr.extern_call) {
+    for (const FuncRef& function : *g_bound_functions) {
+      if (function.name == bare_type(expr.value) && (function.index == expr.slot || expr.virtual_call)) {
+        return function.type_params.empty() || (function.owner_type_param_count == 0 && expr.value.find('<') != std::string::npos)
+            ? specialized_type_name(function.type_params, expr.value, function.return_type)
+            : semantic_expression_type(expr, locals);
+      }
+    }
+  }
+  if (expr.kind == parser::Expr::Kind::Member && expr.left != nullptr) {
+    const int owner_index = struct_index_of(*expr.left, locals, structs, expr.value);
+    const StructRef* owner = owner_index < 0 ? nullptr : struct_at(structs, static_cast<std::uint16_t>(owner_index));
+    if (owner != nullptr) {
+      const int field = find_field(*owner, expr.value);
+      if (field >= 0 && static_cast<std::size_t>(field) < owner->field_types.size()) {
+        return specialized_type_name(owner->type_params, member_owner_spelling(inferred_type(*expr.left, locals, structs), structs, expr.value),
+                                      owner->field_types[static_cast<std::size_t>(field)]);
+      }
+    }
+  }
+  if (expr.kind == parser::Expr::Kind::Index && expr.left != nullptr) {
+    const std::string source = inferred_type(*expr.left, locals, structs);
+    if (source == "string") return "string";
+    if (expr.right && expr.right->kind == parser::Expr::Kind::Range) return semantic_expression_type(expr, locals);
+    const std::size_t open = source.find('<');
+    if (open != std::string::npos && source.back() == '>') {
+      const std::string container = source.substr(0, open);
+      const std::string args = source.substr(open + 1, source.size() - open - 2);
+      if (container == "array" || container == "list") return args;
+      if (container == "dictionary") {
+        std::size_t depth = 0;
+        for (std::size_t index = 0; index < args.size(); ++index) {
+          if (args[index] == '<') ++depth;
+          else if (args[index] == '>' && depth != 0) --depth;
+          else if (args[index] == ',' && depth == 0) {
+            const std::size_t value = args.find_first_not_of(' ', index + 1);
+            return value == std::string::npos ? std::string{} : args.substr(value);
+          }
+        }
+      }
+    }
+  }
+  if (expr.kind == parser::Expr::Kind::String) return "string";
   if (expr.kind == parser::Expr::Kind::Number) {
     if (expr.enum_literal) {
-      return {};
+      return semantic_expression_type(expr, locals);
     }
     if (expr.bool_literal) {
       return "bool";
     }
     if (!expr.null_literal) {
-      return expr.float_literal ? "float" : "int";
+      return expr.float_literal ? "float" : "number";
     }
   }
-  return {};
+  return semantic_expression_type(expr, locals);
 }
 
-void remember_binding(parser::Stmt& stmt, std::vector<Local>& locals) {
+void remember_binding(parser::Stmt& stmt, std::vector<Local>& locals, const std::vector<StructRef>& structs) {
   if (stmt.declared_type.empty()) {
-    stmt.declared_type = inferred_type(stmt.expr, locals);
+    stmt.declared_type = inferred_type(stmt.expr, locals, structs);
   }
   stmt.remembered = literal_text(stmt.expr, locals);
 }
@@ -1107,13 +1508,33 @@ void bind_stmts(std::vector<parser::Stmt>& statements, std::vector<Local>& local
                 const std::vector<FuncRef>& functions, const std::vector<StructRef>& structs,
                 const std::vector<EnumRef>& enums, std::size_t& next_slot, std::vector<Diagnostic>& diagnostics) {
   const std::size_t watermark = locals.size();
+  // Declarations introduced by this block, excluding outer bindings that may
+  // be shadowed. Avoid rescanning all preceding locals for every declaration.
+  std::unordered_set<std::string> declared_names;
   for (parser::Stmt& stmt : statements) {
-    if (stmt.kind == parser::Stmt::Kind::Let) {
+    if (stmt.kind == parser::Stmt::Kind::VariableDecl) {
       if (stmt.has_decltype) {
         bind_expr(stmt.type_expr, locals, functions, structs, enums, diagnostics);
       }
-      bind_expr(stmt.expr, locals, functions, structs, enums, diagnostics);
-      if (declared_since(locals, watermark, stmt.name)) {
+      bind_expr(stmt.expr, locals, functions, structs, enums, diagnostics, stmt.declared_type);
+      if (stmt.module_global) {
+        if (stmt.expr.missing) {
+          diagnostics.push_back(Diagnostic{stmt.name_location, stmt.name_span, "module bindings require explicit initializers"}); continue;
+        }
+        remember_binding(stmt, locals, structs);
+        if (module_globals && stmt.slot < module_globals->size() && (*module_globals)[stmt.slot].name == stmt.name) {
+          auto& global = (*module_globals)[stmt.slot];
+          global.type_name = stmt.declared_type; global.value = stmt.remembered;
+          active_program->globals[global.slot].type = stmt.declared_type;
+          // Every binding scope starts with the module globals in slot order.
+          if (stmt.slot < locals.size() && locals[stmt.slot].global && locals[stmt.slot].name == stmt.name) {
+            locals[stmt.slot].type_name = stmt.declared_type;
+            locals[stmt.slot].value = stmt.remembered;
+          }
+        }
+        continue;
+      }
+      if (declared_names.contains(stmt.name)) {
         diagnostics.push_back(Diagnostic{stmt.name_location, stmt.name_span, "already declared"});
         continue;
       }
@@ -1123,21 +1544,12 @@ void bind_stmts(std::vector<parser::Stmt>& statements, std::vector<Local>& local
       }
       stmt.slot = static_cast<std::uint16_t>(next_slot);
       ++next_slot;
-      remember_binding(stmt, locals);
-      if (stmt.unpack.size() > 1) {
-        for (const std::string& name : stmt.unpack) {
-          if (next_slot >= 65535) {
-            break;
-          }
-          const auto slot = static_cast<std::uint16_t>(next_slot);
-          ++next_slot;
-          stmt.unpack_slots.push_back(slot);
-          locals.push_back(Local{name, slot, {}});
-        }
-      } else {
+      remember_binding(stmt, locals, structs);
       locals.push_back(Local{stmt.name, stmt.slot, stmt.declared_type, stmt.immutable, stmt.remembered});
-      }
+      declared_names.insert(stmt.name);
       if (stmt.observable_cell) {
+        auto& boxed = active_function ? const_cast<parser::Function*>(active_function)->boxed_slots : active_program->boxed_slots;
+        if (std::find(boxed.begin(), boxed.end(), stmt.slot) == boxed.end()) boxed.push_back(stmt.slot);
         locals.back().observable = true;
       }
       continue;
@@ -1146,7 +1558,7 @@ void bind_stmts(std::vector<parser::Stmt>& statements, std::vector<Local>& local
     if (stmt.kind == parser::Stmt::Kind::SelfAssign && self_has_field(locals, structs, stmt.name)) {
       stmt.place = self_member(stmt.name, stmt.name_span, stmt.name_location);
       stmt.kind = parser::Stmt::Kind::PlaceAssign;
-      stmt.name = "self";
+      stmt.name = "@this";
     }
     if (stmt.kind == parser::Stmt::Kind::PlaceAssign) {
       const Local* local = find_local_entry(locals, stmt.name);
@@ -1154,12 +1566,13 @@ void bind_stmts(std::vector<parser::Stmt>& statements, std::vector<Local>& local
         diagnostics.push_back(Diagnostic{stmt.name_location, stmt.name_span, "undefined name"});
       } else if (local->constant) {
         diagnostics.push_back(Diagnostic{stmt.name_location, stmt.name_span,
-                                         "cannot assign to immutable binding (declare it with let mut or a type)"});
+                                         "cannot assign to immutable binding (declare it with auto or a type)"});
       } else {
         stmt.slot = local->slot;
+        stmt.module_global = local->global;
       }
       bind_expr(stmt.place, locals, functions, structs, enums, diagnostics);
-      bind_expr(stmt.expr, locals, functions, structs, enums, diagnostics);
+      bind_expr(stmt.expr, locals, functions, structs, enums, diagnostics, inferred_type(stmt.place, locals, structs));
       continue;
     }
 
@@ -1171,12 +1584,21 @@ void bind_stmts(std::vector<parser::Stmt>& statements, std::vector<Local>& local
         diagnostics.push_back(Diagnostic{stmt.name_location, stmt.name_span, "cannot assign to immutable binding"});
       } else {
         stmt.slot = local->slot;
+        stmt.module_global = local->global;
         if (local->observable && active_listeners != nullptr && local->slot < active_listeners->size()) {
           stmt.listeners = (*active_listeners)[local->slot];
         }
       }
-      bind_expr(stmt.expr, locals, functions, structs, enums, diagnostics);
+      bind_expr(stmt.expr, locals, functions, structs, enums, diagnostics, local ? local->type_name : std::string{});
       stmt.remembered = literal_text(stmt.expr, locals);
+      for (auto entry = locals.rbegin(); entry != locals.rend(); ++entry) {
+        if (entry->name != stmt.name) continue;
+        if (!entry->optional_origin.empty()) {
+          entry->type_name = entry->optional_origin;
+          entry->optional_origin.clear();
+        }
+        break;
+      }
         if (!stmt.remembered.empty()) {
         for (std::size_t index = locals.size(); index > 0; --index) {
           if (locals[index - 1].name == stmt.name) {
@@ -1191,7 +1613,7 @@ void bind_stmts(std::vector<parser::Stmt>& statements, std::vector<Local>& local
     if (stmt.kind == parser::Stmt::Kind::For) {
       const std::size_t mark = locals.size();
       for (parser::Stmt& init : stmt.init) {
-        if (init.kind == parser::Stmt::Kind::Let) {
+        if (init.kind == parser::Stmt::Kind::VariableDecl) {
           bind_expr(init.expr, locals, functions, structs, enums, diagnostics);
           if (declared_since(locals, mark, init.name)) {
             diagnostics.push_back(Diagnostic{init.name_location, init.name_span, "already declared"});
@@ -1210,6 +1632,7 @@ void bind_stmts(std::vector<parser::Stmt>& statements, std::vector<Local>& local
             diagnostics.push_back(Diagnostic{init.name_location, init.name_span, "cannot assign to immutable binding"});
           } else {
             init.slot = local->slot;
+            init.module_global = local->global;
           }
           bind_expr(init.expr, locals, functions, structs, enums, diagnostics);
         }
@@ -1237,22 +1660,14 @@ void bind_stmts(std::vector<parser::Stmt>& statements, std::vector<Local>& local
         ++next_slot;
         stmt.index_slot = static_cast<std::uint16_t>(next_slot);
         ++next_slot;
-        // for (let e in wave) with `array<Enemy> wave`: e is an Enemy, so e.hp resolves.
-        std::string item_type = "int";
-        if (stmt.expr.kind == parser::Expr::Kind::Name) {
-          if (const Local* source = find_local_entry(locals, stmt.expr.value); source != nullptr) {
-            const std::string& type = source->type_name;
-            const std::size_t open = type.find('<');
-            if (open != std::string::npos && type.back() == '>' &&
-                (type.compare(0, open, "array") == 0 || type.compare(0, open, "list") == 0)) {
-              item_type = type.substr(open + 1, type.size() - open - 2);
-            } else if (!type.empty() && type != "int" && type != "float" && type != "double") {
-              item_type = "";
-            }
-          }
-        } else if (stmt.expr.kind != parser::Expr::Kind::Number) {
-          item_type = "";
+        std::string item_type;
+        if (active_program != nullptr) {
+          std::vector<typechecker::LocalType> types;
+          for (const auto& local : locals) types.push_back({local.name, local.type_name, local.global});
+          item_type = typechecker::iteration_type(*active_program, stmt.expr, types, active_function).value_or(std::string{});
         }
+        if (!stmt.declared_type.empty()) item_type = stmt.declared_type;
+        else stmt.declared_type = item_type;
         locals.push_back(Local{stmt.name, stmt.slot, item_type, false});
       }
       bind_stmts(stmt.then_body, locals, functions, structs, enums, next_slot, diagnostics);
@@ -1286,17 +1701,22 @@ void bind_stmts(std::vector<parser::Stmt>& statements, std::vector<Local>& local
     }
     if (stmt.kind == parser::Stmt::Kind::If || stmt.kind == parser::Stmt::Kind::While) {
       bind_expr(stmt.expr, locals, functions, structs, enums, diagnostics);
-      if (stmt.if_let && next_slot < 65535) {
-        stmt.slot = static_cast<std::uint16_t>(next_slot);
-        ++next_slot;
-        locals.push_back(Local{stmt.name, stmt.slot, {}});
-      }
-      bind_stmts(stmt.then_body, locals, functions, structs, enums, next_slot, diagnostics);
-      if (stmt.if_let && !locals.empty()) {
-        locals.pop_back();
-      }
-      if (stmt.has_else) {
-        bind_stmts(stmt.else_body, locals, functions, structs, enums, next_slot, diagnostics);
+      auto then_locals = locals;
+      auto else_locals = locals;
+      if (!stmt.post_condition) narrow_optional(stmt.expr, true, then_locals);
+      narrow_optional(stmt.expr, false, else_locals);
+      bind_stmts(stmt.then_body, then_locals, functions, structs, enums, next_slot, diagnostics);
+      if (stmt.has_else) bind_stmts(stmt.else_body, else_locals, functions, structs, enums, next_slot, diagnostics);
+      if (stmt.is_guard) {
+        narrow_optional(stmt.expr, false, locals);
+      } else {
+        for (std::size_t index = 0; index < locals.size(); ++index) {
+          if (!locals[index].optional_origin.empty() &&
+              (then_locals[index].type_name != locals[index].type_name || else_locals[index].type_name != locals[index].type_name)) {
+            locals[index].type_name = locals[index].optional_origin;
+            locals[index].optional_origin.clear();
+          }
+        }
       }
       continue;
     }
@@ -1304,64 +1724,6 @@ void bind_stmts(std::vector<parser::Stmt>& statements, std::vector<Local>& local
     if (stmt.kind == parser::Stmt::Kind::Match) {
       bind_expr(stmt.expr, locals, functions, structs, enums, diagnostics);
       for (parser::Stmt::MatchArm& arm : stmt.arms) {
-        if (!arm.wildcard && arm.pattern.kind == parser::Expr::Kind::Call && arm.pattern.args.size() == 1 &&
-            arm.pattern.args[0].kind == parser::Expr::Kind::Name) {
-          const std::string ctor = arm.pattern.value;
-          const std::string bound = arm.pattern.args[0].value;
-          int tag = -1;
-          if (ctor == "Some" || ctor == "Ok") {
-            tag = 1;
-          } else if (ctor == "Err") {
-            tag = 0;
-          } else {
-            int hits = 0;
-            for (const EnumRef& enumeration : enums) {
-              const int found = find_variant(enumeration, ctor);
-              if (found >= 0 && found < static_cast<int>(enumeration.payload_types.size()) &&
-                  !enumeration.payload_types[static_cast<std::size_t>(found)].empty()) {
-                ++hits;
-                tag = found;
-              }
-            }
-            if (hits != 1) {
-              tag = -1;
-            }
-          }
-          if (tag >= 0) {
-            arm.has_payload = true;
-            arm.tag_match = true;
-            arm.bind_name = bound;
-            arm.pattern.kind = parser::Expr::Kind::Number;
-            arm.pattern.number = static_cast<double>(tag);
-            arm.pattern.args.clear();
-            stmt.slot = 1;
-          }
-        }
-        if (!arm.wildcard && arm.pattern.kind == parser::Expr::Kind::Name && arm.pattern.value == "None") {
-          arm.tag_match = true;
-          arm.pattern.kind = parser::Expr::Kind::Number;
-          arm.pattern.number = 0;
-          stmt.slot = 1;
-        }
-        if (!arm.wildcard && arm.pattern.kind == parser::Expr::Kind::Name) {
-          int hits = 0;
-          int enum_index = -1;
-          int variant = -1;
-          for (std::size_t index = 0; index < enums.size(); ++index) {
-            const int found = find_variant(enums[index], arm.pattern.value);
-            if (found >= 0) {
-              ++hits;
-              enum_index = static_cast<int>(index);
-              variant = found;
-            }
-          }
-          if (hits == 1) {
-            arm.pattern.kind = parser::Expr::Kind::Number;
-            arm.pattern.number = static_cast<double>(variant);
-            arm.pattern.enum_literal = true;
-            arm.pattern.slot = static_cast<std::uint16_t>(enum_index);
-          }
-        }
         if (!arm.wildcard) {
           bind_expr(arm.pattern, locals, functions, structs, enums, diagnostics);
         }
@@ -1385,67 +1747,79 @@ void bind_stmts(std::vector<parser::Stmt>& statements, std::vector<Local>& local
       continue;
     }
 
-    bind_expr(stmt.expr, locals, functions, structs, enums, diagnostics);
+    bind_expr(stmt.expr, locals, functions, structs, enums, diagnostics,
+              stmt.kind == parser::Stmt::Kind::Return && active_function ? active_function->return_type : std::string{});
   }
   locals.resize(watermark);
 }
 
 }  // namespace
 
-void collect_declarations(std::vector<parser::Stmt>& statements, std::vector<FuncRef>& functions,
-                          std::vector<Diagnostic>& diagnostics) {
-  for (parser::Stmt& stmt : statements) {
-    if (stmt.kind == parser::Stmt::Kind::Signal) {
-      if (find_signal(stmt.name) != nullptr || find_func(functions, stmt.name) >= 0) {
-        diagnostics.push_back(Diagnostic{stmt.name_location, stmt.name_span, "already declared"});
-      } else if (active_signals != nullptr) {
-        active_signals->push_back(SignalBind{stmt.name, {}});
-      }
-    } else if (stmt.kind == parser::Stmt::Kind::Connect) {
-      SignalBind* signal = find_signal(stmt.name);
-      const int function = find_func(functions, stmt.declared_type);
-      if (signal == nullptr) {
-        diagnostics.push_back(Diagnostic{stmt.name_location, stmt.name_span, "undefined name"});
-      } else if (function < 0) {
-        diagnostics.push_back(Diagnostic{stmt.name_location, stmt.name_span, "undefined function"});
-      } else {
-        signal->targets.push_back(static_cast<std::uint16_t>(function));
-      }
-    } else if (stmt.kind == parser::Stmt::Kind::Using) {
-      const int function = find_func(functions, stmt.declared_type);
-      if (function < 0) {
-        diagnostics.push_back(Diagnostic{stmt.name_location, stmt.name_span, "undefined function"});
-      } else if (find_func(functions, stmt.name) >= 0) {
-        diagnostics.push_back(Diagnostic{stmt.name_location, stmt.name_span, "already declared"});
-      } else {
-        functions.push_back(FuncRef{stmt.name, 0, static_cast<std::uint16_t>(function), false});
-        for (const FuncRef& existing : functions) {
-          if (existing.index == static_cast<std::uint16_t>(function) && existing.name == stmt.declared_type) {
-            functions.back().arity = existing.arity;
-            functions.back().is_async = existing.is_async;
-            break;
-          }
-        }
-      }
-    }
-    collect_declarations(stmt.then_body, functions, diagnostics);
-    collect_declarations(stmt.else_body, functions, diagnostics);
-    collect_declarations(stmt.init, functions, diagnostics);
-    collect_declarations(stmt.step, functions, diagnostics);
-    for (parser::Stmt::MatchArm& arm : stmt.arms) {
-      collect_declarations(arm.body, functions, diagnostics);
-    }
-  }
-}
 
 void bind(parser::Program& program, std::vector<Diagnostic>& diagnostics) {
   active_program = &program;
+  std::vector<Local> globals;
+  std::unordered_set<std::string> global_names;
+  program.globals.clear();
+  const auto collect_globals = [&](std::vector<parser::Stmt>& statements) {
+    for (auto& stmt : statements) if (stmt.kind == parser::Stmt::Kind::VariableDecl && stmt.module_global) {
+      if (global_names.contains(stmt.name)) {
+        diagnostics.push_back(Diagnostic{stmt.name_location, stmt.name_span, "already declared"}); continue;
+      }
+      if (globals.size() >= 65535) { diagnostics.push_back(Diagnostic{stmt.name_location, stmt.name_span, "too many module bindings"}); continue; }
+      stmt.slot = static_cast<std::uint16_t>(globals.size());
+      globals.push_back(Local{stmt.name, stmt.slot, stmt.declared_type, stmt.immutable});
+      global_names.insert(stmt.name);
+      globals.back().global = true; globals.back().observable = stmt.observable_cell;
+      program.globals.push_back({stmt.name, stmt.declared_type, stmt.immutable, stmt.observable_cell});
+    }
+  };
+  for (auto& initialize : program.functions) if (initialize.module_init) collect_globals(initialize.body);
+  collect_globals(program.statements);
+  module_globals = &globals;
+  struct RestoreGlobals { ~RestoreGlobals() { module_globals = nullptr; } } restore_globals;
+  // Imported definitions can follow their users in the flattened program.
+  // Establish base-before-child order before assigning any runtime type slots.
+  std::vector<std::vector<std::size_t>> dependencies(program.structs.size());
+  for (std::size_t index = 0; index < program.structs.size(); ++index) {
+    const auto& data = program.structs[index];
+    const auto bases = data.bases.empty() && !data.base.empty() ? std::vector<std::string>{data.base} : data.bases;
+    for (const auto& spelling : bases) {
+      const auto resolved = typechecker::data_base_type(program, spelling, data);
+      if (!resolved) continue;  // The normal binding pass reports invalid base annotations.
+      const auto name = bare_type(*resolved);
+      for (std::size_t base = 0; base < program.structs.size(); ++base) {
+        if (program.structs[base].name == name) { dependencies[index].push_back(base); break; }
+      }
+    }
+  }
+  std::vector<std::size_t> order;
+  std::vector<bool> emitted(program.structs.size());
+  while (order.size() < program.structs.size()) {
+    bool progressed = false;
+    for (std::size_t index = 0; index < program.structs.size(); ++index) {
+      if (emitted[index] || !std::all_of(dependencies[index].begin(), dependencies[index].end(),
+                                       [&](const auto base) { return emitted[base]; })) continue;
+      emitted[index] = true; order.push_back(index); progressed = true;
+    }
+    if (!progressed) {
+      const auto index = static_cast<std::size_t>(std::find(emitted.begin(), emitted.end(), false) - emitted.begin());
+      const auto& data = program.structs[index];
+      diagnostics.push_back(Diagnostic{data.base_location, data.base_span, "cyclic inheritance"});
+      return;
+    }
+  }
+  std::vector<parser::StructDecl> ordered;
+  ordered.reserve(order.size());
+  for (const auto index : order) ordered.push_back(std::move(program.structs[index]));
+  program.structs = std::move(ordered);
   std::vector<StructRef> structs;
   for (std::size_t index = 0; index < program.structs.size(); ++index) {
     parser::StructDecl& decl = program.structs[index];
     decl.index = static_cast<std::uint16_t>(index);
     StructRef ref;
     ref.name = decl.name;
+    ref.type_params = decl.type_params;
     ref.index = decl.index;
     for (const parser::Field& field : decl.fields) {
       ref.fields.push_back(field.name);
@@ -1457,8 +1831,11 @@ void bind(parser::Program& program, std::vector<Diagnostic>& diagnostics) {
                                                     : decl.bases;
     const std::vector<parser::Field> own = decl.fields;
     std::vector<parser::Field> merged;
+    std::size_t storage_bases = 0;
+    bool interface_bases = true;
     for (std::size_t base_at = 0; base_at < base_names.size(); ++base_at) {
-      const StructRef* base = find_struct(structs, base_names[base_at]);
+      const auto specialization = typechecker::data_base_type(program, base_names[base_at], decl);
+      const StructRef* base = specialization ? find_struct(structs, bare_type(*specialization)) : nullptr;
       const bool known = base != nullptr && base->index < decl.index;
       if (!known) {
         const SourceLocation where = base_at < decl.base_locations.size() ? decl.base_locations[base_at] : decl.base_location;
@@ -1467,10 +1844,15 @@ void bind(parser::Program& program, std::vector<Diagnostic>& diagnostics) {
         continue;
       }
       decl.base_indices.push_back(base->index);
+      interface_bases = interface_bases && program.structs[base->index].is_interface;
+      if (!program.structs[base->index].is_interface && ++storage_bases > 1) {
+        diagnostics.push_back(Diagnostic{decl.name_location, decl.name_span, "inheritance permits only one storage base"});
+      }
       if (decl.base_index == 65535) {
         decl.base_index = base->index;
       }
-      for (const parser::Field& inherited : program.structs[base->index].fields) {
+      for (parser::Field inherited : program.structs[base->index].fields) {
+        inherited.type_name = specialized_type_name(base->type_params, *specialization, inherited.type_name);
         const auto same = std::find_if(merged.begin(), merged.end(), [&](const parser::Field& field) {
           return field.name == inherited.name;
         });
@@ -1493,6 +1875,11 @@ void bind(parser::Program& program, std::vector<Diagnostic>& diagnostics) {
     if (!base_names.empty()) {
       decl.fields = std::move(merged);
     }
+    const std::string method_prefix = decl.name + ".";
+    decl.is_interface = decl.is_abstract && decl.fields.empty() && interface_bases &&
+        std::all_of(program.functions.begin(), program.functions.end(), [&](const parser::Function& method) {
+          return method.name.compare(0, method_prefix.size(), method_prefix) != 0 || method.is_abstract;
+        });
     structs[index].fields.clear();
     structs[index].field_owners.clear();
     structs[index].field_types.clear();
@@ -1502,6 +1889,7 @@ void bind(parser::Program& program, std::vector<Diagnostic>& diagnostics) {
       structs[index].fields.push_back(field.name);
       structs[index].field_owners.push_back(field.owner);
       structs[index].field_types.push_back(field.type_name);
+      structs[index].field_defaults.push_back(field.default_value);
       structs[index].private_fields.push_back(field.is_private ? 1 : 0);
     }
   }
@@ -1509,9 +1897,9 @@ void bind(parser::Program& program, std::vector<Diagnostic>& diagnostics) {
   std::vector<EnumRef> enums;
   for (const parser::EnumDecl& decl : program.enums) {
     EnumRef ref;
+    ref.scoped = decl.scoped;
     ref.name = decl.name;
     ref.variants = decl.variants;
-    ref.payload_types = decl.payload_types;
     enums.push_back(std::move(ref));
   }
 
@@ -1537,6 +1925,9 @@ void bind(parser::Program& program, std::vector<Diagnostic>& diagnostics) {
     }
     function.index = static_cast<std::uint16_t>(functions.size());
     FuncRef ref{function.name, static_cast<std::uint16_t>(function.params.size()), function.index, function.is_async};
+    if (function.is_abstract && (function.is_private || function.is_final)) {
+      diagnostics.push_back(Diagnostic{function.name_location, function.name_span, "abstract methods must be public and overridable"});
+    }
     ref.is_extern = function.is_extern;
     ref.extern_id = function.extern_id;
     ref.is_private = function.is_private;
@@ -1544,8 +1935,16 @@ void bind(parser::Program& program, std::vector<Diagnostic>& diagnostics) {
     ref.is_override = function.is_override;
     ref.is_final = function.is_final;
     ref.return_type = function.return_type;
+    ref.type_params = function.type_params;
+    ref.owner_type_param_count = function.owner_type_param_count;
     functions.push_back(std::move(ref));
   }
+  record_lexical_stmts(program.statements, program, functions, 65535);
+  for (const auto& function : program.functions) if (!function.anonymous) {
+    record_lexical_stmts(function.body, program, functions, function.index);
+  }
+  for (const auto& data : program.structs) for (const auto& field : data.fields)
+    if (field.default_value) record_lexical_expr(*field.default_value, program, functions, 65535);
 
   for (std::size_t index = 0; index < program.structs.size(); ++index) {
     parser::StructDecl& decl = program.structs[index];
@@ -1568,7 +1967,15 @@ void bind(parser::Program& program, std::vector<Diagnostic>& diagnostics) {
           decl.method_names.push_back(name);
           decl.vtable.push_back(impl);
         } else if (decl.vtable[static_cast<std::size_t>(found)] != impl) {
-          diagnostics.push_back(Diagnostic{decl.name_location, decl.name_span, "ambiguous inheritance"});
+          const auto abstract_method = [&](const std::uint16_t function_index) {
+            return std::any_of(functions.begin(), functions.end(), [&](const FuncRef& function) {
+              return function.index == function_index && function.is_abstract;
+            });
+          };
+          auto& previous = decl.vtable[static_cast<std::size_t>(found)];
+          if (abstract_method(previous)) previous = impl;
+          else if (!abstract_method(impl))
+            diagnostics.push_back(Diagnostic{decl.name_location, decl.name_span, "ambiguous inheritance"});
         }
       }
       if (program.structs[base].is_final) {
@@ -1610,6 +2017,9 @@ void bind(parser::Program& program, std::vector<Diagnostic>& diagnostics) {
         if (previous != nullptr && previous->is_final) {
           diagnostics.push_back(Diagnostic{symbol.name.empty() ? decl.name_location : decl.name_location, decl.name_span, "final method"});
         }
+        if (previous != nullptr && !previous->is_private && symbol.is_private) {
+          diagnostics.push_back(Diagnostic{decl.name_location, decl.name_span, "override cannot reduce method visibility"});
+        }
         if (previous != nullptr && previous->arity != symbol.arity) {
           for (const parser::Function& function : program.functions) {
             if (function.name == symbol.name) {
@@ -1639,26 +2049,49 @@ void bind(parser::Program& program, std::vector<Diagnostic>& diagnostics) {
     structs[index].vtable = decl.vtable;
   }
 
-  std::vector<VariantRef> variants;
-  for (std::size_t index = 0; index < program.variants.size(); ++index) {
-    variants.push_back(VariantRef{program.variants[index].name, static_cast<std::uint16_t>(index)});
+  // Every method name has a stable slot across nominal interface views. Missing
+  // methods keep empty names and invalid targets; they are never exposed by lookup.
+  std::vector<std::string> method_slots;
+  for (const auto& data : program.structs) for (const auto& name : data.method_names)
+    if (std::find(method_slots.begin(), method_slots.end(), name) == method_slots.end()) method_slots.push_back(name);
+  for (std::size_t index = 0; index < program.structs.size(); ++index) {
+    auto& data = program.structs[index];
+    std::vector<std::string> names(method_slots.size());
+    std::vector<std::uint16_t> targets(method_slots.size(), 65535);
+    for (std::size_t method = 0; method < data.method_names.size(); ++method) {
+      const auto slot = static_cast<std::size_t>(std::find(method_slots.begin(), method_slots.end(), data.method_names[method]) - method_slots.begin());
+      names[slot] = data.method_names[method]; targets[slot] = data.vtable[method];
+    }
+    data.method_names = std::move(names); data.vtable = std::move(targets);
+    structs[index].method_names = data.method_names; structs[index].vtable = data.vtable;
   }
-  active_variants = &variants;
 
-  std::vector<SignalBind> signals;
-  active_signals = &signals;
-  collect_declarations(program.statements, functions, diagnostics);
-  for (parser::Function& function : program.functions) {
-    collect_declarations(function.body, functions, diagnostics);
-  }
+
 
   std::vector<std::vector<std::uint16_t>> listeners;
   active_listeners = &listeners;
-  for (parser::Function& function : program.functions) {
-    std::vector<Local> locals;
+  pending_defaults.clear();
+  bound_defaults.clear();
+  std::vector<parser::Function*> bind_order;
+  for (auto& function : program.functions) if (function.module_init) bind_order.push_back(&function);
+  for (auto& function : program.functions) if (!function.module_init) bind_order.push_back(&function);
+  const auto bind_entry = [&] {
+    active_function = nullptr;
+    std::vector<Local> locals = globals;
+    std::size_t next_slot = 0;
+    bind_stmts(program.statements, locals, functions, structs, enums, next_slot, diagnostics);
+    program.local_count = static_cast<std::uint16_t>(next_slot);
+  };
+  bool entry_bound = false;
+  for (auto* pointer : bind_order) {
+    if (!pointer->module_init && !entry_bound) { bind_entry(); entry_bound = true; }
+    auto& function = *pointer;
+    if (function.anonymous) continue;
+    active_function = &function;
+    std::vector<Local> locals = globals;
     std::size_t next_slot = 0;
     for (std::size_t param = 0; param < function.params.size(); ++param) {
-      if (find_local(locals, function.params[param]) >= 0) {
+      if (find_local_entry(locals, function.params[param]) && !find_local_entry(locals, function.params[param])->global) {
         diagnostics.push_back(
             Diagnostic{function.param_locations[param], function.param_spans[param], "already declared"});
         continue;
@@ -1679,14 +2112,22 @@ void bind(parser::Program& program, std::vector<Diagnostic>& diagnostics) {
     function.local_count = static_cast<std::uint16_t>(next_slot);
   }
 
-  std::vector<Local> locals;
-  std::size_t next_slot = 0;
-  bind_stmts(program.statements, locals, functions, structs, enums, next_slot, diagnostics);
-  program.local_count = static_cast<std::uint16_t>(next_slot);
-  active_signals = nullptr;
-  active_variants = nullptr;
+  if (!entry_bound) bind_entry();
+  active_function = nullptr;
+  for (parser::StructDecl& decl : program.structs) {
+    for (parser::Field& field : decl.fields) {
+      if (field.default_value != nullptr) {
+        const auto* declaration = find_struct(structs, field.owner);
+        const auto declared_field = declaration ? find_field(*declaration, field.name) : -1;
+        const auto& expected = declared_field >= 0 ? declaration->field_types[declared_field] : field.type_name;
+        (void)bind_default(*field.default_value, functions, structs, enums, diagnostics, expected, field.owner);
+      }
+    }
+  }
   active_listeners = nullptr;
   active_program = nullptr;
+  pending_defaults.clear();
+  bound_defaults.clear();
 }
 
 }  // namespace clpp::binder

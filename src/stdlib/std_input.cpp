@@ -17,6 +17,8 @@
 #include <cctype>
 #include <cstdint>
 #include <chrono>
+#include <cmath>
+#include <limits>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -161,12 +163,23 @@ void move_to(const int x, const int y) { SetCursorPos(x, y); }
 
 #endif  // _WIN32
 
+[[nodiscard]] bool input_numbers(const Value* args, const std::uint8_t arity, std::string& error,
+                                 const std::string_view what) {
+  if (!numbers(args, arity, error, what)) return false;
+  for (std::uint8_t index = 0; index < arity; ++index) {
+    const double value = args[index].number;
+    if (!std::isfinite(value) || value < std::numeric_limits<int>::min() || value > std::numeric_limits<int>::max())
+      return fail(error, std::string(what) + ": numeric argument outside native range");
+  }
+  return true;
+}
+
 #define CLPP_NATIVE(name) bool name([[maybe_unused]] const Value* args, [[maybe_unused]] const std::uint8_t arity, \
                                     [[maybe_unused]] Value& out, [[maybe_unused]] std::string& error)
 
 CLPP_NATIVE(input_move) {  // (x, y)
   (void)out;
-  if (!numbers(args, arity, error, "Input.Move")) {
+  if (!input_numbers(args, arity, error, "Input.Move")) {
     return false;
   }
 #ifdef _WIN32
@@ -179,13 +192,18 @@ CLPP_NATIVE(input_move) {  // (x, y)
 
 CLPP_NATIVE(input_move_by) {  // (dx, dy)
   (void)out;
-  if (!numbers(args, arity, error, "Input.MoveBy")) {
+  if (!input_numbers(args, arity, error, "Input.MoveBy")) {
     return false;
   }
 #ifdef _WIN32
   POINT point{};
   GetCursorPos(&point);
-  move_to(point.x + static_cast<int>(args[0].number), point.y + static_cast<int>(args[1].number));
+  const auto x = static_cast<std::int64_t>(point.x) + static_cast<int>(args[0].number);
+  const auto y = static_cast<std::int64_t>(point.y) + static_cast<int>(args[1].number);
+  if (x < std::numeric_limits<int>::min() || x > std::numeric_limits<int>::max() ||
+      y < std::numeric_limits<int>::min() || y > std::numeric_limits<int>::max())
+    return fail(error, "Input.MoveBy: resulting position outside native range");
+  move_to(static_cast<int>(x), static_cast<int>(y));
   return true;
 #else
   return unsupported(error);
@@ -194,7 +212,7 @@ CLPP_NATIVE(input_move_by) {  // (dx, dy)
 
 CLPP_NATIVE(input_mouse) {  // (button, 0 click | 1 down | 2 up | 3 double)
   (void)out;
-  if (!numbers(args, arity, error, "Input mouse")) {
+  if (!input_numbers(args, arity, error, "Input mouse")) {
     return false;
   }
 #ifdef _WIN32
@@ -225,11 +243,13 @@ CLPP_NATIVE(input_mouse) {  // (button, 0 click | 1 down | 2 up | 3 double)
 
 CLPP_NATIVE(input_scroll) {  // (amount): wheel notches, positive = up
   (void)out;
-  if (!numbers(args, arity, error, "Input.Scroll")) {
+  if (!input_numbers(args, arity, error, "Input.Scroll")) {
     return false;
   }
 #ifdef _WIN32
   INPUT input{};
+  if (std::abs(args[0].number) > std::numeric_limits<int>::max() / WHEEL_DELTA)
+    return fail(error, "Input.Scroll: wheel delta outside native range");
   input.type = INPUT_MOUSE;
   input.mi.dwFlags = MOUSEEVENTF_WHEEL;
   input.mi.mouseData = static_cast<DWORD>(static_cast<int>(args[0].number) * WHEEL_DELTA);
@@ -256,6 +276,7 @@ CLPP_NATIVE(input_key) {  // (name, 0 tap | 1 down | 2 up)
   if (arity != 2 || !args[0].is_string() || !args[1].is_number()) {
     return fail(error, "Input key: expected a key name such as \"enter\" or \"a\"");
   }
+  if (!input_numbers(args + 1, 1, error, "Input key")) return false;
 #ifdef _WIN32
   const WORD vk = vk_for(args[0].text);
   if (vk == 0) {
@@ -315,7 +336,7 @@ CLPP_NATIVE(input_type) {  // (text)
 }
 
 CLPP_NATIVE(input_pixel) {  // (x, y) -> 0xRRGGBB of the screen
-  if (!numbers(args, arity, error, "Input.Pixel")) {
+  if (!input_numbers(args, arity, error, "Input.Pixel")) {
     return false;
   }
 #ifdef _WIN32
@@ -344,7 +365,7 @@ CLPP_NATIVE(input_screen) {  // (0 width | 1 height)
 }
 
 CLPP_NATIVE(input_capture) {  // (x, y, w, h) -> a @clpp.gfx image handle
-  if (!numbers(args, arity, error, "Input.Capture")) {
+  if (!input_numbers(args, arity, error, "Input.Capture")) {
     return false;
   }
 #ifdef _WIN32
@@ -401,7 +422,7 @@ CLPP_NATIVE(input_down) {  // (name) -> is this key currently held
 
 CLPP_NATIVE(input_sleep) {  // (milliseconds): pause between macro steps
   (void)out;
-  if (!numbers(args, arity, error, "Input.Wait")) {
+  if (!input_numbers(args, arity, error, "Input.Wait")) {
     return false;
   }
   if (args[0].number > 0) {
@@ -416,27 +437,27 @@ constexpr std::string_view kInputSource = R"clp(<< @clpp.input: desktop automati
 << Moves the real mouse and keyboard and reads the screen, visibly, in the user's own session.
 << Every function is refused inside actor(...). Buttons: 0 left, 1 right, 2 middle.
 
-func Move(float x, float y) { input::Move(x, y); }
-func MoveBy(float dx, float dy) { input::MoveBy(dx, dy); }
-func MouseX() -> int { return input::MousePos(0); }
-func MouseY() -> int { return input::MousePos(1); }
-func Click(int button = 0) { input::Mouse(button, 0); }
-func DoubleClick(int button = 0) { input::Mouse(button, 3); }
-func MouseDown(int button = 0) { input::Mouse(button, 1); }
-func MouseUp(int button = 0) { input::Mouse(button, 2); }
-func ClickAt(float x, float y, int button = 0) { input::Move(x, y); input::Mouse(button, 0); }
-func Scroll(int amount) { input::Scroll(amount); }
-func Press(string key) { input::Key(key, 0); }
-func KeyDown(string key) { input::Key(key, 1); }
-func KeyUp(string key) { input::Key(key, 2); }
-func Hotkey(string combo) { input::Hotkey(combo); }
-func Type(string text) { input::Type(text); }
-func IsDown(string key) -> bool { return input::IsDown(key); }
-func Pixel(float x, float y) -> int { return input::Pixel(x, y); }
-func ScreenWidth() -> int { return input::Screen(0); }
-func ScreenHeight() -> int { return input::Screen(1); }
-func Capture(float x, float y, float width, float height) -> int { return input::Capture(x, y, width, height); }
-func Wait(float milliseconds) { input::Wait(milliseconds); }
+export void Move(float x, float y) { input::Move(x, y); }
+export void MoveBy(float dx, float dy) { input::MoveBy(dx, dy); }
+export number MouseX() { return input::MousePos(0); }
+export number MouseY() { return input::MousePos(1); }
+export void Click(number button) { input::Mouse(button, 0); }
+export void DoubleClick(number button) { input::Mouse(button, 3); }
+export void MouseDown(number button) { input::Mouse(button, 1); }
+export void MouseUp(number button) { input::Mouse(button, 2); }
+export void ClickAt(float x, float y, number button) { input::Move(x, y); input::Mouse(button, 0); }
+export void Scroll(number amount) { input::Scroll(amount); }
+export void Press(string key) { input::Key(key, 0); }
+export void KeyDown(string key) { input::Key(key, 1); }
+export void KeyUp(string key) { input::Key(key, 2); }
+export void Hotkey(string combo) { input::Hotkey(combo); }
+export void Type(string text) { input::Type(text); }
+export bool IsDown(string key) { return input::IsDown(key); }
+export number Pixel(float x, float y) { return input::Pixel(x, y); }
+export number ScreenWidth() { return input::Screen(0); }
+export number ScreenHeight() { return input::Screen(1); }
+export number Capture(float x, float y, float width, float height) { return input::Capture(x, y, width, height); }
+export void Wait(float milliseconds) { input::Wait(milliseconds); }
 )clp";
 
 }  // namespace

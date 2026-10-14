@@ -19,7 +19,7 @@ Um módulo só declara coisas; ele nunca executa código ao ser importado. Isso 
 
 | Pode | Não pode |
 | --- | --- |
-| `func`, `struct`, `enum`, `variant`, `type` | comandos de topo (`post(...)`, laços, `let` com cálculo) |
+| funções tipadas, `def`, `enum class`, aliases com `def` | comandos de topo (`post(...)`, laços, `let` com cálculo) |
 | constantes com valor literal: `const MAX_HP = 100;` | |
 | `link` para outros módulos | |
 
@@ -32,26 +32,26 @@ O módulo `combat.clp`:
 ```clp arquivo=combat.clp
 << combat.clp: regras de combate
 
-const MAX_HP = 100;
-const CRIT_MULTIPLIER = 2;
+export const auto MAX_HP = 100;
+const auto CRIT_MULTIPLIER = 2;
 
-struct Fighter {
+export def Fighter {
   string name;
-  int hp;
-  func isAlive() -> bool { return self.hp > 0; }
+  number hp;
+  bool isAlive() { return @this.hp > 0; }
 }
 
-enum Element { Fire, Ice, Storm }
+export enum class Element { Fire, Ice, Storm }
 
-func damageFor(Element e, int base) -> int {
+export number damageFor(Element e, number base) {
   match (e) {
-    Fire ~> return base + 5;
-    Ice ~> return base;
-    Storm ~> return base * CRIT_MULTIPLIER;
+    Element::Fire => return base + 5;
+    Element::Ice => return base;
+    Element::Storm => return base * CRIT_MULTIPLIER;
   }
 }
 
-func hit(Fighter target, int amount) -> Fighter {
+export Fighter hit(Fighter target, number amount) {
   target.hp -= amount;
   if (target.hp < 0) { target.hp = 0; }
   return target;
@@ -63,8 +63,8 @@ O programa que usa o módulo:
 ```clp
 link "./combat.clp" as Combat;
 
-Combat.Fighter ada = Combat.Fighter("Ada", Combat.MAX_HP);
-let dmg = Combat.damageFor(Combat.Element.Storm, 20);
+Combat.Fighter ada = Combat.Fighter { name = "Ada", hp = Combat.MAX_HP };
+const auto dmg = Combat.damageFor(Combat.Element::Storm, 20);
 ada = Combat.hit(ada, dmg);
 post(ada.name .: " ficou com " .: ada.hp);
 post(ada.isAlive());
@@ -96,29 +96,29 @@ link "./nao_existe.clp" as Missing;
 cannot open module
 ```
 
-Um módulo com código solto no topo é recusado, com a explicação na linha do `link`:
+A inicialização do módulo executa uma vez antes do código de entrada:
 
 ```clp arquivo=solto.clp
 post("isto rodaria ao importar");
-func ok() { return 1; }
+number ok() { return 1; }
 ```
 
-```clp erro
+```clp
 link "./solto.clp" as Loose;
 ```
 
 ```saida
-a module can only declare
+isto rodaria ao importar
 ```
 
-## `import` e `using`
+## Chamadas qualificadas
 
-`import` é um sinônimo de `link`. `using Modulo.nome;` traz um nome do módulo para o escopo do arquivo, para usá-lo sem prefixo.
+Use `link` para carregar o módulo e seu alias para chamar funções exportadas.
 
 ```clp
-import @clpp.math as Math;
-using Math.abs;
-post(abs(-7));
+link @clpp.math as Math;
+
+post(Math.abs(-7));
 ```
 
 ```saida

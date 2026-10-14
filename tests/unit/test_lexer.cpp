@@ -54,6 +54,20 @@ TEST_CASE("lexer CL++ line comment with <<", "[lexer]") {
   require_token(tokens[0], clpp::TokenType::KwPost, "post");
 }
 
+TEST_CASE("authored comments consume code-like text and close at the first delimiter", "[lexer][comments]") {
+  const std::string source = "<< 5) def com HERANÇA nominal.\n<<[ ] > ]] > ]>] text ]>>post(7);";
+  const auto result = clpp::Lexer(source).tokenize();
+  REQUIRE(result.diagnostics.empty());
+  REQUIRE(result.tokens.front().type == clpp::TokenType::KwPost);
+  REQUIRE(result.tokens.front().location.line == 2);
+  REQUIRE(result.tokens.size() == 6);
+  const auto quoted = clpp::Lexer("\"<< line <<[ block ]>>\" / /=").tokenize();
+  REQUIRE(quoted.diagnostics.empty());
+  REQUIRE(quoted.tokens.front().lexeme == "<< line <<[ block ]>>");
+  REQUIRE(quoted.tokens.at(1).type == clpp::TokenType::Slash);
+  REQUIRE(quoted.tokens.at(2).type == clpp::TokenType::SlashEq);
+}
+
 TEST_CASE("lexer CL++ block comment multiline", "[lexer]") {
   const std::string source =
       "<<[\n"
@@ -80,11 +94,11 @@ TEST_CASE("lexer line then block comments like examples/comments.clp", "[lexer]"
   require_token(tokens[0], clpp::TokenType::KwNull, "null");
 }
 
-TEST_CASE("lexer doc comment token for LSP", "[lexer]") {
-  clpp::Lexer lexer("<<[[]] Player health cap >>\nfunc");
+TEST_CASE("lexer ignores ordinary block comments", "[lexer]") {
+  clpp::Lexer lexer("<<[ Player health cap ]>>\nfunc");
   const auto tokens = lexer.tokenize().tokens;
-  require_token(tokens[0], clpp::TokenType::DocComment, " Player health cap ");
-  require_token(tokens[1], clpp::TokenType::KwFunc, "func");
+  require_token(tokens[0], clpp::TokenType::KwFunc, "func");
+  REQUIRE(tokens.size() == 2);
 }
 
 TEST_CASE("lexer numeric separators and scientific", "[lexer]") {
@@ -103,7 +117,7 @@ TEST_CASE("lexer hex and binary literals", "[lexer]") {
   require_token(tokens[1], clpp::TokenType::IntLiteral, "0b1010_1100");
 }
 
-TEST_CASE("lexer 3.Name splits int dot identifier", "[lexer]") {
+TEST_CASE("lexer 3.Name splits number dot identifier", "[lexer]") {
   clpp::Lexer lexer("3.Name");
   const auto tokens = lexer.tokenize().tokens;
   require_token(tokens[0], clpp::TokenType::IntLiteral, "3");
@@ -111,7 +125,7 @@ TEST_CASE("lexer 3.Name splits int dot identifier", "[lexer]") {
   require_token(tokens[2], clpp::TokenType::Identifier, "Name");
 }
 
-TEST_CASE("lexer double-quoted string literal", "[lexer]") {
+TEST_CASE("lexer float-quoted string literal", "[lexer]") {
   clpp::Lexer lexer(R"("hello CL++")");
   const auto tokens = lexer.tokenize().tokens;
   require_token(tokens[0], clpp::TokenType::StringLiteral, "hello CL++");
@@ -145,10 +159,10 @@ TEST_CASE("lexer nested interpolation keeps inner braces", "[lexer]") {
 }
 
 TEST_CASE("lexer skips a utf-8 bom and reports a control character", "[lexer]") {
-  const std::string bom = std::string("\xEF" "\xBB" "\xBF") + "let";
+  const std::string bom = std::string("\xEF" "\xBB" "\xBF") + "auto";
   clpp::Lexer marked(bom);
   const clpp::LexResult marked_result = marked.tokenize();
-  require_token(marked_result.tokens[0], clpp::TokenType::KwLet, "let");
+  require_token(marked_result.tokens[0], clpp::TokenType::KwAuto, "auto");
   REQUIRE(marked_result.tokens[0].location.line == 1);
   REQUIRE(marked_result.tokens[0].location.column == 1);
   REQUIRE(marked_result.diagnostics.empty());
@@ -166,10 +180,10 @@ TEST_CASE("lexer skips a utf-8 bom and reports a control character", "[lexer]") 
 }
 
 TEST_CASE("lexer keeps column across a line and recovers after an invalid token", "[lexer]") {
-  const std::string source = "let\n  x\x01 = 1;";
+  const std::string source = "auto\n  x\x01 = 1;";
   clpp::Lexer lexer(source);
   const clpp::LexResult result = lexer.tokenize();
-  require_token(result.tokens[0], clpp::TokenType::KwLet, "let");
+  require_token(result.tokens[0], clpp::TokenType::KwAuto, "auto");
   REQUIRE(result.tokens[0].location.column == 1);
   require_token(result.tokens[1], clpp::TokenType::Identifier, "x");
   REQUIRE(result.tokens[1].location.line == 2);
@@ -189,7 +203,7 @@ TEST_CASE("lexer sigils for at-decorator and hash directives", "[lexer]") {
   require_token(tokens[4], clpp::TokenType::Hash, "#");
   require_token(tokens[5], clpp::TokenType::KwIf, "if");
   require_token(tokens[6], clpp::TokenType::Hash, "#");
-  require_token(tokens[7], clpp::TokenType::Identifier, "pragma");
+  require_token(tokens[7], clpp::TokenType::KwPragma, "pragma");
   REQUIRE(tokens.back().type == clpp::TokenType::Eof);
 }
 
@@ -280,7 +294,7 @@ TEST_CASE("lexer CL++ 0.8 control and concurrency keywords", "[lexer]") {
   require_token(tokens[8], clpp::TokenType::KwMatch, "match");
 }
 
-TEST_CASE("lexer self table @field @this.field @this::member", "[lexer]") {
+TEST_CASE("lexer @this table @field @this.field @this::member", "[lexer]") {
   clpp::Lexer lexer("@coins @this.janitor @this::PlayerEntered");
   const auto tokens = lexer.tokenize().tokens;
   require_token(tokens[0], clpp::TokenType::At, "@");
@@ -303,7 +317,7 @@ TEST_CASE("lexer indexing and pragma sigils", "[lexer]") {
   require_token(tokens[2], clpp::TokenType::IntLiteral, "0");
   require_token(tokens[3], clpp::TokenType::CloseBracket, "]");
   require_token(tokens[4], clpp::TokenType::Hash, "#");
-  require_token(tokens[5], clpp::TokenType::Identifier, "pragma");
+  require_token(tokens[5], clpp::TokenType::KwPragma, "pragma");
   require_token(tokens[6], clpp::TokenType::Identifier, "once");
   require_token(tokens[7], clpp::TokenType::At, "@");
   require_token(tokens[8], clpp::TokenType::Identifier, "this");
@@ -319,10 +333,10 @@ TEST_CASE("lexer generic angle syntax GetService", "[lexer]") {
 }
 
 TEST_CASE("lexer link quoted path with as", "[lexer]") {
-  clpp::Lexer lexer(R"(link "./Leader.clh" as Leader;)");
+  clpp::Lexer lexer(R"(link "./Leader.clp" as Leader;)");
   const auto tokens = lexer.tokenize().tokens;
   require_token(tokens[0], clpp::TokenType::KwLink, "link");
-  require_token(tokens[1], clpp::TokenType::StringLiteral, "./Leader.clh");
+  require_token(tokens[1], clpp::TokenType::StringLiteral, "./Leader.clp");
   require_token(tokens[2], clpp::TokenType::KwAs, "as");
   require_token(tokens[3], clpp::TokenType::Identifier, "Leader");
 }
@@ -357,7 +371,7 @@ TEST_CASE("lexer invalid float exponent without digits", "[lexer]") {
   require_diagnostic(result.diagnostics[0], "invalid numeric literal", "1e+");
 }
 
-TEST_CASE("lexer line comment after incomplete doc opener", "[lexer]") {
+TEST_CASE("lexer block comment closes before code", "[lexer]") {
   clpp::Lexer lexer("<<[ not a doc ]>>\nreturn");
   const auto tokens = lexer.tokenize().tokens;
   require_token(tokens[0], clpp::TokenType::KwReturn, "return");
@@ -381,7 +395,7 @@ void ProcessPacket() {
     post("Buffer allocated with size: " .: buffer::size(stream));
 }
 
-<< @coins, @this.janitor e @this::BindPart referem-se à mesma tabela (self)
+<< @coins, @this.janitor e @this::BindPart referem-se à mesma tabela (@this)
 )";
   clpp::Lexer lexer(source);
   const clpp::LexResult result = lexer.tokenize();
@@ -471,14 +485,13 @@ TEST_CASE("lexer unterminated block comment reports and yields eof", "[lexer]") 
   require_diagnostic(result.diagnostics[0], "unterminated block comment", source);
 }
 
-TEST_CASE("lexer unterminated doc comment is invalid", "[lexer]") {
-  const std::string source = "<<[[]] hello";
-  clpp::Lexer lexer(source);
-  const clpp::LexResult result = lexer.tokenize();
-  require_token(result.tokens[0], clpp::TokenType::Invalid, source);
-  REQUIRE(result.tokens[1].type == clpp::TokenType::Eof);
-  REQUIRE(result.diagnostics.size() == 1);
-  require_diagnostic(result.diagnostics[0], "unterminated doc comment", source);
+TEST_CASE("lexer comment markers inside strings are ordinary text", "[lexer]") {
+  clpp::Lexer lexer("\"http://example /* text */\" / /=");
+  const auto result = lexer.tokenize();
+  REQUIRE(result.diagnostics.empty());
+  require_token(result.tokens[0], clpp::TokenType::StringLiteral, "http://example /* text */");
+  require_token(result.tokens[1], clpp::TokenType::Slash, "/");
+  require_token(result.tokens[2], clpp::TokenType::SlashEq, "/=");
 }
 
 TEST_CASE("lexer crlf null and invalid utf-8 stay inside the process", "[lexer]") {
@@ -501,7 +514,7 @@ TEST_CASE("lexer crlf null and invalid utf-8 stay inside the process", "[lexer]"
   REQUIRE(utf.diagnostics[0].message == "invalid utf-8");
   REQUIRE(utf.tokens.back().type == clpp::TokenType::Eof);
 
-  clpp::Lexer open("<<[ <<[ never");
+  clpp::Lexer open("<<[ /* never");
   const clpp::LexResult comment = open.tokenize();
   REQUIRE(comment.diagnostics[0].message == "unterminated block comment");
   REQUIRE(comment.tokens.back().type == clpp::TokenType::Eof);
@@ -536,7 +549,7 @@ TEST_CASE("line comment ends at LF, CRLF and a lone CR", "[lexer][crlf]") {
   }
 }
 
-TEST_CASE("block and doc comments span CRLF lines", "[lexer][crlf]") {
+TEST_CASE("block comments span CRLF lines", "[lexer][crlf]") {
   const std::string block("<<[\r\n a\r\n]>>\r\npost");
   clpp::Lexer blocks(block);
   const clpp::LexResult b = blocks.tokenize();

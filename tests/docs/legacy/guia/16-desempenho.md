@@ -35,7 +35,7 @@ Cada mudança foi medida com perfilador (`perf`) antes e depois; só ficaram as 
 
 **Antes:** atribuir um número a um registrador copiava também o texto e a lista de campos do `Value` (vazios, mas a cópia ainda alocava e liberava). O perfilador mostrava ~50% do tempo de um laço aritmético nisso.
 
-**Agora:** `Value` tem uma atribuição especializada: se o valor é número, só o `double` é copiado (`set_number`). Invariante: um número nunca possui texto nem campos. Esse é o ganho de `loop` e `vectors`.
+**Agora:** `Value` tem uma atribuição especializada: se o valor é número, só o `float` é copiado (`set_number`). Invariante: um número nunca possui texto nem campos. Esse é o ganho de `loop` e `vectors`.
 
 ### 3. Leitura de índice sem cópia
 
@@ -45,7 +45,7 @@ Cada mudança foi medida com perfilador (`perf`) antes e depois; só ficaram as 
 
 ### 4. Divisão inteira e operações tipadas
 
-Quando os dois lados são `int`, o compilador emite instruções especializadas (`IntAdd`, `IntDiv`), que pulam verificações de tipo na execução.
+Quando os dois lados são `number`, o compilador emite instruções especializadas (`IntAdd`, `IntDiv`), que pulam verificações de tipo na execução.
 
 ### 5. VM de registradores
 

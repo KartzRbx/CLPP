@@ -8,7 +8,7 @@
 int main() {
   int failures = 0;
   for (int i = 0; i < 800; ++i) {
-    const std::string source = "async func add(a, b) { return a + b; }\npost(parallel(add(" + std::to_string(i) +
+    const std::string source = "async number add(number a, number b) { return a + b; }\npost(parallel(add(" + std::to_string(i) +
                                ", 1), add(" + std::to_string(i) + ", 2)));\n";
     const clpp::CompileResult compiled = clpp::Compiler{}.compile(source);
     std::ostringstream out;

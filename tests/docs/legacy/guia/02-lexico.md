@@ -48,13 +48,13 @@ As palavras abaixo são reservadas e não podem ser usadas como nomes.
 
 | Grupo | Palavras |
 | --- | --- |
-| Declarações | `let`, `mut`, `const`, `constexpr`, `auto`, `func`, `struct`, `enum`, `variant`, `type`, `namespace`, `link`, `import`, `using`, `as`, `extern`, `static`, `signal`, `observable`, `atomic`, `operator` |
+| Declarações | `let`, `mut`, `const`, `constexpr`, `auto`, funções tipadas, `def`, `enum class`, `namespace`, `link`, `import`, `using`, `as`, `extern`, `static`, `signal`, `observable`, `atomic`, `operator` |
 | Modificadores | `abstract`, `override`, `private`, `public`, `final`, `async` |
 | Controle | `if`, `else`, `while`, `for`, `in`, `break`, `continue`, `return`, `match`, `guard`, `switch`, `case`, `default`, `try`, `catch` |
 | Concorrência | `spawn`, `await`, `parallel`, `thread`, `join`, `task` |
 | Operadores em palavra | `and`, `or`, `not`, `shl`, `shr` |
-| Saída | `post`, `warn`, `report`, `cout`, `endl` |
-| Tipos | `int`, `float`, `double`, `bool`, `string`, `void`, `buffer`, `Vector2`, `Vector3`, `Vector4` |
+| Saída | `post`, `warn`, `report` |
+| Tipos | `number`, `float`, `float`, `bool`, `string`, `void`, `buffer`, `Vector2`, `Vector3`, `Vector4` |
 | Outros | `true`, `false`, `null`, `new`, `move`, `decltype`, `pcall`, `where`, `from` |
 
 A lista completa e sempre atualizada é a que o editor sugere ao digitar: ela vem direto do compilador.
@@ -63,7 +63,7 @@ A lista completa e sempre atualizada é a que o editor sugere ao digitar: ela ve
 
 ### Números
 
-Inteiros e decimais usam a notação usual. Um número com ponto é `float`; sem ponto é `int`.
+Inteiros e decimais usam a notação usual. Um número com ponto é `float`; sem ponto é `number`.
 
 ```clp
 post(42);
@@ -118,8 +118,8 @@ coluna1	coluna2
 Um texto entre crases é um template: cada `${expressão}` é avaliado e inserido no lugar. Para escrever `${` literalmente, use `\${`.
 
 ```clp
-let name = "Ada";
-let level = 3;
+const auto name = "Ada";
+const auto level = 3;
 post(`${name} está no nível ${level}`);
 post(`próximo nível: ${level + 1}`);
 post(`literal: \${name}`);
@@ -136,9 +136,9 @@ literal: ${name}
 Todo comando termina com `;`. Blocos ficam entre `{` e `}` e criam um novo escopo: uma variável declarada dentro de um bloco deixa de existir quando ele termina.
 
 ```clp
-let x = 1;
+const auto x = 1;
 if (true) {
-  let x = 2;  << outro x, só dentro do bloco
+  const auto x = 2;  << outro x, só dentro do bloco
   post(x);
 }
 post(x);

@@ -48,22 +48,22 @@ No VS Code, com o arquivo aberto, use **Ctrl+F5** ou o botão ▶ no canto do ed
 Um arquivo `.clp` pode ter, em qualquer ordem:
 
 - `link` — importa outro módulo;
-- declarações — `func`, `struct`, `enum`, `variant`, `type`;
+- declarações — funções tipadas, `def`, `enum class`;
 - comandos de topo — executados de cima para baixo quando o arquivo é o programa principal.
 
 ```clp
 link @clpp.axiom as Axiom;
 
-struct Player {
+def Player {
   string name;
-  int hp;
+  number hp;
 }
 
-func heal(int hp) -> int {
+number heal(number hp) {
   return Axiom.Clamp(hp + 25, 0, 100);
 }
 
-Player p = Player("Ada", 90);
+Player p = Player { name = "Ada", hp = 90 };
 post(p.name .: " tem " .: heal(p.hp) .: " de vida");
 ```
 

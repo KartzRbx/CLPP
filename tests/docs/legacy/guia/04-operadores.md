@@ -7,7 +7,7 @@
 | `+` | soma | `2 + 3` | `5` |
 | `-` | subtração e negação | `5 - 8`, `-x` | `-3` |
 | `*` | multiplicação | `4 * 2.5` | `10` |
-| `/` | divisão (inteira entre dois `int`) | `7 / 2`, `7.0 / 2` | `3`, `3.5` |
+| `/` | divisão (inteira entre dois `number`) | `7 / 2`, `7.0 / 2` | `3`, `3.5` |
 | `%` | resto | `7 % 3` | `1` |
 
 ```clp
@@ -29,7 +29,7 @@ A divisão inteira corta em direção a zero, como em C++ (`-7 / 2` é `-3`). Di
 ## Atribuição composta, incremento e decremento
 
 ```clp
-let mut score = 10;
+auto score = 10;
 score += 5;
 score -= 3;
 score *= 2;
@@ -78,8 +78,8 @@ As formas em palavra e em símbolo são equivalentes; use a que preferir.
 `and` e `or` são de curto-circuito: o lado direito só é avaliado se for necessário.
 
 ```clp
-let hp = 30;
-let shield = false;
+const auto hp = 30;
+const auto shield = false;
 post(hp > 0 and not shield);
 post(hp > 50 || shield);
 post(0 and (1 / 0));   << o lado direito nunca roda
@@ -105,9 +105,9 @@ Operam sobre a representação inteira do número.
 | `shr` | desloca à direita | `16 shr 2` | `4` |
 
 ```clp
-let FLAG_JUMP = 1 shl 0;
-let FLAG_DASH = 1 shl 1;
-let flags = FLAG_JUMP | FLAG_DASH;
+const auto FLAG_JUMP = 1 shl 0;
+const auto FLAG_DASH = 1 shl 1;
+const auto flags = FLAG_JUMP | FLAG_DASH;
 post(flags);
 post((flags & FLAG_DASH) != 0);
 post(16 shr 2);
@@ -126,8 +126,8 @@ true
 `.:` junta dois valores como texto. Qualquer valor pode entrar: números, booleanos, vetores, listas.
 
 ```clp
-let name = "Ada";
-let hp = 90;
+const auto name = "Ada";
+const auto hp = 90;
 post(name .: " tem " .: hp .: " de vida");
 post("vivo: " .: (hp > 0));
 post("posição: " .: Vector3(1, 2, 3));
@@ -144,7 +144,7 @@ posição: (1, 2, 3)
 `condição ? se_verdadeiro : se_falso`.
 
 ```clp
-let hp = 0;
+const auto hp = 0;
 post(hp > 0 ? "vivo" : "derrotado");
 ```
 
@@ -208,8 +208,8 @@ Dois casos pedem parênteses:
 - `shl`/`shr` são mais fracos que a comparação: escreva `(1 shl 3) == 8`.
 
 ```clp
-let a = 2;
-let b = 3;
+const auto a = 2;
+const auto b = 3;
 post("total: " .: (a + b));
 post((1 shl 3) == 8);
 ```
@@ -221,12 +221,12 @@ true
 
 ## Operadores para seus tipos
 
-Um struct pode definir o próprio `+` com `func operator+`:
+Uma definição pode implementar `+` com tipo de retorno antes de `operator+`:
 
 ```clp
-struct Money { int cents; }
-func operator+(Money a, Money b) { return Money(a.cents + b.cents); }
-Money total = Money(150) + Money(275);
+def Money { number cents; }
+Money operator+(Money a, Money b) { return Money { cents = a.cents + b.cents }; }
+Money total = Money { cents = 150 } + Money { cents = 275 };
 post(total.cents);
 ```
 

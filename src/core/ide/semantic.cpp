@@ -28,7 +28,9 @@ void add_symbol(SemanticSnapshot& snapshot, const std::uint32_t scope, const std
 
 void walk_expr(const parser::Expr& expr, const std::uint32_t scope, SemanticSnapshot& snapshot) {
   if (expr.kind == parser::Expr::Kind::Name || expr.kind == parser::Expr::Kind::MoveFrom) {
-    add_symbol(snapshot, scope, expr.slot, expr.value, expr.location, false);
+    const auto name = expr.global && !expr.span.empty() ? std::string(expr.span) : expr.value;
+    add_symbol(snapshot, scope, expr.slot, name, expr.location, false);
+    if (expr.global && !snapshot.symbols.empty()) { snapshot.symbols.back().global = true; snapshot.symbols.back().id = expr.slot; }
   }
   if (expr.left != nullptr) {
     walk_expr(*expr.left, scope, snapshot);
@@ -43,12 +45,14 @@ void walk_expr(const parser::Expr& expr, const std::uint32_t scope, SemanticSnap
 
 void walk_stmts(const std::vector<parser::Stmt>& statements, const std::uint32_t scope, SemanticSnapshot& snapshot) {
   for (const parser::Stmt& stmt : statements) {
-    if (stmt.kind == parser::Stmt::Kind::Let || stmt.kind == parser::Stmt::Kind::For ||
+    if (stmt.kind == parser::Stmt::Kind::VariableDecl || stmt.kind == parser::Stmt::Kind::For ||
         stmt.kind == parser::Stmt::Kind::ForIn) {
       add_symbol(snapshot, scope, stmt.slot, stmt.name, stmt.name_location, true);
+      if (stmt.module_global && !snapshot.symbols.empty()) { snapshot.symbols.back().global = true; snapshot.symbols.back().id = stmt.slot; }
     }
     if (stmt.kind == parser::Stmt::Kind::Assign && !stmt.name.empty()) {
       add_symbol(snapshot, scope, stmt.slot, stmt.name, stmt.name_location, false);  // `score = …`
+      if (stmt.module_global && !snapshot.symbols.empty()) { snapshot.symbols.back().global = true; snapshot.symbols.back().id = stmt.slot; }
     }
     walk_expr(stmt.expr, scope, snapshot);
     walk_expr(stmt.place, scope, snapshot);  // p.hp = …: `p` is a reference
@@ -88,14 +92,23 @@ SemanticSnapshot build_snapshot(const AnalysisResult& analysis) {
     }
     const std::uint32_t scope = static_cast<std::uint32_t>(function.index) + 1u;
     const bool method = function.name.find('.') != std::string::npos && !function.params.empty() &&
-                        function.params.front() == "self";
+                        function.params.front() == "@this";
     // The implicit `self` of a method has no token of its own (it points at the struct name).
     for (std::size_t param = method ? 1 : 0; param < function.params.size() && param < function.param_locations.size();
          ++param) {
       add_symbol(snapshot, scope, static_cast<std::uint16_t>(param), function.params[param],
                  function.param_locations[param], true);
     }
+    const auto first_reference = snapshot.symbols.size();
     walk_stmts(function.body, scope, snapshot);
+    for (std::size_t i = first_reference; i < snapshot.symbols.size(); ++i) {
+      auto& symbol = snapshot.symbols[i];
+      if (!symbol.declaration && !symbol.global && symbol.slot >= function.params.size() &&
+          symbol.slot < function.params.size() + function.captures.size()) {
+        const auto& capture = function.captures[symbol.slot - function.params.size()];
+        symbol.id = capture.source_scope * 65536u + capture.origin_slot;
+      }
+    }
   }
   return snapshot;
 }
@@ -185,7 +198,7 @@ std::vector<SemanticSymbol> references_at(const SemanticSnapshot& snapshot, cons
     return matches;
   }
   for (const SemanticSymbol& symbol : snapshot.symbols) {
-    if (symbol.id == hit->id) {
+    if (symbol.id == hit->id && symbol.global == hit->global) {
       matches.push_back(symbol);
     }
   }

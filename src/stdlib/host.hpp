@@ -29,12 +29,19 @@ void add_gfx(std::vector<Entry>& table);
 void add_window(std::vector<Entry>& table);
 void add_ui(std::vector<Entry>& table);
 void add_json(std::vector<Entry>& table);
+void add_json_typed(std::vector<Entry>& table);
 void add_time(std::vector<Entry>& table);
 void add_files(std::vector<Entry>& table);
 void add_io(std::vector<Entry>& table);
 void add_gui(std::vector<Entry>& table);
 void add_audio(std::vector<Entry>& table);
 void add_input(std::vector<Entry>& table);
+
+void reset_audio();
+void reset_window();
+void reset_gfx();
+void reset_ui();
+void reset_gui();
 
 [[nodiscard]] std::string_view gfx_source();
 [[nodiscard]] std::string_view window_source();
@@ -66,7 +73,7 @@ void add_input(std::vector<Entry>& table);
   return true;
 }
 
-[[nodiscard]] inline Value boolean(const bool value) { return Value::number_of(value ? 1.0 : 0.0); }
+[[nodiscard]] inline Value boolean(const bool value) { return Value::boolean_of(value); }
 
 // --- shared drawing surface (gfx owns it; window presents it; ui draws on it) ----------------
 

@@ -2,6 +2,7 @@
 #include "clpp/compiler.hpp"
 
 #include <algorithm>
+#include <optional>
 
 #include "core/compiler/analyze.hpp"
 #include "core/compiler/opcode.hpp"
@@ -12,6 +13,8 @@ namespace clpp {
 namespace {
 
 SourceLocation emit_origin{};
+thread_local const std::vector<std::uint16_t>* emit_boxed = nullptr;
+thread_local std::size_t operand_opcode = 0;
 
 void emit_op(BytecodeChunk& chunk, const compiler::Opcode op) {
   if (chunk.code.size() <= 0xFFFF) {
@@ -20,10 +23,18 @@ void emit_op(BytecodeChunk& chunk, const compiler::Opcode op) {
     entry.location = emit_origin;
     chunk.source_map.push_back(entry);
   }
+  operand_opcode = chunk.code.size();
   chunk.code.push_back(static_cast<std::uint8_t>(op));
 }
 
 void emit_u16(BytecodeChunk& chunk, const std::uint16_t value) {
+  if (emit_boxed && chunk.code.size() == operand_opcode + 1 &&
+      std::find(emit_boxed->begin(), emit_boxed->end(), value) != emit_boxed->end()) {
+    auto& opcode = chunk.code[operand_opcode];
+    if (opcode == static_cast<std::uint8_t>(compiler::Opcode::LoadLocal)) opcode = static_cast<std::uint8_t>(compiler::Opcode::LoadCell);
+    else if (opcode == static_cast<std::uint8_t>(compiler::Opcode::StoreLocal)) opcode = static_cast<std::uint8_t>(compiler::Opcode::StoreCell);
+    else if (opcode == static_cast<std::uint8_t>(compiler::Opcode::ClearLocal)) opcode = static_cast<std::uint8_t>(compiler::Opcode::ClearCell);
+  }
   chunk.code.push_back(static_cast<std::uint8_t>(value & 0xFF));
   chunk.code.push_back(static_cast<std::uint8_t>(value >> 8));
 }
@@ -130,6 +141,7 @@ void emit_u16(BytecodeChunk& chunk, const std::uint16_t value) {
     case parser::Expr::Kind::BitNot:
     case parser::Expr::Kind::Ternary:
     case parser::Expr::Kind::Update:
+    case parser::Expr::Kind::Cast:
       return compiler::Opcode::Nop;
   }
   return compiler::Opcode::Nop;
@@ -164,22 +176,53 @@ void emit_u16(BytecodeChunk& chunk, const std::uint16_t value) {
   return true;
 }
 
-[[nodiscard]] bool emit_expr(const parser::Expr& expr, BytecodeChunk& chunk,
+[[nodiscard]] bool emit_value(const parser::Expr& expr, BytecodeChunk& chunk,
                              std::vector<Diagnostic>& diagnostics) {
   if (expr.location.line != 0) {
     emit_origin = expr.location;
+  }
+  if (expr.kind == parser::Expr::Kind::Cast) {
+    if (!expr.left || !emit_expr(*expr.left, chunk, diagnostics)) return false;
+    emit_op(chunk, expr.runtime_op == 0 ? compiler::Opcode::ConvertNumber : compiler::Opcode::ConvertFloat);
+    return true;
   }
   if (expr.kind == parser::Expr::Kind::String) {
     return emit_const(chunk, Value::string_of(expr.value), diagnostics);
   }
   if (expr.kind == parser::Expr::Kind::Number) {
-    return emit_const(chunk, Value::number_of(expr.number), diagnostics);
+    return emit_const(chunk, expr.null_literal ? Value::null_of() : expr.bool_literal ? Value::boolean_of(expr.number != 0) : expr.float_literal ? Value::number_of(expr.number) :
+                      Value::integer_of(expr.exact_integer ? expr.integer : static_cast<std::int64_t>(expr.number)), diagnostics);
   }
   if (expr.kind == parser::Expr::Kind::SelfField) {
     return emit_self_field(chunk, expr.value, compiler::Opcode::GetSelf, diagnostics);
   }
+  if (expr.kind == parser::Expr::Kind::Observe) {
+    emit_op(chunk, expr.global ? compiler::Opcode::RawGlobal : compiler::Opcode::RawLoad); emit_u16(chunk, expr.slot);
+    if (expr.args.empty() || !emit_expr(expr.args[0], chunk, diagnostics)) return false;
+    emit_op(chunk, compiler::Opcode::Observe); return true;
+  }
+  if (expr.kind == parser::Expr::Kind::Event) {
+    for (const auto& arg : expr.args) if (!emit_expr(arg, chunk, diagnostics)) return false;
+    emit_op(chunk, compiler::Opcode::Event);
+    emit_u16(chunk, static_cast<std::uint16_t>((expr.args.size() << 8) | expr.runtime_op)); return true;
+  }
+  if (expr.kind == parser::Expr::Kind::Closure) {
+    if (expr.virtual_call && expr.left) {
+      if (!emit_expr(*expr.left, chunk, diagnostics)) return false;
+      emit_op(chunk, compiler::Opcode::MakeBoundMethod); emit_u16(chunk, expr.slot); return true;
+    }
+    for (const auto slot : expr.targets) { emit_op(chunk, compiler::Opcode::RawLoad); emit_u16(chunk, slot); }
+    emit_op(chunk, compiler::Opcode::MakeStruct); emit_u16(chunk, static_cast<std::uint16_t>(expr.targets.size()));
+    emit_op(chunk, compiler::Opcode::MakeClosure); emit_u16(chunk, expr.slot); return true;
+  }
+  if (expr.kind == parser::Expr::Kind::Invoke) {
+    if (!expr.left || !emit_expr(*expr.left, chunk, diagnostics)) return false;
+    for (const auto& arg : expr.args) if (!emit_expr(arg, chunk, diagnostics)) return false;
+    emit_op(chunk, expr.thread_call ? compiler::Opcode::InvokeThread : compiler::Opcode::Invoke);
+    emit_u16(chunk, static_cast<std::uint16_t>(expr.args.size())); return true;
+  }
   if (expr.kind == parser::Expr::Kind::Name || expr.kind == parser::Expr::Kind::MoveFrom) {
-    emit_op(chunk, compiler::Opcode::LoadLocal);
+    emit_op(chunk, expr.global ? compiler::Opcode::LoadGlobal : compiler::Opcode::LoadLocal);
     emit_u16(chunk, expr.slot);
     if (expr.kind == parser::Expr::Kind::MoveFrom) {
       emit_op(chunk, compiler::Opcode::ClearLocal);
@@ -214,14 +257,14 @@ void emit_u16(BytecodeChunk& chunk, const std::uint16_t value) {
     }
     emit_op(chunk, compiler::Opcode::Pop);
     emit_op(chunk, compiler::Opcode::EndTry);
-    if (!emit_const(chunk, Value::number_of(1), diagnostics)) {
+    if (!emit_const(chunk, Value::integer_of(1), diagnostics)) {
       return false;
     }
     const std::size_t skip_handler = emit_jump(chunk, compiler::Opcode::Jump);
     if (!patch_jump(chunk, handler, diagnostics)) {
       return false;
     }
-    if (!emit_const(chunk, Value::number_of(0), diagnostics)) {
+    if (!emit_const(chunk, Value::integer_of(0), diagnostics)) {
       return false;
     }
     return patch_jump(chunk, skip_handler, diagnostics);
@@ -247,19 +290,19 @@ void emit_u16(BytecodeChunk& chunk, const std::uint16_t value) {
       return false;
     }
     if (!expr.postfix) {
-      if (!emit_const(chunk, Value::number_of(expr.number), diagnostics)) {
+      if (!emit_const(chunk, Value::integer_of(static_cast<std::int64_t>(expr.number)), diagnostics)) {
         return false;
       }
       emit_op(chunk, compiler::Opcode::Add);
       emit_op(chunk, compiler::Opcode::Dup);
     } else {
       emit_op(chunk, compiler::Opcode::Dup);
-      if (!emit_const(chunk, Value::number_of(expr.number), diagnostics)) {
+      if (!emit_const(chunk, Value::integer_of(static_cast<std::int64_t>(expr.number)), diagnostics)) {
         return false;
       }
       emit_op(chunk, compiler::Opcode::Add);
     }
-    emit_op(chunk, compiler::Opcode::StoreLocal);
+    emit_op(chunk, expr.global ? compiler::Opcode::StoreGlobal : compiler::Opcode::StoreLocal);
     emit_u16(chunk, expr.slot);
     return true;
   }
@@ -299,7 +342,7 @@ void emit_u16(BytecodeChunk& chunk, const std::uint16_t value) {
       for (std::size_t index = 0; index < expr.args.size(); ++index) {
         emit_op(chunk, compiler::Opcode::Pop);
       }
-      return emit_const(chunk, Value::number_of(0), diagnostics);
+      return emit_const(chunk, Value::integer_of(0), diagnostics);
     }
     for (std::size_t target = 0; target < expr.targets.size(); ++target) {
       for (const parser::Expr& arg : expr.args) {
@@ -330,11 +373,6 @@ void emit_u16(BytecodeChunk& chunk, const std::uint16_t value) {
       emit_op(chunk, compiler::Opcode::VCall);
       emit_u16(chunk, expr.slot);
       emit_u16(chunk, static_cast<std::uint16_t>(expr.args.size()));
-      if (!expr.args.empty() && expr.args[0].kind == parser::Expr::Kind::Name) {
-        // p.damage(5) changes p: the method hands back its final self (if it changed it).
-        emit_op(chunk, compiler::Opcode::SelfBack);
-        emit_u16(chunk, expr.args[0].slot);
-      }
       return true;
     }
     if (expr.runtime_op == 2) {
@@ -402,17 +440,21 @@ void emit_u16(BytecodeChunk& chunk, const std::uint16_t value) {
       emit_op(chunk, compiler::Opcode::Tag);
       emit_u16(chunk, 65535);
     }
-    if (expr.kind == parser::Expr::Kind::Construct && !expr.variant_ctor && !expr.payload_ctor) {
+    if (expr.kind == parser::Expr::Kind::Construct) {
       emit_op(chunk, compiler::Opcode::Tag);
       emit_u16(chunk, static_cast<std::uint16_t>(expr.slot + 1));
-    }
-    if (expr.kind == parser::Expr::Kind::Construct && expr.variant_ctor) {
-      emit_op(chunk, compiler::Opcode::Tag);
-      emit_u16(chunk, 65534);  // a variant box: prints as the value it holds
     }
     return true;
   }
   if (expr.kind == parser::Expr::Kind::ListMut) {
+    if (expr.slot == 65535) {
+      for (const auto& argument : expr.args) if (!emit_expr(argument, chunk, diagnostics)) return false;
+      const int operation = static_cast<int>(expr.number);
+      emit_op(chunk, operation == 0 ? compiler::Opcode::PushItem : operation == 1 ? compiler::Opcode::PopItem :
+                     operation == 2 ? compiler::Opcode::InsertItem : compiler::Opcode::RemoveItem);
+      if (operation == 0 || operation == 2) return emit_const(chunk, Value::integer_of(0), diagnostics);
+      return true;
+    }
     // push(xs, v) / pop(xs) / insert(xs, i, v) / remove(xs, i): change the variable in place.
     const int op = static_cast<int>(expr.number);
     for (std::size_t index = 1; index < expr.args.size(); ++index) {
@@ -427,7 +469,7 @@ void emit_u16(BytecodeChunk& chunk, const std::uint16_t value) {
     emit_op(chunk, code);
     emit_u16(chunk, expr.slot);
     if (op == 0 || op == 2) {
-      return emit_const(chunk, Value::number_of(0), diagnostics);  // push/insert produce no value
+      return emit_const(chunk, Value::integer_of(0), diagnostics);  // push/insert produce no value
     }
     return true;
   }
@@ -567,6 +609,8 @@ void emit_u16(BytecodeChunk& chunk, const std::uint16_t value) {
     if (!emit_expr(*expr.right, chunk, diagnostics) || !patch_jump(chunk, jump, diagnostics)) {
       return false;
     }
+    emit_op(chunk, compiler::Opcode::Not);
+    emit_op(chunk, compiler::Opcode::Not);
     return true;
   }
   if (expr.left == nullptr || expr.right == nullptr) {
@@ -597,46 +641,13 @@ void emit_u16(BytecodeChunk& chunk, const std::uint16_t value) {
   return true;
 }
 
-std::vector<std::vector<std::size_t>*> break_stack;
-std::vector<std::vector<std::size_t>*> continue_stack;  // loops only (a switch is not a target)
-// True while emitting a method whose body can change self (see changes_self).
-thread_local bool mark_self_on_return = false;
-
-[[nodiscard]] bool expr_changes_self(const parser::Expr& expr) {
-  if (expr.kind == parser::Expr::Kind::Call && expr.virtual_call && !expr.args.empty() &&
-      expr.args[0].kind == parser::Expr::Kind::Name && expr.args[0].value == "self") {
-    return true;  // self.other() may change self, and SelfBack writes that into this frame's self
-  }
-  if ((expr.left != nullptr && expr_changes_self(*expr.left)) || (expr.right != nullptr && expr_changes_self(*expr.right))) {
-    return true;
-  }
-  for (const parser::Expr& arg : expr.args) {
-    if (expr_changes_self(arg)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-[[nodiscard]] bool changes_self(const std::vector<parser::Stmt>& body) {
-  for (const parser::Stmt& stmt : body) {
-    if (stmt.kind == parser::Stmt::Kind::PlaceAssign && stmt.name == "self") {
-      return true;
-    }
-    if (stmt.kind == parser::Stmt::Kind::Assign && stmt.name == "self") {
-      return true;
-    }
-    if (expr_changes_self(stmt.expr) || changes_self(stmt.then_body) || changes_self(stmt.else_body) ||
-        changes_self(stmt.init) || changes_self(stmt.step)) {
-      return true;
-    }
-    for (const parser::Stmt::MatchArm& arm : stmt.arms) {
-      if (changes_self(arm.body)) {
-        return true;
-      }
-    }
-  }
-  return false;
+thread_local std::vector<std::vector<std::size_t>*> break_stack;
+thread_local std::vector<std::vector<std::size_t>*> continue_stack;  // loops only (a switch is not a target)
+[[nodiscard]] bool emit_expr(const parser::Expr& expr, BytecodeChunk& chunk,
+                             std::vector<Diagnostic>& diagnostics) {
+  if (!emit_value(expr, chunk, diagnostics)) return false;
+  if (expr.numeric_promotion) emit_op(chunk, expr.numeric_promotion == 2 ? compiler::Opcode::ConvertOptionalFloat : compiler::Opcode::ConvertFloat);
+  return true;
 }
 
 [[nodiscard]] bool emit_stmt(const parser::Stmt& stmt, BytecodeChunk& chunk,
@@ -684,7 +695,7 @@ thread_local bool mark_self_on_return = false;
       steps.push_back(at);
     }
     std::reverse(steps.begin(), steps.end());
-    emit_op(chunk, compiler::Opcode::LoadLocal);
+    emit_op(chunk, stmt.module_global ? compiler::Opcode::LoadGlobal : compiler::Opcode::LoadLocal);
     emit_u16(chunk, stmt.slot);
     for (std::size_t index = 0; index + 1 < steps.size(); ++index) {
       const parser::Expr& step = *steps[index];
@@ -717,7 +728,7 @@ thread_local bool mark_self_on_return = false;
         emit_op(chunk, compiler::Opcode::SetIndex);
       }
     }
-    emit_op(chunk, compiler::Opcode::StoreLocal);
+    emit_op(chunk, stmt.module_global ? compiler::Opcode::StoreGlobal : compiler::Opcode::StoreLocal);
     emit_u16(chunk, stmt.slot);
     return true;
   }
@@ -727,11 +738,8 @@ thread_local bool mark_self_on_return = false;
       if (!emit_expr(stmt.expr, chunk, diagnostics)) {
         return false;
       }
-    } else if (!emit_const(chunk, Value::number_of(0), diagnostics)) {
+    } else if (!emit_const(chunk, Value::integer_of(0), diagnostics)) {
       return false;
-    }
-    if (mark_self_on_return) {
-      emit_op(chunk, compiler::Opcode::MarkSelf);
     }
     emit_op(chunk, compiler::Opcode::Return);
     return true;
@@ -767,44 +775,16 @@ thread_local bool mark_self_on_return = false;
   }
 
   if (stmt.kind == parser::Stmt::Kind::If) {
-    if (!emit_expr(stmt.expr, chunk, diagnostics)) {
-      return false;
-    }
-    if (stmt.if_let) {
-      emit_op(chunk, compiler::Opcode::Dup);
-    }
+    if (!emit_expr(stmt.expr, chunk, diagnostics)) return false;
     const std::size_t else_jump = emit_jump(chunk, compiler::Opcode::JumpIfFalse);
-    if (stmt.if_let) {
-      emit_op(chunk, compiler::Opcode::StoreLocal);
-      emit_u16(chunk, stmt.slot);
-    }
     for (const parser::Stmt& child : stmt.then_body) {
-      if (!emit_stmt(child, chunk, diagnostics)) {
-        return false;
-      }
+      if (!emit_stmt(child, chunk, diagnostics)) return false;
     }
-    if (!stmt.has_else) {
-      if (!stmt.if_let) {
-        return patch_jump(chunk, else_jump, diagnostics);
-      }
-      const std::size_t end_jump = emit_jump(chunk, compiler::Opcode::Jump);
-      if (!patch_jump(chunk, else_jump, diagnostics)) {
-        return false;
-      }
-      emit_op(chunk, compiler::Opcode::Pop);
-      return patch_jump(chunk, end_jump, diagnostics);
-    }
+    if (!stmt.has_else) return patch_jump(chunk, else_jump, diagnostics);
     const std::size_t end_jump = emit_jump(chunk, compiler::Opcode::Jump);
-    if (!patch_jump(chunk, else_jump, diagnostics)) {
-      return false;
-    }
-    if (stmt.if_let) {
-      emit_op(chunk, compiler::Opcode::Pop);
-    }
+    if (!patch_jump(chunk, else_jump, diagnostics)) return false;
     for (const parser::Stmt& child : stmt.else_body) {
-      if (!emit_stmt(child, chunk, diagnostics)) {
-        return false;
-      }
+      if (!emit_stmt(child, chunk, diagnostics)) return false;
     }
     return patch_jump(chunk, end_jump, diagnostics);
   }
@@ -918,10 +898,11 @@ thread_local bool mark_self_on_return = false;
       return false;
     }
     const auto loop_start = static_cast<std::uint16_t>(chunk.code.size());
-    if (!emit_expr(stmt.expr, chunk, diagnostics)) {
-      return false;
+    std::optional<std::size_t> exit_jump;
+    if (!stmt.post_condition) {
+      if (!emit_expr(stmt.expr, chunk, diagnostics)) return false;
+      exit_jump = emit_jump(chunk, compiler::Opcode::JumpIfFalse);
     }
-    const std::size_t exit_jump = emit_jump(chunk, compiler::Opcode::JumpIfFalse);
     std::vector<std::size_t> breaks;
     break_stack.push_back(&breaks);
     std::vector<std::size_t> continues;
@@ -943,9 +924,13 @@ thread_local bool mark_self_on_return = false;
         return false;
       }
     }
+    if (stmt.post_condition) {
+      if (!emit_expr(stmt.expr, chunk, diagnostics)) return false;
+      exit_jump = emit_jump(chunk, compiler::Opcode::JumpIfFalse);
+    }
     emit_op(chunk, compiler::Opcode::Jump);
     emit_u16(chunk, loop_start);
-    if (!patch_jump(chunk, exit_jump, diagnostics)) {
+    if (!patch_jump(chunk, *exit_jump, diagnostics)) {
       return false;
     }
     for (const std::size_t jump : breaks) {
@@ -974,7 +959,7 @@ thread_local bool mark_self_on_return = false;
     emit_op(chunk, compiler::Opcode::IterLen);
     emit_op(chunk, compiler::Opcode::StoreLocal);
     emit_u16(chunk, stmt.limit_slot);
-    if (!emit_const(chunk, Value::number_of(0), diagnostics)) {
+    if (!emit_const(chunk, Value::integer_of(0), diagnostics)) {
       return false;
     }
     emit_op(chunk, compiler::Opcode::StoreLocal);
@@ -994,6 +979,12 @@ thread_local bool mark_self_on_return = false;
     emit_op(chunk, compiler::Opcode::LoadLocal);
     emit_u16(chunk, stmt.index_slot);
     emit_op(chunk, compiler::Opcode::IterAt);
+    if (stmt.item_promotion != 0) {
+      emit_op(chunk, stmt.item_promotion == 2 ? compiler::Opcode::ConvertOptionalFloat : compiler::Opcode::ConvertFloat);
+    }
+    if (emit_boxed && std::find(emit_boxed->begin(), emit_boxed->end(), stmt.slot) != emit_boxed->end()) {
+      emit_op(chunk, compiler::Opcode::BoxLocal); emit_u16(chunk, stmt.slot);
+    }
     emit_op(chunk, compiler::Opcode::StoreLocal);
     emit_u16(chunk, stmt.slot);
     std::vector<std::size_t> breaks;
@@ -1014,7 +1005,7 @@ thread_local bool mark_self_on_return = false;
         return false;
       }
     }
-    if (!body_ok || !emit_const(chunk, Value::number_of(1), diagnostics)) {
+    if (!body_ok || !emit_const(chunk, Value::integer_of(1), diagnostics)) {
       return false;
     }
     emit_op(chunk, compiler::Opcode::LoadLocal);
@@ -1036,11 +1027,11 @@ thread_local bool mark_self_on_return = false;
   }
 
   if (stmt.kind == parser::Stmt::Kind::ForIn) {
-    if (!emit_expr(stmt.expr, chunk, diagnostics) || !emit_const(chunk, Value::number_of(0), diagnostics)) {
+    if (!emit_expr(stmt.expr, chunk, diagnostics) || !emit_const(chunk, Value::integer_of(0), diagnostics)) {
       return false;
     }
     emit_op(chunk, compiler::Opcode::StoreLocal);
-    emit_u16(chunk, stmt.slot);
+    emit_u16(chunk, stmt.index_slot);
     emit_op(chunk, compiler::Opcode::StoreLocal);
     emit_u16(chunk, stmt.limit_slot);
     if (!code_fits(chunk, diagnostics)) {
@@ -1048,11 +1039,16 @@ thread_local bool mark_self_on_return = false;
     }
     const auto loop_start = static_cast<std::uint16_t>(chunk.code.size());
     emit_op(chunk, compiler::Opcode::LoadLocal);
-    emit_u16(chunk, stmt.slot);
+    emit_u16(chunk, stmt.index_slot);
     emit_op(chunk, compiler::Opcode::LoadLocal);
     emit_u16(chunk, stmt.limit_slot);
     emit_op(chunk, compiler::Opcode::Less);
     const std::size_t exit_jump = emit_jump(chunk, compiler::Opcode::JumpIfFalse);
+    emit_op(chunk, compiler::Opcode::LoadLocal); emit_u16(chunk, stmt.index_slot);
+    if (emit_boxed && std::find(emit_boxed->begin(), emit_boxed->end(), stmt.slot) != emit_boxed->end()) {
+      emit_op(chunk, compiler::Opcode::BoxLocal); emit_u16(chunk, stmt.slot);
+    }
+    emit_op(chunk, compiler::Opcode::StoreLocal); emit_u16(chunk, stmt.slot);
     std::vector<std::size_t> breaks;
     break_stack.push_back(&breaks);
     std::vector<std::size_t> continues;
@@ -1071,14 +1067,14 @@ thread_local bool mark_self_on_return = false;
         return false;
       }
     }
-    if (!body_ok || !emit_const(chunk, Value::number_of(1), diagnostics)) {
+    if (!body_ok || !emit_const(chunk, Value::integer_of(1), diagnostics)) {
       return false;
     }
     emit_op(chunk, compiler::Opcode::LoadLocal);
-    emit_u16(chunk, stmt.slot);
+    emit_u16(chunk, stmt.index_slot);
     emit_op(chunk, compiler::Opcode::Add);
     emit_op(chunk, compiler::Opcode::StoreLocal);
-    emit_u16(chunk, stmt.slot);
+    emit_u16(chunk, stmt.index_slot);
     emit_op(chunk, compiler::Opcode::Jump);
     emit_u16(chunk, loop_start);
     if (!patch_jump(chunk, exit_jump, diagnostics)) {
@@ -1161,19 +1157,17 @@ thread_local bool mark_self_on_return = false;
   if (stmt.atomic_cell) {
     emit_op(chunk, compiler::Opcode::AtomicNew);
   }
-  if (stmt.kind == parser::Stmt::Kind::Let || stmt.kind == parser::Stmt::Kind::Assign) {
-    emit_op(chunk, compiler::Opcode::StoreLocal);
+  if (stmt.kind == parser::Stmt::Kind::VariableDecl && !stmt.module_global && emit_boxed &&
+      std::find(emit_boxed->begin(), emit_boxed->end(), stmt.slot) != emit_boxed->end()) {
+    emit_op(chunk, compiler::Opcode::BoxLocal); emit_u16(chunk, stmt.slot);
+  }
+  if (stmt.kind == parser::Stmt::Kind::VariableDecl && stmt.immutable) emit_op(chunk, compiler::Opcode::Freeze);
+  if (stmt.kind == parser::Stmt::Kind::VariableDecl || stmt.kind == parser::Stmt::Kind::Assign) {
+    emit_op(chunk, stmt.module_global ? (stmt.kind == parser::Stmt::Kind::VariableDecl ?
+        (stmt.immutable ? compiler::Opcode::InitConstGlobal : compiler::Opcode::InitGlobal) : compiler::Opcode::StoreGlobal) : compiler::Opcode::StoreLocal);
     emit_u16(chunk, stmt.slot);
-    for (std::size_t index = 0; index < stmt.unpack_slots.size(); ++index) {
-      emit_op(chunk, compiler::Opcode::LoadLocal);
-      emit_u16(chunk, stmt.slot);
-      emit_op(chunk, compiler::Opcode::GetField);
-      chunk.code.push_back(static_cast<std::uint8_t>(index));
-      emit_op(chunk, compiler::Opcode::StoreLocal);
-      emit_u16(chunk, stmt.unpack_slots[index]);
-    }
     for (const std::uint16_t listener : stmt.listeners) {
-      emit_op(chunk, compiler::Opcode::LoadLocal);
+      emit_op(chunk, stmt.module_global ? compiler::Opcode::LoadGlobal : compiler::Opcode::LoadLocal);
       emit_u16(chunk, stmt.slot);
       emit_op(chunk, compiler::Opcode::Call);
       emit_u16(chunk, listener);
@@ -1214,27 +1208,33 @@ thread_local bool mark_self_on_return = false;
       continue;
     }
     FunctionBytecode& code = chunk.functions[function.index];
-    code.arity = static_cast<std::uint16_t>(function.params.size());
+    code.is_async = function.is_async;
+    code.arity = static_cast<std::uint16_t>(function.params.size() + function.captures.size());
     code.local_count = function.local_count;
     if (!code_fits(chunk, diagnostics)) {
       return false;
     }
     code.entry = static_cast<std::uint16_t>(chunk.code.size());
-    mark_self_on_return = !function.params.empty() && function.params[0] == "self" && changes_self(function.body);
+    emit_boxed = nullptr;
+    for (std::size_t index = 0; index < function.param_promotions.size(); ++index) {
+      if (!function.param_promotions[index]) continue;
+      emit_op(chunk, compiler::Opcode::LoadLocal); emit_u16(chunk, static_cast<std::uint16_t>(index));
+      emit_op(chunk, function.param_promotions[index] == 2 ? compiler::Opcode::ConvertOptionalFloat : compiler::Opcode::ConvertFloat);
+      emit_op(chunk, compiler::Opcode::StoreLocal); emit_u16(chunk, static_cast<std::uint16_t>(index));
+    }
+    for (const auto slot : function.boxed_slots) {
+      if (slot >= function.params.size() && slot < function.params.size() + function.captures.size()) continue;
+      emit_op(chunk, compiler::Opcode::BoxLocal); emit_u16(chunk, slot);
+    }
+    emit_boxed = &function.boxed_slots;
     for (const parser::Stmt& stmt : function.body) {
       if (!emit_stmt(stmt, chunk, diagnostics)) {
-        mark_self_on_return = false;
         return false;
       }
     }
-    if (!emit_const(chunk, Value::number_of(0), diagnostics)) {
-      mark_self_on_return = false;
+    if (!emit_const(chunk, Value::integer_of(0), diagnostics)) {
       return false;
     }
-    if (mark_self_on_return) {
-      emit_op(chunk, compiler::Opcode::MarkSelf);
-    }
-    mark_self_on_return = false;
     emit_op(chunk, compiler::Opcode::Return);
   }
 
@@ -1243,12 +1243,20 @@ thread_local bool mark_self_on_return = false;
   }
   chunk.entry = static_cast<std::uint16_t>(chunk.code.size());
   chunk.local_count = program.local_count;
+  emit_boxed = nullptr;
+  if (!program.globals.empty()) { emit_op(chunk, compiler::Opcode::Globals); emit_u16(chunk, static_cast<std::uint16_t>(program.globals.size())); }
+  for (const auto& initialize : program.functions) if (initialize.module_init) {
+    emit_op(chunk, compiler::Opcode::Call); emit_u16(chunk, initialize.index); emit_op(chunk, compiler::Opcode::Pop);
+  }
+  for (const auto slot : program.boxed_slots) { emit_op(chunk, compiler::Opcode::BoxLocal); emit_u16(chunk, slot); }
+  emit_boxed = &program.boxed_slots;
   for (const parser::Stmt& stmt : program.statements) {
     if (!emit_stmt(stmt, chunk, diagnostics)) {
       return false;
     }
   }
   emit_op(chunk, compiler::Opcode::Halt);
+  emit_boxed = nullptr;
   return true;
 }
 
@@ -1257,11 +1265,16 @@ thread_local bool mark_self_on_return = false;
 ClirEmitResult emit_clir(const AnalysisResult& analysis) {
   ClirEmitResult result;
   result.diagnostics = analysis.diagnostics;
-  if (!analysis.ok()) {
-    return result;
-  }
-  if (!emit_program(analysis.program, result.chunk, result.diagnostics)) {
+  if (analysis.ok() && !emit_program(analysis.program, result.chunk, result.diagnostics)) {
     result.chunk = {};
+  }
+  if (!result.diagnostics.empty()) {
+    auto text = std::make_shared<std::vector<std::string>>();
+    text->reserve(result.diagnostics.size());
+    for (const auto& diagnostic : result.diagnostics) text->emplace_back(diagnostic.span);
+    for (std::size_t index = 0; index < result.diagnostics.size(); ++index)
+      result.diagnostics[index].span = (*text)[index];
+    result.diagnostic_text = std::move(text);
   }
   return result;
 }
@@ -1271,6 +1284,7 @@ CompileResult Compiler::compile(const std::string_view source, const ModuleLoade
   const ClirEmitResult emitted = emit_clir(analysis);
   CompileResult result;
   result.diagnostics = emitted.diagnostics;
+  result.diagnostic_text = emitted.diagnostic_text;
   result.chunk = emitted.chunk;
   return result;
 }

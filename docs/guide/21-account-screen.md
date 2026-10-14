@@ -12,25 +12,25 @@ link @clpp.gfx as Gfx;
 link @clpp.gui as Gui;
 
 Window.Open("Account demo", 640, 420);
-let mut message = "Enter a name and demo code";
-let mut signedIn = false;
+string message = "Enter a name and demo code";
+bool signedIn = false;
 
 while (Window.Frame()) {
   Gfx.Clear(0x111827);
-  Gui.Render(Gui.Screen(children: list(
-    Gui.Frame(id: "account", title: "Account demo", anchor: "center", width: 360, children: list(
-      Gui.Text(text: signedIn ? "Welcome!" : "Sign in", size: 26, bold: true),
-      Gui.Text(text: "This form validates locally.", muted: true),
-      Gui.TextBox(id: "name", placeholder: "Name"),
-      Gui.TextBox(id: "code", placeholder: "Demo code"),
-      Gui.Button(id: "submit", text: "Continue", style: "primary"),
-      Gui.Text(text: message)
-    ))
-  )));
+  Gui.Render(Gui.Screen(Gui.ScreenOptions {children = list(
+    Gui.Frame(Gui.FrameOptions {id = "account", title = "Account demo", anchor = "center", width = 360, children = list(
+      Gui.Text(Gui.TextOptions {text = signedIn ? "Welcome!" : "Sign in", size = 26, bold = true}),
+      Gui.Text(Gui.TextOptions {text = "This form validates locally.", muted = true}),
+      Gui.TextBox(Gui.TextBoxOptions {id = "name", placeholder = "Name"}),
+      Gui.TextBox(Gui.TextBoxOptions {id = "code", placeholder = "Demo code"}),
+      Gui.Button(Gui.ButtonOptions {id = "submit", text = "Continue", style = "primary"}),
+      Gui.Text(Gui.TextOptions {text = message})
+    )})
+  )}));
 
   if (Gui.Clicked("submit")) {
-    let name = Gui.GetText("name");
-    let code = Gui.GetText("code");
+    string name = Gui.GetText("name");
+    string code = Gui.GetText("code");
     if (len(name) == 0 or len(code) == 0) {
       message = "Fill in both fields";
     } else if (code == "demo") {
@@ -43,7 +43,7 @@ while (Window.Frame()) {
 }
 ```
 
-Save the file as `account.clp` and run `clpp account.clp`. Enter any name and `demo` as the local code to reach the success state. For a real account system, replace the local comparison with an `extern func` supplied by the host application, provide a masked or secure input control, and handle authentication errors without exposing credentials in logs.
+Save the file as `account.clp` and run `clpp account.clp`. Enter any name and `demo` as the local code to reach the success state. For a real account system, replace the local comparison with a function supplied by the host application, once the native interface is implemented, provide a masked or secure input control, and handle authentication errors without exposing credentials in logs.
 
 ## Why the code is organized this way
 

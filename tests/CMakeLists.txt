@@ -36,6 +36,12 @@ target_compile_definitions(clpp_unit_tests PRIVATE "CLPP_SOURCE_DIR=\"${CLPP_SOU
 
 catch_discover_tests(clpp_unit_tests)
 
+add_executable(clpp_heap_lifetime_test runtime/shared_heap_lifetime.cpp)
+target_link_libraries(clpp_heap_lifetime_test PRIVATE clpp_value)
+clpp_configure_target(clpp_heap_lifetime_test)
+add_test(NAME "shared heap native lifetime" COMMAND clpp_heap_lifetime_test)
+
+
 # Every example is a golden test: it must run from the repository root and print exactly
 # the matching tests/examples/<file>.out. Examples without a .out file only need a clean exit.
 file(GLOB CLPP_EXAMPLES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/examples/*.clp" "${CMAKE_SOURCE_DIR}/examples/*.clp")
@@ -51,12 +57,37 @@ foreach(example IN LISTS CLPP_EXAMPLES)
            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 endforeach()
 
+file(GLOB CLPP_CAPABILITY_EXAMPLES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/examples/capabilities/*.clp")
+foreach(example IN LISTS CLPP_CAPABILITY_EXAMPLES)
+  get_filename_component(stem "${example}" NAME_WE)
+  add_test(NAME "capability ${stem}"
+           COMMAND ${CMAKE_COMMAND} -DCLPP=$<TARGET_FILE:clpp> -DSCRIPT=${example}
+                   -DEXPECTED=${CMAKE_SOURCE_DIR}/tests/examples/capabilities/${stem}.out
+                   -P "${CMAKE_SOURCE_DIR}/tests/run_example.cmake"
+           WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+  set_tests_properties("capability ${stem}" PROPERTIES LABELS capabilities TIMEOUT 30)
+endforeach()
+
+add_test(NAME "author Combat deterministic battle"
+         COMMAND ${CMAKE_COMMAND} -DCLPP=$<TARGET_FILE:clpp> -DSCRIPT=examples/projects/combat/main.clp
+                 -DEXPECTED=${CMAKE_SOURCE_DIR}/tests/examples/combat_author.out -P "${CMAKE_SOURCE_DIR}/tests/run_example.cmake"
+         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+
+add_test(NAME "author Pacman VM core"
+         COMMAND ${CMAKE_COMMAND} -DCLPP=$<TARGET_FILE:clpp> -DSCRIPT=examples/projects/pacman/main.clp
+                 -DEXPECTED=${CMAKE_SOURCE_DIR}/tests/examples/pacman_core.out -P "${CMAKE_SOURCE_DIR}/tests/run_example.cmake"
+         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+
 # Stress harnesses (moved from build/stress, where git ignored them). Short ones run with
 # every ctest under the "stress" label; the long campaigns run only with CLPP_STRESS_LONG=ON
 # (ctest -L long). They write scratch files under the build directory.
 option(CLPP_BUILD_STRESS "Build the stress harnesses in tests/stress" ON)
 option(CLPP_STRESS_LONG "Register the long stress campaigns (minutes each)" OFF)
 if(CLPP_BUILD_STRESS)
+  add_executable(frontend_profile stress/frontend_profile.cpp)
+  target_link_libraries(frontend_profile PRIVATE clpp_core)
+  target_include_directories(frontend_profile PRIVATE "${CMAKE_SOURCE_DIR}/src")
+  clpp_configure_target(frontend_profile)
   set(CLPP_STRESS_SHORT async_stress fs_stress func_stress link_stress match_stress
       oop_stress parallel_stress repl_stress self_stress spawn_stress struct_stress
       template_stress type_stress vector_stress)
@@ -96,6 +127,17 @@ endif()
 # End-to-end language server test: the same JSON-RPC traffic VS Code sends.
 find_package(Python3 COMPONENTS Interpreter QUIET)
 if(Python3_Interpreter_FOUND)
+  add_test(NAME "lsp malformed transport remains bounded"
+           COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/lsp/test_transport.py" $<TARGET_FILE:clpp>)
+  set_tests_properties("lsp malformed transport remains bounded" PROPERTIES LABELS "lsp;core" TIMEOUT 60)
+  add_test(NAME "core adversarial validation"
+           COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/stress/core_validation.py" $<TARGET_FILE:clpp>)
+  set_tests_properties("core adversarial validation" PROPERTIES LABELS "stress;core" TIMEOUT 180)
+  add_test(NAME "all example sources use current syntax"
+           COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/examples/check_sources.py" $<TARGET_FILE:clpp>)
+  set_tests_properties("all example sources use current syntax" PROPERTIES LABELS examples TIMEOUT 120)
+  add_test(NAME "CLI check does not execute native effects"
+           COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/runtime/check_only.py" $<TARGET_FILE:clpp>)
   add_test(NAME "lsp end to end"
            COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/lsp/test_lsp.py" $<TARGET_FILE:clpp>)
   set_tests_properties("lsp end to end" PROPERTIES LABELS lsp TIMEOUT 120)

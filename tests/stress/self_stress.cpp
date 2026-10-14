@@ -8,8 +8,10 @@
 int main() {
   int failures = 0;
   for (int i = 0; i < 800; ++i) {
-    const std::string source = "@coins = " + std::to_string(i) +
-                               ";\n@this.coins = @coins + 1;\npost(@coins);\n";
+    const std::string source = "def Wallet { number Coins=" + std::to_string(i) +
+        "; } void Wallet::Add() { @this.Coins=@this.Coins+1; } "
+        "number Wallet::Read() { return @this.Coins; } "
+        "auto wallet=Wallet {}; wallet.Add(); post(wallet.Read());";
     const clpp::CompileResult compiled = clpp::Compiler{}.compile(source);
     std::ostringstream out;
     clpp::VirtualMachine vm;
@@ -24,10 +26,10 @@ int main() {
     }
   }
   for (int i = 0; i < 200; ++i) {
-    const std::string source = "post(@this::M" + std::to_string(i) + ");\n";
+    const std::string source = "def Wallet { number Coins=0; } number Wallet::Read() { return @this.M" + std::to_string(i) + "; }";
     const clpp::CompileResult compiled = clpp::Compiler{}.compile(source);
-    // docs/lexer.md: `@this::name` reads the receiver field, so it must compile.
-    if (!compiled.ok()) {
+    // Receiver fields are checked even when no object invokes the method.
+    if (compiled.ok()) {
       ++failures;
     }
   }

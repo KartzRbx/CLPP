@@ -33,10 +33,11 @@
     },
     {
       "name": "asan",
-      "displayName": "Ninja Debug + ASan",
+      "displayName": "Ninja Debug + ASan + UBSan",
       "inherits": "debug",
       "cacheVariables": {
-        "CLPP_SANITIZE_ADDRESS": "ON"
+        "CLPP_SANITIZE_ADDRESS": "ON",
+        "CLPP_SANITIZE_UNDEFINED": "ON"
       }
     },
     {

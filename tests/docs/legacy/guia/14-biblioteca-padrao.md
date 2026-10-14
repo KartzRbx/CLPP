@@ -42,7 +42,7 @@ post(Axiom.OutQuad(0.5));
 | `Wrap(x, min, max)` | dá a volta no intervalo | `Wrap(370, 0, 360)` → `10` |
 | `PingPong(x, length)` | vai e volta entre 0 e `length` | `PingPong(7, 5)` → `3` |
 | `Snap(x, step)` | arredonda para o múltiplo de `step` | `Snap(17, 5)` → `15` |
-| `Round(x)`, `Round(x, casas)` | arredonda | `Round(3.14159, 2)` → `3.14` |
+| `Round(x)`, `RoundDigits(x, casas)` | arredonda | `RoundDigits(3.14159, 2)` → `3.14` |
 | `Floor`, `Ceil`, `Trunc`, `Fract` | partes inteira e fracionária | `Floor(-2.5)` → `-3` |
 | `Sign(x)`, `Abs(x)` | sinal e valor absoluto | |
 | `Min(a, b)`, `Max(a, b)` | menor e maior | |
@@ -68,7 +68,7 @@ post(Axiom.OutQuad(0.5));
 
 ```clp
 link @clpp.axiom as Axiom;
-let mut speed = 10;
+auto speed = 10;
 speed = Axiom.Approach(speed, 20, 3);
 post(speed);
 post(Axiom.Map(5, 0, 10, 0, 100));
@@ -96,7 +96,7 @@ post(Axiom.InvLerp(0, 100, 25));
 | `Slerp(a, b, t)` | interpolação esférica (direções) |
 | `LookAt(origem, alvo)` | direção unitária de `origem` para `alvo` |
 | `Flat(v)` | zera o `y` (movimento no chão) |
-| `Orthonormal(v)`, `Orthonormal(a, b)` | base ortonormal |
+| `Orthonormal(v)`, `OrthonormalUp(a, b)` | base ortonormal |
 | `ClosestPointOnSegment(p, a, b)` | ponto mais próximo num segmento |
 | `Barycentric(p, a, b, c)` | coordenadas baricêntricas |
 | `RayPlane(origem, dir, ponto, normal)` | interseção raio–plano |
@@ -164,8 +164,8 @@ Todas recebem `t` entre 0 e 1 e devolvem o progresso suavizado. Use com `Lerp` p
 
 ```clp
 link @clpp.axiom as Axiom;
-for (let frame in 5) {
-  let t = frame / 4.0;
+for (auto frame in 5) {
+  const auto t = frame / 4.0;
   post(Axiom.Lerp(0, 100, Axiom.InOutCubic(t)));
 }
 ```
@@ -183,7 +183,7 @@ for (let frame in 5) {
 | Função | O que faz |
 | --- | --- |
 | `Random(min, max)`, `RandomRange(min, max)` | número aleatório no intervalo |
-| `Gaussian()`, `Gaussian(média, desvio)` | distribuição normal |
+| `Gaussian()`, `GaussianWithParameters(média, desvio)` | distribuição normal |
 | `Weighted(pesos)` | índice sorteado de acordo com os pesos da lista |
 | `HashU32(x)` | hash inteiro determinístico |
 | `Value1(x)`, `Value2(x, y)`, `Value3(x, y, z)` | ruído de valor (determinístico, entre 0 e 1) |

@@ -1,4 +1,4 @@
-async func add(a, b) {
+async number add(number a, number b) {
   return a + b;
 }
 

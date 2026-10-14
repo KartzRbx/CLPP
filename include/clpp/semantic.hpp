@@ -16,6 +16,7 @@ struct SemanticSymbol {
   std::string name;
   SourceLocation location{};
   bool declaration{false};
+  bool global{false};
 };
 
 struct SemanticSnapshot {

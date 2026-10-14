@@ -73,8 +73,28 @@ StackCheck verify_stack(const BytecodeChunk& chunk, const compiler::bytecode::De
     };
     bool ok = true;
     switch (insn.op) {
+      case compiler::Opcode::PushItem:
+        ok = sp >= 2 && next_at(sp - 2); break;
+      case compiler::Opcode::PopItem:
+        ok = sp >= 1 && next_at(sp); break;
+      case compiler::Opcode::InsertItem:
+        ok = sp >= 3 && next_at(sp - 3); break;
+      case compiler::Opcode::RemoveItem:
+        ok = sp >= 2 && next_at(sp - 1); break;
+      case compiler::Opcode::MakeClosure:
+      case compiler::Opcode::MakeBoundMethod:
+      case compiler::Opcode::Freeze:
+      case compiler::Opcode::ConvertNumber:
+      case compiler::Opcode::ConvertFloat:
+      case compiler::Opcode::ConvertOptionalFloat:
+        ok = sp >= 1 && next_at(sp);
+        break;
       case compiler::Opcode::Const:
       case compiler::Opcode::PushError:
+      case compiler::Opcode::LoadGlobal:
+      case compiler::Opcode::RawGlobal:
+      case compiler::Opcode::LoadCell:
+      case compiler::Opcode::RawLoad:
       case compiler::Opcode::LoadLocal:
       case compiler::Opcode::GetSelf:
       case compiler::Opcode::Dup:
@@ -85,11 +105,16 @@ StackCheck verify_stack(const BytecodeChunk& chunk, const compiler::bytecode::De
       case compiler::Opcode::Post:
       case compiler::Opcode::Warn:
       case compiler::Opcode::Report:
+      case compiler::Opcode::StoreGlobal:
+      case compiler::Opcode::InitGlobal:
+      case compiler::Opcode::InitConstGlobal:
+      case compiler::Opcode::StoreCell:
       case compiler::Opcode::StoreLocal:
       case compiler::Opcode::Pop:
       case compiler::Opcode::SetSelf:
         ok = next_at(sp - 1);
         break;
+      case compiler::Opcode::Observe:
       case compiler::Opcode::Add:
       case compiler::Opcode::BitAnd:
       case compiler::Opcode::BitOr:
@@ -155,6 +180,9 @@ StackCheck verify_stack(const BytecodeChunk& chunk, const compiler::bytecode::De
         ok = next_at(sp - static_cast<int>(chunk.functions[insn.imm].arity) + 1);
         break;
       }
+      case compiler::Opcode::Invoke:
+      case compiler::Opcode::InvokeThread:
+        ok = next_at(sp - static_cast<int>(insn.imm)); break;
       case compiler::Opcode::VCall:
         ok = next_at(sp - static_cast<int>(insn.aux) + 1);
         break;
@@ -168,6 +196,7 @@ StackCheck verify_stack(const BytecodeChunk& chunk, const compiler::bytecode::De
       case compiler::Opcode::Axiom:
       case compiler::Opcode::Std:
       case compiler::Opcode::Host:
+      case compiler::Opcode::Event:
         ok = next_at(sp - static_cast<int>(insn.imm >> 8) + 1);
         break;
       case compiler::Opcode::MakeStruct:

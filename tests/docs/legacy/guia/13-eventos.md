@@ -4,18 +4,18 @@ Eventos desacoplam quem avisa de quem reage. O sistema de vida não precisa conh
 
 ## `signal`
 
-Um `signal` é um evento com nome. `~>` conecta uma função a ele. Chamar o signal como função dispara todas as conectadas, na ordem em que foram conectadas.
+Um `signal` é um evento com nome. `~>Connect(callback)` registra um handler no zelador interno. `::Fire(...)` executa os handlers síncronos em ordem de inscrição e para no primeiro erro. `::Clear()` limpa as inscrições gerenciadas.
 
 ```clp
-signal playerDied;
+signal<number> playerDied;
 
-func showGameOver(int score) { post("game over: " .: score); }
-func saveScore(int score) { post("salvando " .: score); }
+void showGameOver(number score) { post("game over: " .: score); }
+void saveScore(number score) { post("salvando " .: score); }
 
-playerDied ~> showGameOver;
-playerDied ~> saveScore;
+playerDied~>Connect(showGameOver);
+playerDied~>Connect(saveScore);
 
-playerDied(1200);
+playerDied::Fire(1200);
 ```
 
 ```saida
@@ -26,12 +26,12 @@ salvando 1200
 Um signal pode não levar valores:
 
 ```clp
-signal levelStart;
-func playMusic() { post("música"); }
-func spawnEnemies() { post("inimigos"); }
-levelStart ~> playMusic;
-levelStart ~> spawnEnemies;
-levelStart();
+signal<> levelStart;
+void playMusic() { post("música"); }
+void spawnEnemies() { post("inimigos"); }
+levelStart~>Connect(playMusic);
+levelStart~>Connect(spawnEnemies);
+levelStart::Fire();
 ```
 
 ```saida
@@ -39,15 +39,15 @@ música
 inimigos
 ```
 
-As conexões são resolvidas na compilação: disparar um signal custa o mesmo que chamar as funções diretamente.
+As inscrições têm vida em execução; `::Connect` retorna uma conexão com `::Disconnect`, e `~>Connect` usa a limpeza interna do evento.
 
 ## `observable`
 
-Uma variável `observable` avisa quando muda de valor. `.OnChange(função)` registra quem quer saber; a função recebe o novo valor. Funciona com funções anônimas (`func (int v) { ... }`) e com funções nomeadas.
+Uma variável `observable` avisa quando muda de valor. `.OnChange(função)` registra quem quer saber; a função recebe o novo valor. Funciona com funções anônimas (`func (number v) -> void { ... }`) e com funções nomeadas.
 
 ```clp
-observable int coins = 10;
-coins.OnChange(func (int value) {
+observable number coins = 10;
+coins.OnChange(func (number value) -> void {
   post("HUD: " .: value .: " moedas");
 });
 
@@ -69,22 +69,22 @@ O aviso acontece a cada atribuição, logo depois de o valor ser gravado.
 Declare as funções que reagem em módulos separados e conecte no arquivo principal. Assim cada módulo fica independente:
 
 ```clp arquivo=hud.clp
-func onDamage(int amount) { post("HUD: -" .: amount); }
+export void onDamage(number amount) { post("HUD: -" .: amount); }
 ```
 
 ```clp arquivo=audio.clp
-func onDamage(int amount) { post("som de impacto"); }
+export void onDamage(number amount) { post("som de impacto"); }
 ```
 
 ```clp
 link "./hud.clp" as Hud;
 link "./audio.clp" as Audio;
 
-signal damaged;
-damaged ~> Hud.onDamage;
-damaged ~> Audio.onDamage;
+signal<number> damaged;
+damaged~>Connect(Hud.onDamage);
+damaged~>Connect(Audio.onDamage);
 
-damaged(15);
+damaged::Fire(15);
 ```
 
 ```saida

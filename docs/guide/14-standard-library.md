@@ -2,6 +2,8 @@
 
 Import a standard module with `link @clpp.name as Alias;`. Module declarations are visible to the compiler and editor, so names and argument types are checked. Built-in functions that need no import include `post`, `warn`, `report`, `len`, `list`, `push`, `pop`, `insert`, `remove`, `find`, `sort`, `args`, `pcall`, vector constructors, typed collections, and `buffer::create`.
 
+Operations have distinct names rather than overloaded declarations. Axiom exposes `Round(value)` and `RoundDigits(value, digits)`, `Orthonormal(direction)` and `OrthonormalUp(direction, up)`, and `Gaussian()` and `GaussianWithParameters(mean, deviation)`. Gfx outlines and lines use separate `WithThickness` operations when an explicit thickness is needed.
+
 | Module | Main purpose |
 | --- | --- |
 | `@clpp.axiom` | Mathematics for games |
@@ -14,6 +16,23 @@ Import a standard module with `link @clpp.name as Alias;`. Module declarations a
 | `@clpp.ui`, `@clpp.gui` | Immediate and declarative interfaces |
 | `@clpp.audio`, `@clpp.io`, `@clpp.input` | Sound, console, and automation |
 | `@clpp.json`, `@clpp.time` | JSON and date/time utilities |
+
+## Import syntax
+
+`link` selects a module; `as` gives it a local name. The `@clpp.` prefix selects a built-in standard module, while `link "./helpers.clp" as Helpers;` selects your own source file. Use the alias followed by `.` to call a member. Modules are `.clp` files and require no headers.
+
+```clp
+link @clpp.axiom as Axiom;
+float position = 12.5;
+position = Axiom.Clamp(position, 0, 10);
+post(position);
+```
+
+```output
+10
+```
+
+Here `float position` declares a variable that can change. Use `const` for a fixed value; imports do not change the language rules for declarations, expressions, or control flow. Start with [variables and types](03-variables-and-types.md) and [control flow](05-control-flow.md) before building a library example.
 
 ## Axiom
 

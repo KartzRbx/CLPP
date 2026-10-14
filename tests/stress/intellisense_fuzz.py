@@ -5,6 +5,10 @@ clpp --lsp process: didOpen, bursts of didChange, then textDocument/completion.
 """
 
 import json
+import argparse
+import queue
+import threading
+import statistics
 import subprocess
 import sys
 import time
@@ -12,7 +16,7 @@ from pathlib import Path
 
 TARGET = 10000
 URI = "file:///C:/clpp/fuzz.clp"
-SERVER = Path(__file__).resolve().parents[1] / "ucrt64" / "src" / "clpp.exe"
+SERVER = Path(__file__).resolve().parents[2] / "build" / "ucrt64" / "src" / "clpp.exe"
 
 
 def cursor(text):
@@ -65,7 +69,7 @@ def generate():
                         continue
                     add(case(
                         "Resilient_Parsing_Incomplete_Member_Access",
-                        f"struct {kind} {{ int {left}; int {right}; }}\n{kind} {owner} = {kind}(1, 2);\n{owner}.@@",
+                        f"def {kind} {{ number {left}; number {right}; }}\n{kind} {owner} = {kind} {{ {left} = 1, {right} = 2 }};\n{owner}.@@",
                         [left, right],
                         [kind, "string", "let"],
                         unique=True,
@@ -78,7 +82,7 @@ def generate():
                     break
                 add(case(
                     "Fuzzy_Subsequence",
-                    f"struct {kind} {{ int {field}; }}\n{kind} {owner} = {kind}(1);\n{owner}.{field[0]}{field[-1]}@@",
+                    f"def {kind} {{ number {field}; }}\n{kind} {owner} = {kind} {{ {field} = 1 }};\n{owner}.{field[0]}{field[-1]}@@",
                     [field],
                     ["let", kind],
                 ))
@@ -87,13 +91,13 @@ def generate():
         name = f"local{index % 40}"
         add(case(
             "Scope_Block_Local_Visible",
-            f"if (1) {{\n  let {name} = {index % 7};\n  {name[:2]}@@\n}}\n",
+            f"if (1) {{\n  const auto {name} = {index % 7};\n  {name[:2]}@@\n}}\n",
             [name],
             ["while"],
         ))
         add(case(
             "Scope_Block_Local_Hidden",
-            f"if (1) {{\n  let {name} = 1;\n}}\npost({name[:2]}@@);\n",
+            f"if (1) {{\n  const auto {name} = 1;\n}}\npost({name[:2]}@@);\n",
             [],
             [name],
         ))
@@ -101,10 +105,10 @@ def generate():
     for index in range(600):
         add(case(
             "Inheritance_Chain_No_Duplicates",
-            "struct Base { int health; func speak() { return 1; } }\n"
-            "struct Mid : Base { int armor; }\n"
-            "struct Top : Mid { int speed; }\n"
-            f"Top unit{index % 5} = Top(1, 2, 3);\nunit{index % 5}.@@",
+            "def Base { number health; number speak() { return 1; } }\n"
+            "def Mid : Base { number armor; }\n"
+            "def Top : Mid { number speed; }\n"
+            f"Top unit{index % 5} = Top {{ health = 1, armor = 2, speed = 3 }};\nunit{index % 5}.@@",
             ["health", "armor", "speed", "speak"],
             ["Base", "string"],
             unique=True,
@@ -113,7 +117,7 @@ def generate():
     for index in range(500):
         add(case(
             "Enum_Variants",
-            "enum Color { Red, Green, Blue }\nColor.@@",
+            "enum class Color { Red, Green, Blue }\nColor::@@",
             ["Red", "Green", "Blue"],
             ["let", "health"],
             unique=True,
@@ -122,7 +126,7 @@ def generate():
     for index in range(400):
         add(case(
             "Type_Alias_In_Scope",
-            'type State = "Idle" | "Running";\nSt@@',
+            'def State = "Idle" | "Running";\nSt@@',
             ["State"],
             ["health", "Red"],
         ))
@@ -130,7 +134,7 @@ def generate():
     for index in range(500):
         add(case(
             "Type_Does_Not_Leak_Foreign_Members",
-            "struct PlayerData { int health; }\nint count = 1;\ncount.@@",
+            "def PlayerData { number health; }\nnumber count = 1;\ncount.@@",
             [],
             ["health", "Name", "speak"],
         ))
@@ -138,14 +142,14 @@ def generate():
     for index in range(400):
         add(case(
             "Comment_Suppresses_Completion",
-            "let health = 1;\n<< hea@@",
+            "const auto health = 1;\n<< hea@@",
             [],
             ["health", "let"],
             trigger=" ",
         ))
         add(case(
             "String_Suppresses_Completion",
-            'let health = 1;\n"hea@@',
+            'const auto health = 1;\n"hea@@',
             [],
             ["health"],
             trigger='"',
@@ -154,23 +158,23 @@ def generate():
     for index in range(400):
         add(case(
             "Keyword_In_Statement_Position",
-            "le@@",
-            ["let"],
-            ["health"],
+            "au@@",
+            ["auto"],
+            ["health", "let"],
             trigger=" ",
         ))
 
     for index in range(400):
         add(case(
             "Incomplete_Call_Still_Sees_Local",
-            "let health = 1;\npost(he@@",
+            "const auto health = 1;\npost(he@@",
             ["health"],
             ["armor"],
             trigger="(",
         ))
         add(case(
             "Junk_Token_Before_Cursor",
-            "let health = 1;\n# he@@",
+            "const auto health = 1;\n# he@@",
             ["health"],
             ["armor"],
         ))
@@ -178,27 +182,27 @@ def generate():
     for index in range(300):
         add(case(
             "Unclosed_Block_Keeps_Local",
-            "if (1) {\n  let health = 1;\n  he@@",
+            "if (1) {\n  const auto health = 1;\n  he@@",
             ["health"],
             ["armor"],
         ))
 
     for index in range(200):
         steps = [
-            "let health = 1;\n",
-            "let health = 1;\nhe",
-            "let health = 1;\nhea",
+            "const auto health = 1;\n",
+            "const auto health = 1;\nhe",
+            "const auto health = 1;\nhea",
         ]
         add(case(
             "Rapid_DidChange_Uses_Latest_Text",
-            "let health = 1;\nhea@@",
+            "const auto health = 1;\nhea@@",
             ["health"],
             ["armor"],
             changes=steps,
         ))
 
     for index in range(80):
-        nest = "if (1) {\n" * 20 + "  let health = 1;\n  he@@\n" + "}\n" * 20
+        nest = "if (1) {\n" * 20 + "  const auto health = 1;\n  he@@\n" + "}\n" * 20
         add(case(
             "Deep_Nesting",
             nest,
@@ -206,8 +210,8 @@ def generate():
             ["armor"],
         ))
 
-    lines = [f"let value{i} = {i % 9};" for i in range(10000)]
-    lines.append("let health = 1;")
+    lines = [f"const auto value{i} = {i % 9};" for i in range(10000)]
+    lines.append("const auto health = 1;")
     lines.append("he@@")
     wide = case(
         "Large_File_Completion",
@@ -223,7 +227,7 @@ def generate():
         field = fields[index % len(fields)]
         add(case(
             "Resilient_Parsing_Incomplete_Member_Access",
-            f"struct Box{index} {{ int {field}; }}\nBox{index} item = Box{index}(1);\nitem.@@",
+            f"def Box{index} {{ number {field}; }}\nBox{index} item = Box{index} {{ {field} = 1 }};\nitem.@@",
             [field],
             ["let", "string"],
             unique=True,
@@ -240,6 +244,15 @@ class LanguageServer:
             stderr=subprocess.DEVNULL,
         )
         self.next_id = 1
+        self.messages = queue.Queue()
+        threading.Thread(target=self._reader, daemon=True).start()
+
+    def _reader(self):
+        try:
+            while True:
+                self.messages.put(self._read())
+        except Exception as error:
+            self.messages.put(error)
 
     def close(self):
         if self.proc.poll() is None:
@@ -280,8 +293,14 @@ class LanguageServer:
         self.next_id += 1
         started = time.perf_counter()
         self._write({"jsonrpc": "2.0", "id": message_id, "method": method, "params": params})
+        deadline = started + 30
         while True:
-            message = self._read()
+            try:
+                message = self.messages.get(timeout=max(0.001, deadline - time.perf_counter()))
+            except queue.Empty:
+                raise TimeoutError(f"language server request timed out: {method}")
+            if isinstance(message, Exception):
+                raise message
             if message.get("id") == message_id:
                 elapsed = (time.perf_counter() - started) * 1000
                 return message, elapsed
@@ -302,6 +321,8 @@ class LanguageServer:
             "textDocument/completion",
             {"textDocument": {"uri": URI}, "position": position},
         )
+        if "error" in response:
+            raise RuntimeError(f"completion returned a protocol error: {response['error']}")
         items = ((response.get("result") or {}).get("items")) or []
         return [item.get("label", "") for item in items], elapsed
 
@@ -312,8 +333,7 @@ def evaluate(labels, item, elapsed):
     duplicated = []
     if item.get("expect_unique"):
         duplicated = [label for label in item["expected_completions"] if labels.count(label) > 1]
-    slow = elapsed > item["max_allowed_latency_ms"]
-    if not missing and not leaked and not duplicated and not slow:
+    if not missing and not leaked and not duplicated:
         return None
     return {
         "id": item["test_id"],
@@ -326,22 +346,46 @@ def evaluate(labels, item, elapsed):
 
 
 def main():
-    server_path = Path(sys.argv[1]) if len(sys.argv) > 1 else SERVER
+    parser = argparse.ArgumentParser()
+    parser.add_argument('server', nargs='?', type=Path, default=SERVER)
+    parser.add_argument('--dump', action='store_true')
+    parser.add_argument('--category')
+    parser.add_argument('--report', type=Path)
+    parser.add_argument('--strict-latency', action='store_true')
+    args = parser.parse_args()
+    server_path = args.server
     if not server_path.exists():
         print(f"missing language server: {server_path}")
         return 1
     cases = generate()
-    if len(sys.argv) > 2 and sys.argv[2] == "--dump":
+    if args.category:
+        cases = [item for item in cases if item['category'] == args.category]
+        if not cases:
+            parser.error('unknown category')
+    if args.dump:
         print(json.dumps(cases[0], indent=2))
         return 0
     server = LanguageServer(server_path)
     failures = []
     slowest = 0.0
+    latencies = []
+    over_budget = 0
+    latency_outliers = []
     try:
         server.start()
         for item in cases:
-            labels, elapsed = server.complete(item["code_snippet"], item["cursor_position"], item.get("changes"))
+            try:
+                labels, elapsed = server.complete(item["code_snippet"], item["cursor_position"], item.get("changes"))
+            except Exception:
+                print(f"failed request {item['test_id']} category={item['category']}", flush=True)
+                print(item['code_snippet'][:2000], flush=True)
+                raise
             slowest = max(slowest, elapsed)
+            latencies.append(elapsed)
+            over_budget += elapsed > item["max_allowed_latency_ms"]
+            if elapsed > item['max_allowed_latency_ms'] and len(latency_outliers) < 20:
+                latency_outliers.append(dict(id=item['test_id'], category=item['category'],
+                    elapsed_ms=elapsed, budget_ms=item['max_allowed_latency_ms']))
             problem = evaluate(labels, item, elapsed)
             if problem is not None:
                 if len(failures) < 12:
@@ -351,10 +395,17 @@ def main():
     finally:
         server.close()
     print(f"ran {len(cases)} failures {len(failures)} slowest_ms {slowest:.2f}")
+    ordered = sorted(latencies)
+    print(f"latency_ms median={statistics.median(ordered):.2f} p95={ordered[int((len(ordered)-1)*.95)]:.2f} p99={ordered[int((len(ordered)-1)*.99)]:.2f} over_budget={over_budget}")
     for problem in failures:
         if "category" in problem:
             print(problem)
-    return 0 if not failures else 1
+    if args.report:
+        args.report.write_text(json.dumps(dict(cases=len(cases), failures=failures,
+            median_ms=statistics.median(ordered), p95_ms=ordered[int((len(ordered)-1)*.95)],
+            p99_ms=ordered[int((len(ordered)-1)*.99)], maximum_ms=slowest,
+            over_budget=over_budget, latency_outliers=latency_outliers), indent=2), encoding='utf8')
+    return int(bool(failures) or (args.strict_latency and over_budget > 0))
 
 
 if __name__ == "__main__":

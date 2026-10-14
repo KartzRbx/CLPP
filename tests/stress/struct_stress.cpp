@@ -8,13 +8,13 @@
 int main() {
   int failures = 0;
   for (int i = 0; i < 800; ++i) {
-    const std::string source = "struct Point { int x; int y; }\n"
-                               "enum Color { Red, Green }\n"
-                               "Point p = Point(" +
+    const std::string source = "def Point { number x; number y; }\n"
+                               "enum class Color { Red, Green }\n"
+                               "Point p = Point { x = " +
                                std::to_string(i) +
-                               ", 1);\n"
+                               ", y = 1 };\n"
                                "post(p.x + p.y);\n"
-                               "post(Color.Green);\n";
+                               "post(Color::Green);\n";
     const clpp::CompileResult compiled = clpp::Compiler{}.compile(source);
     std::ostringstream out;
     clpp::VirtualMachine vm;
@@ -29,7 +29,7 @@ int main() {
     }
   }
   for (int i = 0; i < 200; ++i) {
-    const std::string source = "struct Point { int x; int y; }\nPoint p = Point(\"v" + std::to_string(i) + "\", 1);\n";
+    const std::string source = "def Point { number x; number y; }\nPoint p = Point { x = \"v" + std::to_string(i) + "\", y = 1 };\n";
     const clpp::CompileResult compiled = clpp::Compiler{}.compile(source);
     if (compiled.ok() || !compiled.chunk.code.empty()) {
       ++failures;

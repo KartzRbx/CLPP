@@ -4,16 +4,13 @@
   "scopeName": "source.clpp",
   "patterns": [
     {
-      "include": "#comment-doc"
-    },
-    {
       "include": "#comment-block"
     },
     {
       "include": "#comment-line"
     },
     {
-      "include": "#string-double"
+      "include": "#string-float"
     },
     {
       "include": "#string-single"
@@ -49,7 +46,7 @@
       "include": "#keyword"
     },
     {
-      "include": "#self"
+      "include": "#instance"
     },
     {
       "include": "#receiver"
@@ -68,11 +65,6 @@
     }
   ],
   "repository": {
-    "comment-doc": {
-      "name": "comment.block.documentation.clpp",
-      "begin": "<<\\[\\[",
-      "end": ">>"
-    },
     "comment-block": {
       "name": "comment.block.clpp",
       "begin": "<<\\[",
@@ -80,10 +72,11 @@
     },
     "comment-line": {
       "name": "comment.line.clpp",
-      "match": "<<.*$"
+      "begin": "<<(?!\\[)",
+      "end": "$"
     },
-    "string-double": {
-      "name": "string.quoted.double.clpp",
+    "string-float": {
+      "name": "string.quoted.float.clpp",
       "begin": "\"",
       "end": "\"",
       "patterns": [
@@ -153,21 +146,21 @@
     },
     "type": {
       "name": "support.type.primitive.clpp",
-      "match": "\\b(Vector2|Vector3|Vector4|auto|bool|buffer|double|float|int|string|task|void)\\b"
+      "match": "\\b(Vector2|Vector3|Vector4|auto|bool|buffer|float|number|string|task|void)\\b"
     },
     "keyword": {
       "patterns": [
         {
           "name": "storage.modifier.clpp",
-          "match": "\\b(abstract|async|const|constexpr|enum|extern|final|func|let|link|import|from|as|mut|namespace|operator|override|private|public|static|struct|type|using|variant|where|signal|observable|thread|atomic)\\b"
+          "match": "\\b(pragma|export|abstract|async|const|constexpr|def|template|typename|enum|class|extern|final|func|link|as|operator|override|private|public|static_cast|where|signal|observable|thread|atomic)\\b"
         },
         {
           "name": "keyword.control.clpp",
-          "match": "\\b(await|break|continue|case|catch|default|else|for|guard|if|in|join|match|move|new|parallel|pcall|return|spawn|switch|try|while|and|or|not|shl|shr|decltype)\\b"
+          "match": "\\b(await|break|continue|case|catch|default|else|for|guard|if|in|join|match|move|parallel|pcall|return|spawn|switch|try|do|while|and|or|not|shl|shr|decltype)\\b"
         },
         {
           "name": "support.function.builtin.clpp",
-          "match": "\\b(post|warn|report|cout|endl|len|list|sort|find|push|pop|insert|remove|args|mutex|lock|unlock|fetch_add|atomic_load|actor)\\b"
+          "match": "\\b(post|warn|report|len|list|sort|find|push|pop|insert|remove|args|mutex|lock|unlock|fetch_add|atomic_load|actor)\\b"
         }
       ]
     },
@@ -176,7 +169,7 @@
       "match": "~>|\\.{3}|->|=>|\\+\\+|--|&&|\\|\\||==|!=|<=|>=|\\.:|::|\\.\\.|\\+|\\-|\\*|/|%|=|<|>|&|\\||\\^|~|\\?|:|\\.|!"
     },
     "link": {
-      "match": "\\b(link|import|from)\\s+(@[A-Za-z_][\\w.]*)",
+      "match": "\\b(link)\\s+(@[A-Za-z_][\\w.]*)",
       "captures": {
         "1": {
           "name": "storage.modifier.clpp"
@@ -187,10 +180,10 @@
       }
     },
     "declaration-function": {
-      "match": "\\b(func)\\s+([A-Za-z_\\x{00C0}-\\x{024F}][\\w\\x{00C0}-\\x{024F}]*)",
+      "match": "\\b([A-Za-z_\\x{00C0}-\\x{024F}][\\w.\\x{00C0}-\\x{024F}]*(?:<[^;\\n(){}]+>)?)\\s+([A-Za-z_\\x{00C0}-\\x{024F}][\\w\\x{00C0}-\\x{024F}]*)(?=\\s*(?:::|\\())",
       "captures": {
         "1": {
-          "name": "storage.modifier.clpp"
+          "name": "storage.type.clpp"
         },
         "2": {
           "name": "entity.name.function.clpp"
@@ -198,7 +191,7 @@
       }
     },
     "declaration-type": {
-      "match": "\\b(struct|enum|variant|type)\\s+([A-Za-z_][\\w]*)(?:\\s*:\\s*([A-Za-z_][\\w]*(?:\\s*,\\s*[A-Za-z_][\\w]*)*))?",
+      "match": "\\b(def|enum\\s+class)\\s+([A-Za-z_][\\w]*)(?:\\s*:\\s*([A-Za-z_][\\w]*(?:\\s*,\\s*[A-Za-z_][\\w]*)*))?",
       "captures": {
         "1": {
           "name": "storage.modifier.clpp"
@@ -215,7 +208,7 @@
       "match": "(@)(this\\b|[A-Za-z_]\\w*)",
       "captures": {
         "1": {
-          "name": "punctuation.accessor.self.clpp"
+          "name": "punctuation.accessor.instance.clpp"
         },
         "2": {
           "name": "variable.other.member.clpp"
@@ -230,9 +223,9 @@
       "match": "\\b[A-Z][A-Za-z0-9_]*\\b",
       "name": "entity.name.type.clpp"
     },
-    "self": {
-      "name": "variable.language.self.clpp",
-      "match": "\\b(self|this)\\b"
+    "instance": {
+      "name": "variable.language.this.clpp",
+      "match": "@this\\b"
     },
     "member": {
       "patterns": [

@@ -12,8 +12,8 @@ int main() {
     const int y = (i / 10) % 10;
     const int z = (i / 100) % 10;
     const int scale = (i % 5) + 1;
-    const std::string source = "let v = Vector3(" + std::to_string(x) + ", " + std::to_string(y) + ", " +
-                               std::to_string(z) + ");\nlet w = v * " + std::to_string(scale) +
+    const std::string source = "const auto v = Vector3(" + std::to_string(x) + ", " + std::to_string(y) + ", " +
+                               std::to_string(z) + ");\nconst auto w = v * " + std::to_string(scale) +
                                ";\npost(w.x);\npost(w.y);\npost(w.z);\n";
     const clpp::CompileResult compiled = clpp::Compiler{}.compile(source);
     const std::string expected = std::to_string(x * scale) + "\n" + std::to_string(y * scale) + "\n" +

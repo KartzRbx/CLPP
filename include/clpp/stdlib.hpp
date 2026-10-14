@@ -4,11 +4,23 @@
 
 #include <cstdint>
 #include <optional>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <vector>
 
 namespace clpp::stdlib {
+
+// Native UI/audio resources belong to one root execution. Workers share that execution.
+class HostExecution {
+ public:
+  HostExecution();
+  ~HostExecution();
+  HostExecution(const HostExecution&) = delete;
+  HostExecution& operator=(const HostExecution&) = delete;
+ private:
+  std::unique_lock<std::mutex> m_lock;
+};
 
 [[nodiscard]] std::optional<std::string> module_source(std::string_view path);
 

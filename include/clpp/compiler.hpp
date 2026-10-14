@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -12,12 +13,13 @@
 
 namespace clpp {
 
-inline constexpr std::uint16_t kBytecodeFormatVersion = 1;
+inline constexpr std::uint16_t kBytecodeFormatVersion = 12;
 
 struct FunctionBytecode {
   std::uint16_t arity{0};
   std::uint16_t local_count{0};
   std::uint16_t entry{0};
+  bool is_async{false};
 };
 
 struct SourceMapEntry {
@@ -36,12 +38,14 @@ struct BytecodeChunk {
   std::uint16_t version{kBytecodeFormatVersion};
 };
 
-// CLIR v1 is the in-memory stack chunk. See docs/clir-v1.md.
+// CLIR is the in-memory stack chunk. See docs/reference/toolchain.md for compatibility.
 using ClirChunk = BytecodeChunk;
 
 struct CompileResult {
   BytecodeChunk chunk;
   std::vector<Diagnostic> diagnostics;
+  // Shared immutable storage keeps diagnostic spans valid across result copies and moves.
+  std::shared_ptr<const std::vector<std::string>> diagnostic_text;
 
   [[nodiscard]] bool ok() const { return diagnostics.empty(); }
 };

@@ -357,6 +357,7 @@ void close_window() {
     g_window.hwnd = nullptr;
     pump_messages();
   }
+  if (g_window.timer_period) { timeEndPeriod(1); g_window.timer_period = false; }
 #endif
   g_window.open = false;
   g_window.closed = true;
@@ -387,7 +388,7 @@ void apply_pending_input() {
 
 CLPP_NATIVE(window_open) {
   if (arity != 3 || !args[0].is_string() || !args[1].is_number() || !args[2].is_number()) {
-    return fail(error, "Window.Open: expected (string title, int width, int height)");
+    return fail(error, "Window.Open: expected (string title, number width, number height)");
   }
   const int width = static_cast<int>(args[1].number);
   const int height = static_cast<int>(args[2].number);
@@ -547,7 +548,7 @@ CLPP_NATIVE(window_query) {  // one native for the simple getters: (which)
     default:
       break;
   }
-  out = Value::number_of(value);
+  out = which == 0 || which == 1 ? boolean(value != 0) : Value::number_of(value);
   return true;
 }
 
@@ -635,9 +636,8 @@ CLPP_NATIVE(window_dialog) {  // (title, message, 0 alert | 1 confirm)
 
 CLPP_NATIVE(window_simulate_mouse) {  // (x, y, down)
   (void)out;
-  if (!numbers(args, arity, error, "Window.SimulateMouse")) {
-    return false;
-  }
+  if (arity != 3 || !args[2].is_boolean() || !numbers(args, 2, error, "Window.SimulateMouse"))
+    return fail(error, "Window.SimulateMouse: expected (float x, float y, bool down)");
   g_window.pending_x = args[0].number;
   g_window.pending_y = args[1].number;
   g_window.pending_down[0] = args[2].number != 0;
@@ -646,7 +646,7 @@ CLPP_NATIVE(window_simulate_mouse) {  // (x, y, down)
 
 CLPP_NATIVE(window_simulate_key) {  // (name, down)
   (void)out;
-  if (arity != 2 || !args[0].is_string() || !args[1].is_number()) {
+  if (arity != 2 || !args[0].is_string() || !args[1].is_boolean()) {
     return fail(error, "Window.SimulateKey: expected (string key, bool down)");
   }
   g_window.pending_keys[canonical_key(args[0].text)] = args[1].number != 0;
@@ -668,41 +668,49 @@ constexpr std::string_view kWindowSource = R"clp(<< @clpp.window: a native windo
 << Headless (no window) when CLPP_HEADLESS is set or the system has no backend: Frame() then
 << returns false after CLPP_HEADLESS frames (default 60).
 
-const LEFT = 0;
-const RIGHT = 1;
-const MIDDLE = 2;
+export const auto LEFT = 0;
+export const auto RIGHT = 1;
+export const auto MIDDLE = 2;
 
-func Open(string title, int width, int height) -> bool { return window::Open(title, width, height); }
-func Frame() -> bool { return window::Frame(); }
-func Close() { window::Close(); }
-func IsOpen() -> bool { return window::Query(0); }
-func IsHeadless() -> bool { return window::Query(1); }
-func Width() -> int { return window::Query(2); }
-func Height() -> int { return window::Query(3); }
-func Time() -> float { return window::Query(4); }
-func Delta() -> float { return window::Query(5); }
-func Fps() -> float { return window::Query(6); }
-func FrameCount() -> int { return window::Query(7); }
-func MouseX() -> float { return window::Query(8); }
-func MouseY() -> float { return window::Query(9); }
-func Wheel() -> float { return window::Query(10); }
-func MouseDown(int button) -> bool { return window::Mouse(button, 0); }
-func MousePressed(int button) -> bool { return window::Mouse(button, 1); }
-func MouseReleased(int button) -> bool { return window::Mouse(button, 2); }
-func KeyDown(string key) -> bool { return window::Key(key, 0); }
-func KeyPressed(string key) -> bool { return window::Key(key, 1); }
-func KeyReleased(string key) -> bool { return window::Key(key, 2); }
-func TypedText() -> string { return window::Typed(); }
-func SetTitle(string title) { window::SetTitle(title); }
-func SetFps(int fps) { window::SetFps(fps); }
-func Alert(string title, string message) { window::Dialog(title, message, 0); }
-func Confirm(string title, string message) -> bool { return window::Dialog(title, message, 1); }
-func SimulateMouse(float x, float y, bool down) { window::SimulateMouse(x, y, down); }
-func SimulateKey(string key, bool down) { window::SimulateKey(key, down); }
-func SimulateText(string text) { window::SimulateText(text); }
+export bool Open(string title, number width, number height) { return window::Open(title, width, height); }
+export bool Frame() { return window::Frame(); }
+export void Close() { window::Close(); }
+export bool IsOpen() { return window::Query(0); }
+export bool IsHeadless() { return window::Query(1); }
+export number Width() { return window::Query(2); }
+export number Height() { return window::Query(3); }
+export float Time() { return window::Query(4); }
+export float Delta() { return window::Query(5); }
+export float Fps() { return window::Query(6); }
+export number FrameCount() { return window::Query(7); }
+export float MouseX() { return window::Query(8); }
+export float MouseY() { return window::Query(9); }
+export float Wheel() { return window::Query(10); }
+export bool MouseDown(number button) { return window::Mouse(button, 0); }
+export bool MousePressed(number button) { return window::Mouse(button, 1); }
+export bool MouseReleased(number button) { return window::Mouse(button, 2); }
+export bool KeyDown(string key) { return window::Key(key, 0); }
+export bool KeyPressed(string key) { return window::Key(key, 1); }
+export bool KeyReleased(string key) { return window::Key(key, 2); }
+export string TypedText() { return window::Typed(); }
+export void SetTitle(string title) { window::SetTitle(title); }
+export void SetFps(number fps) { window::SetFps(fps); }
+export void Alert(string title, string message) { window::Dialog(title, message, 0); }
+export bool Confirm(string title, string message) { return window::Dialog(title, message, 1); }
+export void SimulateMouse(float x, float y, bool down) { window::SimulateMouse(x, y, down); }
+export void SimulateKey(string key, bool down) { window::SimulateKey(key, down); }
+export void SimulateText(string text) { window::SimulateText(text); }
 )clp";
 
 }  // namespace
+
+void reset_window() {
+  close_window();
+  g_window = WindowState{};
+#ifdef _WIN32
+  g_high_surrogate = 0;
+#endif
+}
 
 const Input& input() { return g_window.input; }
 
