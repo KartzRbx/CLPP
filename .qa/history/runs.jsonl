@@ -1,0 +1,5 @@
+{"date": "2026-10-14", "layer": "normal-ctest", "total": 515, "passed": 515, "failed": 0, "verdict": "PASS"}
+{"date": "2026-10-14", "layer": "instrumented-ctest", "total": 514, "passed": 513, "failed": 1, "verdict": "TIMING_FAIL"}
+{"date": "2026-10-14", "layer": "instrumented-regressions", "total": 3, "passed": 3, "failed": 0, "verdict": "PASS"}
+{"date": "2026-10-14", "layer": "installer", "total": 2, "passed": 2, "failed": 0, "verdict": "PASS"}
+{"date": "2026-10-14", "layer": "discord-authorized-rpc-and-lsp", "total": 3, "passed": 3, "failed": 0, "verdict": "PASS"}

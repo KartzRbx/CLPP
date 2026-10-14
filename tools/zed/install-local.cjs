@@ -39,7 +39,9 @@ update(['lsp', 'clpp', 'binary', 'path'], installedExecutable);
 update(['lsp', 'clpp', 'binary', 'arguments'], ['--lsp']);
 update(['lsp', 'clpp', 'binary', 'env', 'PATH'], `C:\\msys64\\ucrt64\\bin;${process.env.PATH}`);
 update(['languages', 'CL++', 'tab_size'], 2);
-update(['languages', 'CL++', 'language_servers'], ['clpp']);
+update(['languages', 'CL++', 'language_servers'], [...new Set([
+  'clpp', ...(currentSettings.languages?.['CL++']?.language_servers || []).filter(id => id !== '!clpp'),
+])]);
 update(['languages', 'CL++', 'lsp_document_colors'], 'inlay');
 update(['languages', 'CL++', 'semantic_tokens'], 'combined');
 fs.mkdirSync(destination, { recursive: true });

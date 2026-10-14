@@ -1,0 +1,18 @@
+id = "clpp-discord-presence"
+name = "CL++ Discord Presence"
+version = "0.1.0"
+schema_version = 1
+authors = ["KartzRbx"]
+description = "Discord Rich Presence for CL++ buffers, alongside the compiler language server."
+repository = "https://github.com/KartzRbx/CLPP"
+
+[lib]
+kind = "Rust"
+version = "0.7.0"
+
+[language_servers.clpp_discord_presence]
+name = "CL++ Discord Presence"
+languages = ["CL++"]
+
+[language_servers.clpp_discord_presence.language_ids]
+"CL++" = "clpp"

@@ -112,6 +112,10 @@ jobs:
           cmake -S . -B build/windows-sanitizers -G Ninja '-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/llvm-mingw-x86_64.cmake' "-DLLVM_MINGW=$PWD/toolchains/llvm-mingw-20261006-ucrt-x86_64" '-DCMAKE_BUILD_TYPE=Debug' '-DCMAKE_CXX_FLAGS_DEBUG=-O1 -gline-tables-only' -DCLPP_SANITIZE_ADDRESS=ON -DCLPP_SANITIZE_UNDEFINED=ON
       - name: Build
         run: cmake --build build/windows-sanitizers -j 2
+      - name: Editor installer regressions
+        run: |
+          npm ci --prefix tools/zed/grammar --ignore-scripts --no-audit --no-fund
+          node --test tests/zed/test_installer.cjs
       - name: Test
         run: ctest --test-dir build/windows-sanitizers --output-on-failure
       - name: Mutated compiler inputs

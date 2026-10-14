@@ -3,11 +3,13 @@
 #include "clpp/compiler.hpp"
 #include "clpp/core/lexer/lexer.hpp"
 #include "clpp/vm.hpp"
+#include "clpp/stdlib.hpp"
 #include "core/compiler/analyze.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <iostream>
+#include <limits>
 #include <map>
 #include <optional>
 #include <sstream>
@@ -503,6 +505,47 @@ TEST_CASE("@clpp.text: split, joinAll, replace, startsWith, endsWith, repeat, to
   REQUIRE(result.ran);
   REQUIRE(result.output ==
           "[\"a\", \"b\", \"c\"]\na|b|c\n1+2+3\ntrue\nfalse\nababab\n43.5\n4\nnot a number: \"x1\"\n");
+}
+
+TEST_CASE("native text conversion preserves large values and rejects embedded NUL", "[regression][native-text]") {
+  using clpp::Value;
+  std::string error;
+  Value out;
+  Value args[] = {Value::struct_of({Value::integer_of(9223372036854775807LL),
+                                   Value::integer_of(-9223372036854775807LL - 1),
+                                   Value::number_of(1e300), Value::number_of(-1e300)}),
+                  Value::string_of(",")};
+  REQUIRE(clpp::stdlib::std_apply(14, args, 2, out, error));
+  REQUIRE(out.text == "9223372036854775807,-9223372036854775808,1.0000000000000001e+300,-1.0000000000000001e+300");
+  args[0] = Value::string_of(std::string("12\0junk", 7));
+  REQUIRE_FALSE(clpp::stdlib::std_apply(12, args, 1, out, error));
+}
+
+TEST_CASE("native text repeat rejects nonfinite counts before integer conversion", "[regression][native-text]") {
+  using clpp::Value;
+  Value args[] = {Value::string_of("a"), Value::number_of(std::numeric_limits<double>::quiet_NaN())};
+  Value out;
+  std::string error;
+  REQUIRE_FALSE(clpp::stdlib::std_apply(11, args, 2, out, error));
+  args[1] = Value::number_of(std::numeric_limits<double>::infinity());
+  REQUIRE_FALSE(clpp::stdlib::std_apply(11, args, 2, out, error));
+  args[1] = Value::integer_of(3);
+  REQUIRE(clpp::stdlib::std_apply(11, args, 2, out, error));
+  REQUIRE(out.text == "aaa");
+}
+
+TEST_CASE("JSON indentation rejects overflowing native conversion", "[regression][native-text]") {
+  using clpp::Value;
+  const auto native = clpp::stdlib::host_native("json::Stringify", 2);
+  REQUIRE(native >= 2000);
+  Value args[] = {Value::struct_of({Value::integer_of(1)}), Value::integer_of(9223372036854775807LL)};
+  Value out;
+  std::string error;
+  REQUIRE_FALSE(clpp::stdlib::host_apply(static_cast<std::uint8_t>(native - 2000), args, 2, out, error));
+  REQUIRE(error == "Json.Stringify: indentation is outside the native integer range");
+  args[1] = Value::integer_of(2);
+  REQUIRE(clpp::stdlib::host_apply(static_cast<std::uint8_t>(native - 2000), args, 2, out, error));
+  REQUIRE(out.text == "[\n  1\n]");
 }
 
 TEST_CASE("for-in over array<T> types the item, so its fields resolve", "[regression]") {

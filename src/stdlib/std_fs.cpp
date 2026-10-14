@@ -1,6 +1,7 @@
 #include "clpp/stdlib.hpp"
 
 #include <cctype>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -39,7 +40,7 @@ std::vector<std::string> g_args;
 }
 
 [[nodiscard]] std::string format_plain(const double number) {
-  if (number == static_cast<double>(static_cast<long long>(number)) && number < 1e15 && number > -1e15) {
+  if (number < 1e15 && number > -1e15 && number == std::trunc(number)) {
     return std::to_string(static_cast<long long>(number));
   }
   char buffer[64];
@@ -76,7 +77,8 @@ bool std_apply(const std::uint8_t id, const Value* args, const std::uint8_t arit
         joined += args[1].text;
       }
       const Value& part = args[0].field(index);
-      joined += part.is_string() ? part.text : part.is_number() ? format_plain(part.number) : std::string{};
+      joined += part.is_string() ? part.text : part.kind == Value::Kind::Integer ? std::to_string(part.integer)
+                                            : part.is_number() ? format_plain(part.number) : std::string{};
     }
     out = Value::string_of(std::move(joined));
     return true;
@@ -143,7 +145,7 @@ bool std_apply(const std::uint8_t id, const Value* args, const std::uint8_t arit
     return true;
   }
   if (id == 11) {  // repeat(text, count)
-    if (arity != 2 || !args[1].is_number() || args[1].number < 0 || args[1].number > 1000000) {
+    if (arity != 2 || !args[1].is_number() || !std::isfinite(args[1].number) || args[1].number < 0 || args[1].number > 1000000) {
       return bad(error);
     }
     std::string result;
@@ -157,7 +159,7 @@ bool std_apply(const std::uint8_t id, const Value* args, const std::uint8_t arit
     const std::string clean = trimmed(text);
     char* end = nullptr;
     const double number = std::strtod(clean.c_str(), &end);
-    if (clean.empty() || end == nullptr || *end != '\0') {
+    if (clean.empty() || end != clean.data() + clean.size()) {
       error = "not a number: \"" + text + "\"";
       return false;
     }

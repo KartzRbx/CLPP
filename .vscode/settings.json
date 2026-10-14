@@ -5,6 +5,11 @@
   "cmake.testPreset": "ucrt64",
 
   "clpp.serverPath": "",
+  "discord.enabled": true,
+  "discord.removeRemoteRepository": true,
+  "discord.detailsEditing": "CL++ | {file_name}",
+  "discord.detailsDebugging": "CL++ | {file_name}",
+  "discord.lowerDetailsEditing": "Projeto: {workspace}",
 
   "C_Cpp.intelliSenseEngine": "disabled",
   "clangd.path": "clangd",

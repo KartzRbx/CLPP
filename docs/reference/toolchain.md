@@ -66,3 +66,21 @@ and Release, plus a bounded malformed-input matrix. Platform and sanitizer gates
 are complete only after those binaries have actually built and their tests run.
 
 See [Tools and editor](../guide/15-tools-and-editor.md) for the CLI, extension features, tests, and embedding API.
+
+## Writing development tools in CL++
+
+Programs can already use arguments, text files/directories, JSON, strings,
+collections and terminal input/output. Child-process control, a public path API,
+filesystem watching and standalone program executable generation are still
+missing. The C++ parser/checker API is not exposed to source CL++ programs.
+A transpiler written in CL++ can generate Luau text; the current VM compiler
+does not itself provide a Luau backend or Luau source maps. CLI hosting and
+compiler self-hosting are separate milestones.
+
+## Native text and JSON conversions
+
+Numeric text joining preserves exact 64-bit integers and formats large floating
+values without first casting them to an integer. Native text repetition refuses
+nonfinite counts before conversion. Text.toNumber rejects trailing bytes,
+including an embedded NUL followed by extra input. JSON indentation must fit the
+native integer range; indentation-size multiplication uses an unsigned size type.

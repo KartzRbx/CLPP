@@ -1,5 +1,16 @@
 # CL++ implementation and release handoff
 
+## Native conversion, editor distribution and tooling backlog (2026-10-14)
+
+The current local integration passes **515/515 checks** on Windows LLVM MinGW Debug. Native text/JSON regressions pass **3 cases / 12 assertions** under ASan + UBSan. Fixed out-of-range text formatting casts, exact-integer joining, nonfinite repeat counts, embedded-NUL numeric prefix acceptance and JSON indentation conversions/multiplication. The full instrumented run before the third new regression passed 513/514 combined checks; its only failure was a 50 ms LSP timing assertion. Five isolated repeats passed twice and failed three times. This remains visible in .qa/flaky.yml; it is not a functional server crash and no check was disabled. Full report and individual results: .qa/REPORT.md, .qa/report.html and build/native-review-*.{log,xml}.
+
+The real VS Code installation now has kartzrbx.clpp-language 0.10.2 with the current compiler/grammar/client hash verified. Its predecessor 0.8 directory was residual: the CLI said its extension ID was not installed. Zed uses a current immutable compiler snapshot; both installer regressions preserve themes/comments/additional servers. Optional Discord presence is a separate Zed adapter and the existing VS Code Discord extension. The author explicitly approved sending workspace name, file basename and activity time to Discord; no source, full paths, credentials or repository URL is included. Official upstream server asset digest was verified. The actual Discord RPC acknowledged and cleared the test activity, and its LSP accepts initialization/open/shutdown. No public profile rendering claim is made.
+
+The author screenshot confirms Zed color swatches; the editor's clickable color-picker feature remains an upstream request. Native screenshot capture timed out, so completion/hover UI gates remain open. Website updated and rebuilt: 52 pages, 245 blocks (19 target), 264 local links, all generated links/assets valid. Debug compilation scaling measured ~134/833/1709 ms medians for 1k/10k/20k bindings (3 samples, process startup included). No broad Release speed advantage is claimed.
+
+The author asked to record the Cluaupp migration prerequisites: docs/internal/CLUAUPP_MIGRATION.md now separates CLI primitives, compiler API/Luau/source maps, workflow and later self-hosting, with priorities and executable completion criteria. No new backend or process API was implemented. Next native review is window/UI/terminal integer conversions. Cross-platform runners, leak detection, instrumented latency policy, wider native review, visible editor/profile gates and publication remain outstanding. Local-only authorization still applies to repository publishing; Discord metadata authorization is specific to that requested feature.
+
+
 ## Local-only continuation and final validation (2026-10-14)
 
 The latest user instruction is to continue **local validation only**. Do not run remote CI, push, merge into main, or publish until that scope changes. The author also explicitly chose to preserve the current language: protected colon calls, destructuring declarations and optional missing-key lookup are future proposals. Their target blocks remain excluded rather than counted as passing tests.

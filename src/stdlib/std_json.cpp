@@ -11,6 +11,7 @@
 
 #include <charconv>
 #include <cmath>
+#include <limits>
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -440,7 +441,7 @@ void write(std::string& out, const Value& value, const int indent, const int dep
   const auto newline = [&](const int level) {
     if (indent > 0) {
       out.push_back('\n');
-      out.append(static_cast<std::size_t>(indent * level), ' ');
+      out.append(static_cast<std::size_t>(indent) * static_cast<std::size_t>(level), ' ');
     }
   };
   if (depth > kMaxDepth) {
@@ -607,9 +608,13 @@ CLPP_NATIVE(json_valid) {
 }
 
 CLPP_NATIVE(json_stringify) {  // (value, indent)
-  (void)error;
+  const double indentation = arity == 2 ? num(args[1]) : 0;
+  if (!std::isfinite(indentation) || indentation < std::numeric_limits<int>::min() ||
+      indentation > std::numeric_limits<int>::max()) {
+    return fail(error, "Json.Stringify: indentation is outside the native integer range");
+  }
   std::string text;
-  try { write(text, args[0], arity == 2 ? static_cast<int>(num(args[1])) : 0, 0); }
+  try { write(text, args[0], static_cast<int>(indentation), 0); }
   catch (const HeapError& failure) { return fail(error, failure.what()); }
   out = Value::string_of(std::move(text));
   return true;
