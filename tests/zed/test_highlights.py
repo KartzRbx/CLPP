@@ -1,12 +1,19 @@
 """Regression for the reported Combat highlight and compiler semantic roles."""
 from pathlib import Path
-import os, re, subprocess, sys, tempfile
+import argparse, os, re, subprocess, sys, tempfile
 root = Path(__file__).resolve().parents[2]
 grammar = root / 'tools/zed/grammar'
-cli = grammar / 'node_modules/tree-sitter-cli/tree-sitter.exe'
+parser = argparse.ArgumentParser()
+parser.add_argument('--compiler', type=Path, default=root / 'build/ucrt64/src/clpp-vm.exe')
+parser.add_argument('--tree-sitter', type=Path, default=grammar / ('node_modules/tree-sitter-cli/tree-sitter.exe' if os.name == 'nt' else 'node_modules/tree-sitter-cli/tree-sitter'))
+options = parser.parse_args()
+compiler = options.compiler.resolve()
+cli = options.tree_sitter.resolve()
 sources = [grammar / 'smoke.clp', *sorted((root / 'examples').rglob('*.clp')),
            *sorted((root / 'benchmarks').glob('*.clp'))]
-env = dict(os.environ, CC='C:/msys64/ucrt64/bin/gcc.exe')
+env = dict(os.environ)
+if os.name == 'nt' and 'CC' not in env:
+    env['CC'] = 'C:/msys64/ucrt64/bin/gcc.exe'
 result = subprocess.run([str(cli), 'parse', '-q', *map(str, sources)], cwd=grammar,
                         env=env, capture_output=True, text=True, encoding='utf8')
 assert result.returncode == 0 and 'ERROR' not in result.stdout and 'MISSING' not in result.stdout, result.stdout + result.stderr
@@ -68,14 +75,14 @@ with tempfile.TemporaryDirectory(prefix='clpp-grammar-invalid-') as directory:
                                   env=env, capture_output=True, text=True, encoding='utf8', timeout=15)
         assert rejected.returncode != 0 and ('ERROR' in rejected.stdout or 'MISSING' in rejected.stdout), code
 print('PASS unsupported syntax is not accepted by the editor grammar')
-checked = subprocess.run([str(root / 'build/ucrt64/src/clpp.exe'), '--check', str(sources[0])],
+checked = subprocess.run([str(compiler), '--check', str(sources[0])],
                          cwd=root, env=env, capture_output=True, text=True, encoding='utf8', timeout=30)
 assert checked.returncode == 0, checked.stdout + checked.stderr
 print('PASS editor smoke fixture is also accepted by the real compiler')
 
 sys.path.insert(0, str(root / 'tests/lsp'))
 from lsp_client import Client
-client = Client(str(root / 'build/ucrt64/src/clpp.exe'), root.as_posix())
+client = Client(str(compiler), root.as_posix())
 try:
     uri = client.open(combat.as_posix(), combat.read_text(encoding='utf8'))
     response = client.req('textDocument/semanticTokens/full', {'textDocument': {'uri': uri}})

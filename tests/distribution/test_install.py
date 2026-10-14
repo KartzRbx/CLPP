@@ -20,13 +20,13 @@ def main():
                 for member in archive.infolist():
                     assert (prefix / member.filename).resolve().is_relative_to(prefix), 'unsafe archive path'
                 archive.extractall(prefix)
-            binaries = list(prefix.rglob('clpp.exe' if os.name == 'nt' else 'clpp'))
+            binaries = list(prefix.rglob('clpp-vm.exe' if os.name == 'nt' else 'clpp-vm'))
             assert len(binaries) == 1, 'expected one installed compiler'
             prefix = binaries[0].parent.parent
         else:
             subprocess.run(['cmake', '--install', str(args.build.resolve()), '--prefix', str(prefix),
                             '--component', 'Runtime'], check=True, timeout=60)
-        compiler = prefix / 'bin' / ('clpp.exe' if os.name == 'nt' else 'clpp')
+        compiler = prefix / 'bin' / ('clpp-vm.exe' if os.name == 'nt' else 'clpp-vm')
         assert compiler.is_file(), 'installed CLI missing'
         assert (prefix / 'share/clpp/LICENSE').is_file(), 'license missing'
         environment = dict(os.environ)

@@ -1,3 +1,5 @@
+> The C++20 compiler and VM use **clpp-vm** (**clpp-vm.exe** on Windows), independently of the Rust/Luau compiler named clpp.
+
 <p align="center">
   <a href="https://kartzrbx.github.io/CLPP/">
     <img src="assets/brand/clpp-256.png" width="144" height="144" alt="CL++ logo">
@@ -29,7 +31,7 @@
 
 [See a complete game system](https://kartzrbx.github.io/CLPP/guide/20-modular-combat/) · [Build an app screen](https://kartzrbx.github.io/CLPP/guide/21-account-screen/) · [Explore measured performance](https://kartzrbx.github.io/CLPP/guide/16-performance/)
 
-> **Language status:** the site now describes the author's target syntax. Some constructs still need compiler alignment. [Complete language handbook](https://kartzrbx.github.io/CLPP/handbook/00-o-que-e-o-clpp/) · [Learn the syntax](https://kartzrbx.github.io/CLPP/guide/00-language-tour/) · [Implementation status](https://kartzrbx.github.io/CLPP/reference/status/)
+> **Language status:** the site now describes the author's target syntax. Current syntax is compiler-tested; future proposals and host-specific contracts remain separate. [Complete language handbook](https://kartzrbx.github.io/CLPP/handbook/00-o-que-e-o-clpp/) · [Learn the syntax](https://kartzrbx.github.io/CLPP/guide/00-language-tour/) · [Implementation status](https://kartzrbx.github.io/CLPP/reference/status/)
 
 ## Hello, CL++
 
@@ -39,7 +41,7 @@ Save as `hello.clp`:
 post("Hello, CL++!");
 ```
 
-Run `clpp hello.clp`, or open the file in VS Code and press **Ctrl+F5**.
+Run `clpp-vm hello.clp`, or open the file in VS Code and press **Ctrl+F5**.
 
 ## <img src="assets/brand/clpp-32.png" width="28" height="28" alt=""> Install
 
@@ -48,7 +50,7 @@ Download the `.vsix` from [**Releases**](https://github.com/KartzRbx/CLPP/releas
 <details>
 <summary><strong>CLI, Linux/macOS, and building from source</strong></summary>
 
-For the Windows CLI, download `clpp.exe` from Releases and add its folder to `PATH`. The executable is statically linked and needs no extra DLLs.
+For the Windows CLI, download `clpp-vm.exe` from Releases and add its folder to `PATH`. The executable is statically linked and needs no extra DLLs.
 
 To build from source, install **CMake 3.20+**, **Ninja**, and a **C++20 compiler**:
 
@@ -57,7 +59,7 @@ cmake --preset release
 cmake --build --preset release
 ```
 
-Run `./build/release/src/clpp examples/hello.clp` on Linux/macOS, or `.\build\release\src\clpp.exe examples\hello.clp` in PowerShell. On Linux/macOS, put the compiler on `PATH` or set the extension's `clpp.serverPath`.
+Run `./build/release/src/clpp-vm examples/hello.clp` on Linux/macOS, or `.\build\release\src\clpp-vm.exe examples\hello.clp` in PowerShell. On Linux/macOS, put the compiler on `PATH` or set the extension's `clpp.serverPath`.
 
 [Toolchain reference](https://kartzrbx.github.io/CLPP/reference/toolchain/) · [CI builds](https://github.com/KartzRbx/CLPP/actions/workflows/ci.yml)
 
@@ -96,7 +98,7 @@ Expected output after compiler alignment: `Ada: 100 HP`.
 <details>
 <summary><strong>Try a window with graphics</strong></summary>
 
-Save as `window.clp` and run `clpp window.clp`:
+Save as `window.clp` and run `clpp-vm window.clp`:
 
 ```clp
 link @clpp.gfx as Gfx;
@@ -131,7 +133,7 @@ CL++ started with Roblox development and grew into a general-purpose language. T
 | --- | --- |
 | `src/core/` | Lexer, parser, checker, bytecode, VM, and language server |
 | `src/stdlib/` | Built-in modules |
-| `src/cli/` | `clpp` executable |
+| `src/cli/` | `clpp-vm` executable |
 | `include/clpp/` | C++ embedding API |
 | `tools/vscode/` | VS Code extension |
 | `examples/`, `benchmarks/`, `tests/` | Programs, benchmarks, and validation |

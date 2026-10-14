@@ -4,7 +4,7 @@ This handbook teaches CL++'s target syntax. **CL++ officially compiles to byteco
 
 ## Install the current executable
 
-On Windows x64, obtain the VSIX extension from [GitHub Releases](https://github.com/KartzRbx/CLPP/releases). In VS Code, use **Extensions → … → Install from VSIX**. The extension includes the compiler; `clpp.serverPath` can select another executable. Put `clpp.exe` on your `PATH` if you want to use it from a terminal.
+Build this checkout to use the current language and the `clpp-vm` executable. Existing [GitHub Releases](https://github.com/KartzRbx/CLPP/releases) have their own versioned contracts; the published 0.10.1 assets still use `clpp.exe` and predate these changes. A locally packaged VSIX includes the matching compiler, and `clpp.serverPath` can select an explicit executable. No updated release has been published from this checkout.
 
 To build the current source, install CMake 3.20+, Ninja, and a C++20 compiler:
 
@@ -13,7 +13,7 @@ cmake --preset release
 cmake --build --preset release
 ```
 
-Check installation with `clpp --version`. Use the current release's instructions rather than assuming a Rust build, setup command, or separate installer.
+Check installation with `clpp-vm --version`. Use the current release's instructions rather than assuming a Rust build, setup command, or separate installer.
 
 ## Your first program
 
@@ -27,7 +27,7 @@ post("hello, world");
 hello, world
 ```
 
-`clpp hello.clp` compiles and executes on the VM. This isolated `post` call also works with the current executable; this handbook's `target` marking keeps specification examples separate from executable tests.
+`clpp-vm hello.clp` compiles and executes on the VM. This isolated `post` call also works with the current executable; this handbook's `target` marking keeps specification examples separate from executable tests.
 
 A named function organizes reusable behavior, but naming one `init` does not automatically run it:
 
@@ -87,10 +87,10 @@ block comments
 
 | Command | Purpose |
 | --- | --- |
-| `clpp file.clp [arguments...]` | Compile and execute on the VM; `args()` reads extra arguments |
-| `clpp --repl` | Open the interactive prompt |
-| `clpp --lsp` | Start the language server used by the editor |
-| `clpp --version`, `clpp --help` | Read version and command help |
+| `clpp-vm file.clp [arguments...]` | Compile and execute on the VM; `args()` reads extra arguments |
+| `clpp-vm --repl` | Open the interactive prompt |
+| `clpp-vm --lsp` | Start the language server used by the editor |
+| `clpp-vm --version`, `clpp-vm --help` | Read version and command help |
 
 ## Tooling ideas from the supplied design
 
@@ -106,10 +106,10 @@ The original handbook described the following interfaces. They are **design idea
 | `api compile` | Provide structured JSON compilation input/output |
 | `api complete`, `hover`, `symbols`, `definition` | Provide structured editor operations |
 
-Current CL++ editor integration uses `clpp --lsp`; an application-specific JSON API does not replace that implemented interface.
+Current CL++ editor integration uses `clpp-vm --lsp`; an application-specific JSON API does not replace that implemented interface.
 
 ## A practical workflow
 
-Write a `.clp` program compatible with the installed compiler, run `clpp file.clp`, and use editor diagnostics. Target examples await the language migration and should not be mistaken for release compatibility tests.
+Write a `.clp` program compatible with the installed compiler, run `clpp-vm file.clp`, and use editor diagnostics. Target examples await the language migration and should not be mistaken for release compatibility tests.
 
 For a **user-written Roblox transpiler project**, you would define its input syntax and context rules, emit Luau, and synchronize that application's output with Studio. Rojo or Cluaupp could handle synchronization if your project integrates them. Implementing a transpiler and inserting its output into Studio are separate responsibilities; see [Roblox and Cluaupp](./13-roblox-e-cluaupp.md).

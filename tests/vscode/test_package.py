@@ -32,7 +32,7 @@ def main():
         assert rules['comment-block']['begin'] == r'<<\['
         assert rules['comment-block']['end'] == r'\]>>'
         ET.parse(destination / 'extension.vsixmanifest')
-        compiler = package / 'bin/win32-x64/clpp.exe'
+        compiler = package / 'bin/win32-x64/clpp-vm.exe'
         assert compiler.is_file(), 'missing bundled Windows compiler'
         if args.compiler:
             assert hashlib.sha256(compiler.read_bytes()).digest() == hashlib.sha256(args.compiler.read_bytes()).digest(), 'compiler changed while packaging'

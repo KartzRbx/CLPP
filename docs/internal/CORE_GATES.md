@@ -6,6 +6,22 @@ separates implementation evidence from proposed or host-dependent contracts.
 
 ## Completed in the latest core stage
 
+- Local integration with the already-fetched main branch: all 512 checks passed
+  on a fresh Windows LLVM MinGW Debug build. The renamed clpp-vm binary passed
+  VSIX/ZIP extraction and isolated installation. Zed grammar/query/semantic-role
+  validation passed, as did all 10,000 completion scenarios with no budget
+  violations. The integrated 52-page site passed local content and link checks.
+  Logs use the build/integration- prefix. No remote action or publication ran.
+- Final local checkpoint: 512 integrated checks passed in Windows GCC and the
+  same 512 passed under Windows LLVM MinGW ASan + UBSan. Release mutations and
+  adversarial cases: 1,052 passed; instrumented cases: 302 passed. Reports and
+  artifact checksums are in build/core-validation-summary.json and
+  build/core-release-checksums.sha256.
+- Fixed sanitizer findings in optional-type child assignment, exact integer
+  metadata, audio handle conversions, native input arithmetic and sleep ranges.
+- CMake installation, portable ZIP extraction and bundled VSIX execution passed
+  outside the checkout. The final VSIX installed in a fresh VS Code QA profile.
+
 - Composed generic aliases: unique union evidence, consistent intersections,
   literal/concrete alternatives, rejection of ambiguity/conflicts and IDE results.
 - JSON-RPC field validation: malformed requests receive errors without aborting
@@ -58,12 +74,15 @@ contract needs implementation, executable behavior tests and reference updates.
 
 Visual Zed/VS Code checks (including color swatches), broader AST/input resource
 audits and optimized-runtime profiling remain. A finite fuzz corpus and passing
-tests are not proof that no vulnerability exists. The Windows MinGW ASan probe
-cannot link because matching clang runtime archives are absent; Linux/macOS/
-MSVC and sanitizer jobs need actual runners. A working archive smoke test does
+tests are not proof that no vulnerability exists. Windows ASan + UBSan now pass
+with the portable LLVM MinGW toolchain; Linux/macOS/MSVC still need actual
+runners. LeakSanitizer is not included in the Windows result. A working archive smoke test does
 not establish Marketplace/registry installation or public download integrity.
-No release has been published, and no checkout changes have been committed or
-pushed as part of this stage.
+No release or site deployment has been published. Source was saved in local
+commit 195be06; nothing was pushed. The latest user instruction permits local
+validation only. The separate integration worktree has resolved conflicts and
+passed the fresh local checks recorded above; the primary validated checkout
+is intact. See RELEASE_HANDOFF.md.
 
 Performance logs use a local Windows Release build at `-O2` with three samples.
 Compilation includes process startup. Measured medians for 100/1,000/10,000

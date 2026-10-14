@@ -15,7 +15,7 @@ Create a file named `hello.clp`. A module is a file that groups related code. Th
 post("Hello, CL++!");
 ```
 
-`post` displays a value. Parentheses contain its argument. Quotes delimit text. The semicolon ends the instruction. Run `clpp hello.clp` from a terminal, or use Ctrl+F5 in VS Code.
+`post` displays a value. Parentheses contain its argument. Quotes delimit text. The semicolon ends the instruction. Run `clpp-vm hello.clp` from a terminal, or use Ctrl+F5 in VS Code.
 
 ## 2. Name a value and choose its type
 

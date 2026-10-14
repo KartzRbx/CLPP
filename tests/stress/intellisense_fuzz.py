@@ -1,7 +1,7 @@
 """Property matrix and JSON-RPC executor for the CL++ language server.
 
 The generator builds 10000 completion simulations. The executor is one
-clpp --lsp process: didOpen, bursts of didChange, then textDocument/completion.
+clpp-vm --lsp process: didOpen, bursts of didChange, then textDocument/completion.
 """
 
 import json
@@ -16,7 +16,7 @@ from pathlib import Path
 
 TARGET = 10000
 URI = "file:///C:/clpp/fuzz.clp"
-SERVER = Path(__file__).resolve().parents[2] / "build" / "ucrt64" / "src" / "clpp.exe"
+SERVER = Path(__file__).resolve().parents[2] / "build" / "ucrt64" / "src" / ("clpp-vm.exe" if sys.platform == "win32" else "clpp-vm")
 
 
 def cursor(text):

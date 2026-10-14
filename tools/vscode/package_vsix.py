@@ -3,9 +3,9 @@
 A .vsix is a zip (Open Packaging Conventions) with [Content_Types].xml, extension.vsixmanifest
 and the extension files under extension/. Usage:
 
-    python tools/vscode/package_vsix.py [--exe path/to/clpp.exe] [--out dist/clpp-language.vsix]
+    python tools/vscode/package_vsix.py [--exe path/to/clpp-vm.exe] [--out dist/clpp-language.vsix]
 
---exe bundles a Windows x64 server at extension/bin/win32-x64/clpp.exe, so the extension works
+--exe bundles a Windows x64 server at extension/bin/win32-x64/clpp-vm.exe, so the extension works
 right after `code --install-extension clpp-language-<version>.vsix`.
 """
 import argparse
@@ -63,7 +63,7 @@ def manifest(pkg):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--exe", help="Windows x64 clpp.exe to bundle")
+    parser.add_argument("--exe", help="Windows x64 clpp-vm.exe to bundle")
     parser.add_argument("--out")
     args = parser.parse_args()
     with open(os.path.join(HERE, "package.json"), encoding="utf-8") as f:
@@ -73,7 +73,7 @@ def main():
     entries = [(os.path.join(HERE, name), "extension/" + name) for name in FILES]
     entries.append((os.path.join(ROOT, "LICENSE"), "extension/LICENSE.txt"))
     if args.exe:
-        entries.append((args.exe, "extension/bin/win32-x64/clpp.exe"))
+        entries.append((args.exe, "extension/bin/win32-x64/clpp-vm.exe"))
     types = sorted({os.path.splitext(target)[1] for _, target in entries} | {".vsixmanifest"})
     content_types = ('<?xml version="1.0" encoding="utf-8"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
                      + "".join(f'<Default Extension="{t}" ContentType="{CONTENT_TYPES.get(t, "application/octet-stream")}" />' for t in types)

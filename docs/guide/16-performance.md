@@ -14,7 +14,7 @@ These historical repository benchmarks are medians of seven release-build runs o
 | 200,000 `Vector3` physics steps | 0.353 s | 0.050 s | 0.087 s |
 | 100,000 templates and concatenations | 0.034 s | 0.023 s | 0.024 s |
 
-To reproduce the measurement, run `python3 benchmarks/run.py build/release/src/clpp --runs 7 --markdown` after building the release preset.
+To reproduce the measurement, run `python3 benchmarks/run.py build/release/src/clpp-vm --runs 7 --markdown` after building the release preset.
 
 Bytecode passes structural and stack verification before execution. Recursion has a configurable limit, invalid indices raise errors, and the `asan` preset enables AddressSanitizer for the test suite. These checks describe the existing VM. Its old data-copy behavior differs from the target `def` reference semantics and must not be used as a language specification.
 

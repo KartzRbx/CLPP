@@ -1,6 +1,8 @@
+The VM extension uses clpp-vm; the independent Rust/Luau clpp executable is never selected automatically. Legacy packages need an explicit serverPath.
+
 # CL++ for Visual Studio Code and Cursor
 
-Language support for **CL++** (`.clp`), powered by the CL++ compiler itself (`clpp --lsp`): the editor sees exactly what the compiler sees.
+Language support for **CL++** (`.clp`), powered by the CL++ compiler itself (`clpp-vm --lsp`): the editor sees exactly what the compiler sees.
 
 ## Features
 
@@ -21,7 +23,7 @@ highlighting is enabled by default and follows the compiler's resolved roles.
 The language registration includes the author's crystal file icon; a selected
 third-party icon theme can override language icons.
 
-The extension ships with `clpp.exe` for Windows x64. On other systems install CL++ and make sure `clpp` is on `PATH`, or set **`clpp.serverPath`**.
+The extension ships with `clpp-vm.exe` for Windows x64. On other systems install CL++ and make sure `clpp-vm` is on `PATH`, or set **`clpp.serverPath`**.
 
 ## Commands
 

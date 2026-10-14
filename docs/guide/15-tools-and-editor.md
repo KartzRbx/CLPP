@@ -1,6 +1,6 @@
 # 15. Tools and editor
 
-`clpp file.clp [args...]` compiles and runs a program. `clpp --repl` opens an interactive prompt, `clpp --lsp` starts the language server, and `clpp --version` and `--help` print command information. `args()` returns the arguments after the source filename.
+`clpp-vm file.clp [args...]` compiles and runs a program. `clpp-vm --repl` opens an interactive prompt, `clpp-vm --lsp` starts the language server, and `clpp-vm --version` and `--help` print command information. `args()` returns the arguments after the source filename.
 
 ## VS Code extension
 
@@ -11,7 +11,7 @@ forms remain separate from implemented language contracts. See
 
 The CL++ VS Code extension provides syntax highlighting, diagnostics while typing, completion for local and imported members, signature help, hover information, go to definition, references, rename, formatting, semantic colors, and code folding. It also offers file execution with **Ctrl+F5**, and color swatches for `0xRRGGBB` literals.
 
-The extension uses `clpp --lsp`, so its analysis is based on the same compiler as a command-line build. On Windows x64, the VSIX includes `clpp.exe`. The `clpp.serverPath` setting can point to another executable.
+The extension uses `clpp-vm --lsp`, so its analysis is based on the same compiler as a command-line build. On Windows x64, the VSIX includes `clpp-vm.exe`. The `clpp.serverPath` setting can point to another executable.
 
 ## Build and test
 

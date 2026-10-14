@@ -203,7 +203,7 @@ ana.Health = 80; post(ana.Health);
 6. Keep declarations and imports in `.clp` source modules without introducing headers.
 7. Once the compiler supports the required contracts, test construction, aliases, argument mutation, events, and application policies.
 
-`clpp fmt` and `clpp fix --def` are proposed tools, not currently available commands. The verified CLI runs `clpp program.clp`, a REPL, and the language server. A transpiler written in CL++ must implement its own generation workflow. See [Errors and tools](12-erros-e-ferramentas.md).
+`clpp fmt` and `clpp fix --def` are proposed tools, not currently available commands. The verified CLI runs `clpp-vm program.clp`, a REPL, and the language server. A transpiler written in CL++ must implement its own generation workflow. See [Errors and tools](12-erros-e-ferramentas.md).
 
 ## Continue learning
 

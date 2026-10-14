@@ -1,6 +1,6 @@
 # Editor integrations
 
-CL++ uses one compiler-backed language server: `clpp --lsp`, with JSON-RPC over
+CL++ uses one compiler-backed language server: `clpp-vm --lsp`, with JSON-RPC over
 standard input/output and standard Content-Length framing. Editors use language
 ID `clpp` for `.clp`. Syntax colors and file icons are separate editor assets.
 
@@ -19,7 +19,7 @@ need a dedicated adapter. No editor-specific language implementation is used.
 
 ## Common configuration
 
-- Executable: absolute path to the current `clpp` / `clpp.exe`, or `clpp` on PATH.
+- Executable: absolute path to the current `clpp` / `clpp-vm.exe`, or `clpp` on PATH.
 - Arguments: `["--lsp"]`.
 - Transport: stdio; do not launch through a shell that prints banners on stdout.
 - File extension: `.clp`; language identifier: `clpp`.

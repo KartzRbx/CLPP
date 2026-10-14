@@ -2,7 +2,7 @@
 
 Local Windows integration for `.clp`: syntax colors, comments, bracket matching,
 indentation and the compiler's language server. Completion, hover, diagnostics,
-definitions, references, rename, symbols and formatting use `clpp --lsp`.
+definitions, references, rename, symbols and formatting use `clpp-vm --lsp`.
 
 The editor grammar distinguishes declarations, types, parameters, calls, stored
 generic function values, `decltype`, members, generic arguments, expressions and
@@ -21,7 +21,7 @@ This extension is currently local and has not been published in Zed's registry.
 
 ## Build and install on this development machine
 
-From the repository root, after building `build/ucrt64/src/clpp.exe`:
+From the repository root, after building `build/ucrt64/src/clpp-vm.exe`:
 
 ```powershell
 rustup target add wasm32-wasip2
@@ -39,7 +39,7 @@ reload extensions and open `.clp`; the language picker should show **CL++**.
 The installer uses this checkout's compiler and supplies its UCRT64 DLL search
 path. A different installation can set `lsp.clpp.binary.path`, `arguments`
 (`--lsp`) and `env` in Zed settings; with no binary override, the extension finds
-`clpp` on PATH. Rebuild CL++ to update language features without rebuilding the
+`clpp-vm` on PATH. Rebuild CL++ to update language features without rebuilding the
 extension. Run the installer again after moving the checkout.
 
 The grammar source must be committed and its revision pinned before registry

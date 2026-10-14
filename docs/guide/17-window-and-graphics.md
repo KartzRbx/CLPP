@@ -26,7 +26,7 @@ while (Window.Frame()) {
 ```
 
 Run it and a window appears; press its close button (or Alt+F4) to end the loop. The same file
-run with `CLPP_HEADLESS=1 clpp hello.clp` draws one frame off screen and exits.
+run with `CLPP_HEADLESS=1 clpp-vm hello.clp` draws one frame off screen and exits.
 
 ## Drawing
 

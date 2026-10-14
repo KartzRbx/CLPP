@@ -1,15 +1,15 @@
 // CL++ for VS Code — language client.
 //
-// The language intelligence lives in the compiler (`clpp --lsp`), so the editor, the CLI and the
+// The language intelligence lives in the compiler (`clpp-vm --lsp`), so the editor, the CLI and the
 // build always agree. This file only starts that server and maps Language Server Protocol
 // messages to VS Code features. It has no npm dependencies on purpose: the extension works
 // offline and installs from a single .vsix.
 //
 // Server lookup order (first hit wins), same idea as the Zig/Rust/Go extensions:
 //   1. setting `clpp.serverPath`
-//   2. the binary bundled in this extension: bin/<platform>-<arch>/clpp(.exe)
-//   3. `clpp` / `clpp.exe` on PATH
-//   4. the installer location: %LOCALAPPDATA%\Programs\CLPP\clpp.exe (Windows) or ~/.local/bin/clpp
+//   2. the binary bundled in this extension: bin/<platform>-<arch>/clpp-vm(.exe)
+//   3. `clpp-vm` / `clpp-vm.exe` on PATH
+//   4. the installer location: %LOCALAPPDATA%\Programs\CLPP-VM\clpp-vm.exe (Windows) or ~/.local/bin/clpp-vm
 
 "use strict";
 
@@ -31,7 +31,7 @@ let client;
 // ---------------------------------------------------------------------------------------------
 
 function executableName() {
-  return process.platform === "win32" ? "clpp.exe" : "clpp";
+  return process.platform === "win32" ? "clpp-vm.exe" : "clpp-vm";
 }
 
 function onPath() {
@@ -67,8 +67,8 @@ function findServer(context) {
   }
   const installed =
     process.platform === "win32"
-      ? path.join(process.env.LOCALAPPDATA || "", "Programs", "CLPP", "clpp.exe")
-      : path.join(os.homedir(), ".local", "bin", "clpp");
+      ? path.join(process.env.LOCALAPPDATA || "", "Programs", "CLPP-VM", "clpp-vm.exe")
+      : path.join(os.homedir(), ".local", "bin", "clpp-vm");
   if (fs.existsSync(installed)) {
     return { path: installed, source: "installer" };
   }

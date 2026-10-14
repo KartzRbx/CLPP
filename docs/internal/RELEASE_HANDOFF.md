@@ -1,5 +1,28 @@
 # CL++ implementation and release handoff
 
+## Local-only continuation and final validation (2026-10-14)
+
+The latest user instruction is to continue **local validation only**. Do not run remote CI, push, merge into main, or publish until that scope changes. The author also explicitly chose to preserve the current language: protected colon calls, destructuring declarations and optional missing-key lookup are future proposals. Their target blocks remain excluded rather than counted as passing tests.
+
+The validated source is preserved in commit `195be06` on `codex/complete-language-qa-20261014`. The primary checkout is intact. A managed integration checkout exists at `C:/Users/gtofr/.codex/worktrees/complete-language-qa/CLPP_Rework`. Its conflicts with the already-fetched origin/main have now been resolved locally, preserving the independent Rust/Luau documentation and the C++ executable name `clpp-vm`. CLI help, extension resolution, packaging, install tests and public instructions agree on that name. Existing 0.10.1 release assets are explicitly documented as older `clpp.exe` artifacts. No source was pushed, no PR was created, and no release or site deployment was published.
+
+The fresh integration build (Windows LLVM MinGW Debug, without sanitizers) passed all **512 integrated checks**. The Zed grammar/query/compiler-role audit passed across 47 sources. The **10,000-scenario completion matrix** passed with zero functional failures and zero scenario-budget violations: median 1.44 ms, p95 2.60 ms, p99 3.50 ms, maximum 1,470.08 ms for the large-file scenario. These are local host measurements, not a cross-platform performance guarantee. The renamed compiler passed VSIX extraction, isolated installation and CPack ZIP execution with only Windows system DLLs on PATH. The integrated site passed all 52 pages and generated-link checks. Evidence: `build/integration-{ctest,zed,intellisense,vsix,install,archive-test,site-final}.log` and `build/integration-intellisense.json`. The earlier ASan/UBSan results below apply to the preserved core snapshot; this integration did not change its compiler/runtime implementation.
+
+GitHub authentication **works outside the sandbox**. The earlier authentication question was caused by sandbox/keyring restrictions; the user does not need to send credentials. The latest local-only instruction takes precedence regardless of authentication.
+
+Final local results:
+
+- GCC Debug: all **512 integrated checks passed** (`build/core-release-gate-ctest.log`).
+- Windows LLVM MinGW 20261006, Clang 23.1.3, **ASan + UBSan**: all **512 checks passed** (`build/windows-sanitizers-release-gate.log`). LeakSanitizer is disabled on Windows; no Linux/macOS/MSVC result is claimed.
+- Release adversarial audit: **1,052 cases / zero failures**, including 1,000 mutations of real programs (`build/core-release-gate-audit.json`). Instrumented audit: **302 cases / zero failures** (`build/windows-sanitizers-release-gate-audit.json`). Mutations use --check and never execute native effects. The former fuzz prefix rejected inputs lexically; it was replaced with real-program mutations, and failing reports now preserve the reproducer source.
+- Sanitizers exposed and verified fixes for optional-type child self-assignment use-after-free, loss/overflow in integer literal metadata, out-of-range audio handles, native input integer conversions, wheel/relative-coordinate arithmetic and oversized/non-finite sleep durations. Regression tests pass. Windows executable stacks explicitly reserve 8 MiB normally and 32 MiB under sanitizers without relaxing parser limits.
+- CMake installation and CPack ZIP distribution were added. The final ZIP and VSIX passed archive integrity and isolated extracted execution with only system DLLs on PATH (`build/core-release-gate-install.log`, `build/core-release-gate-package-test.log`). Final VSIX installation in a fresh isolated VS Code profile succeeded (`build/vscode-final-fresh-install.log`). Reinstall into the earlier running QA profile failed due to Windows file locks; do not treat that old log as the fresh-install result.
+- Site: **52 pages**, 245 source blocks with 19 marked target specifications, 264 local Markdown links; all generated links/assets validated (`build/core-publish-site.log`). The future-proposal decision, install instructions, native limits and stale compiler-alignment text were updated.
+- After the local-only instruction, the public toolchain checkpoint and internal gates were updated; `build/core-local-only-site.log` confirms the final local site rebuild and link checks. Artifact hashes and machine-readable counts are saved in `build/core-release-checksums.sha256` and `build/core-validation-summary.json`. Those generated files are not published.
+- Visual IDE checks remain unverified. Zed capture timed out twice; VS Code Computer Use app approval timed out. Functional grammar/LSP/extension tests passed; they do not establish visual swatch rendering.
+
+The portable sanitizer toolchain and checksum metadata are under `build/toolchains` and `build/llvm-mingw-asset.json`. Its official archive digest is pinned in the prepared Windows sanitizer CI job. Remote jobs and Pages composition still require future integration/validation; no remote success is implied by the workflow configuration.
+
 Checkpoint updated: 2026-10-14. Continuation resumed with the author's approved module and concurrency rules. The original checkpoints remain below as history; the latest validation and remaining work are recorded here.
 
 ## Diagnostic span lifetime correction (2026-10-14)

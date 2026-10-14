@@ -6,7 +6,7 @@ const root = path.resolve(__dirname, '../..');
 const source = path.join(root, 'build/zed-extension/clpp');
 const destination = path.join(process.env.LOCALAPPDATA, 'Zed/extensions/installed/clpp');
 const settingsPath = path.join(process.env.APPDATA, 'Zed/settings.json');
-const executable = path.join(root, 'build/ucrt64/src/clpp.exe');
+const executable = path.join(root, 'build/ucrt64/src/clpp-vm.exe');
 for (const required of ['extension.toml', 'extension.wasm', 'grammars/clpp.wasm']) {
   if (!fs.existsSync(path.join(source, required))) throw new Error(`Missing ${required}; run build.ps1 first`);
 }

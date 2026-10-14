@@ -4,7 +4,7 @@ CL++ is implemented in C++20. Build it with CMake 3.20+ and a C++20 compiler; Ni
 
 ## Build presets
 
-`clpp --check script.clp` compiles and verifies a source program without executing it or its native side effects. It returns a nonzero exit status for invalid source; use it when auditing incomplete specification or application examples.
+`clpp-vm --check script.clp` compiles and verifies a source program without executing it or its native side effects. It returns a nonzero exit status for invalid source; use it when auditing incomplete specification or application examples.
 
 ```text
 cmake --preset debug
@@ -32,7 +32,7 @@ diagnostic span storage.
 
 ## Editor
 
-The CL++ VS Code extension in `tools/vscode/` uses the compiler's language server (`clpp --lsp`) for diagnostics, completion, hover, and navigation. The repository also supports clangd for C++ development through `compile_commands.json`.
+The CL++ VS Code extension in `tools/vscode/` uses the compiler's language server (`clpp-vm --lsp`) for diagnostics, completion, hover, and navigation. The repository also supports clangd for C++ development through `compile_commands.json`.
 
 The LSP validates JSON-RPC field types before dispatch. Malformed JSON and request
 envelopes receive protocol errors; subsequent valid requests remain usable.
@@ -42,6 +42,14 @@ the stream without attempting the advertised allocation. A client should open a
 new server connection after a transport failure.
 
 ## Native validation builds
+
+The 2026-10-14 local validation checkpoint passed 512 integrated checks with
+GCC on Windows and the same 512 checks under Windows LLVM MinGW ASan + UBSan.
+Release hostile-input testing passed 1,052 cases; the instrumented corpus passed
+302 cases. These finite tests are evidence for those builds, not a proof that all
+vulnerabilities are absent. Leak detection, Linux/macOS/MSVC runners and visual
+editor verification are separate gates. No new release or website deployment
+is implied by a local build.
 
 The `asan` preset enables AddressSanitizer and UndefinedBehaviorSanitizer on a
 Clang/GCC toolchain with the corresponding runtimes. Undefined-behavior reports

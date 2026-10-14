@@ -73,14 +73,14 @@ A catalogue advertised as implemented must be generated or checked against actua
 ## Current tools
 
 ```text
-clpp program.clp
-clpp --repl
-clpp --lsp
-clpp --help
-clpp --version
+clpp-vm program.clp
+clpp-vm --repl
+clpp-vm --lsp
+clpp-vm --help
+clpp-vm --version
 ```
 
-`clpp program.clp` compiles **and executes** the program. Use `clpp --check program.clp`
+`clpp-vm program.clp` compiles **and executes** the program. Use `clpp-vm --check program.clp`
 for analysis without execution. The language server powers editor diagnostics and
 completion. The current syntax is implemented; examples explicitly marked as
 future proposals or host contracts remain separate from supported language forms.
@@ -95,7 +95,7 @@ Until these tools exist, follow the manual review in [Reference](14-referencia.m
 
 - Read the first error and check its location.
 - Use `post`, `warn`, and `report` to inspect execution; routing depends on the runtime or host.
-- Run a supported program with `clpp program.clp`, or inspect editor diagnostics.
+- Run a supported program with `clpp-vm program.clp`, or inspect editor diagnostics.
 - When building a transpiler as a CL++ application, inspect **that application's output** to debug its translation. The official VM compiler does not emit a `.luau` file for you.
 
 See [Transpilers and engine use cases](13-roblox-e-cluaupp.md) for that application boundary.
