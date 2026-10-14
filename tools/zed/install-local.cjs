@@ -1,16 +1,30 @@
 // Install the prebuilt extension and merge only CL++ settings, preserving JSONC.
 const fs = require('node:fs');
 const path = require('node:path');
+const crypto = require('node:crypto');
 const jsonc = require('./grammar/node_modules/jsonc-parser');
 const root = path.resolve(__dirname, '../..');
-const source = path.join(root, 'build/zed-extension/clpp');
+const options = {};
+for (let i = 2; i < process.argv.length; i += 2) {
+  const key = process.argv[i];
+  if (!['--package', '--compiler'].includes(key) || !process.argv[i + 1]) {
+    throw new Error('Usage: node install-local.cjs [--package directory] [--compiler executable]');
+  }
+  options[key] = path.resolve(process.argv[i + 1]);
+}
+const source = options['--package'] || path.join(root, 'build/zed-extension/clpp');
 const destination = path.join(process.env.LOCALAPPDATA, 'Zed/extensions/installed/clpp');
 const settingsPath = path.join(process.env.APPDATA, 'Zed/settings.json');
-const executable = path.join(root, 'build/ucrt64/src/clpp-vm.exe');
+const executable = options['--compiler'] || path.join(root, 'build/ucrt64/src/clpp-vm.exe');
 for (const required of ['extension.toml', 'extension.wasm', 'grammars/clpp.wasm']) {
   if (!fs.existsSync(path.join(source, required))) throw new Error(`Missing ${required}; run build.ps1 first`);
 }
 if (!fs.existsSync(executable)) throw new Error('Build the CL++ compiler first');
+// Run an immutable snapshot: rebuilding the checkout must not require stopping
+// the editor's live server, nor silently change its executable underneath it.
+const compilerBytes = fs.readFileSync(executable);
+const compilerHash = crypto.createHash('sha256').update(compilerBytes).digest('hex');
+const installedExecutable = path.join(destination, 'bin', compilerHash, path.basename(executable));
 let settings = fs.readFileSync(settingsPath, 'utf8');
 const errors = [];
 const currentSettings = jsonc.parse(settings, errors, { allowTrailingComma: true });
@@ -21,7 +35,7 @@ const update = (keys, value) => {
   settings = jsonc.applyEdits(settings, jsonc.modify(settings, keys, value,
     { formattingOptions: { insertSpaces: true, tabSize: 2, eol: '\n' } }));
 };
-update(['lsp', 'clpp', 'binary', 'path'], executable);
+update(['lsp', 'clpp', 'binary', 'path'], installedExecutable);
 update(['lsp', 'clpp', 'binary', 'arguments'], ['--lsp']);
 update(['lsp', 'clpp', 'binary', 'env', 'PATH'], `C:\\msys64\\ucrt64\\bin;${process.env.PATH}`);
 update(['languages', 'CL++', 'tab_size'], 2);
@@ -30,6 +44,8 @@ update(['languages', 'CL++', 'lsp_document_colors'], 'inlay');
 update(['languages', 'CL++', 'semantic_tokens'], 'combined');
 fs.mkdirSync(destination, { recursive: true });
 fs.cpSync(source, destination, { recursive: true });
+fs.mkdirSync(path.dirname(installedExecutable), { recursive: true });
+if (!fs.existsSync(installedExecutable)) fs.writeFileSync(installedExecutable, compilerBytes);
 // Extend the user's chosen icon theme locally rather than changing its extension.
 const installed = path.dirname(destination);
 const indexPath = path.join(path.dirname(installed), 'index.json');

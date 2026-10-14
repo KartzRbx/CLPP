@@ -36,10 +36,14 @@ backs up `%APPDATA%/Zed/settings.json` and merges only CL++ settings through a
 JSONC parser. It preserves other settings and their comments. Restart Zed or
 reload extensions and open `.clp`; the language picker should show **CL++**.
 
-The installer uses this checkout's compiler and supplies its UCRT64 DLL search
-path. A different installation can set `lsp.clpp.binary.path`, `arguments`
+The installer snapshots this checkout's compiler into a content-addressed
+directory in the installed extension and supplies its UCRT64 DLL search path.
+Rebuilding the checkout does not replace or require stopping the live server.
+Reinstall to select a newly built compiler. For a separate build/package use
+`node tools/zed/install-local.cjs --package <directory> --compiler <executable>`.
+A different installation can set `lsp.clpp.binary.path`, `arguments`
 (`--lsp`) and `env` in Zed settings; with no binary override, the extension finds
-`clpp-vm` on PATH. Rebuild CL++ to update language features without rebuilding the
+`clpp-vm` on PATH. Rebuild CL++ and rerun the installer to update language features without rebuilding the
 extension. Run the installer again after moving the checkout.
 
 The grammar source must be committed and its revision pinned before registry

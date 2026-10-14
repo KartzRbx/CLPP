@@ -34,6 +34,13 @@ diagnostic span storage.
 
 The CL++ VS Code extension in `tools/vscode/` uses the compiler's language server (`clpp-vm --lsp`) for diagnostics, completion, hover, and navigation. The repository also supports clangd for C++ development through `compile_commands.json`.
 
+The local Zed installer runs an immutable compiler snapshot from the installed
+extension, separate from build outputs. Reinstall after rebuilding to select the
+new compiler. It accepts `--package <directory>` and `--compiler <executable>` for
+separate builds. If Zed reports `server shut down`, reload the language server or
+reopen the CL++ buffer after installation; syntax colors alone do not establish
+that completion, hover and semantic tokens are connected.
+
 The LSP validates JSON-RPC field types before dispatch. Malformed JSON and request
 envelopes receive protocol errors; subsequent valid requests remain usable.
 Transport headers are limited to 16 KiB and message bodies to 64 MiB. Invalid,
