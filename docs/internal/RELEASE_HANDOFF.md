@@ -10,6 +10,8 @@ The fresh integration build (Windows LLVM MinGW Debug, without sanitizers) passe
 
 GitHub authentication **works outside the sandbox**. The earlier authentication question was caused by sandbox/keyring restrictions; the user does not need to send credentials. The latest local-only instruction takes precedence regardless of authentication.
 
+Integration is saved locally in merge commit `c002635` on branch `codex/integrate-language-qa-20261014` in the managed worktree. The Rust Zed extension built offline for `wasm32-wasip2`; its grammar built with the official WASI SDK. Both WebAssembly binaries and extension assets are packaged under `build/integration-zed-package`. This is a built package, not a claim of installation or visual approval. Integration artifact hashes and counts are in `build/integration-checksums.sha256` and `build/integration-validation-summary.json`. The primary checkout remains on its preserved core branch.
+
 Final local results:
 
 - GCC Debug: all **512 integrated checks passed** (`build/core-release-gate-ctest.log`).
