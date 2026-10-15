@@ -4,6 +4,84 @@ The author now authorizes general CLI support, site/installer review, local inst
 and GitHub publication after validation. The primary user's Combat edit is preserved.
 Historical local-only stages below describe their scope at that time.
 
+## Format Document and generic highlighting — installed 0.10.6
+
+The author's VS Code screenshots reproduced real formatter/grammar defects:
+`for` semicolons created statement lines, initializer terminators detached,
+generic brackets gained spaces, indentation options were ignored and adjacent
+statement groups lost separation. Spaced generic return types missed the
+TextMate function declaration rule, and collection types had no fallback scope.
+
+The formatter now distinguishes expression/statement delimiters, keeps loop
+headers and initializer punctuation attached, normalizes recognized generic
+type brackets and respects editor tabs/width. It preserves authored paragraphs
+and inline comments, groups variable declarations and separates conditionals,
+loops and following blocks. A final lexer comparison rejects token changes;
+malformed literal input stays untouched. LSP edits end at the actual UTF-16
+document boundary. The TextMate grammar accepts spaced generic return types and
+classifies collection types consistently. No parser rejection was reproduced
+for the author's valid `Predicate<T>` example.
+
+The first corpus run exposed three deterministic second-format differences:
+typed closure braces and comment paragraph boundaries. These were fixed before
+packaging. Final results:
+
+| Layer | Ran | Passed | Real bugs remaining | Flaky | Stale |
+|---|---|---|---|---|---|
+| Normal integrated CTest | 534 | 534 | 0 observed | 0 | 0 |
+| Focused ASan/UBSan unit cases | 7 / 197 assertions | 7 / 197 | 0 observed | 0 | 0 |
+| ASan/UBSan real LSP formatting | 62 | 62 | 0 observed | 0 | 0 |
+| TextMate/Oniguruma generic/comment checks | 14 | 14 | 0 observed | 0 | 0 |
+| VS Code provider adapter including formatting | complete | complete | 0 observed | 0 | 0 |
+| VSIX extraction/startup and local install | complete | complete | 0 observed | 0 | 0 |
+
+All 59 example/benchmark sources compile after formatting and remain identical
+on a second format. The other three LSP checks cover spaces, tabs, exact UTF-16
+replacement and generic semantic roles. Evidence: build/formatter-normal-ctest.xml,
+build/formatter-unit-asan.xml, build/formatter-layout-asan-lsp.xml and
+build/formatter-vscode-client.log. Initial package execution passed but sandbox
+temp cleanup failed; the same complete test passed with normal filesystem access.
+
+VS Code confirms kartzrbx.clpp-language@0.10.6; its bundled compiler digest
+matches the validated build. An already-open extension host must be reloaded;
+live visual theme rendering is not independently verified. The immutable
+snapshot manifest was refreshed. Source examples and user settings were not
+formatted in place. VM site build and all generated link checks passed; final
+GitHub platform results and composed site remain separate publication gates.
+
+## Portable JSON and actual GitHub results — 2026-10-15
+
+PR #13 publishes the general CLI work as a draft. Run 38675084088 at 4a89823
+passed Linux release/benchmarks/isolated installation/archive, Linux ASan/UBSan,
+Windows MSVC and Windows LLVM ASan/UBSan, including adversarial input checks.
+macOS Clang and Windows cross-packaging failed at the floating-point
+`std::from_chars` call: those older libc++ SDKs omit the overload.
+
+The decimal parser now detects that overload at compile time and otherwise
+uses a private stream with the classic locale; global locale is unchanged.
+It rejects nonfinite values, overflow, underflow to zero and trailing data,
+while retaining representable subnormals and negative zero. The normal GCC
+unit binary passed 461 cases / 4,678 assertions, including direct fallback tests.
+Evidence: build/portable-json-unit-normal.xml. The Ninja executable installed
+under WinGet was inaccessible in this sandbox; the two changed translation
+units and dependent archives/executables were rebuilt from the existing
+CMake compilation database and link graph (build/portable-json-incremental.py).
+This is not a fresh clean build or a completed macOS run.
+
+Documentation validation is now a separate push/PR workflow. The current site
+passed 55 source documents, 250 CL++ blocks (19 explicitly future/host targets),
+388 local Markdown links and generated routes/assets. The integrated branch
+also builds and composes the independent Luau documentation before validating
+the final site. No Pages deployment or release is claimed by this check.
+
+| Layer | Ran | Passed | Real bugs | Flaky | Stale |
+|---|---|---|---|---|---|
+| Normal unit cases after decimal fix | 461 | 461 | 0 | 0 | 0 |
+| GitHub platform jobs at 4a89823 | 6 | 4 | 2 compile failures, fix awaiting CI | 0 | 0 |
+| VM site sources and generated links | 1 | 1 | 0 | 0 | 0 |
+
+Verdict: HOLD release until portable JSON and final site composition pass CI.
+
 ## General CLI scope correction and literal-safe formatter — current stage
 
 The Cluaupp-specific prototype, handshake and protocol suite were removed from
@@ -228,5 +306,5 @@ Earlier stages follow as historical evidence.
 | Installer regressions | 2 | 2 | 0 | 0 | 0 |
 | Discord RPC and third-party LSP | 3 | 3 | 0 | 0 | 1 parameterless shutdown corrected |
 
-Verdict: DON'T SHIP — local Windows correctness gates pass, but cross-platform,
-visual and instrumented timing gates remain; publication is not authorized.
+Historical verdict: DON'T SHIP at that stage. Publication is now authorized;
+current release gates and evidence are recorded at the start of this report.

@@ -24,6 +24,65 @@ def main():
         sources = sorted((root / 'examples').rglob('*.clp')) + sorted((root / 'benchmarks').glob('*.clp'))
         client = Client(str(compiler), root.as_posix())
         try:
+            # VS Code passes indentation options and applies exactly this edit
+            # range. Check both contracts, including a final UTF-16 surrogate.
+            sample = 'if(true){post("ação 😀");}'
+            for label, insert_spaces in [('four-spaces', True), ('tabs', False)]:
+                started = time.monotonic()
+                error = ''
+                uri = client.open((root / f'{label}.clp').as_posix(), sample)
+                try:
+                    response = client.req('textDocument/formatting', {'textDocument': {'uri': uri},
+                                          'options': {'tabSize': 4, 'insertSpaces': insert_spaces}}, timeout=20)
+                    edits = response['result']
+                    assert len(edits) == 1, edits
+                    assert edits[0]['range']['end'] == {'line': 0, 'character': len(sample.encode('utf-16-le')) // 2}, edits
+                    indent = '    ' if insert_spaces else '\t'
+                    expected = f'if (true) {{\n{indent}post("ação 😀");\n}}\n'
+                    assert edits[0]['newText'] == expected, repr(edits[0]['newText'])
+                except Exception as failure:
+                    error = str(failure) or type(failure).__name__
+                finally:
+                    client.notify('textDocument/didClose', {'textDocument': {'uri': uri}})
+                results.append((f'contract/{label}', time.monotonic() - started, error))
+                print('FAIL' if error else 'PASS', f'contract/{label}', error[:800], flush=True)
+            generic = ('export def Predicate<T> = (T) -> bool;\n'
+                       'export template<typename T> array<T> Filter(array<T> input, Predicate < T > predicate) {\n'
+                       'array < T > output = array < T > ();\nreturn output;\n}\n')
+            started = time.monotonic()
+            error = ''
+            uri = client.open((root / 'generic-highlight.clp').as_posix(), generic)
+            try:
+                names = client.caps['semanticTokensProvider']['legend']['tokenTypes']
+                def roles(source):
+                    result = client.req('textDocument/semanticTokens/full', {'textDocument': {'uri': uri}}, timeout=20)
+                    values = result['result']['data']
+                    line = column = 0
+                    found = []
+                    lines = source.splitlines()
+                    for index in range(0, len(values), 5):
+                        delta, char, length, kind, _ = values[index:index + 5]
+                        line += delta
+                        column = char if delta else column + char
+                        word = lines[line][column:column + length]
+                        if word in {'array', 'Predicate', 'T', 'Filter'}:
+                            found.append((word, names[kind]))
+                    return found
+                before = roles(generic)
+                expected = {'array': 'type', 'Predicate': 'type', 'T': 'typeParameter', 'Filter': 'function'}
+                assert set(word for word, _ in before) == set(expected), before
+                assert all(expected[word] == kind for word, kind in before), before
+                formatted = client.req('textDocument/formatting', {'textDocument': {'uri': uri},
+                                         'options': {'tabSize': 4, 'insertSpaces': True}}, timeout=20)['result'][0]['newText']
+                assert 'array<T> output = array<T>();' in formatted, formatted
+                client.change(uri, formatted, 2)
+                assert roles(formatted) == before, 'formatting changed generic semantic roles'
+            except Exception as failure:
+                error = str(failure) or type(failure).__name__
+            finally:
+                client.notify('textDocument/didClose', {'textDocument': {'uri': uri}})
+            results.append(('contract/generic-highlight', time.monotonic() - started, error))
+            print('FAIL' if error else 'PASS', 'contract/generic-highlight', error[:800], flush=True)
             for source in sources:
                 started = time.monotonic()
                 error = ''

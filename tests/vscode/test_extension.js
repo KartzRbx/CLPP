@@ -76,6 +76,17 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   check("color presentations use valid CL++ forms", presentations.some(p => p.label.startsWith("Gfx.Rgba(")) &&
     presentations.every(p => !p.label.startsWith("#")), presentations);
 
+  const formatInput = 'number first=1;\nnumber second=2;\nif(first < second){post("ação 😀");}';
+  mock.__test.change(doc, formatInput);
+  await sleep(100);
+  const edits = await providers.format.provideDocumentFormattingEdits(doc, { tabSize: 4, insertSpaces: true }, token);
+  check("format: editor indentation and paragraph separation", edits.length === 1 &&
+    edits[0].newText.includes('number first = 1;\nnumber second = 2;\n\nif (first < second) {\n    post("ação 😀");\n}'), edits);
+  check("format: replacement ends at the actual UTF-16 document end", edits.length === 1 &&
+    edits[0].range.end.line === 2 && edits[0].range.end.character === formatInput.split('\n')[2].length, edits);
+  const tabEdits = await providers.format.provideDocumentFormattingEdits(doc, { tabSize: 4, insertSpaces: false }, token);
+  check("format: editor tabs are honored", tabEdits.length === 1 && tabEdits[0].newText.includes('\n\tpost('), tabEdits);
+
   await extension.deactivate();
   console.log(`${failures} failure(s)`);
   process.exit(failures);

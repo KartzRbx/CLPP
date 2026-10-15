@@ -25,7 +25,7 @@ The local immutable validated snapshot is recorded in
 `build/validated-cli/latest.json` (ignored build artifact). Read its compilerPath,
 SHA-256, capability list and evidence rather than using a binary currently being
 rebuilt. This prevents linker locks and mid-build changes in consuming tools.
-The local VS Code 0.10.5 package includes these APIs and the literal-safe formatter;
+The local VS Code 0.10.6 package includes these APIs and the layout/literal-safe formatter;
 reload an existing editor host before relying on it. No Cluaupp file was edited.
 
 ## Remaining general infrastructure
@@ -51,7 +51,8 @@ reload an existing editor host before relying on it. No Cluaupp file was edited.
 - [ ] Install the validated generic compiler/editor snapshots locally, retaining
   independent Luau installations and user settings.
 - [ ] Integrate upstream main without overwriting its independent compiler/docs.
-- [ ] Publish a reviewable GitHub branch/PR and inspect actual CI results before
+- [x] Publish a reviewable GitHub branch/PR: https://github.com/KartzRbx/CLPP/pull/13.
+- [ ] Inspect final GitHub CI results before
   claiming supported-platform or release readiness. GitHub publication is now
   explicitly authorized. Unrelated user Combat edits are not part of the agent commit.
 

@@ -1,0 +1,42 @@
+name: Documentation validation
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  documentation:
+    name: Site content, routes and product composition
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install VM documentation dependencies
+        run: npm ci --prefix www --no-audit --no-fund
+      - name: Validate the VS Code grammar with TextMate and Oniguruma
+        run: node tests/vscode/test_grammar.mjs
+      - name: Validate and build VM documentation
+        run: npm run build --prefix www
+      - name: Check out the independent Luau documentation
+        if: hashFiles('scripts/compose-luau-docs.mjs') != ''
+        uses: actions/checkout@v4
+        with:
+          ref: v0.8.2
+          path: compiler-docs
+      - name: Build and validate the independent Luau documentation
+        if: hashFiles('scripts/compose-luau-docs.mjs') != ''
+        working-directory: compiler-docs
+        run: |
+          npm ci --no-audit --no-fund
+          npm run docs:build
+          node scripts/check-doc-links.mjs
+      - name: Compose both sites and validate the final routes
+        if: hashFiles('scripts/compose-luau-docs.mjs') != ''
+        run: |
+          node scripts/compose-luau-docs.mjs
+          node www/check-content.mjs --built

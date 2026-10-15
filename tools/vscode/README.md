@@ -31,7 +31,13 @@ The extension ships with `clpp-vm.exe` for Windows x64. On other systems install
 - `CL++: Restart language server`
 - `CL++: Show output`
 
-## Local source update 0.10.5
+## Local source update 0.10.6
+
+Format Document respects VS Code's indentation options, keeps loop headers and
+initializers together, normalizes generic type brackets and retains inline
+comments and paragraph spacing. Consecutive variable declarations stay grouped;
+conditionals and loops are separated from adjacent statement groups. The
+TextMate grammar recognizes generic types with or without spaces around `< >`.
 
 Formatting preserves the original quotes/escapes in imports, strings and nested
 templates. The bundled compiler includes general bounded text/binary reads,

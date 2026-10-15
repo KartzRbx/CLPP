@@ -149,7 +149,7 @@
     },
     "type": {
       "name": "support.type.primitive.clpp",
-      "match": "\\b(Vector2|Vector3|Vector4|auto|bool|buffer|float|number|string|task|void)\\b"
+      "match": "\\b(Vector2|Vector3|Vector4|array|dictionary|optional|tuple|auto|bool|buffer|float|number|string|task|void)\\b"
     },
     "keyword": {
       "patterns": [
@@ -183,7 +183,7 @@
       }
     },
     "declaration-function": {
-      "match": "\\b([A-Za-z_\\x{00C0}-\\x{024F}][\\w.\\x{00C0}-\\x{024F}]*(?:<[^;\\n(){}]+>)?)\\s+([A-Za-z_\\x{00C0}-\\x{024F}][\\w\\x{00C0}-\\x{024F}]*)(?=\\s*(?:::|\\())",
+      "match": "\\b([A-Za-z_\\x{00C0}-\\x{024F}][\\w.\\x{00C0}-\\x{024F}]*(?:\\s*<[^;\\n(){}]+>)?)\\s+([A-Za-z_\\x{00C0}-\\x{024F}][\\w\\x{00C0}-\\x{024F}]*)(?=\\s*(?:::|\\())",
       "captures": {
         "1": {
           "name": "storage.type.clpp"

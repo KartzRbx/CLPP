@@ -118,7 +118,8 @@ struct KeywordDoc {
 };
 [[nodiscard]] const KeywordDoc* keyword_doc(std::string_view word);
 
-[[nodiscard]] std::string format_source(std::string_view source);
+[[nodiscard]] std::string format_source(std::string_view source, std::uint32_t tab_size = 2,
+                                      bool insert_spaces = true);
 
 [[nodiscard]] Info inspect(std::string_view source, std::uint32_t line, std::uint32_t column,
                               const ModuleLoader& modules = {});

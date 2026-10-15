@@ -1941,22 +1941,6 @@ Info Session::open(const std::string_view source, const std::uint32_t line, cons
 
 namespace {
 
-[[nodiscard]] std::size_t source_offset(const std::string_view source, const std::uint32_t line, const std::uint32_t column) {
-  std::size_t index = 0;
-  std::uint32_t current_line = 1;
-  std::uint32_t current_column = 1;
-  while (index < source.size() && (current_line < line || (current_line == line && current_column < column))) {
-    if (source[index] == '\n') {
-      ++current_line;
-      current_column = 1;
-    } else {
-      ++current_column;
-    }
-    ++index;
-  }
-  return index;
-}
-
 [[nodiscard]] bool space_before(const TokenType previous, const TokenType current) {
   if (current == TokenType::CloseParen || current == TokenType::CloseBracket || current == TokenType::Semicolon ||
       current == TokenType::Comma || current == TokenType::Dot || current == TokenType::Scope ||
@@ -1973,7 +1957,8 @@ namespace {
          previous != TokenType::Scope && previous != TokenType::At;
 }
 
-void append_comments(std::string& formatted, const std::string_view trivia, int& indent, bool& line_start) {
+void append_comments(std::string& formatted, const std::string_view trivia, const int indent,
+                     const std::string_view indent_unit, bool& line_start) {
   for (std::size_t index = 0; index < trivia.size(); ++index) {
     if (trivia[index] != '<' || index + 1 >= trivia.size() || trivia[index + 1] != '<') {
       continue;
@@ -1986,13 +1971,19 @@ void append_comments(std::string& formatted, const std::string_view trivia, int&
       const std::size_t newline = trivia.find_first_of("\r\n", index);
       end = newline == std::string_view::npos ? trivia.size() : newline;
     }
+    const bool inline_comment = !line_start && trivia.substr(0, index).find_first_of("\r\n") == std::string_view::npos;
     if (!formatted.empty() && formatted.back() != '\n') {
-      formatted.push_back('\n');
+      formatted.push_back(inline_comment ? ' ' : '\n');
     }
-    formatted.append(static_cast<std::size_t>(indent) * 2, ' ');
+    if (!inline_comment) {
+      for (int level = 0; level < indent; ++level) formatted.append(indent_unit);
+    }
     formatted.append(trivia.substr(index, end - index));
-    formatted.push_back('\n');
-    line_start = true;
+    const bool inline_block = inline_comment && index + 2 < trivia.size() && trivia[index + 2] == '[' &&
+        trivia.substr(index, end - index).find_first_of("\r\n") == std::string_view::npos &&
+        trivia.substr(end).find_first_of("\r\n") == std::string_view::npos;
+    if (!inline_block) formatted.push_back('\n');
+    line_start = !inline_block;
     if (end == 0) {
       break;
     }
@@ -2002,7 +1993,7 @@ void append_comments(std::string& formatted, const std::string_view trivia, int&
 
 }  // namespace
 
-std::string format_source(const std::string_view source) {
+std::string format_source(const std::string_view source, const std::uint32_t tab_size, const bool insert_spaces) {
   const LexResult lexed = Lexer(source).tokenize();
   if (!lexed.diagnostics.empty() || std::any_of(lexed.tokens.begin(), lexed.tokens.end(),
       [](const Token& token) { return token.type == TokenType::Invalid; })) return std::string(source);
@@ -2010,9 +2001,60 @@ std::string format_source(const std::string_view source) {
   int indent = 0;
   bool line_start = true;
   std::size_t cursor = 0;
+  const std::string indent_unit = insert_spaces ? std::string(std::clamp(tab_size, 1u, 16u), ' ') : "\t";
+  struct Delimiter { TokenType type; bool multiline; bool block = false; };
+  std::vector<Delimiter> delimiters;
+  std::vector<std::size_t> matching(lexed.tokens.size(), lexed.tokens.size());
+  std::vector<std::size_t> brace_stack;
+  for (std::size_t index = 0; index < lexed.tokens.size(); ++index) {
+    if (lexed.tokens[index].type == TokenType::OpenBrace) brace_stack.push_back(index);
+    else if (lexed.tokens[index].type == TokenType::CloseBrace && !brace_stack.empty()) {
+      matching[brace_stack.back()] = index;
+      brace_stack.pop_back();
+    }
+  }
+  // Recognize type-shaped angle lists without running module/type analysis.
+  // Comparisons keep their authored spacing unless the left name is a type.
+  std::unordered_set<std::string_view> type_names{"array", "dictionary", "optional", "tuple", "task", "atomic", "thread"};
+  for (std::size_t index = 1; index < lexed.tokens.size(); ++index) {
+    if (lexed.tokens[index - 1].type == TokenType::KwDef && lexed.tokens[index].type == TokenType::Identifier)
+      type_names.insert(lexed.tokens[index].lexeme);
+  }
+  std::vector<bool> generic_angle(lexed.tokens.size(), false);
+  std::vector<std::size_t> generic_base(lexed.tokens.size(), lexed.tokens.size());
+  for (std::size_t index = 1; index < lexed.tokens.size(); ++index) {
+    if (lexed.tokens[index].type != TokenType::Less) continue;
+    const auto& base = lexed.tokens[index - 1];
+    const bool named_type = base.type == TokenType::Identifier && (!base.lexeme.empty() &&
+        (type_names.contains(base.lexeme) || std::isupper(static_cast<unsigned char>(base.lexeme.front())) != 0));
+    if (!named_type && base.type != TokenType::KwTemplate && base.type != TokenType::KwStaticCast) continue;
+    std::size_t depth = 1, end = index + 1;
+    for (; end < lexed.tokens.size(); ++end) {
+      const auto type = lexed.tokens[end].type;
+      if (type == TokenType::Less) ++depth;
+      else if (type == TokenType::Greater) { if (--depth == 0) break; }
+      else if (type != TokenType::Identifier && type != TokenType::Comma && type != TokenType::Scope &&
+          type != TokenType::Dot && type != TokenType::OpenParen && type != TokenType::CloseParen &&
+          type != TokenType::Arrow && type != TokenType::Pipe && type != TokenType::StringLiteral &&
+          type != TokenType::KwTypename && (type < TokenType::KwVoid || type > TokenType::KwAuto)) break;
+    }
+    if (depth != 0) continue;
+    for (std::size_t part = index; part <= end; ++part) {
+      if (lexed.tokens[part].type == TokenType::Less || lexed.tokens[part].type == TokenType::Greater) generic_angle[part] = true;
+    }
+    generic_base[end] = index - 1;
+  }
   const auto write_indent = [&]() {
-    formatted.append(static_cast<std::size_t>(indent) * 2, ' ');
+    for (int level = 0; level < indent; ++level) formatted.append(indent_unit);
     line_start = false;
+  };
+  const auto newline = [&]() {
+    if (!formatted.empty() && formatted.back() != '\n') formatted.push_back('\n');
+    line_start = true;
+  };
+  const auto paragraph = [&]() {
+    newline();
+    if (!formatted.empty() && (formatted.size() < 2 || formatted[formatted.size() - 2] != '\n')) formatted.push_back('\n');
   };
   for (std::size_t index = 0; index < lexed.tokens.size(); ++index) {
     const std::size_t token_index = index;
@@ -2020,7 +2062,7 @@ std::string format_source(const std::string_view source) {
     if (token.type == TokenType::Eof) {
       break;
     }
-    std::size_t start = source_offset(source, token.location.line, token.location.column);
+    std::size_t start = static_cast<std::size_t>(token.lexeme.data() - source.data());
     std::size_t end = start + token.lexeme.size();
     if (token.type == TokenType::StringLiteral || token.type == TokenType::TemplateString) {
       // Lexer payloads omit delimiters. Formatting must copy the original bytes,
@@ -2044,26 +2086,42 @@ std::string format_source(const std::string_view source) {
     }
     if (end > source.size() || start < cursor) return std::string(source);
     const std::string_view spelling = source.substr(start, end - start);
+    const std::string_view trivia = source.substr(cursor, start - cursor);
+    const bool original_gap = !trivia.empty();
+    // Keep authored paragraph boundaries instead of crushing the entire file.
+    const auto before_comment = trivia.substr(0, trivia.find("<<"));
+    if (line_start && !formatted.empty() && std::count(before_comment.begin(), before_comment.end(), '\n') > 1 &&
+        (formatted.size() < 2 || formatted[formatted.size() - 2] != '\n')) formatted.push_back('\n');
     if (start >= cursor && start <= source.size()) {
-      append_comments(formatted, source.substr(cursor, start - cursor), indent, line_start);
+      append_comments(formatted, trivia, indent, indent_unit, line_start);
       cursor = end;
     }
     const TokenType next = index + 1 < lexed.tokens.size() ? lexed.tokens[index + 1].type : TokenType::Eof;
     if (token.type == TokenType::CloseBrace) {
-      if (!formatted.empty() && formatted.back() != '\n') {
-        formatted.push_back('\n');
-      }
-      indent = std::max(0, indent - 1);
-      write_indent();
+      const bool multiline = delimiters.empty() || delimiters.back().multiline;
+      const bool block = delimiters.empty() || delimiters.back().block;
+      if (!delimiters.empty() && delimiters.back().type == TokenType::OpenBrace) delimiters.pop_back();
+      if (multiline) { newline(); indent = std::max(0, indent - 1); write_indent(); }
+      else if (token_index > 0 && lexed.tokens[token_index - 1].type != TokenType::OpenBrace &&
+               !formatted.empty() && formatted.back() != ' ') formatted.push_back(' ');
       formatted.append(spelling);
-      if (next == TokenType::KwElse) {
-        line_start = false;
-      } else {
-        formatted.push_back('\n');
-        line_start = true;
+      line_start = false;
+      // Closing an expression must stay attached to its comma, call, member or
+      // terminating semicolon. A following statement starts a new line.
+      if ((multiline || block) && next != TokenType::KwElse && next != TokenType::KwCatch && next != TokenType::KwWhile &&
+          next != TokenType::Semicolon && next != TokenType::Comma && next != TokenType::CloseParen &&
+          next != TokenType::CloseBracket && next != TokenType::Dot && next != TokenType::Scope &&
+          next != TokenType::OpenParen && next != TokenType::OpenBracket &&
+          (next < TokenType::Plus || next > TokenType::SignalConnect)) {
+        newline();
+        if (block && next != TokenType::CloseBrace && next != TokenType::Eof) paragraph();
       }
       continue;
     }
+    if (line_start && token_index > 0 && lexed.tokens[token_index - 1].type == TokenType::Semicolon &&
+        (delimiters.empty() || delimiters.back().type == TokenType::OpenBrace) &&
+        (token.type == TokenType::KwIf || token.type == TokenType::KwFor || token.type == TokenType::KwWhile ||
+         token.type == TokenType::KwSwitch || token.type == TokenType::KwTry || token.type == TokenType::KwGuard)) paragraph();
     if (line_start) {
       write_indent();
     } else if (token_index > 0) {
@@ -2073,27 +2131,74 @@ std::string format_source(const std::string_view source) {
       // an existing gap before '(' rather than changing expression semantics.
       const bool original_call_gap = token.type == TokenType::OpenParen && previous == TokenType::Identifier &&
           token.lexeme.data() > previous_token.lexeme.data() + previous_token.lexeme.size();
-      if (space_before(previous, token.type) || original_call_gap) {
+      const bool angle_boundary = token.type == TokenType::Less || token.type == TokenType::Greater ||
+          previous == TokenType::Less || previous == TokenType::Greater;
+      bool needs_space = angle_boundary ? original_gap : space_before(previous, token.type);
+      if (generic_angle[token_index] || (previous == TokenType::Less && generic_angle[token_index - 1])) needs_space = false;
+      else if (previous == TokenType::Greater && generic_angle[token_index - 1]) {
+        needs_space = space_before(previous, token.type) && token.type != TokenType::OpenParen;
+        const auto base = generic_base[token_index - 1];
+        // Preserve the whitespace that distinguishes a grouped checked type
+        // expression from calling its constructor.
+        if (token.type == TokenType::OpenParen && original_gap && base > 0 && base < lexed.tokens.size() &&
+            lexed.tokens[base - 1].type == TokenType::OpenParen) needs_space = true;
+      }
+      if (token.type == TokenType::PlusPlus || token.type == TokenType::MinusMinus ||
+          previous == TokenType::PlusPlus || previous == TokenType::MinusMinus) needs_space = false;
+      if ((needs_space || original_call_gap) && !formatted.empty() && formatted.back() != ' ' && formatted.back() != '\t') {
         formatted.push_back(' ');
       }
     }
     formatted.append(spelling);
     if (token.type == TokenType::OpenBrace) {
-      indent += 1;
-      formatted.push_back('\n');
-      line_start = true;
+      const TokenType previous = token_index > 0 ? lexed.tokens[token_index - 1].type : TokenType::Eof;
+      bool expression = previous == TokenType::Identifier || previous == TokenType::Greater ||
+          previous == TokenType::Equal || previous == TokenType::OpenParen || previous == TokenType::OpenBracket ||
+          previous == TokenType::Comma || previous == TokenType::KwReturn;
+      // A named declaration also ends in an identifier; it owns a statement block.
+      for (std::size_t scan = token_index; scan > 0;) {
+        const TokenType before = lexed.tokens[--scan].type;
+        if (before == TokenType::OpenBrace || before == TokenType::CloseBrace || before == TokenType::Semicolon) break;
+        if (before == TokenType::KwDef || before == TokenType::KwNamespace || before == TokenType::KwFunc) { expression = false; break; }
+      }
+      const bool empty = next == TokenType::CloseBrace;
+      const bool multiline = !empty && (!expression || matching[token_index] == lexed.tokens.size() ||
+          token.location.line != lexed.tokens[matching[token_index]].location.line);
+      delimiters.push_back({TokenType::OpenBrace, multiline, !expression});
+      if (multiline) { ++indent; newline(); }
+      else if (!empty) formatted.push_back(' ');
     } else if (token.type == TokenType::Semicolon) {
-      formatted.push_back('\n');
-      line_start = true;
+      if (delimiters.empty() || delimiters.back().type == TokenType::OpenBrace) {
+        // A trailing line comment belongs to this statement, not the next line.
+        std::size_t next_start = source.size();
+        if (index + 1 < lexed.tokens.size() && next != TokenType::Eof) {
+          next_start = static_cast<std::size_t>(lexed.tokens[index + 1].lexeme.data() - source.data());
+          if (next == TokenType::StringLiteral || next == TokenType::TemplateString || next == TokenType::TemplateHead) --next_start;
+        }
+        const auto following = source.substr(end, next_start - end);
+        const auto comment = following.find("<<");
+        if (comment == std::string_view::npos || following.substr(0, comment).find_first_of("\r\n") != std::string_view::npos) newline();
+        else line_start = false;
+      } else line_start = false;
     } else {
       line_start = false;
+      if (token.type == TokenType::OpenParen || token.type == TokenType::OpenBracket) delimiters.push_back({token.type, false});
+      else if ((token.type == TokenType::CloseParen || token.type == TokenType::CloseBracket) && !delimiters.empty()) delimiters.pop_back();
     }
   }
   if (cursor < source.size()) {
-    append_comments(formatted, source.substr(cursor), indent, line_start);
+    append_comments(formatted, source.substr(cursor), indent, indent_unit, line_start);
   }
   if (!formatted.empty() && formatted.back() != '\n') {
     formatted.push_back('\n');
+  }
+  // Formatting may change whitespace only. Fail closed if it would merge tokens
+  // (notably authored << comments) or alter a literal's contents.
+  const auto checked = Lexer(formatted).tokenize();
+  if (!checked.diagnostics.empty() || checked.tokens.size() != lexed.tokens.size()) return std::string(source);
+  for (std::size_t index = 0; index < checked.tokens.size(); ++index) {
+    if (checked.tokens[index].type != lexed.tokens[index].type || checked.tokens[index].lexeme != lexed.tokens[index].lexeme)
+      return std::string(source);
   }
   return formatted;
 }

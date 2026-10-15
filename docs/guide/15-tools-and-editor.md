@@ -33,6 +33,13 @@ The CL++ VS Code extension provides syntax highlighting, diagnostics while typin
 
 The extension uses `clpp-vm --lsp`, so its analysis is based on the same compiler as a command-line build. On Windows x64, the VSIX includes `clpp.exe`. The `clpp.serverPath` setting can point to another executable.
 
+**Format Document** uses the editor's tab width and spaces/tabs preference.
+It keeps `for` headers together, attaches initializer punctuation, normalizes
+generic brackets such as `array<T>` and separates statement groups with blank
+lines. Consecutive variable declarations stay grouped. Original literal contents
+and inline comments are preserved; input with malformed literals is left alone.
+The VS Code grammar recognizes generic types even before spacing is normalized.
+
 ## Build and test
 
 ```text

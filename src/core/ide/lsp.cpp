@@ -573,12 +573,18 @@ class Server {
       return;
     }
     if (method == "textDocument/formatting") {
-      const std::string formatted = format_source(text);
+      const auto options = params.value("options", json::object());
+      const auto tab_size = options.value("tabSize", 2u);
+      const bool insert_spaces = options.value("insertSpaces", true);
+      const std::string formatted = format_source(text, tab_size, insert_spaces);
       int end_line = 0;
+      std::uint32_t end_column = 1;
       for (const char c : text) {
         end_line += c == '\n' ? 1 : 0;
+        end_column = c == '\n' ? 1 : end_column + 1;
       }
-      reply(id, json::array({json{{"range", {{"start", {{"line", 0}, {"character", 0}}}, {"end", {{"line", end_line + 1}, {"character", 0}}}}},
+      reply(id, json::array({json{{"range", {{"start", {{"line", 0}, {"character", 0}}},
+                                                {"end", position(text, static_cast<std::uint32_t>(end_line + 1), end_column)}}},
                                   {"newText", formatted}}}));
       return;
     }

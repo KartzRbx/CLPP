@@ -22,7 +22,8 @@ layers:
   mutation: existing source mutations; test-suite mutation tooling not installed
 limitations:
   - Dedicated secret/SAST scanners were not available in this run
-  - No Linux/macOS/MSVC runner result
+  - Linux release, Linux ASan/UBSan, Windows MSVC and Windows ASan/UBSan passed on GitHub at 4a89823
+  - macOS and cross-compiled Windows package await the portable JSON decimal fix
   - Instrumented responsiveness is separate from the normal 50 ms performance gate
   - Windows LeakSanitizer not enabled
   - Discord RPC acknowledgement does not prove public profile rendering

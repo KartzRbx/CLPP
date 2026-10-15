@@ -65,6 +65,60 @@ TEST_CASE("formatter leaves malformed literals untouched", "[ide][formatter-roun
   }
 }
 
+TEST_CASE("formatter keeps loop headers initializers and trailing comments together", "[ide][formatter-layout]") {
+  const std::string source = "def Point { number X; number Y; }\n\n"
+      "array<Point> points = array<Point>(Point { X = 1, Y = 2 }, Point { X = 3, Y = 4 });\n"
+      "for (number i = 0; i < 2; i++) {\n    post(points[i].X); << keep this explanation\n}\n";
+  REQUIRE(clpp::analyze_program(source, {}).ok());
+  const auto formatted = clpp::ide::format_source(source, 4, true);
+  CHECK(formatted == "def Point {\n    number X;\n    number Y;\n}\n\n"
+      "array<Point> points = array<Point>(Point { X = 1, Y = 2 }, Point { X = 3, Y = 4 });\n\n"
+      "for (number i = 0; i < 2; i++) {\n    post(points[i].X); << keep this explanation\n}\n");
+  CHECK(clpp::analyze_program(formatted, {}).ok());
+  CHECK(clpp::ide::format_source(formatted, 4, true) == formatted);
+  const auto tabs = clpp::ide::format_source(source, 4, false);
+  CHECK(tabs.find("\n\tnumber X;") != std::string::npos);
+  CHECK(tabs.find("\n\tpost(points[i].X);") != std::string::npos);
+  CHECK(clpp::ide::format_source(tabs, 4, false) == tabs);
+}
+
+TEST_CASE("formatter attaches block terminators and retains inline block comments", "[ide][formatter-layout]") {
+  const std::string source = "void Done() {}\n\nnumber Read(number value) { try { return value; } catch { return 0; } }\n"
+      "number value <<[ unit ]>> = 1;\npost(Read(value));\n";
+  const auto formatted = clpp::ide::format_source(source);
+  CHECK(formatted.find("void Done() {}\n\nnumber Read") != std::string::npos);
+  CHECK(formatted.find("} catch {") != std::string::npos);
+  CHECK(formatted.find("number value <<[ unit ]>> = 1;") != std::string::npos);
+  CHECK(clpp::analyze_program(formatted, {}).ok());
+  CHECK(clpp::ide::format_source(formatted) == formatted);
+}
+
+TEST_CASE("formatter repairs spaced generic types and constructors", "[ide][formatter-layout]") {
+  const std::string source = "export def Predicate<T> = (T) -> bool;\n"
+      "export template<typename T> array<T> Filter(array<T> input, Predicate < T > predicate) {\n"
+      "array < T > output = array < T > ();\nreturn output;\n}\n";
+  REQUIRE(clpp::analyze_program(source, {}).ok());
+  const auto formatted = clpp::ide::format_source(source);
+  CHECK(formatted.find("Predicate<T> predicate") != std::string::npos);
+  CHECK(formatted.find("array<T> output = array<T>();") != std::string::npos);
+  CHECK(formatted.find("export template<typename T> array<T> Filter") != std::string::npos);
+  CHECK(clpp::analyze_program(formatted, {}).ok());
+  CHECK(clpp::ide::format_source(formatted) == formatted);
+}
+
+TEST_CASE("formatter separates variable groups and consecutive conditionals", "[ide][formatter-layout]") {
+  const std::string source = "void Run() {\nnumber first = 1;\nnumber second = 2;\n"
+      "if (first == 1) { post(first); }\nnumber third = 3;\n"
+      "if (second == 2) { post(second); }\nif (third == 3) { post(third); }\n}\n";
+  const auto formatted = clpp::ide::format_source(source);
+  CHECK(formatted.find("number first = 1;\n  number second = 2;\n\n  if") != std::string::npos);
+  CHECK(formatted.find("  }\n\n  number third") != std::string::npos);
+  CHECK(formatted.find("number third = 3;\n\n  if") != std::string::npos);
+  CHECK(formatted.find("post(second);\n  }\n\n  if") != std::string::npos);
+  CHECK(clpp::analyze_program(formatted, {}).ok());
+  CHECK(clpp::ide::format_source(formatted) == formatted);
+}
+
 TEST_CASE("authored comments suppress semantic roles and preserve formatter trivia", "[ide][comments]") {
   const std::string source = "<< 5) def com HERANÇA nominal.\n<<[ number Hidden; ]>>\n";
   REQUIRE(clpp::ide::semantic_tokens(source).empty());
