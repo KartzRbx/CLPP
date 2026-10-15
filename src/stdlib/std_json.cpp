@@ -8,6 +8,7 @@
 // arrays of their fields (field names do not exist at run time): use a dictionary for objects.
 
 #include "stdlib/host.hpp"
+#include "stdlib/decimal_parse.hpp"
 
 #include <charconv>
 #include <cmath>
@@ -355,8 +356,7 @@ class Parser {
       if (converted.ec != std::errc{} || converted.ptr != end) return invalid();
       out = Value::integer_of(integer); return true;
     }
-    const auto converted = std::from_chars(begin, end, parsed, std::chars_format::general);
-    if (converted.ec != std::errc{} || converted.ptr != end || !std::isfinite(parsed)) return invalid();
+    if (!detail::parse_decimal(std::string_view(begin, static_cast<std::size_t>(end - begin)), parsed)) return invalid();
     out = Value::number_of(parsed);
     return true;
   }

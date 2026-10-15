@@ -5,6 +5,7 @@
 #include "clpp/vm.hpp"
 #include "clpp/stdlib.hpp"
 #include "core/compiler/analyze.hpp"
+#include "stdlib/decimal_parse.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -4169,6 +4170,22 @@ TEST_CASE("break and continue leave only the protected scopes they exit", "[try-
   )");
   INFO(result.error); REQUIRE(result.compiled); REQUIRE(result.ran);
   CHECK(result.output == "retained outer catch\ntop catch\n0\n");
+}
+
+TEST_CASE("portable JSON decimal parsing preserves ranges and negative zero", "[typed-json][portable-decimal]") {
+  for (const auto* spelling : {"0.0", "-0.0", "1.5", "1e-300", "4.9406564584124654e-324", "1.7976931348623157e308"}) {
+    INFO(spelling);
+    double standard = 0, portable = 0;
+    REQUIRE(clpp::stdlib::detail::parse_decimal(std::string_view(spelling), standard));
+    REQUIRE(clpp::stdlib::detail::parse_decimal_classic(std::string_view(spelling), portable));
+    CHECK(standard == portable);
+    CHECK(std::signbit(standard) == std::signbit(portable));
+  }
+  for (const auto* spelling : {"1e309", "1e-400", "1.5trailing", "nan", "inf", ""}) {
+    INFO(spelling);
+    double value = 0;
+    CHECK_FALSE(clpp::stdlib::detail::parse_decimal_classic(std::string_view(spelling), value));
+  }
 }
 
 TEST_CASE("type first expressions cannot force incompatible or unchecked values", "[type-ascription]") {
