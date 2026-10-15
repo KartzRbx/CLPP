@@ -34,3 +34,6 @@
 {"date": "2026-10-15", "layer": "formatter-sanitizer-lsp-corpus", "total": 62, "passed": 62, "failed": 0, "verdict": "PASS"}
 {"date": "2026-10-15", "layer": "textmate-oniguruma-grammar", "total": 14, "passed": 14, "failed": 0, "verdict": "PASS"}
 {"date": "2026-10-15", "layer": "formatter-vsix-install", "total": 1, "passed": 1, "failed": 0, "verdict": "PASS", "version": "0.10.6"}
+{"date": "2026-10-15", "layer": "composed-site-regression", "total": 1, "passed": 1, "failed": 0, "verdict": "PASS"}
+{"date": "2026-10-15", "layer": "composed-site-all-links", "total": 1, "passed": 1, "failed": 0, "verdict": "PASS"}
+{"date": "2026-10-15", "layer": "isolated-local-vm-runtime", "total": 1, "passed": 1, "failed": 0, "verdict": "PASS"}

@@ -38,5 +38,6 @@ jobs:
       - name: Compose both sites and validate the final routes
         if: hashFiles('scripts/compose-luau-docs.mjs') != ''
         run: |
+          node --test tests/docs/test_site_composition.cjs
           node scripts/compose-luau-docs.mjs
-          node www/check-content.mjs --built
+          node www/check-content.mjs --built --with-luau

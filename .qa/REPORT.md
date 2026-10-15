@@ -4,6 +4,28 @@ The author now authorizes general CLI support, site/installer review, local inst
 and GitHub publication after validation. The primary user's Combat edit is preserved.
 Historical local-only stages below describe their scope at that time.
 
+## Composed documentation and local runtime installation — 2026-10-15
+
+The actual integrated-site gate found two distinct issues: VM English prose
+rules also inspected independently versioned Luau historical pages, and legacy
+Luau API links still targeted `/CLPP/api/`. VM prose rules now stay scoped to VM
+pages when the explicit `--with-luau` mode is selected; link/asset checks still
+cover every generated page of both products. The composer normalizes API links
+inside the independent copy and adds legacy API/benchmark redirects while
+preserving existing VM routes. A real fixture checks namespace separation,
+route collisions, unchanged source, historical prose and repeat composition.
+Both complete sites built, composition passed, and all generated links resolved.
+
+GitHub's Windows package build now succeeds with the decimal fix, but the
+download job requested the obsolete artifact name `clpp-windows` while upload
+used `clpp-vm-windows`. The integrated workflow is being aligned; this was a CI
+delivery wiring bug, not a failed executable startup.
+
+The integrated clpp-vm Runtime component was installed separately in
+`%LOCALAPPDATA%/Programs/CLPP-VM`, preserving the independent Luau compiler.
+Startup with only system DLLs on PATH passed. Version remains the source core
+0.10.1 snapshot; VS Code package version is 0.10.6. Neither is a new core release.
+
 ## Format Document and generic highlighting — installed 0.10.6
 
 The author's VS Code screenshots reproduced real formatter/grammar defects:

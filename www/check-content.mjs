@@ -39,9 +39,14 @@ if (process.argv.includes('--built')) {
   function walk(dir) { return fs.readdirSync(dir,{withFileTypes:true}).flatMap(entry => entry.isDirectory()?walk(path.join(dir,entry.name)):[path.join(dir,entry.name)]); }
   for (const file of walk(dist).filter(name => name.endsWith('.html'))) {
     const html = fs.readFileSync(file,'utf8');
+    // The composed Luau release keeps its own historical documentation. VM
+    // English prose rules do not translate that independently versioned archive;
+    // all links/assets below are still checked for both products.
+    const independentArchive = process.argv.includes('--with-luau') &&
+      path.relative(dist, file).split(path.sep)[0] === 'luau';
     const visible = html.replace(/<(script|style|pre)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]*>/g, ' ');
     const untranslated = visible.match(/(?<!\p{L})(?:você|vocês|não|também|português|variáveis|tipagem|tipagens|funções|capítulos|código|compilação|implementação|explicação|referência|própria|linguagem|sintaxe)(?!\p{L})/giu);
-    if (untranslated) errors.push(`${path.relative(dist,file)}: generated HTML contains untranslated prose (${[...new Set(untranslated)].join(', ')})`);
+    if (untranslated && !independentArchive) errors.push(`${path.relative(dist,file)}: generated HTML contains untranslated prose (${[...new Set(untranslated)].join(', ')})`);
 
     for (const match of html.matchAll(/(?:href|src)="(\/CLPP\/[^"#?]*)(?:[?#][^"]*)?"/g)) {
       const relative = decodeURIComponent(match[1].slice('/CLPP/'.length));
