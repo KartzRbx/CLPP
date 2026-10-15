@@ -19,6 +19,8 @@ list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
 include(CLPPTargets)
 include(CTest)
 include(Catch)
+add_test(NAME "LLVM toolchain normalizes native path separators"
+         COMMAND ${CMAKE_COMMAND} -P "${CMAKE_SOURCE_DIR}/tests/distribution/check_toolchain_paths.cmake")
 
 add_executable(clpp_unit_tests
   unit/test_lexer.cpp

@@ -7,6 +7,9 @@ set(CMAKE_SYSTEM_PROCESSOR x86_64)
 if(NOT LLVM_MINGW)
   set(LLVM_MINGW "$ENV{LLVM_MINGW}")
 endif()
+# Native PowerShell paths may contain \a, \t, etc. Normalize before CMake writes
+# them into its generated compiler configuration as quoted CMake source.
+string(REPLACE "\\" "/" LLVM_MINGW "${LLVM_MINGW}")
 set(CLPP_LLVM_TOOL_SUFFIX "")
 if(CMAKE_HOST_WIN32)
   set(CLPP_LLVM_TOOL_SUFFIX ".exe")

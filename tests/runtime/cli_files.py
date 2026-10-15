@@ -122,7 +122,7 @@ post(Json.Stringify(file)); post(Json.Stringify(Fs.Stat("not-present"))); post(J
             (root / 'different.txt').write_bytes(b'first')
             output = run('''post(Path.Equivalent("first.txt", "alias.txt"));
 post(Path.Equivalent("first.txt", "different.txt"));
-post(Path.Canonical("directory/../first.txt") == Path.Absolute("first.txt", ""));
+post(Path.Equivalent(Path.Canonical("directory/../first.txt"), Path.Absolute("first.txt", "")));
 number caught=0;
 try { Path.Equivalent("first.txt", "absent"); } catch { caught++; }
 try { Path.Canonical("bad\\0suffix"); } catch { caught++; }

@@ -16,6 +16,7 @@
 #include <map>
 #include <stdexcept>
 #include <thread>
+#include <utility>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -45,6 +46,27 @@ namespace host {
 namespace {
 using Clock = std::chrono::steady_clock;
 constexpr std::size_t kMaxBytes = 64 * 1024 * 1024;
+
+// Older supported libc++ SDKs do not ship std::jthread. No stop token is needed
+// here: the owned process/job is terminated before exceptional pipe joins.
+class JoiningThread {
+ public:
+  JoiningThread() = default;
+  template <typename Function> explicit JoiningThread(Function&& function)
+      : m_thread(std::forward<Function>(function)) {}
+  JoiningThread(JoiningThread&&) noexcept = default;
+  JoiningThread& operator=(JoiningThread&& other) {
+    if (this != &other) {
+      if (m_thread.joinable()) m_thread.join();
+      m_thread = std::move(other.m_thread);
+    }
+    return *this;
+  }
+  ~JoiningThread() { if (m_thread.joinable()) m_thread.join(); }
+  void join() { m_thread.join(); }
+ private:
+  std::thread m_thread;
+};
 
 std::string utf8_path(const std::filesystem::path& path) {
   const auto text = path.generic_u8string();
@@ -234,11 +256,11 @@ bool execute(const Request& request, Result& result, std::string& error) {
     }
   };
   // Start all pipes concurrently: either output stream may fill before stdin is consumed.
-  std::jthread output, errors, input;
+  JoiningThread output, errors, input;
   try {
-  output = std::jthread([&] { try { read(out_read.value, result.output); } catch (...) { result.io_error.store(true); } });
-  errors = std::jthread([&] { try { read(err_read.value, result.error); } catch (...) { result.io_error.store(true); } });
-  input = std::jthread([&] {
+  output = JoiningThread([&] { try { read(out_read.value, result.output); } catch (...) { result.io_error.store(true); } });
+  errors = JoiningThread([&] { try { read(err_read.value, result.error); } catch (...) { result.io_error.store(true); } });
+  input = JoiningThread([&] {
     std::size_t offset = 0;
     while (offset < request.input.size()) {
       DWORD written = 0;
@@ -335,11 +357,11 @@ bool execute(const Request& request, Result& result, std::string& error) {
       if (result.limited.load()) break;
     }
   };
-  std::jthread output, errors, input;
+  JoiningThread output, errors, input;
   try {
-  output = std::jthread([&] { try { read_pipe(out_read.value, result.output); } catch (...) { result.io_error.store(true); } });
-  errors = std::jthread([&] { try { read_pipe(err_read.value, result.error); } catch (...) { result.io_error.store(true); } });
-  input = std::jthread([&] {
+  output = JoiningThread([&] { try { read_pipe(out_read.value, result.output); } catch (...) { result.io_error.store(true); } });
+  errors = JoiningThread([&] { try { read_pipe(err_read.value, result.error); } catch (...) { result.io_error.store(true); } });
+  input = JoiningThread([&] {
     sigset_t mask; sigemptyset(&mask); sigaddset(&mask, SIGPIPE); pthread_sigmask(SIG_BLOCK, &mask, nullptr);
     std::size_t offset = 0;
     while (offset < request.input.size()) {
