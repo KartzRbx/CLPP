@@ -9,6 +9,11 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(Catch2)
 
+# Catch2 and the tested code must agree on libc++ sanitizer container annotations.
+# Mixed instrumented/uninstrumented Catch2 inline code can corrupt XML failure reports.
+clpp_apply_sanitizers(Catch2)
+clpp_apply_sanitizers(Catch2WithMain)
+
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
 
 include(CLPPTargets)
@@ -127,6 +132,26 @@ endif()
 # End-to-end language server test: the same JSON-RPC traffic VS Code sends.
 find_package(Python3 COMPONENTS Interpreter QUIET)
 if(Python3_Interpreter_FOUND)
+  add_test(NAME "CLI filesystem Unicode and NUL paths"
+           COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/runtime/filesystem_host.py" $<TARGET_FILE:clpp>)
+  set_tests_properties("CLI filesystem Unicode and NUL paths" PROPERTIES LABELS "tooling;contract" TIMEOUT 60)
+  add_test(NAME "CLI generic child process contract"
+           COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/runtime/tooling_host.py" $<TARGET_FILE:clpp>)
+  set_tests_properties("CLI generic child process contract" PROPERTIES LABELS "tooling;contract" TIMEOUT 180)
+  add_test(NAME "CLI bounded storage atomic writes and path identity"
+           COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/runtime/cli_files.py" $<TARGET_FILE:clpp>)
+  set_tests_properties("CLI bounded storage atomic writes and path identity" PROPERTIES LABELS "tooling;contract" TIMEOUT 180)
+  add_test(NAME "LSP formatter preserves the full example corpus"
+           COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/lsp/test_formatter.py" $<TARGET_FILE:clpp>)
+  set_tests_properties("LSP formatter preserves the full example corpus" PROPERTIES LABELS "lsp;contract" TIMEOUT 240)
+  if(CLPP_SANITIZE_ADDRESS)
+    add_executable(clpp_reporter_probe runtime/catch_reporter.cpp)
+    target_link_libraries(clpp_reporter_probe PRIVATE Catch2::Catch2WithMain)
+    clpp_configure_target(clpp_reporter_probe)
+    add_test(NAME "sanitizer JUnit failure reporting"
+             COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/runtime/check_catch_reporter.py" $<TARGET_FILE:clpp_reporter_probe>)
+    set_tests_properties("sanitizer JUnit failure reporting" PROPERTIES LABELS "qa;sanitizer" TIMEOUT 30)
+  endif()
   add_test(NAME "lsp malformed transport remains bounded"
            COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/lsp/test_transport.py" $<TARGET_FILE:clpp>)
   set_tests_properties("lsp malformed transport remains bounded" PROPERTIES LABELS "lsp;core" TIMEOUT 60)
@@ -136,11 +161,19 @@ if(Python3_Interpreter_FOUND)
   add_test(NAME "all example sources use current syntax"
            COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/examples/check_sources.py" $<TARGET_FILE:clpp>)
   set_tests_properties("all example sources use current syntax" PROPERTIES LABELS examples TIMEOUT 120)
+  add_test(NAME "language contract examples and keyword coverage"
+           COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/examples/check_language_contract.py" $<TARGET_FILE:clpp>)
+  set_tests_properties("language contract examples and keyword coverage" PROPERTIES LABELS "examples;docs;contract" TIMEOUT 120)
   add_test(NAME "CLI check does not execute native effects"
            COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/runtime/check_only.py" $<TARGET_FILE:clpp>)
   add_test(NAME "lsp end to end"
            COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/lsp/test_lsp.py" $<TARGET_FILE:clpp>)
   set_tests_properties("lsp end to end" PROPERTIES LABELS lsp TIMEOUT 120)
+  if(CLPP_SANITIZE_ADDRESS OR CLPP_SANITIZE_UNDEFINED)
+    # Instrumented correctness/responsiveness is a separate gate. Normal Debug
+    # and Release builds retain the original 50 ms deployed-runtime threshold.
+    set_tests_properties("lsp end to end" PROPERTIES ENVIRONMENT "CLPP_LSP_TIMING_BUDGET_MS=500")
+  endif()
   # Every ```clp example in docs/ compiles, runs and prints what its ```saida block says.
   add_test(NAME "documentation examples"
            COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/docs/check_docs.py" $<TARGET_FILE:clpp>

@@ -142,6 +142,7 @@ void emit_u16(BytecodeChunk& chunk, const std::uint16_t value) {
     case parser::Expr::Kind::Ternary:
     case parser::Expr::Kind::Update:
     case parser::Expr::Kind::Cast:
+    case parser::Expr::Kind::Ascribe:
       return compiler::Opcode::Nop;
   }
   return compiler::Opcode::Nop;
@@ -180,6 +181,9 @@ void emit_u16(BytecodeChunk& chunk, const std::uint16_t value) {
                              std::vector<Diagnostic>& diagnostics) {
   if (expr.location.line != 0) {
     emit_origin = expr.location;
+  }
+  if (expr.kind == parser::Expr::Kind::Ascribe) {
+    return expr.left && emit_expr(*expr.left, chunk, diagnostics);
   }
   if (expr.kind == parser::Expr::Kind::Cast) {
     if (!expr.left || !emit_expr(*expr.left, chunk, diagnostics)) return false;
@@ -641,8 +645,24 @@ void emit_u16(BytecodeChunk& chunk, const std::uint16_t value) {
   return true;
 }
 
-thread_local std::vector<std::vector<std::size_t>*> break_stack;
-thread_local std::vector<std::vector<std::size_t>*> continue_stack;  // loops only (a switch is not a target)
+thread_local std::size_t emit_try_depth = 0;
+struct TryScope {
+  TryScope() { ++emit_try_depth; }
+  ~TryScope() { --emit_try_depth; }
+};
+struct JumpTarget {
+  std::vector<std::size_t>* jumps;
+  std::size_t try_depth;
+  JumpTarget(std::vector<std::size_t>* value) : jumps(value), try_depth(emit_try_depth) {}
+  std::vector<std::size_t>* operator->() const { return jumps; }
+};
+thread_local std::vector<JumpTarget> break_stack;
+thread_local std::vector<JumpTarget> continue_stack;  // loops only (a switch is not a target)
+void leave_tries(BytecodeChunk& chunk, const std::size_t destination_depth) {
+  for (std::size_t depth = emit_try_depth; depth > destination_depth; --depth) {
+    emit_op(chunk, compiler::Opcode::EndTry);
+  }
+}
 [[nodiscard]] bool emit_expr(const parser::Expr& expr, BytecodeChunk& chunk,
                              std::vector<Diagnostic>& diagnostics) {
   if (!emit_value(expr, chunk, diagnostics)) return false;
@@ -662,6 +682,7 @@ thread_local std::vector<std::vector<std::size_t>*> continue_stack;  // loops on
       diagnostics.push_back(Diagnostic{stmt.name_location, stmt.name_span, "continue outside loop"});
       return false;
     }
+    leave_tries(chunk, continue_stack.back().try_depth);
     continue_stack.back()->push_back(emit_jump(chunk, compiler::Opcode::Jump));
     return true;
   }
@@ -670,6 +691,7 @@ thread_local std::vector<std::vector<std::size_t>*> continue_stack;  // loops on
       diagnostics.push_back(Diagnostic{stmt.name_location, stmt.name_span, "break outside loop"});
       return false;
     }
+    leave_tries(chunk, break_stack.back().try_depth);
     break_stack.back()->push_back(emit_jump(chunk, compiler::Opcode::Jump));
     return true;
   }
@@ -741,6 +763,7 @@ thread_local std::vector<std::vector<std::size_t>*> continue_stack;  // loops on
     } else if (!emit_const(chunk, Value::integer_of(0), diagnostics)) {
       return false;
     }
+    leave_tries(chunk, 0);
     emit_op(chunk, compiler::Opcode::Return);
     return true;
   }
@@ -749,9 +772,12 @@ thread_local std::vector<std::vector<std::size_t>*> continue_stack;  // loops on
     emit_op(chunk, compiler::Opcode::Protect);
     const std::size_t handler = chunk.code.size();
     emit_u16(chunk, 0);
-    for (const parser::Stmt& child : stmt.then_body) {
-      if (!emit_stmt(child, chunk, diagnostics)) {
-        return false;
+    {
+      TryScope scope;
+      for (const parser::Stmt& child : stmt.then_body) {
+        if (!emit_stmt(child, chunk, diagnostics)) {
+          return false;
+        }
       }
     }
     emit_op(chunk, compiler::Opcode::EndTry);

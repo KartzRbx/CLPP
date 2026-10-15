@@ -34,6 +34,8 @@ void reset_resources() {
     host::add_audio(entries);
     host::add_input(entries);
     host::add_json_typed(entries);  // Append to retain existing serialized native IDs.
+    host::add_tooling(entries);
+    host::add_cli_files(entries);
     return entries;
   }();
   return table;
@@ -41,7 +43,7 @@ void reset_resources() {
 
 }  // namespace
 
-HostExecution::HostExecution() : m_lock(execution_mutex()) { reset_resources(); }
+HostExecution::HostExecution() : m_lock(execution_mutex()) { reset_resources(); host::reset_process_status(); }
 HostExecution::~HostExecution() { reset_resources(); }
 
 int host_native(const std::string_view name, const std::size_t arity) {

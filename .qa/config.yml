@@ -1,6 +1,6 @@
 project: CL++ VM
 detected: 2026-10-14
-environment: local-only
+environment: local-validation-and-authorized-github-publication
 stack:
   core: C++20 / CMake / Catch2 / CTest
   lsp_contract: Python JSON-RPC client
@@ -18,11 +18,11 @@ layers:
   e2e: isolated installer and VSIX compiler execution
   ui: partial; user screenshot confirms Zed swatches, capture failed
   authz: not-applicable; no HTTP identity service
-  canary: skipped; publication and remote actions not authorized
+  canary: pending; inspect actual GitHub results after authorized publication
   mutation: existing source mutations; test-suite mutation tooling not installed
 limitations:
   - Dedicated secret/SAST scanners were not available in this run
   - No Linux/macOS/MSVC runner result
-  - Sanitized LSP latency fluctuates around the 50 ms budget
+  - Instrumented responsiveness is separate from the normal 50 ms performance gate
   - Windows LeakSanitizer not enabled
   - Discord RPC acknowledgement does not prove public profile rendering

@@ -89,6 +89,12 @@ export E.Score Consume(E.Grid<E.Tile> maze, E.Vec2 at) {
     return gained;
 }
 
+<<[
+
+    Que munitinho mamãe <3
+
+]>>
+
 << ---------------------------------------------------------------------
 << Eventos: E.ScoreListener é um tipo de função checado de ponta a ponta
 << ---------------------------------------------------------------------

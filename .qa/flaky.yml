@@ -7,5 +7,6 @@ checks:
     failed: 3
     measurements_ms: [53.68, 61.38, 62.13, 43.50, 43.63]
     reason: Instrumented timing fluctuates; functional protocol assertions all pass
-    action: Keep failure visible; separate instrumented correctness and deployed-build latency before changing budgets
+    action: Historical measurements retained; normal builds still enforce 50 ms, instrumented correctness enforces 500 ms responsiveness
+    status: separated-performance-and-instrumented-correctness-gates
     disabled_in_ci: false

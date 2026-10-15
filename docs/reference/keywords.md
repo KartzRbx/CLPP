@@ -1,6 +1,6 @@
 # Keywords and operators
 
-Use this page to find a language word by purpose. The vocabulary follows the author's target language; recognizing a word in an old lexer does not prove target compiler support. See [Implementation status](status.md).
+Use this page to find a language word by purpose. The [complete lexer keyword inventory](keyword-inventory.md) includes every reserved word, with removed forms identified. The [language contract](language-contract.md) also covers contextual type names, less common forms and semantics. See [Implementation status](status.md).
 
 ## Declaration words
 
@@ -56,8 +56,8 @@ Use this page to find a language word by purpose. The vocabulary follows the aut
 
 ## Runtime extensions and APIs
 
-`signal`, `connection`, `observable` and typed `tuple` event payloads are explained in [Events](../guide/13-events.md). `async`, `await`, `spawn`, `task`, `thread`, `join`, `parallel`, and atomic operations are explained in [Concurrency](../guide/12-concurrency.md), including pending syntax contracts.
+`signal`, `connection`, `observable` and typed `tuple` event payloads are explained in [Events](../guide/13-events.md). `async`, `await`, `spawn`, `task`, `thread`, `join`, `parallel`, and atomic operations are explained in [Concurrency](../guide/12-concurrency.md), with tested scheduling and synchronization rules.
 
 `post`, `warn`, `report`, `len`, `list`, `push`, `pop`, and the collection constructors are runtime callables. They are not user-defined logging aliases or replacements for declaration syntax. The [library](../guide/14-standard-library.md) documents their existing APIs.
 
-Access modifiers, operator declarations, coroutine ownership, additional checking modes, and variadic forms require separate target decisions before being added as ready language features. Their appearance in implementation code is not a language promise.
+Access modifiers, restricted data operators, the existing dynamic variadic form and current pragma modes are described in the [language contract](language-contract.md). Their implementation does not imply arbitrary C++ modifiers, custom operators, variadic generics or new checking modes.

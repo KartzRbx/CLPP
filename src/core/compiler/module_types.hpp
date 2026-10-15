@@ -96,6 +96,7 @@ inline void annotation(std::string& text, const Map& types) {
 }
 
 inline void expression(parser::Expr& expr, const Map& types, const std::vector<std::string>& locals = {}) {
+  if (expr.kind == parser::Expr::Kind::Ascribe && lexical_annotations) annotation(expr.value, types);
   if (lexical_globals && expr.kind == parser::Expr::Kind::Call && !expr.left) {
     auto dot = expr.value.find('.');
     if (dot == std::string::npos) dot = expr.value.find("::");

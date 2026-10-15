@@ -452,6 +452,7 @@ constexpr std::string_view kIoSource = R"clp(<< @clpp.io: the console. Colors an
 export void Print(any value) { io::Print(value, 0); }
 export void PrintError(any value) { io::Print(value, 1); }
 export string ReadLine() { return io::ReadLine(""); }
+export void Error(string text) { io::Error(text); }
 export string Prompt(string question) { return io::ReadLine(question); }
 export float ReadNumber(string question) { return io::ReadNumber(question); }
 export string ReadAll() { return io::ReadAll(); }

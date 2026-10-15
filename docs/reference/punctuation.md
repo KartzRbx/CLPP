@@ -9,6 +9,7 @@ CL++ uses punctuation to make boundaries explicit. Indentation improves readabil
 | `;` | End an instruction or alias | `number hp = 100;` |
 | `{ }` | Block, data definition, or initializer | `if (hp > 0) { post(hp); }` |
 | `( )` | Arguments, conditions, grouping | `post(hp);`, `(a + b) * c` |
+| `(Type value)` | Explicit checked expression type | `(Outcome "ongoing")` |
 | `[ ]` | Index a collection | `scores[0]` |
 | `,` | Separate parameters or values | `Damage(20, 5)` |
 | `< >` | Generic type arguments | `array<number>` |

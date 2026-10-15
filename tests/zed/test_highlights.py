@@ -59,9 +59,11 @@ for prefix, word, role in [('auto storedFactory', 'Keep', 'function'),
                            ('decltype(', 'decltype', 'keyword'),
                            ('Vector3 position', 'Vector3', 'type.builtin'),
                            ('buffer bytes', 'buffer', 'type.builtin'),
+                           ('auto typedOutcome', 'Outcome', 'type'),
+                           ('post((attempts', 'attempts', 'variable'),
                            ('number pontuação', 'pontuação', 'variable')]:
     row = next(index for index, line in enumerate(smoke_lines) if line.startswith(prefix))
-    column = smoke_lines[row].index(word)
+    column = re.search(r'\b' + re.escape(word) + r'\b', smoke_lines[row]).start()
     assert role in smoke_captures.get((row, column, word), set()), (word, role)
 print('PASS stored generic function, decltype and builtin vector/buffer roles')
 with tempfile.TemporaryDirectory(prefix='clpp-grammar-invalid-') as directory:

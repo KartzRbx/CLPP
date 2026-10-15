@@ -1,7 +1,8 @@
 // One-shot, user-authorized test of the desktop Discord Rich Presence transport.
 const net = require('node:net');
 const crypto = require('node:crypto');
-const clientId = '1263505205522337886'; // Upstream Zed application's public ID.
+const vscodeIcon = process.argv.includes('--vscode-icon');
+const clientId = vscodeIcon ? '383226320970055681' : '1263505205522337886'; // Public editor application IDs.
 const frame = (opcode, data) => {
   const body = Buffer.from(JSON.stringify(data));
   const header = Buffer.alloc(8); header.writeUInt32LE(opcode); header.writeUInt32LE(body.length, 4);
@@ -53,8 +54,14 @@ async function main() {
   };
   try {
     const ready = wait('ready'); socket.write(frame(0, { v: 1, client_id: clientId })); await ready;
-    await sendActivity({ details: 'Programando CL++', state: 'Projeto: CLPP_Rework | main.clp',
-      timestamps: { start: Math.floor(Date.now() / 1000) } });
+    const activity = { details: 'Programando CL++', state: 'Projeto: CLPP_Rework | main.clp',
+      timestamps: { start: Math.floor(Date.now() / 1000) } };
+    if (vscodeIcon) activity.assets = {
+      large_image: require('./vscode-icon.cjs').ICON, large_text: 'CL++',
+      small_image: 'vscode', small_text: 'Visual Studio Code'
+    };
+    const acknowledgement = await sendActivity(activity);
+    if (vscodeIcon && !acknowledgement.data?.assets?.large_image) throw Error('Discord did not return a large image asset');
     console.log('PASS Discord accepted the CL++ activity through local RPC');
     await sendActivity(null);
     console.log('PASS test activity cleared; no code or full paths were sent');

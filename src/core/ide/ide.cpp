@@ -2004,6 +2004,8 @@ void append_comments(std::string& formatted, const std::string_view trivia, int&
 
 std::string format_source(const std::string_view source) {
   const LexResult lexed = Lexer(source).tokenize();
+  if (!lexed.diagnostics.empty() || std::any_of(lexed.tokens.begin(), lexed.tokens.end(),
+      [](const Token& token) { return token.type == TokenType::Invalid; })) return std::string(source);
   std::string formatted;
   int indent = 0;
   bool line_start = true;
@@ -2013,14 +2015,38 @@ std::string format_source(const std::string_view source) {
     line_start = false;
   };
   for (std::size_t index = 0; index < lexed.tokens.size(); ++index) {
+    const std::size_t token_index = index;
     const Token& token = lexed.tokens[index];
     if (token.type == TokenType::Eof) {
       break;
     }
-    const std::size_t start = source_offset(source, token.location.line, token.location.column);
+    std::size_t start = source_offset(source, token.location.line, token.location.column);
+    std::size_t end = start + token.lexeme.size();
+    if (token.type == TokenType::StringLiteral || token.type == TokenType::TemplateString) {
+      // Lexer payloads omit delimiters. Formatting must copy the original bytes,
+      // including the original quote style and escapes, rather than the payload.
+      start = static_cast<std::size_t>(token.lexeme.data() - source.data()) - 1;
+      end = start + token.lexeme.size() + 2;
+    } else if (token.type == TokenType::TemplateHead) {
+      start = static_cast<std::size_t>(token.lexeme.data() - source.data()) - 1;
+      std::size_t depth = 0;
+      bool closed = false;
+      for (std::size_t tail = index; tail < lexed.tokens.size(); ++tail) {
+        if (lexed.tokens[tail].type == TokenType::TemplateHead) ++depth;
+        else if (lexed.tokens[tail].type == TokenType::TemplateTail && --depth == 0) {
+          end = static_cast<std::size_t>(lexed.tokens[tail].lexeme.data() - source.data()) + lexed.tokens[tail].lexeme.size() + 1;
+          index = tail;
+          closed = true;
+          break;
+        }
+      }
+      if (!closed) return std::string(source);
+    }
+    if (end > source.size() || start < cursor) return std::string(source);
+    const std::string_view spelling = source.substr(start, end - start);
     if (start >= cursor && start <= source.size()) {
       append_comments(formatted, source.substr(cursor, start - cursor), indent, line_start);
-      cursor = start + token.lexeme.size();
+      cursor = end;
     }
     const TokenType next = index + 1 < lexed.tokens.size() ? lexed.tokens[index + 1].type : TokenType::Eof;
     if (token.type == TokenType::CloseBrace) {
@@ -2029,7 +2055,7 @@ std::string format_source(const std::string_view source) {
       }
       indent = std::max(0, indent - 1);
       write_indent();
-      formatted.append(token.lexeme);
+      formatted.append(spelling);
       if (next == TokenType::KwElse) {
         line_start = false;
       } else {
@@ -2040,13 +2066,18 @@ std::string format_source(const std::string_view source) {
     }
     if (line_start) {
       write_indent();
-    } else if (index > 0) {
-      const TokenType previous = lexed.tokens[index - 1].type;
-      if (space_before(previous, token.type)) {
+    } else if (token_index > 0) {
+      const TokenType previous = lexed.tokens[token_index - 1].type;
+      const auto& previous_token = lexed.tokens[token_index - 1];
+      // Spacing can distinguish (Alias (value)) from a constructor/call. Preserve
+      // an existing gap before '(' rather than changing expression semantics.
+      const bool original_call_gap = token.type == TokenType::OpenParen && previous == TokenType::Identifier &&
+          token.lexeme.data() > previous_token.lexeme.data() + previous_token.lexeme.size();
+      if (space_before(previous, token.type) || original_call_gap) {
         formatted.push_back(' ');
       }
     }
-    formatted.append(token.lexeme);
+    formatted.append(spelling);
     if (token.type == TokenType::OpenBrace) {
       indent += 1;
       formatted.push_back('\n');

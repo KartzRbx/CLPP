@@ -20,6 +20,14 @@ namespace {
 
 const Token kSyntheticEof{TokenType::Eof, {}, {}};
 
+struct AnnotationTypeScope {
+  std::vector<std::string>& names;
+  std::size_t size;
+  AnnotationTypeScope(std::vector<std::string>& storage, const std::vector<std::string>& added)
+      : names(storage), size(storage.size()) { names.insert(names.end(), added.begin(), added.end()); }
+  ~AnnotationTypeScope() { names.resize(size); }
+};
+
 [[nodiscard]] std::optional<std::string> decode_escapes(const std::string_view raw) {
   std::string out;
   out.reserve(raw.size());
@@ -1366,6 +1374,7 @@ std::optional<Stmt> Parser::parse_for_in(std::string declared_type) {
     synchronize();
     return std::nullopt;
   }
+  const AnnotationTypeScope value_scope(m_expression_names, {std::string(name.lexeme)});
   std::optional<std::vector<Stmt>> body = parse_block();
   if (!body) {
     return std::nullopt;
@@ -1430,6 +1439,7 @@ std::optional<Stmt> Parser::parse_for() {
     synchronize();
     return std::nullopt;
   }
+  const AnnotationTypeScope value_scope(m_expression_names, {init->name});
   std::optional<std::vector<Stmt>> body = parse_block();
   if (!body) {
     return std::nullopt;
@@ -1869,6 +1879,7 @@ std::optional<Function> Parser::parse_generic_function(const bool allow_signatur
   const bool asynchronous = check(TokenType::KwAsync);
   if (asynchronous) advance();
   if (!starts_typed_function()) { error("expected typed function"); return std::nullopt; }
+  const AnnotationTypeScope annotation_scope(m_annotation_types, parameters);
   auto function = parse_typed_function(allow_signature);
   if (function) {
     for (const auto& parameter : parameters) {
@@ -1951,6 +1962,8 @@ std::optional<Function> Parser::parse_typed_function(const bool allow_signature)
     advance();
     return function;
   }
+  const AnnotationTypeScope formal_scope(m_annotation_types, function.type_params);
+  const AnnotationTypeScope value_scope(m_expression_names, function.params);
   std::optional<std::vector<Stmt>> body = parse_block();
   if (!body) {
     return std::nullopt;
@@ -2138,6 +2151,9 @@ std::optional<StructDecl> Parser::parse_struct() {
     synchronize();
     return std::nullopt;
   }
+  auto annotation_types = decl.type_params;
+  annotation_types.push_back(decl.name);
+  const AnnotationTypeScope annotation_scope(m_annotation_types, annotation_types);
   while (!check(TokenType::CloseBrace) && !is_at_end()) {
     bool is_private = false;
     bool is_override = false;
@@ -2395,6 +2411,7 @@ std::optional<std::vector<Stmt>> Parser::parse_block() {
     return std::nullopt;
   }
 
+  const AnnotationTypeScope value_scope(m_expression_names, {});
   ++m_block_depth;
   std::vector<Stmt> body;
   while (!check(TokenType::CloseBrace) && !is_at_end()) {
@@ -2404,6 +2421,7 @@ std::optional<std::vector<Stmt>> Parser::parse_block() {
     }
     const std::size_t before = m_current;
     if (std::optional<Stmt> stmt = parse_statement()) {
+      if (stmt->kind == Stmt::Kind::VariableDecl || stmt->kind == Stmt::Kind::Signal) m_expression_names.push_back(stmt->name);
       body.push_back(std::move(*stmt));
     } else if (m_current == before) {
       advance();
@@ -2787,6 +2805,7 @@ std::optional<Expr> Parser::parse_primary() {
     }
     if (!consume(TokenType::Arrow, "lambda requires an explicit result type after ->")) return std::nullopt;
     function.return_type = parse_type_annotation();
+    const AnnotationTypeScope value_scope(m_expression_names, function.params);
     std::optional<std::vector<Stmt>> body = parse_block();
     if (!body) return std::nullopt;
     function.body = std::move(*body);
@@ -3060,12 +3079,72 @@ std::optional<Expr> Parser::parse_primary() {
 
   if (check(TokenType::OpenParen)) {
     advance();
+    const std::size_t start = m_current;
+    const std::size_t diagnostics_start = m_diagnostics.size();
+    const Token type_token = peek();
+    const std::string type = parse_type_annotation();
+    const std::string type_root = type.substr(0, type.find('<'));
+    const auto next = peek().type;
+    const bool prefix_candidate = next == TokenType::OpenParen || next == TokenType::Minus ||
+        next == TokenType::Bang || next == TokenType::KwNot || next == TokenType::BitNot;
+    bool known_type = is_type_name(type_token.type) || type_token.type == TokenType::KwVoid;
+    bool array_type = type_root == "array";
+    if (prefix_candidate && !known_type) {
+      known_type = std::find(m_annotation_types.begin(), m_annotation_types.end(), type_root) != m_annotation_types.end();
+      if (m_program) {
+        for (const auto& alias : m_program->aliases) known_type = known_type || alias.name == type_root;
+        for (const auto& data : m_program->structs) known_type = known_type || data.name == type_root;
+        for (const auto& enumeration : m_program->enums) known_type = known_type || enumeration.name == type_root;
+      }
+    }
+    if (next == TokenType::OpenBrace && !array_type && m_program) {
+      for (const auto& alias : m_program->aliases) {
+        array_type = array_type || (alias.name == type_root && alias.body.starts_with("array<"));
+      }
+    }
+    bool value_name = false;
+    if (prefix_candidate && known_type && type_token.type == TokenType::Identifier) {
+      value_name = std::find(m_expression_names.begin(), m_expression_names.end(), type_root) != m_expression_names.end();
+      if (m_program) for (const auto& statement : m_program->statements) {
+        value_name = value_name || statement.name == type_root;
+      }
+    }
+    const bool array_braces = next == TokenType::OpenBrace && (array_type ||
+        (peek_at(1).type != TokenType::CloseBrace &&
+         !(peek_at(1).type == TokenType::Identifier && peek_at(2).type == TokenType::Equal)));
+    const bool adjacent_value = next == TokenType::Identifier || next == TokenType::StringLiteral ||
+        next == TokenType::IntLiteral || next == TokenType::FloatLiteral ||
+        next == TokenType::TemplateString || next == TokenType::TemplateHead ||
+        next == TokenType::KwTrue || next == TokenType::KwFalse || next == TokenType::KwNull ||
+        next == TokenType::KwFunc || next == TokenType::KwAsync || next == TokenType::At ||
+        next == TokenType::KwAwait || next == TokenType::KwSpawn || next == TokenType::KwThread ||
+        array_braces || is_type_name(next);
+    const bool separated = prefix_candidate && m_current > start && !peek().lexeme.empty() && peek().lexeme.data() >
+        m_tokens[m_current - 1].lexeme.data() + m_tokens[m_current - 1].lexeme.size();
+    const bool known_prefix = known_type && !value_name && separated && (next == TokenType::OpenParen || next == TokenType::Minus ||
+        next == TokenType::Bang || next == TokenType::KwNot || next == TokenType::BitNot);
+    if (!type.empty() && m_diagnostics.size() == diagnostics_start && (adjacent_value || known_prefix)) {
+      auto operand = parse_expression();
+      if (!operand || !consume(TokenType::CloseParen, "expected ')' after typed expression")) return std::nullopt;
+      Expr typed;
+      typed.kind = Expr::Kind::Ascribe; typed.value = type;
+      typed.location = type_token.location; typed.span = type_token.lexeme;
+      typed.left = std::make_unique<Expr>(std::move(*operand));
+      return finish_postfix(std::move(typed));
+    }
+    m_current = start;
+    m_diagnostics.resize(diagnostics_start);
     std::optional<Expr> expr = parse_expression();
     if (!expr) {
       return std::nullopt;
     }
     if (!consume(TokenType::CloseParen, "expected ')'")) {
       return std::nullopt;
+    }
+    if (expr->kind == Expr::Kind::Call && !type.empty() && expr->value == type &&
+        ((next == TokenType::OpenParen && separated && expr->args.size() == 1) ||
+         (next == TokenType::OpenBrace && expr->named_initializer && expr->args.empty()))) {
+      expr->scoped_type_candidate = true;
     }
     return finish_postfix(std::move(*expr));
   }
@@ -3210,6 +3289,12 @@ std::optional<Expr> Parser::parse_template() {
         diagnostic.location.column += hole_column - 1;
       }
       Parser embedded(lexed.tokens, lexed.diagnostics);
+      embedded.m_annotation_types = m_annotation_types;
+      embedded.m_expression_names = m_expression_names;
+      if (m_program) {
+        for (const auto& alias : m_program->aliases) embedded.m_annotation_types.push_back(alias.name);
+        for (const auto& data : m_program->structs) embedded.m_annotation_types.push_back(data.name);
+      }
       std::optional<Expr> piece = embedded.parse_embedded_expression();
       m_diagnostics.insert(m_diagnostics.end(), embedded.m_diagnostics.begin(), embedded.m_diagnostics.end());
       if (!piece) {

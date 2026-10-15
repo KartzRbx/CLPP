@@ -105,6 +105,9 @@ CLPP_NATIVE(time_part) {  // 0 year, 1 month, 2 day, 3 hour, 4 minute, 5 second,
   if (args[0].text.find("..") != std::string::npos) {
     return fail(error, std::string(what) + ": paths with '..' are refused");
   }
+  if (args[0].text.find('\0') != std::string::npos) {
+    return fail(error, std::string(what) + ": paths containing NUL are refused");
+  }
   return true;
 }
 
@@ -112,7 +115,7 @@ CLPP_NATIVE(fs_write) {  // (path, text, append)
   if (!check_path(args, arity, 2, error, "Fs.write")) {
     return false;
   }
-  std::ofstream file(args[0].text, std::ios::binary | (num(args[2]) != 0 ? std::ios::app : std::ios::trunc));
+  std::ofstream file(std::filesystem::u8path(args[0].text), std::ios::binary | (num(args[2]) != 0 ? std::ios::app : std::ios::trunc));
   file.write(args[1].text.data(), static_cast<std::streamsize>(args[1].text.size()));
   out = boolean(static_cast<bool>(file));
   return true;
@@ -123,8 +126,9 @@ CLPP_NATIVE(fs_exists) {  // (path, 0 exists | 1 is directory)
     return false;
   }
   std::error_code failure;
-  const bool result = num(args[1]) != 0 ? std::filesystem::is_directory(args[0].text, failure)
-                                        : std::filesystem::exists(args[0].text, failure);
+  const auto path = std::filesystem::u8path(args[0].text);
+  const bool result = num(args[1]) != 0 ? std::filesystem::is_directory(path, failure)
+                                        : std::filesystem::exists(path, failure);
   out = boolean(result && !failure);
   return true;
 }
@@ -134,7 +138,7 @@ CLPP_NATIVE(fs_remove) {
     return false;
   }
   std::error_code failure;
-  out = boolean(std::filesystem::remove(args[0].text, failure) && !failure);  // a file or an empty folder
+  out = boolean(std::filesystem::remove(std::filesystem::u8path(args[0].text), failure) && !failure);  // a file or an empty folder
   return true;
 }
 
@@ -143,8 +147,9 @@ CLPP_NATIVE(fs_make_dir) {
     return false;
   }
   std::error_code failure;
-  std::filesystem::create_directories(args[0].text, failure);
-  out = boolean(!failure && std::filesystem::is_directory(args[0].text, failure));
+  const auto path = std::filesystem::u8path(args[0].text);
+  std::filesystem::create_directories(path, failure);
+  out = boolean(!failure && std::filesystem::is_directory(path, failure));
   return true;
 }
 
@@ -179,6 +184,12 @@ export bool exists(string path) { return fs::Exists(path, 0); }
 export bool isDir(string path) { return fs::Exists(path, 1); }
 export bool remove(string path) { return fs::Remove(path); }
 export bool makeDir(string path) { return fs::MakeDir(path); }
+export def FileInfo { bool exists; bool isDirectory; bool isFile; number size; number modifiedUnixMs; }
+export FileInfo Stat(string path) { return fs::Stat(path); }
+export string ReadText(string path, number maxBytes) { return fs::ReadText(path, maxBytes); }
+export array<number> ReadBytes(string path, number maxBytes) { return fs::ReadBytes(path, maxBytes); }
+export void WriteAtomic(string path, string text) { fs::WriteAtomic(path, text); }
+export void WriteBytesAtomic(string path, array<number> bytes) { fs::WriteBytesAtomic(path, bytes); }
 )clp";
 
 }  // namespace

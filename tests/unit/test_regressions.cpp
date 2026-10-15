@@ -4086,3 +4086,101 @@ TEST_CASE("signal connections survive returned closures and synchronized workers
   INFO(result.error); INFO(result.detail); REQUIRE(result.compiled); REQUIRE(result.ran);
   CHECK(result.output == "2\n12\n3\n15\nfalse\n");
 }
+
+TEST_CASE("type first expressions check literal unions and preserve single evaluation", "[type-ascription]") {
+  const auto result = run(R"(
+    def Outcome = "ongoing" | "team_a" | "team_b";
+    def Battle { Outcome Result; }
+    auto battle = Battle { Result = "ongoing" };
+    if (battle.Result != (Outcome "ongoing")) { report("wrong comparison"); }
+    auto result = (Outcome "team_a"); post(result);
+    number calls = 0;
+    number Next() { calls += 1; return calls; }
+    post((number Next())); post(calls);
+    post((float 7) / 2);
+    post((number -3));
+    number Read(number value) { return value; }
+    post((Read (4)));
+    number n = 9; post((n - 2));
+    def Count = number;
+    number Shadow() { number Count = 9; return (Count - 2); }
+    post(Shadow());
+    def Point { number X; }
+    post((Point { X = 8 }).X);
+  )");
+  REQUIRE(result.compiled);
+  REQUIRE(result.ran);
+  CHECK(result.output == "team_a\n1\n1\n3.5\n-3\n4\n7\n7\n8\n");
+}
+
+TEST_CASE("type first expressions preserve generic containers callbacks and module identity", "[type-ascription]") {
+  const auto result = run(R"(
+    link "./types.clp" as Types;
+    def Box<T> { T Value; }
+    template <typename T> T Keep(T value) { return (T value); }
+    def Callback = (number) -> number;
+    auto increment = (Callback func(value) -> number { return value + 1; });
+    auto values = (array<number> { 3, 4 }); post(values[1]);
+    post((Box<number> Box<number> { Value = 7 }).Value);
+    post((Types.Outcome "ongoing"));
+    post((Types.Outcome ("ongoing")));
+    auto empty = (Types.Numbers {}); post(len(empty));
+    optional<number> absent = (optional<number> null); post(absent == null);
+    post(Keep("generic")); post(increment(4));
+  )", {{"./types.clp", "export def Outcome = \"ongoing\" | \"done\"; export def Numbers = array<number>;"}});
+  REQUIRE(result.compiled);
+  REQUIRE(result.ran);
+  CHECK(result.output == "4\n7\nongoing\nongoing\n0\ntrue\ngeneric\n5\n");
+}
+
+TEST_CASE("return leaves protected scopes without retaining a dead catch", "[try-lifetime]") {
+  const auto result = run(R"(
+    number Read(number value) {
+      try { try { return value; } catch { return -1; } } catch { return -2; }
+    }
+    void Done() { try { return; } catch { post("dead void catch"); } }
+    number Divide(number value) { try { return 10 / value; } catch { return 99; } }
+    number Recurse(number value) { try { if (value == 0) { return 7; } return Recurse(value - 1); } catch { return -3; } }
+    try {
+      post(Read(42)); Done(); post(Divide(0)); post(Recurse(4));
+      report("original failure");
+    } catch (error) { post(error); }
+    post("finished");
+  )");
+  INFO(result.error); REQUIRE(result.compiled); REQUIRE(result.ran);
+  CHECK(result.output == "42\n99\n7\noriginal failure\nfinished\n");
+}
+
+TEST_CASE("break and continue leave only the protected scopes they exit", "[try-lifetime]") {
+  const auto result = run(R"(
+    number stale = 0;
+    try {
+      for (number i = 0; i < 3; i++) {
+        try { if (i < 2) { continue; } break; } catch { stale++; }
+      }
+      switch (1) { case 1: try { break; } catch { stale++; } default: post("wrong switch"); }
+      try {
+        while (true) { try { break; } catch { stale++; } }
+        report("retained outer catch");
+      } catch (error) { post(error); }
+      report("top catch");
+    } catch (error) { post(error); }
+    post(stale);
+  )");
+  INFO(result.error); REQUIRE(result.compiled); REQUIRE(result.ran);
+  CHECK(result.output == "retained outer catch\ntop catch\n0\n");
+}
+
+TEST_CASE("type first expressions cannot force incompatible or unchecked values", "[type-ascription]") {
+  for (const auto* source : {
+    "def Outcome = \"ongoing\" | \"done\"; post((Outcome \"invalid\"));",
+    "def Outcome = \"ongoing\" | \"done\"; string value=\"ongoing\"; post((Outcome value));",
+    "post((number 1.5));", "post((number true));", "post((Unknown \"value\"));",
+    "auto value=(array<number> { \"bad\" });",
+    "any Dynamic() { return 1; } post((number Dynamic()));",
+    "def A { number Value; } def B { number Value; } post((A B { Value=1 }));"
+  }) {
+    INFO(source);
+    CHECK_FALSE(run(source).compiled);
+  }
+}

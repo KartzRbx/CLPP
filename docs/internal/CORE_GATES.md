@@ -1,5 +1,10 @@
 # Core and distribution validation gates
 
+Current scope update: the author now authorizes general CLI APIs, full site/installer
+review, local installation and GitHub publication after validation. Application-specific
+Cluaupp/Luau/Roblox policy belongs outside this VM. Older entries below are historical;
+see CLI_SUPPORT.md and .qa/REPORT.md for the current gates.
+
 Updated 2026-10-14. Priority: core syntax/semantics and IDEs, robustness and
 performance, distribution, then embedded/native packages. This inventory
 separates implementation evidence from proposed or host-dependent contracts.

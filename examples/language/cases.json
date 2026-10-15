@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "positive": [
+    {
+      "file": "01_values.clp",
+      "stdout": "9007199254740993\n3.5\nAda: true\n6\n26\n4\n"
+    },
+    {
+      "file": "02_operators.clp",
+      "stdout": "1\n14\n-6\ntrue\ntrue\n10\n2\n3\n4\n-1\n3\ntrue\none\nsum: 5\n"
+    },
+    {
+      "file": "03_flow.clp",
+      "stdout": "ten\nswitch\nguarded\n-1\n42\ncontrolled failure\ncaught\n0\n1\n"
+    },
+    {
+      "file": "04_collections.clp",
+      "stdout": "4\n9\n2\n[1, 2, 3]\n[3, 1]\n[3, 4, 5]\n7\n9\nmissing key\nç\n4\n2\n3\n4\n"
+    },
+    {
+      "file": "05_objects.clp",
+      "stdout": "Ada\n12\n14\n7\n"
+    },
+    {
+      "file": "06_types_callbacks.clp",
+      "stdout": "7\n5\ncaptured\ntyped\n6\nongoing\nteam_b\n"
+    },
+    {
+      "file": "07_events_async.clp",
+      "stdout": "42\nready\nready\n41\nfalse\nfalse\n2\n6\n4\n10\n"
+    },
+    {
+      "file": "08_workers.clp",
+      "stdout": "2\n2\n42\n1\n2\n"
+    },
+    {
+      "file": "09_advanced_forms.clp",
+      "stdout": "3\n12\n2\nlocal\n7\n"
+    },
+    {
+      "file": "10_modules.clp",
+      "stdout": "1\n2\n2\n100\n"
+    }
+  ],
+  "negative": [
+    {
+      "name": "named func",
+      "source": "func Old(number value) -> number { return value; }"
+    },
+    {
+      "name": "struct",
+      "source": "struct Old { number Value; }"
+    },
+    {
+      "name": "parameter default",
+      "source": "number Old(number value = 1) { return value; }"
+    },
+    {
+      "name": "named argument",
+      "source": "number Read(number value) { return value; } post(Read(value: 7));"
+    },
+    {
+      "name": "payload enum",
+      "source": "enum State { Ready(number value) }"
+    },
+    {
+      "name": "untyped signal",
+      "source": "signal changed;"
+    },
+    {
+      "name": "legacy receiver",
+      "source": "def Data { number Value; number Read() { return @Value; } }"
+    },
+    {
+      "name": "C++ comment",
+      "source": "// comment\npost(1);"
+    },
+    {
+      "name": "lambda result missing",
+      "source": "auto f=func(number value) { return value; };"
+    },
+    {
+      "name": "missing optional narrowing",
+      "source": "optional<number> value=null; number Required(number x) { return x; } post(Required(value));"
+    },
+    {
+      "name": "wrong generic evidence",
+      "source": "template <typename T> T Choose(T a,T b) { return a; } post(Choose(1,\"bad\"));"
+    },
+    {
+      "name": "decltype immutable",
+      "source": "number source=1; decltype(source) copy=2; copy=3;"
+    },
+    {
+      "name": "overloaded name",
+      "source": "number Read() { return 1; } number Read(number value) { return value; }"
+    },
+    {
+      "name": "missing callback context",
+      "source": "auto f=func(value) -> number { return value + 1; };"
+    },
+    {
+      "name": "invalid typed expression literal",
+      "source": "def Outcome = \"ongoing\" | \"done\"; post((Outcome \"invalid\"));"
+    }
+  ]
+}

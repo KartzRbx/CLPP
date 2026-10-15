@@ -2,7 +2,7 @@
 
 This is the language reference index. Each topic has its own explanation; the standard library describes APIs rather than the grammar of CL++.
 
-The author-defined syntax is primary. [Implementation status](status.md) lists what still needs compiler work. Examples labeled target syntax are specifications, not evidence that the current executable accepts them.
+Read the [language contract and executable examples](language-contract.md) for a consolidated explanation of current forms, semantics and limitations. The [lexer keyword inventory](keyword-inventory.md) tracks every reserved word. [Implementation status](status.md) distinguishes tested behavior from future proposals; target-marked examples are never passing compiler evidence.
 
 ## Complete language handbook
 

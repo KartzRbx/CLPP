@@ -102,6 +102,8 @@ class Parser {
   std::size_t m_unary_depth{0};
   std::size_t m_statement_depth{0};
   std::size_t m_type_depth{0};
+  std::vector<std::string> m_annotation_types;
+  std::vector<std::string> m_expression_names;
   std::vector<Diagnostic> m_diagnostics;
 };
 

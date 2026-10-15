@@ -1,6 +1,7 @@
 #include "clpp/ide.hpp"
 #include "clpp/semantic.hpp"
 #include "core/compiler/analyze.hpp"
+#include "clpp/core/lexer/lexer.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -10,6 +11,59 @@
 #include <iterator>
 #include <string>
 #include <utility>
+
+TEST_CASE("type first expressions retain alias hover and type semantic roles", "[ide][type-ascription]") {
+  const std::string source = "def Outcome = \"ongoing\" | \"team_a\" | \"team_b\";\nauto result = (Outcome \"ongoing\");\npost(result);\n";
+  const auto info = clpp::ide::inspect(source, 2, 18);
+  REQUIRE(info.has_hover);
+  CHECK(info.hover.text.find("ongoing") != std::string::npos);
+  const auto tokens = clpp::ide::semantic_tokens(source);
+  bool found = false;
+  for (const auto& token : tokens) {
+    if (token.line == 2 && token.column == 16) {
+      found = true;
+      CHECK(token.token_type == clpp::ide::kSemanticType);
+    }
+  }
+  CHECK(found);
+  const std::string grouped = "def Count = number;\nauto result = (Count (2 + 3));\npost(result);\n";
+  const auto formatted = clpp::ide::format_source(grouped);
+  CHECK(formatted.find("Count (") != std::string::npos);
+  CHECK(clpp::analyze_program(formatted, {}).ok());
+}
+
+TEST_CASE("formatter preserves quoted imports strings and nested templates", "[ide][formatter-roundtrip]") {
+  const std::string source = R"clp(link "./module.clp" as Module;
+array<string> values = array<string>("", 'ação', "a\\b\"c", "<< not a comment", "]>>");
+post(Module.Read()); post(values[1]);
+post(`plain`); post(`${values[1]}: ${`nested ${1 + 2}`}`);
+<< real comment
+)clp";
+  const auto loader = [](std::string_view path) -> std::optional<std::string> {
+    if (path == "./module.clp") return "export string Read() { return \"module\"; }";
+    return std::nullopt;
+  };
+  REQUIRE(clpp::analyze_program(source, loader).ok());
+  const auto formatted = clpp::ide::format_source(source);
+  CHECK(formatted.find("\"./module.clp\"") != std::string::npos);
+  CHECK(formatted.find("'ação'") != std::string::npos);
+  CHECK(formatted.find("`${values[1]}: ${`nested ${1 + 2}`}`") != std::string::npos);
+  CHECK(clpp::analyze_program(formatted, loader).ok());
+  CHECK(clpp::ide::format_source(formatted) == formatted);
+  const auto original_tokens = clpp::Lexer(source).tokenize();
+  const auto new_tokens = clpp::Lexer(formatted).tokenize();
+  REQUIRE(original_tokens.tokens.size() == new_tokens.tokens.size());
+  for (std::size_t index = 0; index < original_tokens.tokens.size(); ++index) {
+    CHECK(original_tokens.tokens[index].type == new_tokens.tokens[index].type);
+    CHECK(original_tokens.tokens[index].lexeme == new_tokens.tokens[index].lexeme);
+  }
+}
+
+TEST_CASE("formatter leaves malformed literals untouched", "[ide][formatter-roundtrip]") {
+  for (const std::string source : {"post(\"unfinished", "post(`unfinished", "link './unfinished", "<<[ unfinished"}) {
+    CHECK(clpp::ide::format_source(source) == source);
+  }
+}
 
 TEST_CASE("authored comments suppress semantic roles and preserve formatter trivia", "[ide][comments]") {
   const std::string source = "<< 5) def com HERANÇA nominal.\n<<[ number Hidden; ]>>\n";

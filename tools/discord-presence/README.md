@@ -43,3 +43,23 @@ prove that a public profile displayed the activity; verify that separately.
 The Windows `probe.cjs` sends a one-shot activity with CL++ / CLPP_Rework / main.clp
 and verifies Discord's RPC acknowledgement, then clears the test activity.
 Run this only after authorizing those names and activity time for Discord.
+
+### CL++ image in VS Code
+
+iCrawl 5.9.2 has no CL++ entry in its image table and no configurable image-key
+setting. The local `vscode-icon.cjs` adapter adds only that mapping, using the
+public CL++ logo URL. It retains the editor's application ID/title, backs up the
+original bundle, checks the installed version and is idempotent. It does not add
+a second presence connection or change the other language images.
+
+```text
+node tools/discord-presence/vscode-icon.cjs <installed icrawl.discord-vscode-5.9.2 folder>
+```
+
+Reload the editor window after installation. An upstream update can replace this
+local compatibility patch; rerun only against its supported version, or update
+the adapter after reviewing the new source. The original bundle is retained as
+`dist/extension.cjs.clpp-original`; hashes are recorded alongside it. The
+`--vscode-icon` option of `probe.cjs` verifies RPC acceptance with that public
+image URL and then clears its own test activity. Acceptance is not visual proof
+that an already-running editor host has reloaded the mapping.

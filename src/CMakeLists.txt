@@ -28,6 +28,8 @@ add_library(clpp_std STATIC
   stdlib/std_axiom.cpp
   stdlib/std_fs.cpp
   stdlib/std_os.cpp
+  stdlib/std_process.cpp
+  stdlib/std_cli_files.cpp
   stdlib/std_http.cpp
   stdlib/std_host.cpp
   stdlib/std_gfx.cpp
@@ -113,5 +115,13 @@ if(WIN32)
   target_sources(clpp PRIVATE cli/clpp.rc)  # icon + version info in Explorer
 endif()
 target_link_libraries(clpp PRIVATE clpp_core)
+if(WIN32)
+  target_link_libraries(clpp PRIVATE shell32)
+endif()
+if(MINGW AND NOT CLPP_SANITIZE_ADDRESS AND NOT CLPP_SANITIZE_UNDEFINED)
+  # Production CLI/VSIX packages must run without an installed compiler SDK.
+  # Instrumented builds retain their matching sanitizer runtime instead.
+  target_link_options(clpp PRIVATE -static)
+endif()
 clpp_configure_target(clpp)
 install(TARGETS clpp RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT Runtime)

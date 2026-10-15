@@ -57,7 +57,7 @@ struct Expr {
     Range,
     Ternary,
     Update,
-    Cast, Closure, Invoke, Observe, Event
+    Cast, Ascribe, Closure, Invoke, Observe, Event
   };
 
   Kind kind{Kind::String};
@@ -76,6 +76,7 @@ struct Expr {
   bool enum_literal{false};
   bool named_initializer{false};
   bool scoped_member{false};
+  bool scoped_type_candidate{false}; // Parenthesized spaced type/call: resolved after module loading.
   bool async_call{false};
   bool signal_call{false};
   bool thread_call{false};

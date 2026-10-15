@@ -37,13 +37,21 @@ def main():
         result = subprocess.run([str(compiler), '--version'], cwd=prefix, env=environment,
                                 capture_output=True, text=True, timeout=10)
         assert result.returncode == 0 and 'clpp' in result.stdout.lower(), result
-        source = prefix / 'installed.clp'
-        source.write_text('<< installed CLI\ndef Box<T> { T Value; }\n'
-                          'auto value = Box<number> { Value = 42 }; post(value.Value);\n', encoding='utf8')
-        result = subprocess.run([str(compiler), str(source)], cwd=prefix, env=environment,
-                                capture_output=True, text=True, timeout=10)
-        assert result.returncode == 0 and result.stdout == '42\n', (result.returncode, result.stderr)
-        print('PASS isolated CLI installation, license and execution outside checkout')
+        source_directory = prefix / 'ação 漢字'
+        source_directory.mkdir()
+        source = source_directory / 'installed.clp'
+        source.write_text('<< installed CLI\nlink @clpp.fs as Fs;\nlink @clpp.path as Path;\n'
+                          'link @clpp.process as Process;\ndef Box<T> { T Value; }\n'
+                          'auto value = Box<number> { Value = 42 }; post(value.Value);\n'
+                          'def Outcome = "ongoing" | "done"; post((Outcome "ongoing"));\n'
+                          'Fs.WriteAtomic("installed-output.txt", "ação");\n'
+                          'post(Fs.ReadText("installed-output.txt", 6));\n'
+                          'post(Path.Equivalent(Process.ExecutablePath(), args()[0]));\n', encoding='utf8', newline='\n')
+        result = subprocess.run([str(compiler), str(source), str(compiler)], cwd=prefix, env=environment,
+                                capture_output=True, text=True, encoding='utf8', timeout=20)
+        assert result.returncode == 0 and result.stdout == '42\nongoing\nação\ntrue\n', (result.returncode, result.stderr)
+        assert (prefix / 'installed-output.txt').read_bytes() == 'ação'.encode('utf8')
+        print('PASS isolated CLI installation, license, Unicode, generic CLI APIs and execution outside checkout')
 
 
 if __name__ == '__main__':

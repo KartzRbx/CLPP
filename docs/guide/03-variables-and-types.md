@@ -16,7 +16,7 @@ A variable gives a value a name. A declaration creates the name; an assignment c
 | `const number maxLives = 3;` | No | Explicit type before the name |
 | `const auto maxLives = 3;` | No | Inferred from the initial value |
 | `constexpr number tileSize = 8 * 2;` | No | Numeric expression evaluated during compilation |
-| `decltype(score) saved = 0;` | Yes | Uses the type of another variable |
+| `decltype(score) saved = 0;` | No | Uses an expression type; current bindings are immutable |
 
 The ordinary shape is **type, name, `=`, value, `;`**. Always initialize the variable. `auto` keeps the declaration short; it does not allow the variable's type to change later. With `const`, write `const`, an explicit type or `auto`, the name, `=`, the initial value, and `;`.
 

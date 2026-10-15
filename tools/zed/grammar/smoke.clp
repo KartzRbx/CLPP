@@ -41,3 +41,7 @@ Vector3 position = Vector3(1, 2, 3);
 buffer bytes = buffer::create(8);
 number pontuação = 7;
 post(pontuação);
+def Outcome = "ongoing" | "team_a" | "team_b";
+auto typedOutcome = (Outcome "ongoing");
+if (typedOutcome != (Outcome "team_a")) { post("typed outcome"); }
+post((attempts - 1));

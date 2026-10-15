@@ -31,7 +31,7 @@
 
 [See a complete game system](https://kartzrbx.github.io/CLPP/guide/20-modular-combat/) · [Build an app screen](https://kartzrbx.github.io/CLPP/guide/21-account-screen/) · [Explore measured performance](https://kartzrbx.github.io/CLPP/guide/16-performance/)
 
-> **Language status:** the site now describes the author's target syntax. Current syntax is compiler-tested; future proposals and host-specific contracts remain separate. [Complete language handbook](https://kartzrbx.github.io/CLPP/handbook/00-o-que-e-o-clpp/) · [Learn the syntax](https://kartzrbx.github.io/CLPP/guide/00-language-tour/) · [Implementation status](https://kartzrbx.github.io/CLPP/reference/status/)
+> **Language status:** current syntax, semantics and executable examples are consolidated in the [language contract](docs/reference/language-contract.md). Future proposals and unverified platform gates remain explicit. [Complete language handbook](https://kartzrbx.github.io/CLPP/handbook/00-o-que-e-o-clpp/) · [Learn the syntax](https://kartzrbx.github.io/CLPP/guide/00-language-tour/) · [Implementation status](https://kartzrbx.github.io/CLPP/reference/status/)
 
 ## Hello, CL++
 

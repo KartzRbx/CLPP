@@ -12,7 +12,8 @@
 namespace clpp::stdlib {
 
 double file_size(const std::string_view path) {
-  std::ifstream file(std::string(path), std::ios::binary | std::ios::ate);
+  if (path.find('\0') != std::string_view::npos || path.find("..") != std::string_view::npos) return -1;
+  std::ifstream file(std::filesystem::u8path(path), std::ios::binary | std::ios::ate);
   if (!file) {
     return -1;
   }
@@ -205,11 +206,11 @@ bool std_apply(const std::uint8_t id, const Value* args, const std::uint8_t arit
     return true;
   }
   if (id == 4) {
-    if (text.find("..") != std::string::npos) {
+    if (text.find("..") != std::string::npos || text.find('\0') != std::string::npos) {
       error = "runtime error";
       return false;
     }
-    std::ifstream file(text, std::ios::binary);
+    std::ifstream file(std::filesystem::u8path(text), std::ios::binary);
     if (!file) {
       out = Value::string_of("");
       return true;
@@ -218,17 +219,18 @@ bool std_apply(const std::uint8_t id, const Value* args, const std::uint8_t arit
     return true;
   }
   if (id == 5) {
-    if (text.find("..") != std::string::npos) {
+    if (text.find("..") != std::string::npos || text.find('\0') != std::string::npos) {
       error = "runtime error";
       return false;
     }
     std::vector<Value> names;
     std::error_code failure;
-    for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(text, failure)) {
+    for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(std::filesystem::u8path(text), failure)) {
       if (failure) {
         break;
       }
-      names.push_back(Value::string_of(entry.path().filename().string()));
+      const auto name = entry.path().filename().generic_u8string();
+      names.push_back(Value::string_of(std::string(name.begin(), name.end())));
     }
     out = Value::struct_of(std::move(names));
     return true;

@@ -1018,6 +1018,17 @@ void check_function_constraints(const parser::Expr& expr, const Signature& signa
       }
       mismatch(expr, diagnostics); return kError;
     }
+    case parser::Expr::Kind::Ascribe: {
+      const Type target = named_type(expr.value, structs);
+      const Type source = expr.left ? check_expr(*expr.left, bindings, signatures, structs, diagnostics) : kError;
+      if (source == kError) return kError;
+      if (target == kError || target == kVoid || (source == kAny && target != kAny) ||
+          !expr.left || !accepts_value(target, source, *expr.left)) {
+        diagnostics.push_back(Diagnostic{expr.location, expr.span, "value does not satisfy explicit expression type"});
+        return kError;
+      }
+      return target;
+    }
     case parser::Expr::Kind::Cast: {
       const Type target = named_type(expr.value, structs);
       const Type source = expr.left ? check_expr(*expr.left, bindings, signatures, structs, diagnostics) : kError;

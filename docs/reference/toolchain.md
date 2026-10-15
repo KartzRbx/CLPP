@@ -41,6 +41,13 @@ separate builds. If Zed reports `server shut down`, reload the language server o
 reopen the CL++ buffer after installation; syntax colors alone do not establish
 that completion, hover and semantic tokens are connected.
 
+The local Zed installer runs an immutable compiler snapshot from the installed
+extension, separate from build outputs. Reinstall after rebuilding to select the
+new compiler. It accepts `--package <directory>` and `--compiler <executable>` for
+separate builds. If Zed reports `server shut down`, reload the language server or
+reopen the CL++ buffer after installation; syntax colors alone do not establish
+that completion, hover and semantic tokens are connected.
+
 The LSP validates JSON-RPC field types before dispatch. Malformed JSON and request
 envelopes receive protocol errors; subsequent valid requests remain usable.
 Transport headers are limited to 16 KiB and message bodies to 64 MiB. Invalid,
@@ -65,14 +72,22 @@ support this combined preset. The CI matrix executes normal tests in both Debug
 and Release, plus a bounded malformed-input matrix. Platform and sanitizer gates
 are complete only after those binaries have actually built and their tests run.
 
+Normal Debug/Release LSP tests retain the 50 ms average completion latency gate.
+ASan/UBSan tests use a separate 500 ms instrumented responsiveness bound because
+instrumentation changes execution cost. A pass there is not a 50 ms performance
+result. Historical instrumented timing failures and measurements remain in QA
+history; no functional protocol assertions are removed.
+
 See [Tools and editor](../guide/15-tools-and-editor.md) for the CLI, extension features, tests, and embedding API.
 
 ## Writing development tools in CL++
 
 Programs can already use arguments, text files/directories, JSON, strings,
-collections and terminal input/output. Child-process control, a public path API,
-filesystem watching and standalone program executable generation are still
-missing. The C++ parser/checker API is not exposed to source CL++ programs.
+collections and terminal input/output. Source builds also provide bounded child
+processes, executable discovery, a public path/identity API, bounded text/binary
+reads, atomic file replacement and typed metadata; see [CLI host APIs](cli-host.md).
+Filesystem watching and standalone program executable generation remain pending.
+The C++ parser/checker API is not exposed to source CL++ programs.
 A transpiler written in CL++ can generate Luau text; the current VM compiler
 does not itself provide a Luau backend or Luau source maps. CLI hosting and
 compiler self-hosting are separate milestones.

@@ -33,7 +33,7 @@
 ["def" "enum" "class" "template" "typename" "where" "auto" "func"
  "if" "else" "do" "while" "for" "in" "guard" "match" "switch" "case" "default" "static_cast" "try" "catch" "return"
  "break" "continue" "link"  "as" "pragma" "strict" "nostrict" "decltype"
- "await" "spawn" "thread" "move"] @keyword
+ "await" "spawn" "thread" "move" "atomic"] @keyword
 ["+" "-" "*" "/" "%" "=" "+=" "-=" "*=" "/=" "%="
  "==" "!=" "<" ">" "<=" ">=" "&&" "||" "!" "&" "|" "^" "~"
  "shl" "shr" ".." "++" "--" "?" ":" ".:" "->" "=>" "~>" "and" "or" "not"] @operator

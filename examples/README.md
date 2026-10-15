@@ -1,6 +1,6 @@
 # Exemplos CL++
 
-Todos os 41 arquivos `.clp` desta pasta e suas subpastas usam a sintaxe atual.
+Os arquivos `.clp` desta pasta e suas subpastas usam a sintaxe atual.
 O compilador verifica cada fonte, incluindo os módulos reutilizáveis. As entradas
 executáveis têm testes de saída completa; módulos são exercitados pelos programas
 que os importam. Execute os comandos a partir da raiz do repositório.
@@ -48,3 +48,10 @@ No build Windows/UCRT64, inclua `C:\msys64\ucrt64\bin` no PATH para carregar as 
 Os testes de compilação rejeitam construções antigas para evitar que voltem a
 aparecer nos exemplos. Os cenários Combat/Pacman não implementam os contratos
 externos de Roblox, persistência ou análise de pureza.
+
+## Contrato da linguagem para ferramentas e outras IAs
+
+Comece por [language/README.md](language/README.md) e pelo
+[contrato completo](../docs/reference/language-contract.md). O corpus dedicado
+tem resultados esperados e casos inválidos, cobrindo fundamentos, operadores,
+fluxo, coleções, herança, generics, callbacks, eventos, concorrência e módulos.

@@ -30,3 +30,18 @@ The extension ships with `clpp-vm.exe` for Windows x64. On other systems install
 - `CL++: Run current file`
 - `CL++: Restart language server`
 - `CL++: Show output`
+
+## Local source update 0.10.5
+
+Formatting preserves the original quotes/escapes in imports, strings and nested
+templates. The bundled compiler includes general bounded text/binary reads,
+atomic writes, file metadata, canonical/identity paths and executable discovery.
+
+The bundled compiler now releases exited try scopes on return/break/continue and
+handles UTF-8 filesystem paths on Windows. Embedded NUL paths are rejected before
+filesystem access. Process, path and filesystem APIs support general CLI tools.
+
+The bundled VM supports checked type-first expressions such as `(Outcome "ongoing")`,
+including imported aliases, contextual arrays/callbacks and preserved formatter
+spacing. Invalid assertions remain errors. Rebuild/package this checkout to use
+new APIs; publishing to a marketplace is a separate release action.

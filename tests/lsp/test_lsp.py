@@ -9,6 +9,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lsp_client import Client, labels  # noqa: E402
 
 EXE = sys.argv[1]
+TIMING_BUDGET_MS = float(os.environ.get('CLPP_LSP_TIMING_BUDGET_MS', '50'))
+if not 0 < TIMING_BUDGET_MS <= 500:
+    raise ValueError('LSP timing budget must be in (0, 500] ms')
 failures = 0
 
 
@@ -213,11 +216,12 @@ with tempfile.TemporaryDirectory() as ws:
             "range": first["range"], "newText": "0xFF0000"}, presentations)
 
     # 20. latency
-    t0 = time.time()
+    t0 = time.perf_counter()
     for _ in range(50):
         c.pos(uri, "textDocument/completion", 1, 6)
-    ms = (time.time() - t0) * 1000 / 50
-    check(f"completion latency {ms:.1f} ms < 50 ms", ms < 50, ms)
+    ms = (time.perf_counter() - t0) * 1000 / 50
+    gate = 'completion latency' if TIMING_BUDGET_MS == 50 else 'instrumented completion responsiveness'
+    check(f"{gate} {ms:.1f} ms < {TIMING_BUDGET_MS:g} ms", ms < TIMING_BUDGET_MS, ms)
 
     c.close()
 

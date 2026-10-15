@@ -16,15 +16,19 @@ const std::vector<ModuleEntry>& module_catalog() {
       {"@clpp.input", "Input", "Desktop automation (AutoHotkey style): move/click mouse, press keys, hotkeys, type text, read screen"},
       {"@clpp.io", "Io", "Console: Print without newline, ReadLine, ReadKey, ReadNumber, colors, cursor, Clear"},
       {"@clpp.text", "Text", "Text: trim, lower, upper, contains, split, replace, startsWith, endsWith, repeat, toNumber, indexOf, joinAll"},
-      {"@clpp.fs", "Fs", "Files: read, write, append, exists, remove, list, makeDir, size"},
+      {"@clpp.fs", "Fs", "Files: bounded text/bytes, atomic writes, metadata, directories and legacy text I/O"},
       {"@clpp.math", "Math", "Basic math: abs"},
       {"@clpp.os", "Os", "Process: env"},
+      {"@clpp.process", "Process", "Child processes: Run, streams, timeout, environment, status and ExecutablePath"},
+      {"@clpp.path", "Path", "Paths: current/temp directory, lexical operations, Canonical and Equivalent"},
       {"@clpp.http", "Http", "URLs: host"},
   };
   return catalog;
 }
 
 std::optional<std::string> module_source(const std::string_view path) {
+  if (path == "@clpp.process") return std::string(host::process_source());
+  if (path == "@clpp.path") return std::string(host::path_source());
   if (path == "@clpp.axiom" || path == "@clpp.Axion" || path == "@clpp.libs.axiom" || path == "@clpp.libs.Axion" ||
       path == "@clpp.mathutils") {
     return std::string(axiom_source());

@@ -10,7 +10,7 @@ The fifteen chapters in [handbook/](handbook/) incorporate the author's language
 
 1. [Learn CL++ from zero](guide/00-language-tour.md): read a source file, a declaration, a condition, a function, and a data definition.
 2. [Implementation status](reference/status.md): understand executable examples versus author-defined target examples.
-3. [Syntax map](reference/syntax.md): find every topic independently.
+3. [Language contract](reference/language-contract.md), [keyword inventory](reference/keyword-inventory.md) and [syntax map](reference/syntax.md): consolidated rules and every topic independently.
 4. [Lexer](reference/lexer.md), [comments](reference/comments.md), [names](reference/identifiers.md), [literals](reference/literals.md), and [punctuation](reference/punctuation.md).
 5. Guide chapters 3–13: declarations, expressions, flow, functions, definitions, types, collections, modules, errors, concurrency, and events.
 6. Library chapters and complete projects after the language fundamentals.

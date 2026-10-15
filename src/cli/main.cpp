@@ -20,10 +20,29 @@
 #define NOMINMAX
 #endif
 #include <windows.h>
+#include <shellapi.h>
 #endif
 
 int main(int argc, char* argv[]) {
 #ifdef _WIN32
+  // Decode Unicode arguments independently of the CRT's legacy narrow code page.
+  int wide_count = 0;
+  wchar_t** wide_args = CommandLineToArgvW(GetCommandLineW(), &wide_count);
+  if (!wide_args) { std::cerr << "cannot decode command line\n"; return 1; }
+  std::vector<std::string> utf8_args;
+  utf8_args.reserve(static_cast<std::size_t>(wide_count));
+  for (int index = 0; index < wide_count; ++index) {
+    const int length = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide_args[index], -1, nullptr, 0, nullptr, nullptr);
+    if (length == 0) { LocalFree(wide_args); std::cerr << "invalid Unicode command line\n"; return 1; }
+    std::string text(static_cast<std::size_t>(length), '\0');
+    WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide_args[index], -1, text.data(), length, nullptr, nullptr);
+    text.pop_back(); utf8_args.push_back(std::move(text));
+  }
+  LocalFree(wide_args);
+  std::vector<char*> utf8_pointers;
+  for (auto& text : utf8_args) utf8_pointers.push_back(text.data());
+  utf8_pointers.push_back(nullptr);
+  argc = wide_count; argv = utf8_pointers.data();
   // Programs print UTF-8 ("ação", "naïve"). Without this the Windows console shows it in the OEM
   // code page ("a├º├úo"). Pipes and files are unaffected: they always get the raw UTF-8 bytes.
   SetConsoleOutputCP(CP_UTF8);
@@ -66,16 +85,16 @@ int main(int argc, char* argv[]) {
   }
   clpp::stdlib::set_program_args(program_args);
 
-  std::ifstream file(std::string(arg), std::ios::binary);
+  std::ifstream file(std::filesystem::u8path(arg), std::ios::binary);
   if (!file) {
     std::cerr << "cannot open " << arg << '\n';
     return 1;
   }
 
   const std::string source(std::istreambuf_iterator<char>(file), {});
-  const std::filesystem::path base = std::filesystem::path(std::string(arg)).parent_path();
+  const std::filesystem::path base = std::filesystem::u8path(arg).parent_path();
   const clpp::ModuleLoader modules = [&base](const std::string_view path) -> std::optional<std::string> {
-    std::ifstream module(base / std::string(path), std::ios::binary);
+    std::ifstream module(base / std::filesystem::u8path(path), std::ios::binary);
     if (!module) {
       return std::nullopt;
     }
@@ -104,5 +123,5 @@ int main(int argc, char* argv[]) {
   }
   // Flush script output before global worker slots are destroyed at process shutdown.
   std::cout.flush();
-  return 0;
+  return clpp::stdlib::program_exit_code();
 }

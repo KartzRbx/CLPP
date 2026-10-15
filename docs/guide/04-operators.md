@@ -1,6 +1,6 @@
 # 4. Operators
 
-> **Target syntax — compiler alignment pending.** This page teaches the intended CL++ language. Examples marked `target` describe the specification and are not claimed to compile with the current executable. See [implementation status](../reference/status.md).
+This page describes current CL++ forms. Executable examples are checked by the documentation suite; explicitly target-marked proposals remain separate. See [implementation status](../reference/status.md).
 
 CL++ supports arithmetic `+ - * / %`, compound assignment `+= -= *= /= %=`, and postfix `++ --`. Integer division truncates toward zero; division by zero raises a catchable runtime error.
 
@@ -16,7 +16,7 @@ post("abcdef"[1 .. 4]);
 post(Vector3(0, 10, 0) + Vector3(2, 0, 1) * 0.5);
 ```
 
-Use parentheses when combining operators whose precedence is unclear. In particular, write `"total: " .: (a + b)` for concatenation after addition and `(1 shl 3) == 8` for a shift before comparison. Custom operator declarations need a separate target-language decision; they are not part of the confirmed syntax taught here.
+Use parentheses when combining operators whose precedence is unclear. In particular, write `"total: " .: (a + b)` for concatenation after addition and `(1 shl 3) == 8` for a shift before comparison. The restricted data operator forms `operator+` and `operator-` exist; they do not imply arbitrary operator support. See [less common forms](../reference/language-contract.md#12-less-common-forms-and-limits).
 
 The [operators reference](../reference/keywords.md) lists every operator and spelling.
 
@@ -46,6 +46,6 @@ true
 
 ## Grouping expressions
 
-Use parentheses to make evaluation order explicit: `(2 + 3) * 4`, `not (hp <= 0)`, and `(1 shl 3) == 8`. Arithmetic, comparison, and logical operators should each be readable as separate steps. The current parser has unusual precedence around unary operators; its behavior is recorded in [implementation status](../reference/status.md), rather than treated as the intended language specification.
+Use parentheses to make evaluation order explicit: `(2 + 3) * 4`, `not (hp <= 0)`, and `(1 shl 3) == 8`. Arithmetic, comparison, and logical operators should each be readable as separate steps. Prefix operators bind before arithmetic. Comparisons share one precedence level and bind before shifts in the current parser. See the exact [precedence table](../reference/language-contract.md#3-expressions-access-and-precedence); do not assume another language's grouping.
 
 Assignment is a statement: `score = 10;`. Equality is an expression: `score == 10`. Avoid chained comparisons; write `score >= 0 and score <= 100`.

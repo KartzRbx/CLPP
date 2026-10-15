@@ -6,6 +6,8 @@ Operations have distinct names rather than overloaded declarations. Axiom expose
 
 | Module | Main purpose |
 | --- | --- |
+| `@clpp.process` | General child processes, argument boundaries, streams, budgets, exit status and executable location |
+| `@clpp.path` | General lexical paths, canonical paths and existing-file identity |
 | `@clpp.axiom` | Mathematics for games |
 | `@clpp.text` | String operations |
 | `@clpp.math` | Basic numeric functions |

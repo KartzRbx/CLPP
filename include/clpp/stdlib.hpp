@@ -38,6 +38,7 @@ struct ModuleEntry {
 [[nodiscard]] int axiom_native(std::string_view name, std::size_t arity);
 [[nodiscard]] bool axiom_apply(std::uint8_t id, const Value* args, std::uint8_t arity, Value& out, std::string& error);
 void set_program_args(const std::vector<std::string>& args);
+[[nodiscard]] int program_exit_code();
 
 // Host libraries: natives that talk to the operating system or keep state between calls
 // (@clpp.window, @clpp.gfx, @clpp.ui, @clpp.json, @clpp.time and the writing half of @clpp.fs).

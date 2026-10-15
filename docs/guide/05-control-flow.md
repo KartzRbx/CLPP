@@ -1,6 +1,6 @@
 # 5. Control flow
 
-> **Target syntax — compiler alignment pending.** This page teaches the intended CL++ language. Examples marked `target` describe the specification and are not claimed to compile with the current executable. See [implementation status](../reference/status.md).
+This page describes current CL++ forms. Executable examples are checked by the documentation suite; explicitly target-marked proposals remain separate. See [implementation status](../reference/status.md).
 
 Control flow chooses which statements run and how often. A condition uses `(...)`; an `if`, `while`, or `for` body always uses `{...}`, even for one statement. `true`, nonzero numbers, and nonempty strings are truthy; `false`, zero, and empty strings are falsey. Prefer explicit comparisons in beginner code.
 

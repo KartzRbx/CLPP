@@ -47,9 +47,9 @@ The lexer must distinguish multi-character symbols from their shorter prefixes: 
 
 - `.` selects a member; `::` selects a scoped case such as `Element::Fire` or an established native member.
 - `.:` concatenates text; `..` denotes a range or slice boundary.
-- `=>` introduces a target match arm. Anonymous callbacks use `func (...) -> Type { ... }`.
-- `~>` is part of the connection/janitor design; its final lifecycle contract still needs reconciliation with the old signal runtime.
-- `@` begins a standard-library module path after `link`; annotations and receiver shortcuts require separate contracts.
+- `=>` introduces a match arm. Anonymous callbacks use `func (...) -> Type { ... }`.
+- `~>` registers a signal callback with its internal cleanup manager; `event::Clear()` disconnects managed subscriptions.
+- `@` begins a standard-library module path after `link`; `@this` selects the method receiver. Other receiver shortcuts and arbitrary annotations are rejected.
 - `and`, `or`, `not`, `shl`, and `shr` are word operators.
 
 The parser determines the meaning of a symbol in context. See [Punctuation](punctuation.md) and [Operators](../guide/04-operators.md).

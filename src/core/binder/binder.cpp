@@ -94,6 +94,7 @@ thread_local std::vector<const parser::Expr*> bound_defaults;
   copy.enum_literal = expr.enum_literal;
   copy.named_initializer = expr.named_initializer;
   copy.scoped_member = expr.scoped_member;
+  copy.scoped_type_candidate = expr.scoped_type_candidate;
   copy.async_call = expr.async_call;
   copy.signal_call = expr.signal_call;
   copy.thread_call = expr.thread_call;
@@ -475,6 +476,10 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
   if (expr.kind == parser::Expr::Kind::Construct) {
     return static_cast<int>(expr.slot);
   }
+  if (expr.kind == parser::Expr::Kind::Ascribe) {
+    const StructRef* decl = find_struct(structs, bare_type(member_owner_spelling(expr.value, structs, member)));
+    return decl == nullptr ? -1 : static_cast<int>(decl->index);
+  }
   if (expr.kind == parser::Expr::Kind::Name) {
     const Local* local = expression_local(locals, expr);
     if (local == nullptr) {
@@ -595,6 +600,29 @@ void bind_method(parser::Expr& expr, parser::Expr receiver, const std::vector<Lo
 void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::vector<FuncRef>& functions,
                const std::vector<StructRef>& structs, const std::vector<EnumRef>& enums,
                std::vector<Diagnostic>& diagnostics, const std::string& expected) {
+  if (expr.kind == parser::Expr::Kind::Call && expr.scoped_type_candidate && !expr.left &&
+      find_local(locals, expr.value) < 0 && active_program) {
+    const auto root = bare_type(expr.value);
+    const bool alias = std::any_of(active_program->aliases.begin(), active_program->aliases.end(),
+                                  [&](const auto& declaration) { return declaration.name == root; });
+    const bool data = find_struct(structs, root) != nullptr || find_enum(enums, root) != nullptr;
+    if ((alias || data) && !expr.named_initializer && expr.args.size() == 1) {
+      expr.kind = parser::Expr::Kind::Ascribe;
+      expr.left = std::make_unique<parser::Expr>(std::move(expr.args[0]));
+      expr.args.clear();
+    } else if (expr.named_initializer && expr.args.empty() &&
+               typechecker::array_initializer_type(*active_program, expr.value, active_function)) {
+      expr.kind = parser::Expr::Kind::Ascribe;
+      expr.left = std::make_unique<parser::Expr>();
+      expr.left->kind = parser::Expr::Kind::MakeList;
+      expr.left->value = "$array_initializer";
+      expr.left->location = expr.location; expr.left->span = expr.span;
+    }
+  }
+  if (expr.kind == parser::Expr::Kind::Ascribe) {
+    if (expr.left) bind_expr(*expr.left, locals, functions, structs, enums, diagnostics, expr.value);
+    return;
+  }
   if (expr.kind == parser::Expr::Kind::MakeList && expr.value == "$array_initializer") {
     const auto type = active_program ? typechecker::array_initializer_type(*active_program, expected, active_function) : std::nullopt;
     if (!type) {
@@ -1420,6 +1448,7 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
 
 [[nodiscard]] std::string inferred_type(const parser::Expr& expr, const std::vector<Local>& locals,
                                         const std::vector<StructRef>& structs) {
+  if (expr.kind == parser::Expr::Kind::Ascribe) return expr.value;
   if (expr.kind == parser::Expr::Kind::Construct && !expr.value.empty()) {
     return expr.value;
   }
