@@ -31,7 +31,7 @@ forms remain separate from implemented language contracts. See
 
 The CL++ VS Code extension provides syntax highlighting, diagnostics while typing, completion for local and imported members, signature help, hover information, go to definition, references, rename, formatting, semantic colors, and code folding. It also offers file execution with **Ctrl+F5**, and color swatches for `0xRRGGBB` literals.
 
-The extension uses `clpp-vm --lsp`, so its analysis is based on the same compiler as a command-line build. On Windows x64, the VSIX includes `clpp.exe`. The `clpp.serverPath` setting can point to another executable.
+The extension uses `clpp-vm --lsp`, so its analysis is based on the same compiler as a command-line build. On Windows x64, the VSIX includes `clpp-vm.exe`. The `clpp.serverPath` setting can point to another executable.
 
 **Format Document** uses the editor's tab width and spaces/tabs preference.
 It keeps `for` headers together, attaches initializer punctuation, normalizes

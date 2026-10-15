@@ -164,7 +164,7 @@ jobs:
           python-version: "3.11"
       - uses: actions/download-artifact@v4
         with:
-          name: clpp-windows
+          name: clpp-vm-windows
           path: package-artifacts
       - name: Verify bundled executable without build-tool DLLs
         shell: pwsh
