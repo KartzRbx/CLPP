@@ -1,0 +1,108 @@
+// =====================================================================
+// Diagnostics.expected.clpp
+//
+// Cada trecho abaixo está ERRADO de propósito. O comentário diz o que o
+// compilador novo deve responder. Serve de base para os testes da Fase 1
+// e da Fase 5 do prompt (um diagnóstico por causa raiz, zero cascata).
+//
+// Códigos marcados (existente) já estão na documentação.
+// Códigos marcados (proposto) são numeração sugerida, não existem ainda.
+// =====================================================================
+
+pragma strict;
+link "Entities.clh";
+
+// ---------------------------------------------------------------------
+// 1) `let` não existe  ->  UM erro, sem cascata
+// ---------------------------------------------------------------------
+void Caso1() {
+    let tile = GridAt(maze, pos);         // CLPP0902 (proposto): CL++ não tem 'let';
+                                          //   use 'auto' ou o tipo.  Quick-fix: auto
+    post(to_string(tile));                // sem erro: `tile` foi declarada com tipo Error
+    tile.Foo();                           // sem erro: Error absorve o resto
+}
+// Esperado: exatamente 1 diagnóstico neste bloco.
+// Hoje (bug do Pacman): a linha `let` não declara `tile` e cada uso gera erro.
+
+// ---------------------------------------------------------------------
+// 2) struct está deprecado
+// ---------------------------------------------------------------------
+struct Antigo { int A; }                  // CLPP0901 (proposto, warning): use `def`.
+                                          //   Quick-fix e `clpp fix --def`.
+
+// ---------------------------------------------------------------------
+// 3) func sem tipo
+// ---------------------------------------------------------------------
+void Caso3() {
+    func callback = func (int x) { return x; };
+                                          // CLPP0903 (proposto, warning): `func` perde
+                                          //   os tipos. Use um def de função:
+                                          //   def IntFn = (int) -> int;
+}
+
+// ---------------------------------------------------------------------
+// 4) optional para tipo simples sem estreitar
+// ---------------------------------------------------------------------
+void Caso4(Pacman p) {
+    Dir d = p.Queued;                     // CLPP0201 (existente): optional<Dir> -> Dir
+                                          //   sem narrowing
+}
+
+// ---------------------------------------------------------------------
+// 5) match não exaustivo
+// ---------------------------------------------------------------------
+Vec2 Caso5(Dir dir) {
+    match (dir) {                         // CLPP0501 (existente): falta Dir::Right
+        Dir::Up   => { return Vec2 { .X = 0,  .Y = -1 }; }
+        Dir::Down => { return Vec2 { .X = 0,  .Y = 1 };  }
+        Dir::Left => { return Vec2 { .X = -1, .Y = 0 };  }
+    }
+}
+
+// ---------------------------------------------------------------------
+// 6) def privado usado fora do módulo
+// ---------------------------------------------------------------------
+void Caso6() {
+    Cell c;                               // CLPP0904 (proposto): `Cell` é privado de
+                                          //   Maze.clp; não vem em Entities.clh
+}
+
+// ---------------------------------------------------------------------
+// 7) callback com assinatura errada
+// ---------------------------------------------------------------------
+void Caso7() {
+    OnScore(func (string s) -> void { }); // CLPP0905 (proposto): esperado
+                                          //   (Score, Vec2) -> void
+                                          //   recebido (string) -> void
+}
+
+// ---------------------------------------------------------------------
+// 8) atribuição em @parallel
+// ---------------------------------------------------------------------
+@parallel
+int Caso8(Vec2 a) {
+    int total = 0;
+    total = a.X;                          // CLUAU_PAR001 (existente): mutation is not
+                                          //   allowed under @parallel
+    return total;
+}
+
+// ---------------------------------------------------------------------
+// 9) autoridade cliente/servidor (neste arquivo = módulo comum)
+// ---------------------------------------------------------------------
+// Em Game.client.clpp:  SaveScore(player, 10);
+//   CLUAU_AUTH001 (existente): call to server function `SaveScore` from a
+//   Client context
+
+// ---------------------------------------------------------------------
+// 10) formas aceitas, mas não canônicas: HINT, não erro
+// ---------------------------------------------------------------------
+bool Caso10(bool a, bool b) {
+    return a and not b;                   // CLPP1001 (proposto, hint): prefira
+                                          //   `a && !b`.  `clpp fmt` reescreve.
+}
+
+// ---------------------------------------------------------------------
+// 11) !def aceito como alias
+// ---------------------------------------------------------------------
+!def Legado { int V = 0; }                // CLPP1002 (proposto, hint): prefira `def`.

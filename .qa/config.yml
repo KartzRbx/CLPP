@@ -1,0 +1,29 @@
+project: CL++ VM
+detected: 2026-10-14
+environment: local-validation-and-authorized-github-publication
+stack:
+  core: C++20 / CMake / Catch2 / CTest
+  lsp_contract: Python JSON-RPC client
+  editor_clients: VS Code JavaScript / Zed Rust-Wasm + Tree-sitter
+  site: Astro / Node content and link validation
+interfaces:
+  results: JUnit XML and exit status
+  compiler: --check and VM execution
+  protocol: JSON-RPC over Content-Length-framed stdio
+layers:
+  static: focused native conversion review and JavaScript syntax checks
+  unit: existing Catch2 suite and sanitizer regressions
+  contract: existing LSP and VS Code provider suite
+  fuzz: existing bounded compiler mutation audit
+  e2e: isolated installer and VSIX compiler execution
+  ui: partial; user screenshot confirms Zed swatches, capture failed
+  authz: not-applicable; no HTTP identity service
+  canary: pending final release downloads and deployed Pages verification
+  mutation: existing source mutations; test-suite mutation tooling not installed
+limitations:
+  - Dedicated secret/SAST scanners were not available in this run
+  - Linux release, Linux ASan/UBSan, Windows MSVC and Windows ASan/UBSan passed on GitHub at 4a89823
+  - macOS and cross-compiled Windows package passed on integrated baseline 773453d; final 0.11.0 revision pending
+  - Instrumented responsiveness is separate from the normal 50 ms performance gate
+  - Windows LeakSanitizer not enabled
+  - Discord RPC acknowledgement does not prove public profile rendering

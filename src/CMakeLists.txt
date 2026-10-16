@@ -7,7 +7,7 @@ find_package(Threads REQUIRED)
 #
 #   clpp_std       stdlib natives (leaf: depends only on the public Value type)
 #   clpp_front     lexer, parser, binder, type checker, analyze_program
-#   clpp_compiler  stack bytecode (CLIR v1), verifiers, register lowering, Luau text backend
+#   clpp_compiler  stack bytecode (CLIR v1), verifiers, register lowering
 #   clpp_vm        register VM and GC
 #   clpp_tools     IDE queries, LSP server, REPL
 #
@@ -17,12 +17,19 @@ find_package(Threads REQUIRED)
 
 set(CLPP_PUBLIC_INCLUDES "${CMAKE_SOURCE_DIR}/include" "${CMAKE_SOURCE_DIR}/src")
 
+add_library(clpp_value STATIC core/vm/shared_heap.cpp)
+target_include_directories(clpp_value PUBLIC ${CLPP_PUBLIC_INCLUDES})
+target_link_libraries(clpp_value PUBLIC Threads::Threads)
+clpp_configure_target(clpp_value)
+
 add_library(clpp_std STATIC
   stdlib/std_io.cpp
   stdlib/std_math.cpp
   stdlib/std_axiom.cpp
   stdlib/std_fs.cpp
   stdlib/std_os.cpp
+  stdlib/std_process.cpp
+  stdlib/std_cli_files.cpp
   stdlib/std_http.cpp
   stdlib/std_host.cpp
   stdlib/std_gfx.cpp
@@ -38,6 +45,7 @@ add_library(clpp_std STATIC
   stdlib/std_time.cpp
 )
 target_include_directories(clpp_std PUBLIC ${CLPP_PUBLIC_INCLUDES})
+target_link_libraries(clpp_std PUBLIC clpp_value)
 if(WIN32)
   # @clpp.window talks to Win32 directly: no extra DLLs ship with clpp.exe.
   target_link_libraries(clpp_std PRIVATE user32 gdi32 winmm)
@@ -60,8 +68,6 @@ add_library(clpp_compiler STATIC
   core/compiler/bytecode_verifier.cpp
   core/compiler/stack_verifier.cpp
   core/compiler/clir_io.cpp
-  core/compiler/luau_emit.cpp
-  core/compiler/backend.cpp
   core/compiler/codegen.cpp
   core/compiler/register_lower.cpp
 )
@@ -95,6 +101,7 @@ add_library(clpp_tools STATIC
   core/repl/repl.cpp
 )
 target_link_libraries(clpp_tools PUBLIC clpp_vm clpp_front PRIVATE nlohmann_json::nlohmann_json)
+target_compile_definitions(clpp_tools PRIVATE CLPP_VERSION="${PROJECT_VERSION}")
 clpp_configure_target(clpp_tools)
 
 # Everything at once, for the CLI, the tests and existing embedders.
@@ -102,11 +109,22 @@ add_library(clpp_core INTERFACE)
 target_link_libraries(clpp_core INTERFACE clpp_tools clpp_vm clpp_compiler clpp_front clpp_std)
 
 add_executable(clpp cli/main.cpp)
-# The C++20 VM is a separate product from the Rust/Luau compiler.
+# Separate from the independent Luau compiler.
 set_target_properties(clpp PROPERTIES OUTPUT_NAME "clpp-vm")
+target_compile_definitions(clpp PRIVATE CLPP_VERSION="${PROJECT_VERSION}")
 if(WIN32)
   enable_language(RC)
-  target_sources(clpp PRIVATE cli/clpp.rc)  # icon + version info in Explorer
+  configure_file(cli/clpp.rc.in "${CMAKE_CURRENT_BINARY_DIR}/clpp.rc" @ONLY)
+  target_sources(clpp PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/clpp.rc")
 endif()
 target_link_libraries(clpp PRIVATE clpp_core)
+if(WIN32)
+  target_link_libraries(clpp PRIVATE shell32)
+endif()
+if(MINGW AND NOT CLPP_SANITIZE_ADDRESS AND NOT CLPP_SANITIZE_UNDEFINED)
+  # Production CLI/VSIX packages must run without an installed compiler SDK.
+  # Instrumented builds retain their matching sanitizer runtime instead.
+  target_link_options(clpp PRIVATE -static)
+endif()
 clpp_configure_target(clpp)
+install(TARGETS clpp RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT Runtime)

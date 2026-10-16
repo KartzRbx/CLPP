@@ -10,7 +10,7 @@ int main() {
   for (int i = 0; i < 1000; ++i) {
     const int a = i % 50;
     const int b = (i / 50) % 20;
-    const std::string source = "func add(a, b) {\n  return a + b;\n}\npost(add(" + std::to_string(a) +
+    const std::string source = "number add(number a, number b) {\n  return a + b;\n}\npost(add(" + std::to_string(a) +
                                ", " + std::to_string(b) + "));\n";
     const clpp::CompileResult compiled = clpp::Compiler{}.compile(source);
     if (!compiled.ok()) {

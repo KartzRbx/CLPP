@@ -13,6 +13,7 @@ namespace clpp {
 struct ClirEmitResult {
   BytecodeChunk chunk;
   std::vector<Diagnostic> diagnostics;
+  std::shared_ptr<const std::vector<std::string>> diagnostic_text;
 
   [[nodiscard]] bool ok() const { return diagnostics.empty(); }
 };
@@ -21,21 +22,11 @@ struct ClirEmitResult {
 
 [[nodiscard]] RegChunk lower_to_vm(const BytecodeChunk& chunk);
 
-// Test serializer for CLIR v1. Not a stable distribution format.
+// Complete test container for CLIR. The container revision is separate from the
+// bytecode version; this is not a stable distribution format. Invalid input returns
+// an empty chunk with version 0. Runtime heap values are not constant-pool literals.
+inline constexpr std::uint16_t kClirContainerVersion = 4;
 [[nodiscard]] std::string serialize_clir(const BytecodeChunk& chunk);
 [[nodiscard]] BytecodeChunk deserialize_clir(std::string_view bytes);
-
-enum class Backend { Vm, Luau };
-
-// Empty when every opcode in the chunk has a lowering on that backend.
-[[nodiscard]] std::string check_backend(Backend backend, const BytecodeChunk& chunk);
-
-struct LuauEmit {
-  std::string source;
-  std::string error;
-};
-
-// Text backend for a small statement subset. Does not invoke a Luau VM.
-[[nodiscard]] LuauEmit clir_to_luau(const AnalysisResult& analysis);
 
 }  // namespace clpp

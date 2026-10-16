@@ -46,7 +46,7 @@ Cada item abaixo tem um teste de regressão em `tests/unit/test_regressions.cpp`
 | Antes | Agora | Por quê |
 | --- | --- | --- |
 | Um comentário `<<` em arquivo com fim de linha Windows (CRLF) engolia o resto do arquivo | CRLF, LF e CR terminam a linha | arquivos criados no Windows quebravam sem aviso |
-| `7 / 2` dava `3.5` mesmo com dois `int` | `int / int` é divisão inteira (`3`); com um `float` é decimal | coerente com os tipos declarados e com C++/C# |
+| `7 / 2` dava `3.5` mesmo com dois `number` | `number / number` é divisão inteira (`3`); com um `float` é decimal | coerente com os tipos declarados e com C++/C# |
 | `post(true)` imprimia `1` | imprime `true`; em `.:` também | bool é um tipo, não um número |
 | `"AZ"[1]` dava `90` (o byte) | dá `"Z"`, contando caracteres UTF-8 | texto é texto |
 | Índice fora da lista devolvia lixo ou travava | erro `index out of range: i (size n)`, capturável | segurança |
@@ -55,7 +55,7 @@ Cada item abaixo tem um teste de regressão em `tests/unit/test_regressions.cpp`
 | `a \| b`, `a & b`, `shl`, `shr` com variáveis davam o valor de `a` | resultado correto | bug de alias de registrador na VM |
 | `"abc" != "abd"` não compilava | compila | comparação de literais distintos era tratada como erro |
 | `facing == Direction.East`, `alive == true`, `p == q` não compilavam | igualdade entre enums, bools, structs, listas e vetores, por valor | básico |
-| Função com `-> int` e `return` só dentro de um `if` compilava | `missing return` se algum caminho não devolve | erro silencioso virava `0` |
+| Função com `-> number` e `return` só dentro de um `if` compilava | `missing return` se algum caminho não devolve | erro silencioso virava `0` |
 | `link @clpp.x;` sem `as` era ignorado | usa o último nome com inicial maiúscula (`Axiom`) | importação silenciosamente vazia |
 | `parallel(...)` somava os resultados e só aceitava números | devolve a lista de resultados, de qualquer tipo | soma era um caso particular |
 | `post(lista)` imprimia `1, 2, 3`; `post(Vector3(...))` imprimia só `x` | `[1, 2, 3]`, `{chave: 1}`, `(3, 4)`, `(1, 2, 3)` | legível e sem ambiguidade |
@@ -70,8 +70,8 @@ Cada item abaixo tem um teste de regressão em `tests/unit/test_regressions.cpp`
 | --- | --- | --- |
 | Atribuir campos, campos aninhados, componentes, elementos | `p.stats.hp -= 3; pos.y = 1; xs[i] = v; team[1].hp = 9;` | 7, 9 |
 | Métodos que alteram o objeto | `p.damage(5)` altera `p` | 7 |
-| `@campo` dentro de métodos = `self.campo` | `@hp = @hp - 1;` | 7 |
-| Construtor com argumentos nomeados | `Item(price: 150, name: "espada")` | 7 |
+| `@campo` dentro de métodos = `@this.campo` | `@hp = @hp - 1;` | 7 |
+| Inicialização com campos nomeados | `Item { price=150, name="espada" }` | 7 |
 | `continue` | em `while`, `for` e `for … in` | 5 |
 | `for … in` sobre listas, textos e dicionários | `for (let item in inventory)` | 5 |
 | `len`, `push`, `pop`, `insert`, `remove` | `push(queue, "ana");` | 9 |
@@ -79,7 +79,7 @@ Cada item abaixo tem um teste de regressão em `tests/unit/test_regressions.cpp`
 | Texto: `split`, `joinAll`, `replace`, `startsWith`, `endsWith`, `repeat`, `toNumber`, `indexOf` | `Text.split("a,b", ",")` | 9 |
 | Vetores: `-` entre vetores, `/` por número | `enemy - player` | 4 |
 | Axiom: `Dot`, `Cross`, `Length`, `Normalize`; predicados devolvem `bool` | `Axiom.Normalize(dir)` | 14 |
-| Tipos de módulo qualificados e genéricos em parâmetros | `func f(Combat.Fighter x, array<int> xs)` | 6, 10 |
+| Tipos de módulo qualificados e genéricos em parâmetros | `func f(Combat.Fighter x, array<number> xs)` | 6, 10 |
 | Campo do retorno de uma função | `make().hp` | 7 |
 | `-> void` | `func log(string m) -> void` | 6 |
 | Signals conectando funções de módulo | `damaged ~> Hud.onDamage;` | 13 |

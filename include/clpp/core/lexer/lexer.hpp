@@ -44,10 +44,8 @@ class Lexer {
   void report(SourceLocation loc, std::string_view span, std::string_view message);
 
   void skip_whitespace();
-  void skip_line_comment_after_ll();
-  [[nodiscard]] bool skip_block_comment_after_lbracket();
-  void consume_less_less_comment(SourceLocation start_loc, std::size_t comment_start,
-                                 std::vector<Token>& tokens);
+  void skip_line_comment();
+  [[nodiscard]] bool skip_block_comment();
 
   [[nodiscard]] Token make_token(TokenType type, std::string_view text, SourceLocation loc);
   [[nodiscard]] bool take_utf8();

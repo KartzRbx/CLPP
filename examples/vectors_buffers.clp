@@ -16,5 +16,5 @@ void ProcessPacket() {
     post("Buffer allocated with size: " .: buffer::size(stream));
 }
 
-<< @coins, @this.janitor e @this::BindPart referem-se à mesma tabela (self)
+UpdatePosition(Vector3(0, 125, 0));
 ProcessPacket();

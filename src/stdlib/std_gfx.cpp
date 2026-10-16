@@ -47,6 +47,7 @@ struct Image {
   std::vector<std::uint32_t> pixels;  // 0xAARRGGBB with real alpha
 };
 std::vector<Image> g_images;  // handle = index + 1
+std::unordered_map<std::string, int> g_image_cache;
 
 struct Paint {
   std::uint32_t rgb{0};
@@ -1298,9 +1299,7 @@ CLPP_NATIVE(gfx_font) {  // (family): "pixel" = the built-in bitmap font
 
 CLPP_NATIVE(gfx_bold) {
   (void)out;
-  if (!numbers(args, arity, error, "Gfx.Bold")) {
-    return false;
-  }
+  if (arity != 1 || !args[0].is_boolean()) return fail(error, "Gfx.Bold: expected a bool");
   text::choice().bold = args[0].number != 0;
   return true;
 }
@@ -1614,70 +1613,70 @@ constexpr std::string_view kGfxSource = R"clp(<< @clpp.gfx: 2D drawing on a soft
 << Colors are ints 0xRRGGBB; the top byte is transparency (0 = opaque). See Fade and Rgba.
 << Text sizes are pixels (like CSS font-size); Font("pixel") switches to the built-in pixel font.
 
-const BLACK = 0x000000;
-const WHITE = 0xFFFFFF;
-const GRAY = 0x9E9E9E;
-const DARK = 0x1E1E2E;
-const LIGHT = 0xF4F4F8;
-const RED = 0xE5484D;
-const ORANGE = 0xF76B15;
-const YELLOW = 0xFFC53D;
-const GREEN = 0x30A46C;
-const TEAL = 0x12A594;
-const CYAN = 0x00A2C7;
-const BLUE = 0x3E63DD;
-const PURPLE = 0x8E4EC6;
-const PINK = 0xD6409F;
-const BROWN = 0xAD7F58;
-const TRANSPARENT = 0xFF000000;
+export const auto BLACK = 0x000000;
+export const auto WHITE = 0xFFFFFF;
+export const auto GRAY = 0x9E9E9E;
+export const auto DARK = 0x1E1E2E;
+export const auto LIGHT = 0xF4F4F8;
+export const auto RED = 0xE5484D;
+export const auto ORANGE = 0xF76B15;
+export const auto YELLOW = 0xFFC53D;
+export const auto GREEN = 0x30A46C;
+export const auto TEAL = 0x12A594;
+export const auto CYAN = 0x00A2C7;
+export const auto BLUE = 0x3E63DD;
+export const auto PURPLE = 0x8E4EC6;
+export const auto PINK = 0xD6409F;
+export const auto BROWN = 0xAD7F58;
+export const auto TRANSPARENT = 0xFF000000;
 
-func Canvas(int width, int height) { gfx::Canvas(width, height); }
-func Width() -> int { return gfx::Width(); }
-func Height() -> int { return gfx::Height(); }
-func Clear(int color) { gfx::Clear(color); }
-func Pixel(float x, float y, int color) { gfx::Pixel(x, y, color); }
-func GetPixel(float x, float y) -> int { return gfx::GetPixel(x, y); }
-func Rect(float x, float y, float width, float height, int color) { gfx::Rect(x, y, width, height, color); }
-func RectLine(float x, float y, float width, float height, int color) { gfx::RectLine(x, y, width, height, color); }
-func RectLine(float x, float y, float width, float height, float thickness, int color) { gfx::RectLine(x, y, width, height, thickness, color); }
-func RoundRect(float x, float y, float width, float height, float radius, int color) { gfx::RoundRect(x, y, width, height, radius, color); }
-func Circle(float x, float y, float radius, int color) { gfx::Circle(x, y, radius, color); }
-func CircleLine(float x, float y, float radius, int color) { gfx::CircleLine(x, y, radius, color); }
-func CircleLine(float x, float y, float radius, float thickness, int color) { gfx::CircleLine(x, y, radius, thickness, color); }
-func Line(float x1, float y1, float x2, float y2, int color) { gfx::Line(x1, y1, x2, y2, color); }
-func Line(float x1, float y1, float x2, float y2, float thickness, int color) { gfx::Line(x1, y1, x2, y2, thickness, color); }
-func Triangle(float x1, float y1, float x2, float y2, float x3, float y3, int color) { gfx::Triangle(x1, y1, x2, y2, x3, y3, color); }
-func Gradient(float x, float y, float width, float height, int top, int bottom) { gfx::Gradient(x, y, width, height, top, bottom); }
-func GradientH(float x, float y, float width, float height, int left, int right) { gfx::Gradient(x, y, width, height, left, right, 1); }
-func Text(string text, float x, float y, float size, int color) { gfx::Text(text, x, y, size, color); }
-func TextWidth(string text, float size) -> float { return gfx::TextWidth(text, size); }
-func TextHeight(float size) -> float { return gfx::TextHeight(size); }
-func Font(string family) { gfx::Font(family); }
-func Bold(bool bold) { gfx::Bold(bold); }
-func Shadow(float x, float y, float width, float height, float radius, float blur, int color) { gfx::Shadow(x, y, width, height, radius, blur, color); }
-func RoundRectLine(float x, float y, float width, float height, float radius, float thickness, int color) { gfx::RoundRectLine(x, y, width, height, radius, thickness, color); }
-func Effect(string name, float amount) { gfx::Effect(name, amount); }
-func Tint(int color, float amount) { gfx::Tint(color, amount); }
-func Clip(float x, float y, float width, float height) { gfx::Clip(x, y, width, height); }
-func NoClip() { gfx::NoClip(); }
-func Rgb(int r, int g, int b) -> int { return gfx::Rgb(r, g, b); }
-func Rgba(int r, int g, int b, int a) -> int { return gfx::Rgb(r, g, b, a); }
-func Hsv(float hue, float saturation, float value) -> int { return gfx::Hsv(hue, saturation, value); }
-func Mix(int a, int b, float t) -> int { return gfx::Mix(a, b, t); }
-func Fade(int color, float alpha) -> int { return gfx::Fade(color, alpha); }
-func Hex(string text) -> int { return gfx::Hex(text); }
-func Red(int color) -> int { return gfx::Channel(color, 16); }
-func Green(int color) -> int { return gfx::Channel(color, 8); }
-func Blue(int color) -> int { return gfx::Channel(color, 0); }
-func LoadImage(string path) -> int { return gfx::LoadImage(path); }
-func ImageWidth(int image) -> int { return gfx::ImageSize(image, 0); }
-func ImageHeight(int image) -> int { return gfx::ImageSize(image, 1); }
-func Image(int image, float x, float y) { gfx::Image(image, x, y); }
-func ImageScaled(int image, float x, float y, float width, float height) { gfx::Image(image, x, y, width, height); }
-func ImagePart(int image, float sx, float sy, float sw, float sh, float x, float y, float scale) { gfx::ImagePart(image, sx, sy, sw, sh, x, y, scale); }
-func Capture(float x, float y, float width, float height) -> int { return gfx::Capture(x, y, width, height); }
-func Save(string path) -> bool { return gfx::Save(path); }
-func Checksum() -> int { return gfx::Checksum(); }
+export void Canvas(number width, number height) { gfx::Canvas(width, height); }
+export number Width() { return gfx::Width(); }
+export number Height() { return gfx::Height(); }
+export void Clear(number color) { gfx::Clear(color); }
+export void Pixel(float x, float y, number color) { gfx::Pixel(x, y, color); }
+export number GetPixel(float x, float y) { return gfx::GetPixel(x, y); }
+export void Rect(float x, float y, float width, float height, number color) { gfx::Rect(x, y, width, height, color); }
+export void RectLine(float x, float y, float width, float height, number color) { gfx::RectLine(x, y, width, height, color); }
+export void RectLineWithThickness(float x, float y, float width, float height, float thickness, number color) { gfx::RectLine(x, y, width, height, thickness, color); }
+export void RoundRect(float x, float y, float width, float height, float radius, number color) { gfx::RoundRect(x, y, width, height, radius, color); }
+export void Circle(float x, float y, float radius, number color) { gfx::Circle(x, y, radius, color); }
+export void CircleLine(float x, float y, float radius, number color) { gfx::CircleLine(x, y, radius, color); }
+export void CircleLineWithThickness(float x, float y, float radius, float thickness, number color) { gfx::CircleLine(x, y, radius, thickness, color); }
+export void Line(float x1, float y1, float x2, float y2, number color) { gfx::Line(x1, y1, x2, y2, color); }
+export void LineWithThickness(float x1, float y1, float x2, float y2, float thickness, number color) { gfx::Line(x1, y1, x2, y2, thickness, color); }
+export void Triangle(float x1, float y1, float x2, float y2, float x3, float y3, number color) { gfx::Triangle(x1, y1, x2, y2, x3, y3, color); }
+export void Gradient(float x, float y, float width, float height, number top, number bottom) { gfx::Gradient(x, y, width, height, top, bottom); }
+export void GradientH(float x, float y, float width, float height, number left, number right) { gfx::Gradient(x, y, width, height, left, right, 1); }
+export void Text(string text, float x, float y, float size, number color) { gfx::Text(text, x, y, size, color); }
+export float TextWidth(string text, float size) { return gfx::TextWidth(text, size); }
+export float TextHeight(float size) { return gfx::TextHeight(size); }
+export void Font(string family) { gfx::Font(family); }
+export void Bold(bool bold) { gfx::Bold(bold); }
+export void Shadow(float x, float y, float width, float height, float radius, float blur, number color) { gfx::Shadow(x, y, width, height, radius, blur, color); }
+export void RoundRectLine(float x, float y, float width, float height, float radius, float thickness, number color) { gfx::RoundRectLine(x, y, width, height, radius, thickness, color); }
+export void Effect(string name, float amount) { gfx::Effect(name, amount); }
+export void Tint(number color, float amount) { gfx::Tint(color, amount); }
+export void Clip(float x, float y, float width, float height) { gfx::Clip(x, y, width, height); }
+export void NoClip() { gfx::NoClip(); }
+export number Rgb(number r, number g, number b) { return gfx::Rgb(r, g, b); }
+export number Rgba(number r, number g, number b, number a) { return gfx::Rgb(r, g, b, a); }
+export number Hsv(float hue, float saturation, float value) { return gfx::Hsv(hue, saturation, value); }
+export number Mix(number a, number b, float t) { return gfx::Mix(a, b, t); }
+export number Fade(number color, float alpha) { return gfx::Fade(color, alpha); }
+export number Hex(string text) { return gfx::Hex(text); }
+export number Red(number color) { return gfx::Channel(color, 16); }
+export number Green(number color) { return gfx::Channel(color, 8); }
+export number Blue(number color) { return gfx::Channel(color, 0); }
+export number LoadImage(string path) { return gfx::LoadImage(path); }
+export number ImageWidth(number image) { return gfx::ImageSize(image, 0); }
+export number ImageHeight(number image) { return gfx::ImageSize(image, 1); }
+export void Image(number image, float x, float y) { gfx::Image(image, x, y); }
+export void ImageScaled(number image, float x, float y, float width, float height) { gfx::Image(image, x, y, width, height); }
+export void ImagePart(number image, float sx, float sy, float sw, float sh, float x, float y, float scale) { gfx::ImagePart(image, sx, sy, sw, sh, x, y, scale); }
+export number Capture(float x, float y, float width, float height) { return gfx::Capture(x, y, width, height); }
+export bool Save(string path) { return gfx::Save(path); }
+export number Checksum() { return gfx::Checksum(); }
 )clp";
 
 }  // namespace
@@ -1685,6 +1684,14 @@ func Checksum() -> int { return gfx::Checksum(); }
 // --- shared with the other host libraries -------------------------------------------------------
 
 Canvas& canvas() { return g_canvas; }
+
+void reset_gfx() {
+  g_canvas = Canvas{};
+  g_clip = Clip{};
+  std::vector<Image>().swap(g_images);
+  std::unordered_map<std::string, int>().swap(g_image_cache);
+  text::reset();
+}
 
 void set_clip(const double x, const double y, const double w, const double h) {
   g_clip = Clip{static_cast<int>(std::floor(x)), static_cast<int>(std::floor(y)), static_cast<int>(std::ceil(x + w)),
@@ -1694,14 +1701,13 @@ void set_clip(const double x, const double y, const double w, const double h) {
 void clear_clip() { g_clip = Clip{}; }
 
 int load_image_file(const std::string& path, std::string& error) {
-  static std::unordered_map<std::string, int> cache;
-  const auto found = cache.find(path);
-  if (found != cache.end()) {
+  const auto found = g_image_cache.find(path);
+  if (found != g_image_cache.end()) {
     return found->second;
   }
   const int handle = load_image(path, error);
   if (handle != 0) {
-    cache.emplace(path, handle);
+    g_image_cache.emplace(path, handle);
   }
   return handle;
 }

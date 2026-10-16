@@ -1,0 +1,38 @@
+// =====================================================================
+// Save.server.clpp  —  vira um Script (sufixo .server)
+// Contexto = Server.
+// =====================================================================
+
+pragma strict;
+
+link <clpp/roblox.clh>;                   // [VERIFICAR]
+link "Entities.clh";
+
+// Resultado da gravação como def genérico próprio. [NOVO]
+def SaveResult {
+    bool   Ok = false;
+    string Reason = "";
+}
+
+@server
+SaveResult SaveScore(Player player, Score points) {
+    // Aqui entraria o DataStore via dataservice.clh (Cluaupp).
+    // Placeholder para o exemplo:
+    post("salvando " .: to_string(points) .: " para " .: player.Name);
+    return SaveResult { .Ok = true };
+}
+
+void init() {
+    Players players = GetService<Players>();
+
+    players.PlayerRemoving~>Connect(func (Player player) {
+        SaveResult result = SaveScore(player, 0);
+
+        if (not result.Ok) {
+            warn("falha ao salvar: " .: result.Reason);
+        }
+    });
+}
+
+// Um .client.clpp que chamasse SaveScore(...) receberia:
+//   CLUAU_AUTH001: call to server function `SaveScore` from a Client context

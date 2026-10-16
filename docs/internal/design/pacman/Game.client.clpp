@@ -1,0 +1,97 @@
+// =====================================================================
+// Game.client.clpp  —  vira um LocalScript (sufixo .client)
+// Contexto = Client: o checker aplica CLUAU_AUTH001 neste arquivo.
+// =====================================================================
+
+pragma strict;
+
+link <clpp/roblox.clh>;                   // [VERIFICAR] sintaxe de link para headers do Cluaupp
+link "Entities.clh";                      // traz TODOS os def exportados
+link "Maze";                              // [VERIFICAR] como referenciar o módulo .clp
+
+// ---------------------------------------------------------------------
+// Construção do estado inicial
+// ---------------------------------------------------------------------
+GameState NewGame() {
+    array<Tile> cells = {                 // [VERIFICAR] literal de array
+        "#", "#", "#", "#", "#", "#", "#",
+        "#", "o", ".", ".", ".", ".", "#",
+        "#", ".", "#", "#", "#", ".", "#",
+        "#", "#", "#", "#", "#", "#", "#"
+    };
+
+    Grid<Tile> maze = Grid<Tile> { .Width = 7, .Height = 4, .Cells = cells };
+
+    // Campos omitidos usam o valor padrão do def: Lives = 3, Points = 0, ...
+    Pacman player = Pacman { .Pos = Vec2 { .X = 1, .Y = 1 } };
+
+    GameState state = GameState {
+        .Maze      = maze,
+        .Player    = player,
+        .Ghosts    = {},
+        .Bonus     = Fruit { .Pos = Vec2 { .X = 5, .Y = 1 } },
+        .Remaining = 6
+    };
+
+    return state;
+}
+
+// ---------------------------------------------------------------------
+// Entrada do jogador
+// ---------------------------------------------------------------------
+void Turn(GameState state, Dir dir) {
+    state.Player.Queued = dir;            // optional<Dir> aceita Dir
+}
+
+void ClearTurn(GameState state) {
+    state.Player.Queued = null;
+}
+
+// ---------------------------------------------------------------------
+// @client: só pode ser chamada daqui. Chamar de .server.clpp dá
+// CLUAU_AUTH001. (Já existe hoje.)
+// ---------------------------------------------------------------------
+@client
+void RenderHud(GameState state) {
+    string line = "pontos: " .: to_string(state.Player.Points)
+               .: "  restam: " .: to_string(state.Remaining);
+    post(line);
+}
+
+// Percorre fantasmas; a leitura é paralelizável, a atribuição local é normal
+// porque esta função NÃO é @parallel.
+int NearestGhost(GameState state) {
+    int best = 9999;
+    for (Ghost ghost in state.Ghosts) {
+        int d = Manhattan(state.Player.Pos, ghost.Pos);
+        if (d < best) { best = d; }
+    }
+    return best;
+}
+
+// ---------------------------------------------------------------------
+// init: ponto de entrada (não existe int main)
+// ---------------------------------------------------------------------
+void init() {
+    GameState state = NewGame();
+
+    // callback com tipo de função completo: (Score, Vec2) -> void
+    OnScore(func (Score gained, Vec2 at) -> void {
+        post("+" .: to_string(gained) .: " em "
+             .: to_string(at.X) .: "," .: to_string(at.Y));
+    });
+
+    RunService run = GetService<RunService>();
+
+    // `~>` registra a conexão no janitor: desconecta sozinha ao limpar
+    run.Heartbeat~>Connect(func (float dt) {
+        Tick(state, dt);
+        RenderHud(state);
+
+        if (state.Won) {
+            post("fim de jogo: vitória");
+        }
+    });
+
+    Turn(state, Dir::Right);
+}

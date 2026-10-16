@@ -1,6 +1,8 @@
+#include "clpp/detail/utf8_path.hpp"
 #include "clpp/stdlib.hpp"
 
 #include <cctype>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -11,7 +13,8 @@
 namespace clpp::stdlib {
 
 double file_size(const std::string_view path) {
-  std::ifstream file(std::string(path), std::ios::binary | std::ios::ate);
+  if (path.find('\0') != std::string_view::npos || path.find("..") != std::string_view::npos) return -1;
+  std::ifstream file(clpp::detail::utf8_path(path), std::ios::binary | std::ios::ate);
   if (!file) {
     return -1;
   }
@@ -39,7 +42,7 @@ std::vector<std::string> g_args;
 }
 
 [[nodiscard]] std::string format_plain(const double number) {
-  if (number == static_cast<double>(static_cast<long long>(number)) && number < 1e15 && number > -1e15) {
+  if (number < 1e15 && number > -1e15 && number == std::trunc(number)) {
     return std::to_string(static_cast<long long>(number));
   }
   char buffer[64];
@@ -71,12 +74,13 @@ bool std_apply(const std::uint8_t id, const Value* args, const std::uint8_t arit
       return bad(error);
     }
     std::string joined;
-    for (std::size_t index = 0; index < args[0].fields.size(); ++index) {
+    for (std::size_t index = 0; index < args[0].field_count(); ++index) {
       if (index != 0) {
         joined += args[1].text;
       }
-      const Value& part = args[0].fields[index];
-      joined += part.is_string() ? part.text : part.is_number() ? format_plain(part.number) : std::string{};
+      const Value& part = args[0].field(index);
+      joined += part.is_string() ? part.text : part.kind == Value::Kind::Integer ? std::to_string(part.integer)
+                                            : part.is_number() ? format_plain(part.number) : std::string{};
     }
     out = Value::string_of(std::move(joined));
     return true;
@@ -139,11 +143,11 @@ bool std_apply(const std::uint8_t id, const Value* args, const std::uint8_t arit
     const bool hit = part.size() <= text.size() &&
                      (id == 9 ? text.compare(0, part.size(), part) == 0
                               : text.compare(text.size() - part.size(), part.size(), part) == 0);
-    out = Value::number_of(hit ? 1 : 0);
+    out = Value::boolean_of(hit);
     return true;
   }
   if (id == 11) {  // repeat(text, count)
-    if (arity != 2 || !args[1].is_number() || args[1].number < 0 || args[1].number > 1000000) {
+    if (arity != 2 || !args[1].is_number() || !std::isfinite(args[1].number) || args[1].number < 0 || args[1].number > 1000000) {
       return bad(error);
     }
     std::string result;
@@ -157,7 +161,7 @@ bool std_apply(const std::uint8_t id, const Value* args, const std::uint8_t arit
     const std::string clean = trimmed(text);
     char* end = nullptr;
     const double number = std::strtod(clean.c_str(), &end);
-    if (clean.empty() || end == nullptr || *end != '\0') {
+    if (clean.empty() || end != clean.data() + clean.size()) {
       error = "not a number: \"" + text + "\"";
       return false;
     }
@@ -199,15 +203,15 @@ bool std_apply(const std::uint8_t id, const Value* args, const std::uint8_t arit
     if (arity != 2 || !args[1].is_string()) {
       return bad(error);
     }
-    out = Value::number_of(text.find(args[1].text) == std::string::npos ? 0 : 1);
+    out = Value::boolean_of(text.find(args[1].text) != std::string::npos);
     return true;
   }
   if (id == 4) {
-    if (text.find("..") != std::string::npos) {
+    if (text.find("..") != std::string::npos || text.find('\0') != std::string::npos) {
       error = "runtime error";
       return false;
     }
-    std::ifstream file(text, std::ios::binary);
+    std::ifstream file(clpp::detail::utf8_path(text), std::ios::binary);
     if (!file) {
       out = Value::string_of("");
       return true;
@@ -216,17 +220,18 @@ bool std_apply(const std::uint8_t id, const Value* args, const std::uint8_t arit
     return true;
   }
   if (id == 5) {
-    if (text.find("..") != std::string::npos) {
+    if (text.find("..") != std::string::npos || text.find('\0') != std::string::npos) {
       error = "runtime error";
       return false;
     }
     std::vector<Value> names;
     std::error_code failure;
-    for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(text, failure)) {
+    for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(clpp::detail::utf8_path(text), failure)) {
       if (failure) {
         break;
       }
-      names.push_back(Value::string_of(entry.path().filename().string()));
+      const auto name = entry.path().filename().generic_u8string();
+      names.push_back(Value::string_of(std::string(name.begin(), name.end())));
     }
     out = Value::struct_of(std::move(names));
     return true;

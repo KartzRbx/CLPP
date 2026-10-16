@@ -1,0 +1,13 @@
+{
+  "grammars": [
+    {
+      "name": "clpp",
+      "scope": "source.clpp",
+      "path": ".",
+      "file-types": ["clp"]
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0"
+  }
+}

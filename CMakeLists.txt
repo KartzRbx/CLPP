@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(clpp VERSION 0.10.1 LANGUAGES CXX)
+project(clpp VERSION 0.11.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -11,11 +11,13 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
 option(CLPP_BUILD_TESTS "Build Catch2 unit tests" ON)
 option(CLPP_SANITIZE_ADDRESS "Enable AddressSanitizer (Clang/GCC/MSVC)" OFF)
+option(CLPP_SANITIZE_UNDEFINED "Enable UndefinedBehaviorSanitizer (Clang/GCC)" OFF)
 option(CLPP_ENABLE_CLANG_TIDY "Run clang-tidy during compilation" OFF)
 
 include(CompilerWarnings)
 include(Sanitizers)
 include(ClangTidy)
+include(GNUInstallDirs)
 
 add_subdirectory(src)
 
@@ -23,3 +25,11 @@ if(CLPP_BUILD_TESTS)
   enable_testing()
   add_subdirectory(tests)
 endif()
+
+install(FILES LICENSE THIRD_PARTY_NOTICES.txt DESTINATION ${CMAKE_INSTALL_DATADIR}/clpp COMPONENT Runtime)
+set(CPACK_PACKAGE_NAME "clpp-vm")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(CPACK_PACKAGE_VENDOR "KartzRbx")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+set(CPACK_GENERATOR "ZIP")
+include(CPack)

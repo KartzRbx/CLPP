@@ -8,7 +8,7 @@
 int main() {
   int failures = 0;
   for (int i = 0; i < 800; ++i) {
-    const std::string source = "int x = " + std::to_string(i) + ";\npost(x);\n";
+    const std::string source = "number x = " + std::to_string(i) + ";\npost(x);\n";
     const clpp::CompileResult compiled = clpp::Compiler{}.compile(source);
     std::ostringstream out;
     clpp::VirtualMachine vm;
@@ -23,7 +23,7 @@ int main() {
     }
   }
   for (int i = 0; i < 200; ++i) {
-    const std::string source = "int x = \"v" + std::to_string(i) + "\";\n";
+    const std::string source = "number x = \"v" + std::to_string(i) + "\";\n";
     const clpp::CompileResult compiled = clpp::Compiler{}.compile(source);
     if (compiled.ok() || compiled.chunk.code.empty() == false) {
       ++failures;

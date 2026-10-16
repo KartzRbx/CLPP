@@ -1,0 +1,428 @@
+Content policy passed: 51 sources, 208 CL++ blocks (165 target specifications), 242 local Markdown links.
+36 executable examples checked, 0 failure(s); 164 target-specification blocks excluded (not compiler tests)
+
+> prebuild
+> node check-content.mjs && node build-content.mjs
+
+Content policy passed: 51 sources, 208 CL++ blocks (165 target specifications), 242 local Markdown links.
+Generated 23 English guide/project pages, 15 Portuguese chapters and 11 reference pages in 8 topic groups.
+
+> build
+> astro build
+
+15:29:39 [content] Syncing content
+15:29:40 [content] Astro config changed
+15:29:40 [content] Clearing content store
+15:29:45 [content] Synced content
+15:29:45 [types] Generated 7.08s
+15:29:45 [build] output: "static"
+15:29:45 [build] mode: "static"
+15:29:45 [build] directory: C:\Users\gtofr\OneDrive\Documentos\GitHub\CLPP_Rework\www\dist\
+15:29:45 [build] Collecting build info...
+15:29:45 [build] ✓ Completed in 7.71s.
+15:29:45 [build] Building static entrypoints...
+15:29:50 [vite] ✓ built in 5.17s
+15:29:50 [build] ✓ Completed in 5.26s.
+
+ building client (vite) 
+15:29:50 [vite] transforming...
+15:29:51 [vite] ✓ 18 modules transformed.
+15:29:51 [vite] rendering chunks...
+15:29:51 [vite] computing gzip size...
+15:29:51 [vite] dist/_astro/ec.0vx5m.js                                                              2.52 kB
+15:29:51 [vite] dist/_astro/ec.v4551.css                                                            18.22 kB │ gzip:  3.96 kB
+15:29:51 [vite] dist/_astro/MobileTableOfContents.astro_astro_type_script_index_0_lang.C181hMzK.js   0.67 kB │ gzip:  0.40 kB
+15:29:51 [vite] dist/_astro/TableOfContents.astro_astro_type_script_index_0_lang.CKWWgpjV.js         1.67 kB │ gzip:  0.86 kB
+15:29:51 [vite] dist/_astro/page.B1D-nYk3.js                                                         2.24 kB │ gzip:  1.01 kB
+15:29:51 [vite] dist/_astro/Search.astro_astro_type_script_index_0_lang.Bd7Ah7MR.js                  2.71 kB │ gzip:  1.39 kB
+15:29:51 [vite] dist/_astro/ui-core.0CcZexJ6.js                                                     94.19 kB │ gzip: 27.34 kB
+15:29:51 [vite] ✓ built in 631ms
+
+ generating static routes 
+15:29:51 ▶ @astrojs/starlight/routes/static/404.astro
+Entry docs → 404 was not found.
+15:29:51   └─ /404.html (+161ms) 
+15:29:52 ▶ @astrojs/starlight/routes/static/index.astro
+15:29:52   ├─ /index.html (+88ms) 
+15:29:52   ├─ /guide/00-about/index.html (+155ms) 
+15:29:52   ├─ /guide/01-getting-started/index.html (+45ms) 
+15:29:52   ├─ /guide/02-lexical-syntax/index.html (+27ms) 
+15:29:52   ├─ /guide/04-operators/index.html (+52ms) 
+15:29:52   ├─ /guide/00-language-tour/index.html (+76ms) 
+15:29:52   ├─ /guide/03-variables-and-types/index.html (+192ms) 
+15:29:52   ├─ /guide/06-functions/index.html (+60ms) 
+15:29:52   ├─ /guide/07-structs-and-inheritance/index.html (+47ms) 
+15:29:52   ├─ /guide/05-control-flow/index.html (+35ms) 
+15:29:52   ├─ /guide/08-enums-variants-option-result/index.html (+26ms) 
+15:29:52   ├─ /guide/09-collections-and-text/index.html (+47ms) 
+15:29:52   ├─ /guide/10-modules/index.html (+41ms) 
+15:29:52   ├─ /guide/11-errors/index.html (+42ms) 
+15:29:52   ├─ /guide/12-concurrency/index.html (+37ms) 
+15:29:52   ├─ /guide/13-events/index.html (+41ms) 
+15:29:53   ├─ /guide/14-standard-library/index.html (+37ms) 
+15:29:53   ├─ /guide/15-tools-and-editor/index.html (+50ms) 
+15:29:53   ├─ /guide/16-performance/index.html (+52ms) 
+15:29:53   ├─ /guide/17-window-and-graphics/index.html (+64ms) 
+15:29:53   ├─ /guide/18-user-interfaces/index.html (+116ms) 
+15:29:53   ├─ /guide/19-audio-console-automation/index.html (+76ms) 
+15:29:53   ├─ /guide/20-modular-combat/index.html (+37ms) 
+15:29:53   ├─ /guide/21-account-screen/index.html (+40ms) 
+15:29:53   ├─ /handbook/00-o-que-e-o-clpp/index.html (+50ms) 
+15:29:53   ├─ /handbook/01-comecando/index.html (+47ms) 
+15:29:53   ├─ /handbook/02-modelo-mental/index.html (+22ms) 
+15:29:53   ├─ /handbook/03-tipos-e-variaveis/index.html (+74ms) 
+15:29:53   ├─ /handbook/04-operadores/index.html (+43ms) 
+15:29:53   ├─ /handbook/05-controle-de-fluxo/index.html (+46ms) 
+15:29:53   ├─ /handbook/06-funcoes/index.html (+48ms) 
+15:29:53   ├─ /handbook/07-def-e-tipos/index.html (+52ms) 
+15:29:53   ├─ /handbook/08-colecoes/index.html (+84ms) 
+15:29:53   ├─ /handbook/09-modulos/index.html (+39ms) 
+15:29:54   ├─ /handbook/10-contextos-e-seguranca/index.html (+44ms) 
+15:29:54   ├─ /handbook/11-eventos-e-concorrencia/index.html (+24ms) 
+15:29:54   ├─ /handbook/12-erros-e-ferramentas/index.html (+22ms) 
+15:29:54   ├─ /handbook/13-roblox-e-cluaupp/index.html (+26ms) 
+15:29:54   ├─ /handbook/14-referencia/index.html (+31ms) 
+15:29:54   ├─ /reference/comments/index.html (+29ms) 
+15:29:54   ├─ /reference/def/index.html (+24ms) 
+15:29:54   ├─ /reference/ebnf/index.html (+39ms) 
+15:29:54   ├─ /reference/identifiers/index.html (+15ms) 
+15:29:54   ├─ /reference/keywords/index.html (+19ms) 
+15:29:54   ├─ /reference/lexer/index.html (+70ms) 
+15:29:54   ├─ /reference/literals/index.html (+16ms) 
+15:29:54   ├─ /reference/punctuation/index.html (+324ms) 
+15:29:54   ├─ /reference/status/index.html (+27ms) 
+15:29:54   ├─ /reference/toolchain/index.html (+16ms) 
+15:29:54   └─ /reference/syntax/index.html (+13ms) 
+15:29:54 ✓ Completed in 3.27s.
+
+ generating optimized images 
+15:29:54   ▶ /_astro/logo.C_6bIk9L_2pDEoD.webp (reused cache entry) (+4ms) (1/1)
+15:29:54 ✓ Completed in 6ms.
+
+(node:9800) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+15:29:57 [build] Waiting for integration "@astrojs/starlight", hook "astro:build:done"...
+
+Running Pagefind v1.5.2 (Extended)
+Running from: "C:\\Users\\gtofr\\OneDrive\\Documentos\\GitHub\\CLPP_Rework\\www\\node_modules\\@astrojs\\starlight"
+Source:       "..\\..\\..\\dist"
+Output:       "..\\..\\..\\dist\\pagefind"
+
+[Walking source directory]
+Found 52 files matching **/*.{html}
+
+[Parsing files]
+Found a data-pagefind-body element on the site.
+↳ Ignoring pages without this tag.
+
+[Reading languages]
+Discovered 1 language: en
+
+[Building search indexes]
+Total: 
+  Indexed 1 language
+  Indexed 50 pages
+  Indexed 4786 words
+  Indexed 0 filters
+  Indexed 0 sorts
+
+Finished in 3.843 seconds
+15:30:04 [@astrojs/sitemap] `sitemap-index.xml` created at `dist`
+15:30:04 [build] 51 page(s) built in 26.40s
+15:30:04 [build] Complete!
+
+> postbuild
+> node check-content.mjs --built
+
+Content policy passed: 51 sources, 208 CL++ blocks (165 target specifications), 242 local Markdown links.
+All /CLPP/ links and assets in generated HTML exist.
+
+Rendered HTML verified: 15 Portuguese chapters, named fields without dots, member access preserved, support warnings present.
+
+> prebuild
+> node check-content.mjs && node build-content.mjs
+
+Content policy passed: 51 sources, 207 CL++ blocks (164 target specifications), 243 local Markdown links.
+Generated 23 English guide/project pages, 15 handbook chapters and 11 reference pages in 8 topic groups.
+
+> build
+> astro build
+
+15:40:45 [content] Syncing content
+15:40:45 [WARN] [starlight-docs-loader] Duplicate id "handbook/01-comecando" found in C:\Users\gtofr\OneDrive\Documentos\GitHub\CLPP_Rework\www\src\content\docs\handbook\01-comecando.md. Later items with the same id will overwrite earlier ones.
+15:40:45 [WARN] [starlight-docs-loader] Duplicate id "handbook/00-o-que-e-o-clpp" found in C:\Users\gtofr\OneDrive\Documentos\GitHub\CLPP_Rework\www\src\content\docs\handbook\00-o-que-e-o-clpp.md. Later items with the same id will overwrite earlier ones.
+15:40:45 [WARN] [starlight-docs-loader] Duplicate id "handbook/02-modelo-mental" found in C:\Users\gtofr\OneDrive\Documentos\GitHub\CLPP_Rework\www\src\content\docs\handbook\02-modelo-mental.md. Later items with the same id will overwrite earlier ones.
+15:40:45 [WARN] [starlight-docs-loader] Duplicate id "handbook/03-tipos-e-variaveis" found in C:\Users\gtofr\OneDrive\Documentos\GitHub\CLPP_Rework\www\src\content\docs\handbook\03-tipos-e-variaveis.md. Later items with the same id will overwrite earlier ones.
+15:40:46 [WARN] [starlight-docs-loader] Duplicate id "handbook/04-operadores" found in C:\Users\gtofr\OneDrive\Documentos\GitHub\CLPP_Rework\www\src\content\docs\handbook\04-operadores.md. Later items with the same id will overwrite earlier ones.
+15:40:46 [WARN] [starlight-docs-loader] Duplicate id "handbook/05-controle-de-fluxo" found in C:\Users\gtofr\OneDrive\Documentos\GitHub\CLPP_Rework\www\src\content\docs\handbook\05-controle-de-fluxo.md. Later items with the same id will overwrite earlier ones.
+15:40:46 [WARN] [starlight-docs-loader] Duplicate id "handbook/06-funcoes" found in C:\Users\gtofr\OneDrive\Documentos\GitHub\CLPP_Rework\www\src\content\docs\handbook\06-funcoes.md. Later items with the same id will overwrite earlier ones.
+15:40:46 [WARN] [starlight-docs-loader] Duplicate id "handbook/07-def-e-tipos" found in C:\Users\gtofr\OneDrive\Documentos\GitHub\CLPP_Rework\www\src\content\docs\handbook\07-def-e-tipos.md. Later items with the same id will overwrite earlier ones.
+15:40:47 [WARN] [starlight-docs-loader] Duplicate id "handbook/08-colecoes" found in C:\Users\gtofr\OneDrive\Documentos\GitHub\CLPP_Rework\www\src\content\docs\handbook\08-colecoes.md. Later items with the same id will overwrite earlier ones.
+15:40:47 [WARN] [starlight-docs-loader] Duplicate id "handbook/09-modulos" found in C:\Users\gtofr\OneDrive\Documentos\GitHub\CLPP_Rework\www\src\content\docs\handbook\09-modulos.md. Later items with the same id will overwrite earlier ones.
+15:40:47 [WARN] [starlight-docs-loader] Duplicate id "handbook/10-contextos-e-seguranca" found in C:\Users\gtofr\OneDrive\Documentos\GitHub\CLPP_Rework\www\src\content\docs\handbook\10-contextos-e-seguranca.md. Later items with the same id will overwrite earlier ones.
+15:40:47 [WARN] [starlight-docs-loader] Duplicate id "handbook/11-eventos-e-concorrencia" found in C:\Users\gtofr\OneDrive\Documentos\GitHub\CLPP_Rework\www\src\content\docs\handbook\11-eventos-e-concorrencia.md. Later items with the same id will overwrite earlier ones.
+15:40:47 [WARN] [starlight-docs-loader] Duplicate id "handbook/12-erros-e-ferramentas" found in C:\Users\gtofr\OneDrive\Documentos\GitHub\CLPP_Rework\www\src\content\docs\handbook\12-erros-e-ferramentas.md. Later items with the same id will overwrite earlier ones.
+15:40:47 [WARN] [starlight-docs-loader] Duplicate id "handbook/13-roblox-e-cluaupp" found in C:\Users\gtofr\OneDrive\Documentos\GitHub\CLPP_Rework\www\src\content\docs\handbook\13-roblox-e-cluaupp.md. Later items with the same id will overwrite earlier ones.
+15:40:47 [WARN] [starlight-docs-loader] Duplicate id "handbook/14-referencia" found in C:\Users\gtofr\OneDrive\Documentos\GitHub\CLPP_Rework\www\src\content\docs\handbook\14-referencia.md. Later items with the same id will overwrite earlier ones.
+15:40:47 [WARN] [starlight-docs-loader] Duplicate id "reference/status" found in C:\Users\gtofr\OneDrive\Documentos\GitHub\CLPP_Rework\www\src\content\docs\reference\status.md. Later items with the same id will overwrite earlier ones.
+15:40:47 [WARN] [starlight-docs-loader] Duplicate id "reference/syntax" found in C:\Users\gtofr\OneDrive\Documentos\GitHub\CLPP_Rework\www\src\content\docs\reference\syntax.md. Later items with the same id will overwrite earlier ones.
+15:40:48 [content] Synced content
+15:40:48 [types] Generated 4.21s
+15:40:48 [build] output: "static"
+15:40:48 [build] mode: "static"
+15:40:48 [build] directory: C:\Users\gtofr\OneDrive\Documentos\GitHub\CLPP_Rework\www\dist\
+15:40:48 [build] Collecting build info...
+15:40:48 [build] ✓ Completed in 4.68s.
+15:40:48 [build] Building static entrypoints...
+15:40:54 [vite] ✓ built in 6.44s
+15:40:54 [build] ✓ Completed in 6.56s.
+
+ building client (vite) 
+15:40:54 [vite] transforming...
+15:40:55 [vite] ✓ 18 modules transformed.
+15:40:55 [vite] rendering chunks...
+15:40:55 [vite] computing gzip size...
+15:40:55 [vite] dist/_astro/ec.0vx5m.js                                                              2.52 kB
+15:40:55 [vite] dist/_astro/ec.v4551.css                                                            18.22 kB │ gzip:  3.96 kB
+15:40:55 [vite] dist/_astro/MobileTableOfContents.astro_astro_type_script_index_0_lang.C181hMzK.js   0.67 kB │ gzip:  0.40 kB
+15:40:55 [vite] dist/_astro/TableOfContents.astro_astro_type_script_index_0_lang.CKWWgpjV.js         1.67 kB │ gzip:  0.86 kB
+15:40:55 [vite] dist/_astro/page.B1D-nYk3.js                                                         2.24 kB │ gzip:  1.01 kB
+15:40:55 [vite] dist/_astro/Search.astro_astro_type_script_index_0_lang.Bd7Ah7MR.js                  2.71 kB │ gzip:  1.39 kB
+15:40:55 [vite] dist/_astro/ui-core.0CcZexJ6.js                                                     94.19 kB │ gzip: 27.34 kB
+15:40:55 [vite] ✓ built in 743ms
+
+ generating static routes 
+15:40:55 ▶ @astrojs/starlight/routes/static/404.astro
+Entry docs → 404 was not found.
+15:40:55   └─ /404.html (+93ms) 
+15:40:55 ▶ @astrojs/starlight/routes/static/index.astro
+15:40:55   ├─ /index.html (+61ms) 
+15:40:56   ├─ /guide/00-about/index.html (+32ms) 
+15:40:56   ├─ /guide/01-getting-started/index.html (+25ms) 
+15:40:56   ├─ /guide/02-lexical-syntax/index.html (+19ms) 
+15:40:56   ├─ /guide/04-operators/index.html (+143ms) 
+15:40:56   ├─ /guide/00-language-tour/index.html (+83ms) 
+15:40:56   ├─ /guide/03-variables-and-types/index.html (+50ms) 
+15:40:56   ├─ /guide/06-functions/index.html (+51ms) 
+15:40:56   ├─ /guide/07-structs-and-inheritance/index.html (+38ms) 
+15:40:56   ├─ /guide/05-control-flow/index.html (+35ms) 
+15:40:56   ├─ /guide/08-enums-variants-option-result/index.html (+331ms) 
+15:40:56   ├─ /guide/09-collections-and-text/index.html (+25ms) 
+15:40:56   ├─ /guide/10-modules/index.html (+44ms) 
+15:40:56   ├─ /guide/11-errors/index.html (+36ms) 
+15:40:56   ├─ /guide/12-concurrency/index.html (+43ms) 
+15:40:56   ├─ /guide/13-events/index.html (+21ms) 
+15:40:56   ├─ /guide/14-standard-library/index.html (+23ms) 
+15:40:57   ├─ /guide/15-tools-and-editor/index.html (+30ms) 
+15:40:57   ├─ /guide/16-performance/index.html (+33ms) 
+15:40:57   ├─ /guide/17-window-and-graphics/index.html (+42ms) 
+15:40:57   ├─ /guide/18-user-interfaces/index.html (+27ms) 
+15:40:57   ├─ /guide/19-audio-console-automation/index.html (+20ms) 
+15:40:57   ├─ /guide/20-modular-combat/index.html (+16ms) 
+15:40:57   ├─ /guide/21-account-screen/index.html (+50ms) 
+15:40:57   ├─ /handbook/00-o-que-e-o-clpp/index.html (+14ms) 
+15:40:57   ├─ /handbook/01-comecando/index.html (+48ms) 
+15:40:57   ├─ /handbook/02-modelo-mental/index.html (+76ms) 
+15:40:57   ├─ /handbook/03-tipos-e-variaveis/index.html (+56ms) 
+15:40:57   ├─ /handbook/04-operadores/index.html (+20ms) 
+15:40:57   ├─ /handbook/05-controle-de-fluxo/index.html (+22ms) 
+15:40:57   ├─ /handbook/06-funcoes/index.html (+51ms) 
+15:40:57   ├─ /handbook/07-def-e-tipos/index.html (+38ms) 
+15:40:57   ├─ /handbook/08-colecoes/index.html (+23ms) 
+15:40:57   ├─ /handbook/09-modulos/index.html (+34ms) 
+15:40:57   ├─ /handbook/10-contextos-e-seguranca/index.html (+23ms) 
+15:40:57   ├─ /handbook/11-eventos-e-concorrencia/index.html (+44ms) 
+15:40:57   ├─ /handbook/12-erros-e-ferramentas/index.html (+34ms) 
+15:40:57   ├─ /handbook/13-roblox-e-cluaupp/index.html (+48ms) 
+15:40:57   ├─ /handbook/14-referencia/index.html (+34ms) 
+15:40:57   ├─ /reference/comments/index.html (+63ms) 
+15:40:57   ├─ /reference/def/index.html (+39ms) 
+15:40:57   ├─ /reference/ebnf/index.html (+19ms) 
+15:40:57   ├─ /reference/identifiers/index.html (+25ms) 
+15:40:57   ├─ /reference/keywords/index.html (+32ms) 
+15:40:57   ├─ /reference/lexer/index.html (+29ms) 
+15:40:58   ├─ /reference/literals/index.html (+33ms) 
+15:40:58   ├─ /reference/punctuation/index.html (+29ms) 
+15:40:58   ├─ /reference/status/index.html (+57ms) 
+15:40:58   ├─ /reference/toolchain/index.html (+37ms) 
+15:40:58   └─ /reference/syntax/index.html (+35ms) 
+15:40:58 ✓ Completed in 2.68s.
+
+ generating optimized images 
+15:40:58   ▶ /_astro/logo.C_6bIk9L_2pDEoD.webp (reused cache entry) (+6ms) (1/1)
+15:40:58 ✓ Completed in 8ms.
+
+(node:15664) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+15:41:01 [build] Waiting for integration "@astrojs/starlight", hook "astro:build:done"...
+
+Running Pagefind v1.5.2 (Extended)
+Running from: "C:\\Users\\gtofr\\OneDrive\\Documentos\\GitHub\\CLPP_Rework\\www\\node_modules\\@astrojs\\starlight"
+Source:       "..\\..\\..\\dist"
+Output:       "..\\..\\..\\dist\\pagefind"
+
+[Walking source directory]
+Found 52 files matching **/*.{html}
+
+[Parsing files]
+Found a data-pagefind-body element on the site.
+↳ Ignoring pages without this tag.
+
+[Reading languages]
+Discovered 1 language: en
+
+[Building search indexes]
+Total: 
+  Indexed 1 language
+  Indexed 50 pages
+  Indexed 4784 words
+  Indexed 0 filters
+  Indexed 0 sorts
+
+Finished in 3.274 seconds
+15:41:06 [@astrojs/sitemap] `sitemap-index.xml` created at `dist`
+15:41:06 [build] 51 page(s) built in 22.70s
+15:41:06 [build] Complete!
+
+> postbuild
+> node check-content.mjs --built
+
+Content policy passed: 51 sources, 207 CL++ blocks (164 target specifications), 243 local Markdown links.
+All /CLPP/ links and assets in generated HTML exist.
+
+> prebuild
+> node check-content.mjs && node build-content.mjs
+
+Content policy passed: 51 sources, 207 CL++ blocks (164 target specifications), 243 local Markdown links.
+Generated 23 English guide/project pages, 15 handbook chapters and 11 reference pages in 8 topic groups.
+
+> build
+> astro build
+
+15:42:10 [content] Syncing content
+15:42:14 [content] Synced content
+15:42:14 [types] Generated 5.70s
+15:42:14 [build] output: "static"
+15:42:14 [build] mode: "static"
+15:42:14 [build] directory: C:\Users\gtofr\OneDrive\Documentos\GitHub\CLPP_Rework\www\dist\
+15:42:14 [build] Collecting build info...
+15:42:14 [build] ✓ Completed in 6.24s.
+15:42:14 [build] Building static entrypoints...
+15:42:20 [vite] ✓ built in 6.07s
+15:42:20 [build] ✓ Completed in 6.19s.
+
+ building client (vite) 
+15:42:20 [vite] transforming...
+15:42:21 [vite] ✓ 18 modules transformed.
+15:42:21 [vite] rendering chunks...
+15:42:21 [vite] computing gzip size...
+15:42:21 [vite] dist/_astro/ec.0vx5m.js                                                              2.52 kB
+15:42:21 [vite] dist/_astro/ec.v4551.css                                                            18.22 kB │ gzip:  3.96 kB
+15:42:21 [vite] dist/_astro/MobileTableOfContents.astro_astro_type_script_index_0_lang.C181hMzK.js   0.67 kB │ gzip:  0.40 kB
+15:42:21 [vite] dist/_astro/TableOfContents.astro_astro_type_script_index_0_lang.CKWWgpjV.js         1.67 kB │ gzip:  0.86 kB
+15:42:21 [vite] dist/_astro/page.B1D-nYk3.js                                                         2.24 kB │ gzip:  1.01 kB
+15:42:21 [vite] dist/_astro/Search.astro_astro_type_script_index_0_lang.Bd7Ah7MR.js                  2.71 kB │ gzip:  1.39 kB
+15:42:21 [vite] dist/_astro/ui-core.0CcZexJ6.js                                                     94.19 kB │ gzip: 27.34 kB
+15:42:21 [vite] ✓ built in 726ms
+
+ generating static routes 
+15:42:21 ▶ @astrojs/starlight/routes/static/404.astro
+Entry docs → 404 was not found.
+15:42:21   └─ /404.html (+87ms) 
+15:42:22 ▶ @astrojs/starlight/routes/static/index.astro
+15:42:22   ├─ /index.html (+53ms) 
+15:42:22   ├─ /guide/00-about/index.html (+27ms) 
+15:42:22   ├─ /guide/01-getting-started/index.html (+25ms) 
+15:42:22   ├─ /guide/02-lexical-syntax/index.html (+18ms) 
+15:42:22   ├─ /guide/04-operators/index.html (+20ms) 
+15:42:22   ├─ /guide/00-language-tour/index.html (+19ms) 
+15:42:22   ├─ /guide/03-variables-and-types/index.html (+17ms) 
+15:42:22   ├─ /guide/06-functions/index.html (+18ms) 
+15:42:22   ├─ /guide/07-structs-and-inheritance/index.html (+18ms) 
+15:42:22   ├─ /guide/05-control-flow/index.html (+17ms) 
+15:42:22   ├─ /guide/08-enums-variants-option-result/index.html (+47ms) 
+15:42:22   ├─ /guide/09-collections-and-text/index.html (+36ms) 
+15:42:22   ├─ /guide/10-modules/index.html (+20ms) 
+15:42:22   ├─ /guide/11-errors/index.html (+19ms) 
+15:42:22   ├─ /guide/12-concurrency/index.html (+45ms) 
+15:42:22   ├─ /guide/13-events/index.html (+16ms) 
+15:42:22   ├─ /guide/14-standard-library/index.html (+22ms) 
+15:42:22   ├─ /guide/15-tools-and-editor/index.html (+19ms) 
+15:42:22   ├─ /guide/16-performance/index.html (+18ms) 
+15:42:22   ├─ /guide/17-window-and-graphics/index.html (+18ms) 
+15:42:22   ├─ /guide/18-user-interfaces/index.html (+105ms) 
+15:42:22   ├─ /guide/19-audio-console-automation/index.html (+22ms) 
+15:42:22   ├─ /guide/20-modular-combat/index.html (+193ms) 
+15:42:22   ├─ /guide/21-account-screen/index.html (+12ms) 
+15:42:22   ├─ /handbook/00-o-que-e-o-clpp/index.html (+36ms) 
+15:42:22   ├─ /handbook/01-comecando/index.html (+17ms) 
+15:42:22   ├─ /handbook/02-modelo-mental/index.html (+11ms) 
+15:42:22   ├─ /handbook/03-tipos-e-variaveis/index.html (+39ms) 
+15:42:23   ├─ /handbook/04-operadores/index.html (+14ms) 
+15:42:23   ├─ /handbook/05-controle-de-fluxo/index.html (+44ms) 
+15:42:23   ├─ /handbook/06-funcoes/index.html (+16ms) 
+15:42:23   ├─ /handbook/07-def-e-tipos/index.html (+40ms) 
+15:42:23   ├─ /handbook/08-colecoes/index.html (+40ms) 
+15:42:23   ├─ /handbook/09-modulos/index.html (+16ms) 
+15:42:23   ├─ /handbook/10-contextos-e-seguranca/index.html (+28ms) 
+15:42:23   ├─ /handbook/11-eventos-e-concorrencia/index.html (+41ms) 
+15:42:23   ├─ /handbook/12-erros-e-ferramentas/index.html (+16ms) 
+15:42:23   ├─ /handbook/13-roblox-e-cluaupp/index.html (+27ms) 
+15:42:23   ├─ /handbook/14-referencia/index.html (+15ms) 
+15:42:23   ├─ /reference/comments/index.html (+16ms) 
+15:42:23   ├─ /reference/def/index.html (+19ms) 
+15:42:23   ├─ /reference/ebnf/index.html (+22ms) 
+15:42:23   ├─ /reference/identifiers/index.html (+13ms) 
+15:42:23   ├─ /reference/keywords/index.html (+33ms) 
+15:42:23   ├─ /reference/lexer/index.html (+13ms) 
+15:42:23   ├─ /reference/literals/index.html (+26ms) 
+15:42:23   ├─ /reference/punctuation/index.html (+20ms) 
+15:42:23   ├─ /reference/status/index.html (+15ms) 
+15:42:23   ├─ /reference/syntax/index.html (+15ms) 
+15:42:23   └─ /reference/toolchain/index.html (+15ms) 
+15:42:23 ✓ Completed in 1.90s.
+
+ generating optimized images 
+15:42:23   ▶ /_astro/logo.C_6bIk9L_2pDEoD.webp (reused cache entry) (+5ms) (1/1)
+15:42:23 ✓ Completed in 7ms.
+
+(node:20956) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+15:42:26 [build] Waiting for integration "@astrojs/starlight", hook "astro:build:done"...
+
+Running Pagefind v1.5.2 (Extended)
+Running from: "C:\\Users\\gtofr\\OneDrive\\Documentos\\GitHub\\CLPP_Rework\\www\\node_modules\\@astrojs\\starlight"
+Source:       "..\\..\\..\\dist"
+Output:       "..\\..\\..\\dist\\pagefind"
+
+[Walking source directory]
+Found 52 files matching **/*.{html}
+
+[Parsing files]
+Found a data-pagefind-body element on the site.
+↳ Ignoring pages without this tag.
+
+[Reading languages]
+Discovered 1 language: en
+
+[Building search indexes]
+Total: 
+  Indexed 1 language
+  Indexed 50 pages
+  Indexed 3445 words
+  Indexed 0 filters
+  Indexed 0 sorts
+
+Finished in 2.369 seconds
+15:42:29 [@astrojs/sitemap] `sitemap-index.xml` created at `dist`
+15:42:29 [build] 51 page(s) built in 21.02s
+15:42:29 [build] Complete!
+
+> postbuild
+> node check-content.mjs --built
+
+Content policy passed: 51 sources, 207 CL++ blocks (164 target specifications), 243 local Markdown links.
+All /CLPP/ links and assets in generated HTML exist.
+
+English-only final verification: all rendered pages scanned; all 15 handbook chapters lang=en; definition examples preserved.
+36 executable examples checked, 0 failure(s); 163 target-specification blocks excluded (not compiler tests).

@@ -160,46 +160,46 @@ struct Spec {
 };
 
 constexpr Spec kSpecs[] = {
-    {"Clamp", Clamp, 3, {"double", "double", "double", nullptr, nullptr}},
-    {"Map", Map, 5, {"double", "double", "double", "double", "double"}},
-    {"Wrap", Wrap, 3, {"double", "double", "double", nullptr, nullptr}},
-    {"Sign", Sign, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"Round", Round, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"Round", RoundDigits, 2, {"double", "double", nullptr, nullptr, nullptr}},
-    {"Snap", Snap, 2, {"double", "double", nullptr, nullptr, nullptr}},
-    {"PingPong", PingPong, 2, {"double", "double", nullptr, nullptr, nullptr}},
-    {"Saturate", Saturate, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"Fract", Fract, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"InvLerp", InvLerp, 3, {"double", "double", "double", nullptr, nullptr}},
-    {"Approach", Approach, 3, {"double", "double", "double", nullptr, nullptr}},
-    {"IsFinite", IsFinite, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"Abs", Abs, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"Min", Min, 2, {"double", "double", nullptr, nullptr, nullptr}},
-    {"Max", Max, 2, {"double", "double", nullptr, nullptr, nullptr}},
-    {"Pow", Pow, 2, {"double", "double", nullptr, nullptr, nullptr}},
-    {"Sqrt", Sqrt, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"Cbrt", Cbrt, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"Hypot", Hypot, 2, {"double", "double", nullptr, nullptr, nullptr}},
-    {"Log", Log, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"Exp", Exp, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"Smoothstep", Smoothstep, 3, {"double", "double", "double", nullptr, nullptr}},
-    {"Smootherstep", Smootherstep, 3, {"double", "double", "double", nullptr, nullptr}},
-    {"Gcd", Gcd, 2, {"double", "double", nullptr, nullptr, nullptr}},
-    {"Lcm", Lcm, 2, {"double", "double", nullptr, nullptr, nullptr}},
-    {"IsEven", IsEven, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"IsOdd", IsOdd, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"Factorial", Factorial, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"Scale", Scale, 2, {"double", "double", nullptr, nullptr, nullptr}},
-    {"Lerp", Lerp, 3, {"double", "double", "double", nullptr, nullptr}},
-    {"LerpClamped", LerpClamped, 3, {"double", "double", "double", nullptr, nullptr}},
-    {"LerpVector2", LerpVector2, 3, {"Vector2", "Vector2", "double", nullptr, nullptr}},
-    {"LerpVector3", LerpVector3, 3, {"Vector3", "Vector3", "double", nullptr, nullptr}},
-    {"LerpVector", LerpVector, 3, {"Vector3", "Vector3", "double", nullptr, nullptr}},
-    {"LerpColor3", LerpColor3, 3, {"Vector3", "Vector3", "double", nullptr, nullptr}},
-    {"LerpCFrame", LerpCFrame, 3, {"Vector3", "Vector3", "double", nullptr, nullptr}},
-    {"LerpUDim2", LerpUDim2, 3, {"Vector4", "Vector4", "double", nullptr, nullptr}},
-    {"LerpAngle", LerpAngle, 3, {"double", "double", "double", nullptr, nullptr}},
-    {"Inverse", Inverse, 3, {"double", "double", "double", nullptr, nullptr}},
+    {"Clamp", Clamp, 3, {"float", "float", "float", nullptr, nullptr}},
+    {"Map", Map, 5, {"float", "float", "float", "float", "float"}},
+    {"Wrap", Wrap, 3, {"float", "float", "float", nullptr, nullptr}},
+    {"Sign", Sign, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"Round", Round, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"RoundDigits", RoundDigits, 2, {"float", "float", nullptr, nullptr, nullptr}},
+    {"Snap", Snap, 2, {"float", "float", nullptr, nullptr, nullptr}},
+    {"PingPong", PingPong, 2, {"float", "float", nullptr, nullptr, nullptr}},
+    {"Saturate", Saturate, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"Fract", Fract, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"InvLerp", InvLerp, 3, {"float", "float", "float", nullptr, nullptr}},
+    {"Approach", Approach, 3, {"float", "float", "float", nullptr, nullptr}},
+    {"IsFinite", IsFinite, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"Abs", Abs, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"Min", Min, 2, {"float", "float", nullptr, nullptr, nullptr}},
+    {"Max", Max, 2, {"float", "float", nullptr, nullptr, nullptr}},
+    {"Pow", Pow, 2, {"float", "float", nullptr, nullptr, nullptr}},
+    {"Sqrt", Sqrt, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"Cbrt", Cbrt, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"Hypot", Hypot, 2, {"float", "float", nullptr, nullptr, nullptr}},
+    {"Log", Log, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"Exp", Exp, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"Smoothstep", Smoothstep, 3, {"float", "float", "float", nullptr, nullptr}},
+    {"Smootherstep", Smootherstep, 3, {"float", "float", "float", nullptr, nullptr}},
+    {"Gcd", Gcd, 2, {"float", "float", nullptr, nullptr, nullptr}},
+    {"Lcm", Lcm, 2, {"float", "float", nullptr, nullptr, nullptr}},
+    {"IsEven", IsEven, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"IsOdd", IsOdd, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"Factorial", Factorial, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"Scale", Scale, 2, {"float", "float", nullptr, nullptr, nullptr}},
+    {"Lerp", Lerp, 3, {"float", "float", "float", nullptr, nullptr}},
+    {"LerpClamped", LerpClamped, 3, {"float", "float", "float", nullptr, nullptr}},
+    {"LerpVector2", LerpVector2, 3, {"Vector2", "Vector2", "float", nullptr, nullptr}},
+    {"LerpVector3", LerpVector3, 3, {"Vector3", "Vector3", "float", nullptr, nullptr}},
+    {"LerpVector", LerpVector, 3, {"Vector3", "Vector3", "float", nullptr, nullptr}},
+    {"LerpColor3", LerpColor3, 3, {"Vector3", "Vector3", "float", nullptr, nullptr}},
+    {"LerpCFrame", LerpCFrame, 3, {"Vector3", "Vector3", "float", nullptr, nullptr}},
+    {"LerpUDim2", LerpUDim2, 3, {"Vector4", "Vector4", "float", nullptr, nullptr}},
+    {"LerpAngle", LerpAngle, 3, {"float", "float", "float", nullptr, nullptr}},
+    {"Inverse", Inverse, 3, {"float", "float", "float", nullptr, nullptr}},
     {"Project", Project, 2, {"Vector3", "Vector3", nullptr, nullptr, nullptr}},
     {"Reject", Reject, 2, {"Vector3", "Vector3", nullptr, nullptr, nullptr}},
     {"Reflect", Reflect, 2, {"Vector3", "Vector3", nullptr, nullptr, nullptr}},
@@ -207,84 +207,84 @@ constexpr Spec kSpecs[] = {
     {"Distance", Distance, 2, {"Vector3", "Vector3", nullptr, nullptr, nullptr}},
     {"Distance2", Distance2, 2, {"Vector2", "Vector2", nullptr, nullptr, nullptr}},
     {"Orthonormal", Orthonormal, 1, {"Vector3", nullptr, nullptr, nullptr, nullptr}},
-    {"Orthonormal", OrthonormalUp, 2, {"Vector3", "Vector3", nullptr, nullptr, nullptr}},
-    {"Slerp", Slerp, 3, {"Vector3", "Vector3", "double", nullptr, nullptr}},
-    {"SlerpCFrame", SlerpCFrame, 3, {"Vector3", "Vector3", "double", nullptr, nullptr}},
+    {"OrthonormalUp", OrthonormalUp, 2, {"Vector3", "Vector3", nullptr, nullptr, nullptr}},
+    {"Slerp", Slerp, 3, {"Vector3", "Vector3", "float", nullptr, nullptr}},
+    {"SlerpCFrame", SlerpCFrame, 3, {"Vector3", "Vector3", "float", nullptr, nullptr}},
     {"LookAt", LookAt, 2, {"Vector3", "Vector3", nullptr, nullptr, nullptr}},
     {"Flat", Flat, 1, {"Vector3", nullptr, nullptr, nullptr, nullptr}},
-    {"InSine", InSine, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"OutSine", OutSine, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"InOutSine", InOutSine, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"InQuad", InQuad, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"OutQuad", OutQuad, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"InOutQuad", InOutQuad, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"InCubic", InCubic, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"OutCubic", OutCubic, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"InOutCubic", InOutCubic, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"InQuart", InQuart, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"OutQuart", OutQuart, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"InOutQuart", InOutQuart, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"InQuint", InQuint, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"OutQuint", OutQuint, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"InOutQuint", InOutQuint, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"InExpo", InExpo, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"OutExpo", OutExpo, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"InOutExpo", InOutExpo, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"InCirc", InCirc, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"OutCirc", OutCirc, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"InOutCirc", InOutCirc, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"InBack", InBack, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"OutBack", OutBack, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"InOutBack", InOutBack, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"InElastic", InElastic, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"OutElastic", OutElastic, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"InOutElastic", InOutElastic, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"InBounce", InBounce, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"OutBounce", OutBounce, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"InOutBounce", InOutBounce, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"Linear", Linear, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"CubicBezier", CubicBezier, 5, {"double", "Vector3", "Vector3", "Vector3", "Vector3"}},
-    {"QuadraticBezier", QuadraticBezier, 4, {"double", "Vector3", "Vector3", "Vector3", nullptr}},
-    {"Hover", Hover, 3, {"double", "Vector3", "Vector3", nullptr, nullptr}},
-    {"Float", Float, 3, {"double", "Vector3", "Vector3", nullptr, nullptr}},
-    {"FloatSpin", FloatSpin, 2, {"double", "Vector3", nullptr, nullptr, nullptr}},
+    {"InSine", InSine, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"OutSine", OutSine, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"InOutSine", InOutSine, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"InQuad", InQuad, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"OutQuad", OutQuad, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"InOutQuad", InOutQuad, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"InCubic", InCubic, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"OutCubic", OutCubic, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"InOutCubic", InOutCubic, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"InQuart", InQuart, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"OutQuart", OutQuart, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"InOutQuart", InOutQuart, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"InQuint", InQuint, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"OutQuint", OutQuint, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"InOutQuint", InOutQuint, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"InExpo", InExpo, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"OutExpo", OutExpo, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"InOutExpo", InOutExpo, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"InCirc", InCirc, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"OutCirc", OutCirc, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"InOutCirc", InOutCirc, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"InBack", InBack, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"OutBack", OutBack, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"InOutBack", InOutBack, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"InElastic", InElastic, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"OutElastic", OutElastic, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"InOutElastic", InOutElastic, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"InBounce", InBounce, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"OutBounce", OutBounce, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"InOutBounce", InOutBounce, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"Linear", Linear, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"CubicBezier", CubicBezier, 5, {"float", "Vector3", "Vector3", "Vector3", "Vector3"}},
+    {"QuadraticBezier", QuadraticBezier, 4, {"float", "Vector3", "Vector3", "Vector3", nullptr}},
+    {"Hover", Hover, 3, {"float", "Vector3", "Vector3", nullptr, nullptr}},
+    {"Float", Float, 3, {"float", "Vector3", "Vector3", nullptr, nullptr}},
+    {"FloatSpin", FloatSpin, 2, {"float", "Vector3", nullptr, nullptr, nullptr}},
     {"AabbContains", AabbContains, 3, {"Vector3", "Vector3", "Vector3", nullptr, nullptr}},
-    {"SphereContains", SphereContains, 3, {"Vector3", "Vector3", "double", nullptr, nullptr}},
+    {"SphereContains", SphereContains, 3, {"Vector3", "Vector3", "float", nullptr, nullptr}},
     {"RayPlane", RayPlane, 4, {"Vector3", "Vector3", "Vector3", "Vector3", nullptr}},
     {"Barycentric", Barycentric, 4, {"Vector3", "Vector3", "Vector3", "Vector3", nullptr}},
     {"ClosestPointOnSegment", ClosestPointOnSegment, 3, {"Vector3", "Vector3", "Vector3", nullptr, nullptr}},
-    {"Deg", Deg, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"Rad", Rad, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"DeltaAngle", DeltaAngle, 2, {"double", "double", nullptr, nullptr, nullptr}},
-    {"AngleDiff", AngleDiff, 2, {"double", "double", nullptr, nullptr, nullptr}},
-    {"DeltaAngleDegrees", DeltaAngleDegrees, 2, {"double", "double", nullptr, nullptr, nullptr}},
-    {"NormalizeAngle", NormalizeAngle, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"Sin", Sin, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"Cos", Cos, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"Tan", Tan, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"Asin", Asin, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"Acos", Acos, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"Atan2", Atan2, 2, {"double", "double", nullptr, nullptr, nullptr}},
-    {"RandomRange", RandomRange, 2, {"double", "double", nullptr, nullptr, nullptr}},
-    {"Random", Random, 2, {"double", "double", nullptr, nullptr, nullptr}},
+    {"Deg", Deg, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"Rad", Rad, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"DeltaAngle", DeltaAngle, 2, {"float", "float", nullptr, nullptr, nullptr}},
+    {"AngleDiff", AngleDiff, 2, {"float", "float", nullptr, nullptr, nullptr}},
+    {"DeltaAngleDegrees", DeltaAngleDegrees, 2, {"float", "float", nullptr, nullptr, nullptr}},
+    {"NormalizeAngle", NormalizeAngle, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"Sin", Sin, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"Cos", Cos, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"Tan", Tan, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"Asin", Asin, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"Acos", Acos, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"Atan2", Atan2, 2, {"float", "float", nullptr, nullptr, nullptr}},
+    {"RandomRange", RandomRange, 2, {"float", "float", nullptr, nullptr, nullptr}},
+    {"Random", Random, 2, {"float", "float", nullptr, nullptr, nullptr}},
     {"Weighted", Weighted, 1, {"any", nullptr, nullptr, nullptr, nullptr}},
     {"Gaussian", Gaussian, 0, {nullptr, nullptr, nullptr, nullptr, nullptr}},
-    {"Gaussian", GaussianMS, 2, {"double", "double", nullptr, nullptr, nullptr}},
+    {"GaussianWithParameters", GaussianMS, 2, {"float", "float", nullptr, nullptr, nullptr}},
     {"Average", Average, 1, {"any", nullptr, nullptr, nullptr, nullptr}},
     {"Sum", Sum, 1, {"any", nullptr, nullptr, nullptr, nullptr}},
-    {"HashU32", HashU32, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"Value1", Value1, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"Value2", Value2, 2, {"double", "double", nullptr, nullptr, nullptr}},
-    {"Value3", Value3, 3, {"double", "double", "double", nullptr, nullptr}},
-    {"FromHSV", FromHSV, 3, {"double", "double", "double", nullptr, nullptr}},
-    {"Contrast", Contrast, 2, {"Vector3", "double", nullptr, nullptr, nullptr}},
-    {"LerpHSV", LerpHSV, 3, {"Vector3", "Vector3", "double", nullptr, nullptr}},
-    {"Floor", Floor, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"Ceil", Ceil, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"Trunc", Trunc, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"Log2", Log2, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"Log10", Log10, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
-    {"IsNaN", IsNaN, 1, {"double", nullptr, nullptr, nullptr, nullptr}},
+    {"HashU32", HashU32, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"Value1", Value1, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"Value2", Value2, 2, {"float", "float", nullptr, nullptr, nullptr}},
+    {"Value3", Value3, 3, {"float", "float", "float", nullptr, nullptr}},
+    {"FromHSV", FromHSV, 3, {"float", "float", "float", nullptr, nullptr}},
+    {"Contrast", Contrast, 2, {"Vector3", "float", nullptr, nullptr, nullptr}},
+    {"LerpHSV", LerpHSV, 3, {"Vector3", "Vector3", "float", nullptr, nullptr}},
+    {"Floor", Floor, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"Ceil", Ceil, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"Trunc", Trunc, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"Log2", Log2, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"Log10", Log10, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
+    {"IsNaN", IsNaN, 1, {"float", nullptr, nullptr, nullptr, nullptr}},
     {"Pi", Pi, 0, {nullptr, nullptr, nullptr, nullptr, nullptr}},
     {"Dot", Dot, 2, {"Vector3", "Vector3", nullptr, nullptr, nullptr}},
     {"Cross", Cross, 2, {"Vector3", "Vector3", nullptr, nullptr, nullptr}},
@@ -616,8 +616,8 @@ void rgb_to_hsv(const double r, const double g, const double b, double& h, doubl
     return false;
   }
   out.clear();
-  out.reserve(value.fields.size());
-  for (const clpp::Value& field : value.fields) {
+  out.reserve(value.field_count());
+  for (const clpp::Value& field : value.snapshot_fields()) {
     if (!field.is_number()) {
       return false;
     }
@@ -630,7 +630,9 @@ void rgb_to_hsv(const double r, const double g, const double b, double& h, doubl
   std::string source;
   source.reserve(24000);
   for (const Spec& spec : kSpecs) {
-    source += "func ";
+    const std::string_view name = spec.name;
+    const bool predicate = name.rfind("Is", 0) == 0 || name == "AabbContains" || name == "SphereContains";
+    source += predicate ? "export bool " : "export any ";
     source += spec.name;
     source += "(";
     for (std::uint8_t index = 0; index < spec.arity; ++index) {
@@ -642,10 +644,6 @@ void rgb_to_hsv(const double r, const double g, const double b, double& h, doubl
       source += static_cast<char>('0' + index);
     }
     source += ")";
-    const std::string_view name = spec.name;
-    if (name.rfind("Is", 0) == 0 || name == "AabbContains" || name == "SphereContains") {
-      source += " -> bool";  // predicates print as true/false
-    }
     source += " {\n  return axiom::";
     source += spec.name;
     source += "(";
@@ -843,7 +841,7 @@ bool axiom_apply(const std::uint8_t id, const Value* args, const std::uint8_t ar
         out = Value::number_of(0);
         return true;
       }
-      out = Value::number_of(std::isfinite(value) ? 1.0 : 0.0);
+      out = Value::boolean_of(std::isfinite(value));
       return true;
     }
     case Abs: {
@@ -952,7 +950,7 @@ bool axiom_apply(const std::uint8_t id, const Value* args, const std::uint8_t ar
         return bad(error);
       }
       const bool even = even_num(value);
-      out = Value::number_of((which == IsEven ? even : !even) ? 1.0 : 0.0);
+      out = Value::boolean_of(which == IsEven ? even : !even);
       return true;
     }
     case Factorial: {
@@ -1198,7 +1196,7 @@ bool axiom_apply(const std::uint8_t id, const Value* args, const std::uint8_t ar
       }
       const bool inside = point.x >= lo.x && point.x <= hi.x && point.y >= lo.y && point.y <= hi.y && point.z >= lo.z &&
                           point.z <= hi.z;
-      out = Value::number_of(inside ? 1.0 : 0.0);
+      out = Value::boolean_of(inside);
       return true;
     }
     case SphereContains: {
@@ -1208,7 +1206,7 @@ bool axiom_apply(const std::uint8_t id, const Value* args, const std::uint8_t ar
       if (arity != 3 || args == nullptr || !vec_of(args[0], point) || !vec_of(args[1], center) || !num_of(args[2], radius)) {
         return bad(error);
       }
-      out = Value::number_of(radius >= 0.0 && len3(sub3(point, center)) <= radius ? 1.0 : 0.0);
+      out = Value::boolean_of(radius >= 0.0 && len3(sub3(point, center)) <= radius);
       return true;
     }
     case RayPlane: {

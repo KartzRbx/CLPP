@@ -11,14 +11,21 @@
 //   from disk, so completion across files follows what the user sees.
 // - Unknown requests get MethodNotFound instead of silence, so the client never waits.
 
+#include "clpp/detail/utf8_path.hpp"
 #include "clpp/ide.hpp"
 #include "clpp/semantic.hpp"
 #include "clpp/stdlib.hpp"
+#include "clpp/core/lexer/lexer.hpp"
 #include "core/compiler/analyze.hpp"
 
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <cctype>
+#include <cmath>
+#include <cstdint>
+#include <iomanip>
+#include <sstream>
 #include <exception>
 #include <filesystem>
 #include <fstream>
@@ -26,9 +33,11 @@
 #include <iterator>
 #include <map>
 #include <optional>
+#include <set>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <unordered_set>
 #include <vector>
 
 #ifdef _WIN32
@@ -84,11 +93,16 @@ constexpr int kServerNotInitialized = -32002;
   if (decoded.size() >= 3 && decoded[0] == '/' && decoded[2] == ':') {
     decoded.erase(0, 1);
   }
-  return std::filesystem::path(decoded).lexically_normal();
+  return clpp::detail::utf8_path(decoded).lexically_normal();
+}
+
+[[nodiscard]] std::string path_utf8(const std::filesystem::path& path) {
+  const auto bytes = path.generic_u8string();
+  return {reinterpret_cast<const char*>(bytes.data()), bytes.size()};
 }
 
 [[nodiscard]] std::string path_to_uri(const std::filesystem::path& path) {
-  std::string text = path.lexically_normal().generic_string();
+  std::string text = path_utf8(path.lexically_normal());
   std::string encoded = "file://";
   if (!text.empty() && text.front() != '/') {
     encoded.push_back('/');  // Windows drive: file:///c:/...
@@ -108,7 +122,7 @@ constexpr int kServerNotInitialized = -32002;
 }
 
 [[nodiscard]] std::string key_of(const std::filesystem::path& path) {
-  std::string key = path.lexically_normal().generic_string();
+  std::string key = path_utf8(path.lexically_normal());
 #ifdef _WIN32
   std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 #endif
@@ -146,6 +160,15 @@ class Server {
         send_error(nullptr, kInvalidRequest, "expected an object");
         continue;
       }
+      const bool valid_id = !message.contains("id") || message["id"].is_null() ||
+          message["id"].is_string() || message["id"].is_number_integer();
+      const bool valid_params = !message.contains("params") || message["params"].is_null() ||
+          message["params"].is_object() || message["params"].is_array();
+      if (!message.contains("jsonrpc") || message["jsonrpc"] != "2.0" || !valid_id || !valid_params ||
+          (message.contains("method") && !message["method"].is_string())) {
+        send_error(valid_id && message.contains("id") ? message["id"] : json(), kInvalidRequest, "invalid JSON-RPC request");
+        continue;
+      }
       const json id = message.contains("id") ? message["id"] : json();
       const std::string method = message.value("method", "");
       const json params = message.contains("params") ? message["params"] : json::object();
@@ -169,10 +192,22 @@ class Server {
   // --- transport -----------------------------------------------------------------------------
 
   bool read_message(std::string& body) {
+    constexpr std::size_t kMaximumHeaderBytes = 16 * 1024;
+    constexpr std::size_t kMaximumMessageBytes = 64 * 1024 * 1024;
     std::size_t length = 0;
+    std::size_t header_bytes = 0;
+    bool saw_length = false;
     bool any_header = false;
     std::string line;
-    while (std::getline(m_in, line)) {
+    while (m_in) {
+      line.clear();
+      char character = 0;
+      while (m_in.get(character)) {
+        if (++header_bytes > kMaximumHeaderBytes) return false;
+        if (character == '\n') break;
+        line.push_back(character);
+      }
+      if (!m_in) return false;
       if (!line.empty() && line.back() == '\r') {
         line.pop_back();
       }
@@ -190,10 +225,17 @@ class Server {
       std::string name = line.substr(0, colon);
       std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
       if (name == "content-length") {
-        try {
-          length = static_cast<std::size_t>(std::stoul(line.substr(colon + 1)));
-        } catch (...) {
-          length = 0;
+        if (saw_length) return false;
+        saw_length = true;
+        std::string_view value(line.data() + colon + 1, line.size() - colon - 1);
+        while (!value.empty() && (value.front() == ' ' || value.front() == '\t')) value.remove_prefix(1);
+        while (!value.empty() && (value.back() == ' ' || value.back() == '\t')) value.remove_suffix(1);
+        if (value.empty()) return false;
+        for (const char digit : value) {
+          if (digit < '0' || digit > '9') return false;
+          const auto part = static_cast<std::size_t>(digit - '0');
+          if (length > (kMaximumMessageBytes - part) / 10) return false;
+          length = length * 10 + part;
         }
       }
     }
@@ -226,7 +268,7 @@ class Server {
   [[nodiscard]] ModuleLoader loader_for(const std::string& uri) const {
     const std::filesystem::path base = uri_to_path(uri).parent_path();
     return [this, base](const std::string_view path) -> std::optional<std::string> {
-      const std::filesystem::path target = (base / std::filesystem::path(std::string(path))).lexically_normal();
+      const std::filesystem::path target = (base / clpp::detail::utf8_path(path)).lexically_normal();
       const auto open = m_documents.find(key_of(target));
       if (open != m_documents.end()) {
         return open->second.text;  // unsaved edits in another tab win over the disk
@@ -332,17 +374,38 @@ class Server {
 
   // --- diagnostics ---------------------------------------------------------------------------
 
+  const AnalysisResult& analysis_for(const Document& doc) {
+    const auto key = key_of(uri_to_path(doc.uri));
+    auto found = m_analysis_cache.find(key);
+    if (found == m_analysis_cache.end()) {
+      // Retain a few active document graphs, not a second full workspace index.
+      if (m_analysis_cache.size() >= 4) {
+        const auto oldest = std::min_element(m_analysis_cache.begin(), m_analysis_cache.end(),
+            [](const auto& left, const auto& right) { return left.second.used < right.second.used; });
+        m_analysis_cache.erase(oldest);
+      }
+      CachedAnalysis cached;
+      cached.analysis = std::make_unique<AnalysisResult>(analyze_program(doc.text, loader_for(doc.uri)));
+      found = m_analysis_cache.emplace(key, std::move(cached)).first;
+    }
+    found->second.used = ++m_analysis_clock;
+    return *found->second.analysis;
+  }
+
   void publish(const Document& doc) {
-    const AnalysisResult analysis = analyze_program(doc.text, loader_for(doc.uri));
-    const Info info = build(analysis, doc, 1, 1);
+    const AnalysisResult& analysis = analysis_for(doc);
     json diagnostics = json::array();
-    for (const Diagnostic& diagnostic : info.diagnostics) {
+    // Publishing errors must not construct completions, hover or references.
+    // Retain the IDE's one diagnostic per source position policy.
+    std::set<std::pair<std::uint32_t, std::uint32_t>> positions;
+    for (const Diagnostic& diagnostic : analysis.diagnostics) {
+      if (!positions.emplace(diagnostic.location.line, diagnostic.location.column).second) continue;
       const std::uint32_t line = std::max<std::uint32_t>(diagnostic.location.line, 1);
       const std::uint32_t column = std::max<std::uint32_t>(diagnostic.location.column, 1);
       json item{{"range", range(doc.text, line, column, static_cast<std::uint32_t>(diagnostic.span.size()))},
                 {"severity", 1},
                 {"source", "clpp"},
-                {"message", diagnostic.message}};
+                {"message", diagnostic.formatted_message()}};
       diagnostics.push_back(std::move(item));
     }
     notify("textDocument/publishDiagnostics",
@@ -365,6 +428,16 @@ class Server {
   void dispatch(const std::string& method, const json& id, const json& params) {
     const bool request = !id.is_null();
     if (method == "initialize") {
+      if (params.contains("workspaceFolders") && params["workspaceFolders"].is_array()) {
+        for (const auto& folder : params["workspaceFolders"]) {
+          const auto uri = folder.value("uri", "");
+          if (uri.rfind("file://", 0) == 0) m_workspace_roots.push_back(uri_to_path(uri));
+        }
+      }
+      if (m_workspace_roots.empty() && params.contains("rootUri") && params["rootUri"].is_string()) {
+        const auto uri = params["rootUri"].get<std::string>();
+        if (uri.rfind("file://", 0) == 0) m_workspace_roots.push_back(uri_to_path(uri));
+      }
       m_initialized = true;
       reply(id, initialize_result());
       return;
@@ -378,6 +451,10 @@ class Server {
     if (method == "initialized" || method.rfind("$/", 0) == 0 || method == "workspace/didChangeConfiguration" ||
         method == "workspace/didChangeWatchedFiles") {
       if (method == "workspace/didChangeWatchedFiles") {
+        m_analysis_cache.clear();
+        for (const auto& change : params.value("changes", json::array())) {
+          if (change.value("type", 2) != 2) m_module_index_dirty = true;
+        }
         publish_all();  // a linked file changed on disk
       }
       if (request && method.rfind("$/", 0) == 0) {
@@ -397,6 +474,7 @@ class Server {
       doc.text = text_document.at("text").get<std::string>();
       doc.version = text_document.value("version", 0);
       m_documents[key_of(uri_to_path(doc.uri))] = doc;
+      m_analysis_cache.clear();
       publish_all();  // files that link this one may change too
       return;
     }
@@ -428,17 +506,22 @@ class Server {
         doc->text.replace(from, to - from, change.at("text").get<std::string>());
       }
       doc->version = params.at("textDocument").value("version", doc->version);
+      m_analysis_cache.clear();
       publish_all();
       return;
     }
     if (method == "textDocument/didSave") {
+      m_module_index_dirty = true;
+      m_analysis_cache.clear();
       publish_all();
       return;
     }
     if (method == "textDocument/didClose") {
       const std::string uri = params.at("textDocument").at("uri").get<std::string>();
       m_documents.erase(key_of(uri_to_path(uri)));
+      m_analysis_cache.clear();
       notify("textDocument/publishDiagnostics", json{{"uri", uri}, {"diagnostics", json::array()}});
+      publish_all();  // Importers now see saved disk content instead of the closed buffer.
       return;
     }
     if (!request) {
@@ -450,7 +533,8 @@ class Server {
         method == "textDocument/references" || method == "textDocument/rename" ||
         method == "textDocument/prepareRename" || method == "textDocument/semanticTokens/full" ||
         method == "textDocument/formatting" || method == "textDocument/foldingRange" ||
-        method == "textDocument/codeAction" || method == "textDocument/documentHighlight") {
+        method == "textDocument/codeAction" || method == "textDocument/documentHighlight" ||
+        method == "textDocument/documentColor" || method == "textDocument/colorPresentation") {
       Document* doc = document(params);
       if (doc == nullptr) {
         reply(id, nullptr);
@@ -482,6 +566,7 @@ class Server {
           {"definitionProvider", true},
           {"referencesProvider", true},
           {"documentHighlightProvider", true},
+          {"colorProvider", true},
           {"renameProvider", {{"prepareProvider", true}}},
           {"foldingRangeProvider", true},
           {"codeActionProvider", {{"codeActionKinds", json::array({"quickfix"})}}},
@@ -489,28 +574,67 @@ class Server {
           {"documentSymbolProvider", true},
           {"semanticTokensProvider",
            {{"legend", {{"tokenTypes", token_types}, {"tokenModifiers", token_modifiers}}}, {"full", true}}}}},
-        {"serverInfo", {{"name", "clpp"}, {"version", "0.10.1"}}}};
+        {"serverInfo", {{"name", "clpp-vm"}, {"version", CLPP_VERSION}}}};
   }
 
   void handle_document_request(const std::string& method, const json& id, const json& params, Document& doc) {
     const std::string& text = doc.text;
-    const AnalysisResult analysis = analyze_program(text, loader_for(doc.uri));
-
+    // Color previews are lexical and remain available while the program is incomplete.
+    if (method == "textDocument/documentColor") {
+      json colors = json::array();
+      Lexer lexer(text);
+      for (const auto& token : lexer.tokenize().tokens) {
+        if (token.type != TokenType::IntLiteral || token.lexeme.size() < 3 ||
+            token.lexeme[0] != '0' || (token.lexeme[1] != 'x' && token.lexeme[1] != 'X')) continue;
+        std::string digits;
+        for (const char c : token.lexeme.substr(2)) if (c != '_') digits.push_back(c);
+        if (digits.size() != 6 && digits.size() != 8) continue;
+        std::uint32_t packed = 0;
+        for (const char c : digits) packed = (packed << 4) | static_cast<std::uint32_t>(hex_value(c));
+        colors.push_back(json{{"range", range(text, token.location.line, token.location.column,
+                                                static_cast<std::uint32_t>(token.lexeme.size()))},
+          {"color", {{"red", ((packed >> 16) & 255) / 255.0}, {"green", ((packed >> 8) & 255) / 255.0},
+                     {"blue", (packed & 255) / 255.0}, {"alpha", (255 - ((packed >> 24) & 255)) / 255.0}}}});
+      }
+      reply(id, colors); return;
+    }
+    if (method == "textDocument/colorPresentation") {
+      const auto& color = params.at("color");
+      const auto byte = [&](const char* component) {
+        const double value = color.at(component).get<double>();
+        return static_cast<std::uint32_t>(std::lround(std::clamp(value, 0.0, 1.0) * 255));
+      };
+      const std::uint32_t transparency = 255 - byte("alpha");
+      const std::uint32_t packed = (transparency << 24) | (byte("red") << 16) | (byte("green") << 8) | byte("blue");
+      std::ostringstream literal;
+      literal << "0x" << std::uppercase << std::hex << std::setfill('0')
+              << std::setw(transparency == 0 ? 6 : 8) << packed;
+      reply(id, json::array({json{{"label", literal.str()},
+          {"textEdit", {{"range", params.at("range")}, {"newText", literal.str()}}}}}));
+      return;
+    }
     if (method == "textDocument/semanticTokens/full") {
-      const std::vector<std::uint32_t> data = encode_semantic_tokens(semantic_tokens(text, loader_for(doc.uri)), text);
+      const std::vector<std::uint32_t> data = encode_semantic_tokens(semantic_tokens(analysis_for(doc)), text);
       reply(id, json{{"data", data}});
       return;
     }
     if (method == "textDocument/formatting") {
-      const std::string formatted = format_source(text);
+      const auto options = params.value("options", json::object());
+      const auto tab_size = options.value("tabSize", 2u);
+      const bool insert_spaces = options.value("insertSpaces", true);
+      const std::string formatted = format_source(text, tab_size, insert_spaces);
       int end_line = 0;
+      std::uint32_t end_column = 1;
       for (const char c : text) {
         end_line += c == '\n' ? 1 : 0;
+        end_column = c == '\n' ? 1 : end_column + 1;
       }
-      reply(id, json::array({json{{"range", {{"start", {{"line", 0}, {"character", 0}}}, {"end", {{"line", end_line + 1}, {"character", 0}}}}},
+      reply(id, json::array({json{{"range", {{"start", {{"line", 0}, {"character", 0}}},
+                                                {"end", position(text, static_cast<std::uint32_t>(end_line + 1), end_column)}}},
                                   {"newText", formatted}}}));
       return;
     }
+    const AnalysisResult& analysis = analysis_for(doc);
     if (method == "textDocument/foldingRange") {
       json ranges = json::array();
       std::vector<int> open;
@@ -541,27 +665,26 @@ class Server {
         if (diagnostic.value("message", "") != "cannot assign to immutable binding") {
           continue;
         }
-        // Find the `let name` that declares the assigned binding and offer `let mut name`.
+        // Resolve the declaration, so a shadowed name cannot change a different binding.
         const auto [line, column] = to_compiler(text, diagnostic.at("range").at("start"));
-        std::string name;
-        for (const Token& token : analysis.tokens) {
-          if (token.location.line == line && token.location.column == column) {
-            name = std::string(token.lexeme);
-          }
-        }
-        for (std::size_t index = 0; index + 1 < analysis.tokens.size() && !name.empty(); ++index) {
-          const Token& keyword = analysis.tokens[index];
-          const Token& target = analysis.tokens[index + 1];
-          if (keyword.type == TokenType::KwLet && target.lexeme == name) {
-            json edit{{"range", range(text, target.location.line, target.location.column, 0)}, {"newText", "mut "}};
-            edit["range"]["end"] = edit["range"]["start"];
-            actions.push_back(json{{"title", "Make '" + name + "' mutable (let mut)"},
-                                   {"kind", "quickfix"},
-                                   {"diagnostics", json::array({diagnostic})},
-                                   {"isPreferred", true},
+        const Info declaration = build_info_for(analysis, text, line, column);
+        if (!declaration.has_definition || !declaration.definition_path.empty()) continue;
+        for (std::size_t index = 0; index < analysis.tokens.size(); ++index) {
+          const Token& target = analysis.tokens[index];
+          if (target.location.line != declaration.definition.line ||
+              target.location.column != declaration.definition.column) continue;
+          for (std::size_t prefix = index; prefix > 0;) {
+            const Token& token = analysis.tokens[--prefix];
+            if (token.type == TokenType::Semicolon || token.type == TokenType::OpenBrace ||
+                token.type == TokenType::CloseBrace) break;
+            if (token.type != TokenType::KwConst) continue;
+            json edit{{"range", range(text, token.location.line, token.location.column, 5)}, {"newText", ""}};
+            actions.push_back(json{{"title", "Make '" + std::string(target.lexeme) + "' mutable (remove const)"},
+                                   {"kind", "quickfix"}, {"diagnostics", json::array({diagnostic})},
                                    {"edit", {{"changes", {{doc.uri, json::array({edit})}}}}}});
             break;
           }
+          break;
         }
       }
       reply(id, actions);
@@ -632,7 +755,8 @@ class Server {
       if (info.link_path_completion) {
         link_path_items(doc, info.link_path_prefix, items);
       }
-      reply(id, json{{"isIncomplete", false}, {"items", std::move(items)}});
+      const bool incomplete = !info.link_path_completion && auto_import_items(doc, analysis, line, column, items);
+      reply(id, json{{"isIncomplete", incomplete}, {"items", std::move(items)}});
       return;
     }
     if (method == "textDocument/hover") {
@@ -659,7 +783,7 @@ class Server {
         return;
       }
       const std::filesystem::path target =
-          (uri_to_path(doc.uri).parent_path() / std::filesystem::path(info.definition_path)).lexically_normal();
+          (uri_to_path(doc.uri).parent_path() / clpp::detail::utf8_path(info.definition_path)).lexically_normal();
       const std::optional<std::string> module_text = loader_for(doc.uri)(info.definition_path);
       const std::string target_text = module_text.value_or(std::string{});
       reply(id, json{{"uri", path_to_uri(target)},
@@ -683,16 +807,151 @@ class Server {
     reply(id, nullptr);
   }
 
+  void refresh_module_index(const std::filesystem::path& base) {
+    if (m_workspace_roots.empty() && m_fallback_root != base) {
+      m_fallback_root = base;
+      m_module_index_dirty = true;
+    }
+    if (!m_module_index_dirty) return;
+    m_module_index_dirty = false;
+    m_module_files.clear();
+    const auto roots = m_workspace_roots.empty() ? std::vector<std::filesystem::path>{base} : m_workspace_roots;
+    std::set<std::string> seen;
+    std::size_t visited = 0;
+    for (const auto& root : roots) {
+      std::error_code error;
+      std::filesystem::recursive_directory_iterator iterator(root, std::filesystem::directory_options::skip_permission_denied, error), end;
+      for (; iterator != end && visited < 20000 && m_module_files.size() < 5000; iterator.increment(error)) {
+        if (error) { error.clear(); continue; }
+        ++visited;
+        const auto name = path_utf8(iterator->path().filename());
+        if (iterator->is_directory(error)) {
+          if (iterator.depth() >= 32 || (!name.empty() && name.front() == '.') || name == "node_modules" ||
+              name == "build" || name == "dist" || name == "target") iterator.disable_recursion_pending();
+          continue;
+        }
+        if (iterator->path().extension() == ".clp" && iterator->is_regular_file(error) && seen.insert(key_of(iterator->path())).second)
+          m_module_files.push_back(iterator->path());
+      }
+    }
+    std::sort(m_module_files.begin(), m_module_files.end());
+  }
+
+  // Additional edits travel over standard LSP, so acceptance works in any client.
+  bool auto_import_items(const Document& doc, const AnalysisResult& analysis, const std::uint32_t line,
+                         const std::uint32_t column, json& items) {
+    const auto lexed = Lexer(doc.text).tokenize();
+    const Token* word = nullptr;
+    std::size_t word_index = 0;
+    for (std::size_t index = 0; index < lexed.tokens.size(); ++index) {
+      const auto& token = lexed.tokens[index];
+      if (token.type == TokenType::Identifier && token.location.line == line && column > token.location.column &&
+          column <= token.location.column + token.lexeme.size()) { word = &token; word_index = index; break; }
+    }
+    if (!word) return false;  // Also excludes strings, comments and empty/member triggers.
+    if (word_index > 0 && (lexed.tokens[word_index - 1].type == TokenType::Dot ||
+        lexed.tokens[word_index - 1].type == TokenType::Scope || lexed.tokens[word_index - 1].type == TokenType::At)) return false;
+    for (std::size_t index = word_index; index > 0;) {
+      const auto type = lexed.tokens[--index].type;
+      if (type == TokenType::Semicolon || type == TokenType::OpenBrace || type == TokenType::CloseBrace) break;
+      if (type == TokenType::KwLink) return false;
+    }
+    const std::string prefix(word->lexeme.substr(0, column - word->location.column));
+    const auto base = uri_to_path(doc.uri).parent_path();
+    std::set<std::string> occupied, imported;
+    for (const auto& item : items) occupied.insert(item.at("label").get<std::string>());
+    for (const auto& link : analysis.links) {
+      occupied.insert(link.alias);
+      imported.insert(!link.path.empty() && link.path.front() == '@' ? link.path : key_of((base / clpp::detail::utf8_path(link.path)).lexically_normal()));
+    }
+    std::size_t insertion = 0;
+    if (!lexed.tokens.empty() && lexed.tokens.front().type != TokenType::Eof) {
+      const auto first = static_cast<std::size_t>(lexed.tokens.front().lexeme.data() - doc.text.data());
+      const auto newline = first == 0 ? std::string::npos : doc.text.rfind('\n', first - 1);
+      insertion = newline == std::string::npos ? 0 : newline + 1;
+    }
+    int depth = 0;
+    bool header = false;
+    for (std::size_t index = 0; index < lexed.tokens.size(); ++index) {
+      const auto& token = lexed.tokens[index];
+      if (token.type == TokenType::OpenBrace) ++depth;
+      if (token.type == TokenType::CloseBrace) --depth;
+      if (depth == 0 && (token.type == TokenType::KwLink || token.type == TokenType::KwPragma)) header = true;
+      if (header && depth == 0 && token.type == TokenType::Semicolon) {
+        insertion = static_cast<std::size_t>(token.lexeme.data() - doc.text.data()) + 1;
+        if (index + 1 == lexed.tokens.size() || lexed.tokens[index + 1].type == TokenType::Eof ||
+            lexed.tokens[index + 1].location.line > token.location.line) {
+          const auto newline = doc.text.find('\n', insertion);
+          if (newline != std::string::npos) insertion = newline + 1;
+        }
+        header = false;
+      }
+    }
+    std::uint32_t insert_line = 1, insert_column = 1;
+    for (std::size_t offset = 0; offset < insertion; ++offset) {
+      if (doc.text[offset] == '\n') { ++insert_line; insert_column = 1; } else ++insert_column;
+    }
+    const json insertion_position = position(doc.text, insert_line, insert_column);
+    const json insertion_range{{"start", insertion_position}, {"end", insertion_position}};
+    const json replacement = range(doc.text, word->location.line, word->location.column, static_cast<std::uint32_t>(word->lexeme.size()));
+    const auto word_start = static_cast<std::size_t>(word->lexeme.data() - doc.text.data());
+    const std::string eol = doc.text.find("\r\n") == std::string::npos ? "\n" : "\r\n";
+    std::size_t count = 0;
+    std::set<std::string> suggested;
+    const auto offer = [&](const std::string& alias, const std::string& path, const std::string& identity, const bool native) {
+      if (alias.size() < prefix.size() || occupied.contains(alias) || imported.contains(identity) || !suggested.insert(identity).second) return;
+      for (std::size_t index = 0; index < prefix.size(); ++index)
+        if (std::tolower(static_cast<unsigned char>(alias[index])) != std::tolower(static_cast<unsigned char>(prefix[index]))) return;
+      if (count >= 200) { ++count; return; }
+      const std::string statement = "link " + (native ? path : json(path).dump()) + " as " + alias + ";";
+      const std::string import_text = (insertion > 0 && doc.text[insertion - 1] != '\n' ? eol : "") + statement + eol;
+      json item{{"label", alias}, {"kind", 9}, {"detail", "Auto-import: " + statement}, {"sortText", "8" + alias + path},
+                {"textEdit", {{"range", replacement}, {"newText", alias}}},
+                {"documentation", {{"kind", "markdown"}, {"value", "Insert module link:\n```clp\n" + statement + "\n```"}}}};
+      if (insertion >= word_start && insertion <= word_start + word->lexeme.size()) {
+        item["textEdit"]["newText"] = import_text + eol + alias;  // No overlapping LSP edits at the first word.
+      } else item["additionalTextEdits"] = json::array({json{{"range", insertion_range}, {"newText", import_text}}});
+      items.push_back(std::move(item));
+      ++count;
+    };
+    for (const auto& module : stdlib::module_catalog()) offer(std::string(module.alias), std::string(module.path), std::string(module.path), true);
+    if (doc.uri.rfind("file://", 0) == 0) {
+      refresh_module_index(base);
+      auto files = m_module_files;
+      for (const auto& [key, open] : m_documents) {
+        (void)key;
+        if (open.uri.rfind("file://", 0) == 0 && uri_to_path(open.uri).extension() == ".clp") files.push_back(uri_to_path(open.uri));
+      }
+      for (const auto& file : files) {
+        if (key_of(file) == key_of(uri_to_path(doc.uri))) continue;
+        std::string alias = path_utf8(file.stem());
+        for (char& byte : alias) if (static_cast<unsigned char>(byte) < 128 && std::isalnum(static_cast<unsigned char>(byte)) == 0 && byte != '_') byte = '_';
+        if (!alias.empty() && std::isdigit(static_cast<unsigned char>(alias.front())) != 0) alias.insert(alias.begin(), '_');
+        auto checked = Lexer(alias).tokenize();
+        if (!checked.diagnostics.empty() || checked.tokens.empty() || checked.tokens.front().type != TokenType::Identifier) {
+          for (char& byte : alias) if (static_cast<unsigned char>(byte) >= 128) byte = '_';
+          alias += "Module";
+        }
+        const auto relative = file.lexically_normal().lexically_relative(base);
+        if (relative.empty()) continue;
+        auto path = path_utf8(relative);
+        if (path.front() != '.') path = "./" + path;
+        offer(alias, path, key_of(file), false);
+      }
+    }
+    return count > 200;
+  }
+
   // Files and folders for `link "./…"`.
   void link_path_items(const Document& doc, const std::string& typed, json& items) const {
     const std::filesystem::path base = uri_to_path(doc.uri).parent_path();
     std::string folder_part = typed;
     const std::size_t slash = folder_part.find_last_of('/');
     folder_part = slash == std::string::npos ? std::string{} : folder_part.substr(0, slash + 1);
-    const std::filesystem::path folder = (base / folder_part).lexically_normal();
+    const std::filesystem::path folder = (base / clpp::detail::utf8_path(folder_part)).lexically_normal();
     std::error_code error;
     for (const auto& entry : std::filesystem::directory_iterator(folder, error)) {
-      const std::string name = entry.path().filename().string();
+      const std::string name = path_utf8(entry.path().filename());
       if (name.empty() || name.front() == '.') {
         continue;
       }
@@ -737,7 +996,7 @@ class Server {
       return json{{"name", name}, {"detail", detail}, {"kind", kind}, {"range", where}, {"selectionRange", where}};
     };
     for (const parser::StructDecl& decl : program.structs) {
-      if (imported_type(decl.name) || decl.name_location.line == 0) {
+      if (decl.imported || imported_type(decl.name) || decl.name_location.line == 0) {
         continue;
       }
       json entry = symbol(decl.name, decl.base.empty() ? "struct" : "struct : " + decl.base, 23, decl.name_location);
@@ -758,7 +1017,7 @@ class Server {
       symbols.push_back(std::move(entry));
     }
     for (const parser::EnumDecl& decl : program.enums) {
-      if (imported_type(decl.name) || decl.name_location.line == 0) {
+      if (decl.imported || imported_type(decl.name) || decl.name_location.line == 0) {
         continue;
       }
       json entry = symbol(decl.name, "enum", 10, decl.name_location);
@@ -776,8 +1035,8 @@ class Server {
       symbols.push_back(symbol(function.name, "func", 12, function.name_location));
     }
     for (const parser::Stmt& stmt : program.statements) {
-      if (stmt.kind == parser::Stmt::Kind::Let && stmt.name_location.line != 0) {
-        symbols.push_back(symbol(stmt.name, stmt.declared_type.empty() ? "let" : stmt.declared_type,
+      if (stmt.kind == parser::Stmt::Kind::VariableDecl && stmt.name_location.line != 0) {
+        symbols.push_back(symbol(stmt.name, stmt.declared_type.empty() ? "auto" : stmt.declared_type,
                                  stmt.immutable ? 14 : 13, stmt.name_location));
       }
     }
@@ -787,6 +1046,13 @@ class Server {
   std::istream& m_in;
   std::ostream& m_out;
   std::map<std::string, Document> m_documents;
+  struct CachedAnalysis { std::unique_ptr<AnalysisResult> analysis; std::uint64_t used{0}; };
+  std::map<std::string, CachedAnalysis> m_analysis_cache;
+  std::uint64_t m_analysis_clock{0};
+  std::vector<std::filesystem::path> m_workspace_roots;
+  std::vector<std::filesystem::path> m_module_files;
+  std::filesystem::path m_fallback_root;
+  bool m_module_index_dirty{true};
   bool m_initialized{false};
   bool m_shutdown{false};
 };

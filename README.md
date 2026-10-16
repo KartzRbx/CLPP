@@ -1,94 +1,155 @@
-> Product identity: this C++20 register VM builds **clpp-vm** (Windows: **clpp-vm.exe**). The Rust compiler that emits Luau retains **clpp**. Both can be on PATH together. The published 0.10.1 assets predate this rename and must be configured with an explicit path until a renamed release is published. No language syntax changes accompany the binary rename.
+> The C++20 compiler and VM use **clpp-vm** (**clpp-vm.exe** on Windows), independently of the Rust/Luau compiler named clpp.
 
 <p align="center">
-  <img src="assets/brand/clpp-256.png" width="128" alt="CL++ logo">
+  <a href="https://kartzrbx.github.io/CLPP/">
+    <img src="assets/brand/clpp-256.png" width="144" height="144" alt="CL++ logo">
+  </a>
 </p>
 
 <h1 align="center">CL++</h1>
+<p align="center"><strong>Build playable prototypes and desktop tools with one language.</strong><br>Static types, header-free modules, built-in graphics, UI, and audio.</p>
 
-<p align="center">A compiled, general-purpose programming language designed for games and tools.</p>
+<p align="center">
+  <a href="https://kartzrbx.github.io/CLPP/">Documentation</a> ·
+  <a href="https://github.com/KartzRbx/CLPP/releases">Download</a> ·
+  <a href="https://kartzrbx.github.io/CLPP/guide/01-getting-started/">Get started</a> ·
+  <a href="https://kartzrbx.github.io/CLPP/reference/syntax/">Language reference</a> ·
+  <a href="examples/">Examples</a> ·
+  <a href="https://github.com/KartzRbx/CLPP/issues">Issues</a>
+</p>
 
-CL++ has static typing with inference, value semantics, modules without headers, a bytecode compiler and register virtual machine, and built-in libraries for mathematics, graphics, UI, audio, files, JSON, and automation.
+| 🚀 Start coding | 📖 Look up syntax | 🧰 Explore the library |
+| :--- | :--- | :--- |
+| [**Getting started**](https://kartzrbx.github.io/CLPP/guide/01-getting-started/)<br>Install, write a `.clp` file, and run it. | [**Keywords & operators**](https://kartzrbx.github.io/CLPP/reference/keywords/)<br>Quick reference for the language. | [**Standard library**](https://kartzrbx.github.io/CLPP/guide/14-standard-library/)<br>Math, files, JSON, and more. |
+| [**Editor setup**](https://kartzrbx.github.io/CLPP/guide/15-tools-and-editor/)<br>Completion, diagnostics, and navigation. | [**Grammar**](https://kartzrbx.github.io/CLPP/reference/ebnf/)<br>Exact syntax in EBNF. | [**Graphics & windows**](https://kartzrbx.github.io/CLPP/guide/17-window-and-graphics/)<br>Draw your first interactive scene. |
+
+## <img src="assets/brand/clpp-32.png" width="28" height="28" alt=""> Why build with CL++?
+
+- **Get something on screen:** windows, drawing, input, UI, and audio are built in.
+- **Keep game code organized:** typed data, functions, and independent `.clp` modules — no headers or required `main()`.
+- **Catch mistakes while you work:** compiler-powered diagnostics, completion, hover, and navigation in VS Code. On Windows x64, the extension includes the compiler.
+
+[See a complete game system](https://kartzrbx.github.io/CLPP/guide/20-modular-combat/) · [Build an app screen](https://kartzrbx.github.io/CLPP/guide/21-account-screen/) · [Explore measured performance](https://kartzrbx.github.io/CLPP/guide/16-performance/)
+
+> **Language status:** current syntax, semantics and executable examples are consolidated in the [language contract](docs/reference/language-contract.md). Future proposals and unverified platform gates remain explicit. [Complete language handbook](https://kartzrbx.github.io/CLPP/handbook/00-o-que-e-o-clpp/) · [Learn the syntax](https://kartzrbx.github.io/CLPP/guide/00-language-tour/) · [Implementation status](https://kartzrbx.github.io/CLPP/reference/status/)
+
+## Hello, CL++
+
+Save as `hello.clp`:
+
+```clp
+post("Hello, CL++!");
+```
+
+Run `clpp-vm hello.clp`, or open the file in VS Code and press **Ctrl+F5**.
+
+## <img src="assets/brand/clpp-32.png" width="28" height="28" alt=""> Install
+
+Download the 0.11.0 `.vsix` or platform runtime ZIP from [**Releases**](https://github.com/KartzRbx/CLPP/releases/tag/v0.11.0). In VS Code or Cursor, select **Extensions → ⋯ → Install from VSIX…**, then reload the window. The extension bundles the compiler for **Windows x64**.
+
+<details>
+<summary><strong>CLI, Linux/macOS, and building from source</strong></summary>
+
+For the Windows CLI, download `clpp-vm.exe` from Releases and add its folder to `PATH`. The executable is statically linked and needs no extra DLLs.
+
+To build from source, install **CMake 3.20+**, **Ninja**, and a **C++20 compiler**:
+
+```sh
+cmake --preset release
+cmake --build --preset release
+```
+
+Run `./build/release/src/clpp-vm examples/hello.clp` on Linux/macOS, or `.\build\release\src\clpp-vm.exe examples\hello.clp` in PowerShell. On Linux/macOS, put the compiler on `PATH` or set the extension's `clpp.serverPath`.
+
+[Toolchain reference](https://kartzrbx.github.io/CLPP/reference/toolchain/) · [CI builds](https://github.com/KartzRbx/CLPP/actions/workflows/ci.yml)
+
+</details>
+
+<details>
+<summary><strong>Windows opens the wrong VSIX installer?</strong></summary>
+
+Install the `.vsix` **from inside VS Code**. Windows may associate `.vsix` with Visual Studio's installer. Alternatively, run `code --install-extension <downloaded-file>.vsix` (use `cursor` for Cursor).
+
+</details>
+
+## A small example
 
 ```clp
 link @clpp.axiom as Axiom;
 
-struct Player {
+def Player {
   string name;
-  int hp;
-  Vector3 position;
-
-  func damage(int amount) {
-    @hp = Axiom.Clamp(@hp - amount, 0, 100);
-  }
+  number hp = 100;
 }
 
-Player hero = Player("Ada", 100, Vector3(0, 0, 0));
-hero.damage(30);
-hero.position.y += 2.5;
-post(`${hero.name}: ${hero.hp} HP at ${hero.position}`);
+Player hero = Player { name = "Ada", hp = 90 };
+hero.hp = Axiom.Clamp(hero.hp + 25, 0, 100);
+post(hero.name .: ": " .: hero.hp .: " HP");
 ```
 
-## Why CL++ exists
-
-Kartz Dev originally wanted a clearer, professional programming experience for Roblox development, inspired by C++ but better suited to that context. CL++ grew into its own general-purpose language with a C++20 implementation, independent modules, a compiler, and a VM. The [about page](https://kartzrbx.github.io/CLPP/guide/00-about/) explains its goals and current uses.
-
-## What you can make
-
-- Games and prototypes with vectors, a native window, 2D drawing, input, audio, and UI.
-- Desktop tools with widgets, file I/O, JSON, dates, and a console.
-- Visible desktop macros and UI automation on supported platforms.
-- Embedded scripts in a C++ application through `clpp_core` and `extern func`.
-
-## Install
-
-**[CL++ 0.10.1](https://github.com/KartzRbx/CLPP/releases/tag/v0.10.1)** is the current release: the C++20 bytecode compiler, register VM, graphics/UI/audio libraries, and the VS Code extension (`clpp-language-0.10.1.vsix`). The extension bundles a self-contained `clpp.exe` for Windows x64, so on Windows there is nothing else to install.
-
-### Install the VS Code extension
-
-Download `clpp-language-0.10.1.vsix` from [Releases](https://github.com/KartzRbx/CLPP/releases), then install it **inside VS Code** — one of:
-
-- In VS Code (or Cursor): open the **Extensions** panel, click the **⋯** menu at the top, choose **Install from VSIX…**, and pick the file; or
-- From a terminal: `code --install-extension clpp-language-0.10.1.vsix` (use `cursor` instead of `code` for Cursor).
-
-Then reload the window (**Ctrl+Shift+P → Developer: Reload Window**). Open any `.clp` file to check it works.
-
-> **Do not double-click the `.vsix` file.** On machines with Visual Studio installed, Windows opens `.vsix` with the *Visual Studio* VSIX Installer, which refuses it with “one or more extensions are for Visual Studio Code.” That is a Windows file-association quirk, not a problem with the file — always install from inside VS Code as above.
-
-The extension includes the compiler, so you do not need `clpp.exe` separately on Windows x64. For the legacy 0.10.1 CLI, download `clpp.exe` from Releases (or the `clpp-vm-windows` artifact from a successful [CI run](https://github.com/KartzRbx/CLPP/actions/workflows/ci.yml)) and put it on your `PATH`. The released `clpp.exe` and CI-built `clpp-vm.exe` are statically linked, so it runs on a clean Windows machine with no extra DLLs.
-
-To build from source, install CMake 3.20+, Ninja, and a C++20 compiler:
-
-```text
-cmake --preset release
-cmake --build --preset release
-./build/release/src/clpp-vm examples/hello.clp
+```output
+Ada: 100 HP
 ```
 
-On Windows, run `.\build\release\src\clpp-vm.exe examples\hello.clp` after the build. Put the executable on your `PATH` to call `clpp-vm` from any directory. On Linux and macOS, point the extension's `clpp.serverPath` setting at the executable or put it on `PATH`.
+Expected output after compiler alignment: `Ada: 100 HP`.
 
-## Documentation
+[Types & variables](https://kartzrbx.github.io/CLPP/guide/03-variables-and-types/) · [Data definitions](https://kartzrbx.github.io/CLPP/guide/07-structs-and-inheritance/) · [Modules](https://kartzrbx.github.io/CLPP/guide/10-modules/)
 
-The [documentation site](https://kartzrbx.github.io/CLPP/) covers the complete language guide, syntax and grammar references, standard library, editor, performance, and project tutorials. Start with [Getting started](https://kartzrbx.github.io/CLPP/guide/01-getting-started/). The [documentation index](docs/README.md) lists repository source material and examples.
+<details>
+<summary><strong>Try a window with graphics</strong></summary>
 
-## Performance
+Save as `window.clp` and run `clpp-vm window.clp`:
 
-The compiler verifies bytecode and lowers it to a register VM. Measured optimizations include reusable function frames, fast numeric assignment, indexed reads without copying a whole collection, and specialized integer operations. The [performance chapter](https://kartzrbx.github.io/CLPP/guide/16-performance/) gives the hardware, workloads, timings, and reproduction command. Results are specific to those workloads.
+```clp
+link @clpp.gfx as Gfx;
+link @clpp.window as Window;
 
-## Repository layout
+Window.Open("Hello", 480, 320);
+while (Window.Frame()) {
+  Gfx.Clear(Gfx.DARK);
+  Gfx.Text("Hello, CL++!", 40, 40, 24, Gfx.WHITE);
+  Gfx.Circle(240, 200, 60, Gfx.ORANGE);
+}
+```
+
+[Graphics guide](https://kartzrbx.github.io/CLPP/guide/17-window-and-graphics/) · [UI guide](https://kartzrbx.github.io/CLPP/guide/18-user-interfaces/)
+
+</details>
+
+## <img src="assets/brand/clpp-32.png" width="28" height="28" alt=""> Build something
+
+| 🎮 Games | 🖥️ Tools | 🧩 Complete projects |
+| :--- | :--- | :--- |
+| [Graphics & input](https://kartzrbx.github.io/CLPP/guide/17-window-and-graphics/)<br>[Events](https://kartzrbx.github.io/CLPP/guide/13-events/)<br>[Audio](https://kartzrbx.github.io/CLPP/guide/19-audio-console-automation/) | [User interfaces](https://kartzrbx.github.io/CLPP/guide/18-user-interfaces/)<br>[Files & JSON](https://kartzrbx.github.io/CLPP/guide/14-standard-library/)<br>[Concurrency](https://kartzrbx.github.io/CLPP/guide/12-concurrency/) | [Modular combat](https://kartzrbx.github.io/CLPP/guide/20-modular-combat/)<br>[Account screen](https://kartzrbx.github.io/CLPP/guide/21-account-screen/)<br>[Example sources](examples/) |
+
+<details>
+<summary><strong>About the language, performance, and repository</strong></summary>
+
+CL++ started with Roblox development and grew into a general-purpose language. The current implementation uses **C++20**, verified bytecode, and a register VM. Each `.clp` file is a module; there are no headers or required `main()` function.
+
+[About CL++](https://kartzrbx.github.io/CLPP/guide/00-about/) · [Measured benchmarks](https://kartzrbx.github.io/CLPP/guide/16-performance/)
 
 | Path | Contents |
 | --- | --- |
-| `src/core/` | Lexer, parser, type checker, code generation, VM, and language server |
+| `src/core/` | Lexer, parser, checker, bytecode, VM, and language server |
 | `src/stdlib/` | Built-in modules |
-| `src/cli/` | `clpp` executable |
+| `src/cli/` | `clpp-vm` executable |
 | `include/clpp/` | C++ embedding API |
 | `tools/vscode/` | VS Code extension |
-| `examples/` | Example programs |
-| `benchmarks/` | CL++ and Python benchmark programs |
-| `tests/` | Unit, regression, stress, LSP, extension, and documentation tests |
-| `docs/` | English guide and reference used to build the website |
+| `examples/`, `benchmarks/`, `tests/` | Programs, benchmarks, and validation |
+| `docs/` | Website guide and reference sources |
+| `www/` | Astro / Starlight website |
 
-## License
+Website commands run from `www/`:
 
-See [LICENSE](LICENSE).
+```sh
+npm ci
+npm run dev
+npm run build
+```
+
+The build generates pages and navigation from `docs/` and writes the static site to `www/dist/`. Source documents are listed in the [documentation index](docs/README.md).
+
+</details>
+
+Licensed under [MIT](LICENSE).

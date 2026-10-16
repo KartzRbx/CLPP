@@ -5,13 +5,13 @@ Um `struct` agrupa dados (campos) e comportamento (métodos). É o bloco básico
 ## Declarar e construir
 
 ```clp
-struct Player {
+def Player {
   string name;
-  int hp;
+  number hp;
   Vector3 position;
 }
 
-Player hero = Player("Ada", 100, Vector3(0, 0, 0));
+Player hero = Player { name = "Ada", hp = 100, position = Vector3(0, 0, 0) };
 post(hero.name);
 post(hero.hp);
 ```
@@ -24,8 +24,8 @@ Ada
 O construtor recebe os campos na ordem em que foram declarados. Também dá para nomeá-los, em qualquer ordem:
 
 ```clp
-struct Item { string name; int price; int weight; }
-Item sword = Item(price: 150, name: "espada", weight: 3);
+def Item { string name; number price; number weight; }
+Item sword = Item { price=150, name="espada", weight=3 };
 post(sword.name .: " custa " .: sword.price);
 ```
 
@@ -40,10 +40,10 @@ espada custa 150
 Campos de uma variável mutável podem ser alterados diretamente, inclusive campos aninhados, componentes de vetores e formas compostas.
 
 ```clp
-struct Stats { int hp; int mana; }
-struct Hero { string name; Stats stats; Vector3 position; }
+def Stats { number hp; number mana; }
+def Hero { string name; Stats stats; Vector3 position; }
 
-Hero h = Hero("Ada", Stats(100, 50), Vector3(0, 0, 0));
+Hero h = Hero { name = "Ada", stats = Stats { hp = 100, mana = 50 }, position = Vector3(0, 0, 0) };
 h.name = "Bea";
 h.stats.hp -= 30;
 h.stats.mana += 5;
@@ -59,18 +59,18 @@ Uma variável declarada com `let` (sem `mut`) não pode ter campos alterados.
 
 ## Métodos
 
-Funções declaradas dentro do struct. Dentro delas, `self` é o objeto em que o método foi chamado. `@campo` é um atalho para `self.campo` (e `@this.campo` também funciona).
+Funções declaradas dentro de `def` usam `@this` como receptor. Acesse campos com `@this.campo`; não há receptor implícito chamado `self` nem atalho `@campo`.
 
 ```clp
-struct Player {
+def Player {
   string name;
-  int hp;
+  number hp;
 
-  func isAlive() -> bool { return self.hp > 0; }
-  func describe() -> string { return @name .: " (" .: @hp .: " hp)"; }
+  bool isAlive() { return @this.hp > 0; }
+  string describe() { return @this.name .: " (" .: @this.hp .: " hp)"; }
 }
 
-Player p = Player("Ada", 80);
+Player p = Player { name = "Ada", hp = 80 };
 post(p.describe());
 post(p.isAlive());
 ```
@@ -85,22 +85,22 @@ true
 Um método que muda `self` atualiza a variável em que foi chamado.
 
 ```clp
-struct Player {
-  int hp;
-  int maxHp;
+def Player {
+  number hp;
+  number maxHp;
 
-  func damage(int amount) -> int {
-    @hp = @hp - amount;
-    if (@hp < 0) { @hp = 0; }
-    return @hp;
+  number damage(number amount) {
+    @this.hp = @this.hp - amount;
+    if (@this.hp < 0) { @this.hp = 0; }
+    return @this.hp;
   }
-  func heal(int amount) {
-    self.hp = self.hp + amount;
-    if (self.hp > self.maxHp) { self.hp = self.maxHp; }
+  void heal(number amount) {
+    @this.hp = @this.hp + amount;
+    if (@this.hp > @this.maxHp) { @this.hp = @this.maxHp; }
   }
 }
 
-Player p = Player(100, 100);
+Player p = Player { hp = 100, maxHp = 100 };
 p.damage(30);
 p.heal(10);
 post(p.hp);
@@ -119,18 +119,18 @@ Structs são valores (capítulo 3): passar `p` para uma função comum entrega u
 `struct Filho : Pai` herda todos os campos e métodos do pai. O construtor do filho recebe primeiro os campos do pai e depois os próprios.
 
 ```clp
-struct Entity {
+def Entity {
   string name;
-  int hp;
-  func describe() -> string { return @name .: " hp=" .: @hp; }
+  number hp;
+  string describe() { return @this.name .: " hp=" .: @this.hp; }
 }
 
-struct Enemy : Entity {
-  int damage;
-  func attack() -> string { return @name .: " causa " .: @damage; }
+def Enemy : Entity {
+  number damage;
+  string attack() { return @this.name .: " causa " .: @this.damage; }
 }
 
-Enemy orc = Enemy("Orc", 60, 12);
+Enemy orc = Enemy { name = "Orc", hp = 60, damage = 12 };
 post(orc.describe());     << herdado de Entity
 post(orc.attack());
 post(orc.hp);
@@ -149,19 +149,19 @@ O editor mostra os membros herdados na lista de sugestões, com "(herdado de Ent
 Um método redefinido no filho substitui o do pai, mesmo quando o objeto é visto pelo tipo do pai. A escolha do método acontece na execução (despacho dinâmico).
 
 ```clp
-struct Animal {
+def Animal {
   string name;
-  func sound() -> string { return "..."; }
+  string sound() { return "..."; }
 }
-struct Dog : Animal {
-  func sound() -> string { return "au"; }
+def Dog : Animal {
+  string sound() { return "au"; }
 }
-struct Cat : Animal {
-  func sound() -> string { return "miau"; }
+def Cat : Animal {
+  string sound() { return "miau"; }
 }
 
-Animal a = Dog("Rex");
-Animal b = Cat("Mia");
+Animal a = Dog { name = "Rex" };
+Animal b = Cat { name = "Mia" };
 post(a.name .: ": " .: a.sound());
 post(b.name .: ": " .: b.sound());
 ```
@@ -182,14 +182,14 @@ Mia: miau
 | `final struct` | struct | proíbe que seja herdado |
 
 ```clp
-abstract struct Shape {
-  abstract func area() -> float {}
+abstract def Shape {
+  abstract float area() {}
 }
-struct Square : Shape {
+def Square : Shape {
   float side;
-  override func area() -> float { return self.side * self.side; }
+  override float area() { return @this.side * @this.side; }
 }
-Square s = Square(3);
+Square s = Square { side = 3 };
 post(s.area());
 ```
 
@@ -198,8 +198,8 @@ post(s.area());
 ```
 
 ```clp erro
-abstract struct Shape { abstract func area() -> float {} }
-Shape s = Shape();
+abstract def Shape { abstract float area() {} }
+Shape s = Shape {  };
 ```
 
 ```saida
@@ -208,15 +208,15 @@ abstract type
 
 ### Herança múltipla
 
-Um struct pode herdar de vários pais. Se dois pais herdarem do mesmo avô (o "losango"), os campos do avô aparecem uma vez só.
+Uma definição pode herdar de uma base com armazenamento e de contratos abstratos sem campos. Um losango de contratos pode repetir a mesma especialização, mas duas bases com armazenamento são rejeitadas.
 
 ```clp
-struct Base { int health; }
-struct Armored : Base { int armor; }
-struct Fast : Base { int speed; }
-struct Knight : Armored, Fast { int honor; }
+def Base { number health; }
+def Armored : Base { number armor; }
+abstract def Fast { abstract number Speed(); }
+def Knight : Armored, Fast { number speed; number honor; number Speed() { return @this.speed; } }
 
-Knight k = Knight(100, 20, 5, 9);
+Knight k = Knight { health = 100, armor = 20, speed = 5, honor = 9 };
 post(k.health);
 post(k.armor .: " " .: k.speed .: " " .: k.honor);
 ```
@@ -226,18 +226,18 @@ post(k.armor .: " " .: k.speed .: " " .: k.honor);
 20 5 9
 ```
 
-Dois pais com um campo de mesmo nome, vindo de origens diferentes, é erro: o compilador pede que você resolva a ambiguidade.
+Os campos pertencem à única base com armazenamento ou à própria definição. Cada contrato exige uma implementação compatível de seus métodos; não adiciona campos ao objeto.
 
 ## Campos privados
 
 `private` restringe o acesso aos métodos do próprio struct.
 
 ```clp erro
-struct Account {
-  private int pin;
-  func check(int guess) -> bool { return guess == self.pin; }
+def Account {
+  private number pin;
+  bool check(number guess) { return guess == @this.pin; }
 }
-Account acc = Account(1234);
+Account acc = Account { pin = 1234 };
 post(acc.pin);
 ```
 
@@ -248,9 +248,9 @@ private member
 ## Structs genéricos
 
 ```clp
-struct Box<T> { T item; }
-Box<int> coins = Box<int>(25);
-Box<string> note = Box<string>("mapa");
+def Box<T> { T item; }
+Box<number> coins = Box<number> { item = 25 };
+Box<string> note = Box<string> { item = "mapa" };
 post(coins.item);
 post(note.item);
 ```
@@ -265,8 +265,8 @@ mapa
 Para acessar campos de elementos, declare a lista com o tipo do elemento (`array<Stats>`), assim o compilador sabe o que há dentro.
 
 ```clp
-struct Stats { int hp; }
-array<Stats> team = array<Stats>(Stats(10), Stats(20));
+def Stats { number hp; }
+array<Stats> team = array<Stats>(Stats { hp = 10 }, Stats { hp = 20 });
 team[1].hp = 99;
 post(team[0].hp .: " " .: team[1].hp);
 ```
@@ -280,8 +280,8 @@ post(team[0].hp .: " " .: team[1].hp);
 `post` mostra os campos entre parênteses.
 
 ```clp
-struct Point { int x; int y; }
-post(Point(3, 4));
+def Point { number x; number y; }
+post(Point { x = 3, y = 4 });
 ```
 
 ```saida

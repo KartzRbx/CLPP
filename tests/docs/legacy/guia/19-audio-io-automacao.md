@@ -12,8 +12,8 @@ programs and tests behave the same. `Audio.SaveWav` writes any sound to a `.wav`
 
 ```clp
 link @clpp.audio as Audio;
-let coin = Audio.Sweep(880, 1760, 0.12, "square");   << a rising arcade "coin"
-let note = Audio.Tone(440, 0.3);                     << a 440 Hz sine for 0.3 s
+const auto coin = Audio.Sweep(880, 1760, 0.12, "square");   << a rising arcade "coin"
+const auto note = Audio.Tone(440, 0.3, "sine");                     << a 440 Hz sine for 0.3 s
 post(Audio.Duration(coin) > 0);
 post(Audio.SaveWav(note, "note.wav"));
 ```
@@ -37,11 +37,11 @@ true
 
 ```clp trecho
 link @clpp.audio as Audio;
-let music = Audio.Load("theme.wav");
-let voice = Audio.Play(music, volume: 0.6, loop: true);
-let shot = Audio.Tone(220, 0.08, "square");
+const auto music = Audio.Load("theme.wav");
+const auto voice = Audio.Play(music, 0.6, 0, 1, true);
+const auto shot = Audio.Tone(220, 0.08, "square");
 << later, on an event:
-Audio.Play(shot, pan: -0.3);
+Audio.Play(shot, 1, -0.3, 1, false);
 Audio.SetVolume(voice, 0.3);
 ```
 
@@ -54,7 +54,7 @@ color and cursor calls write nothing, so logs stay clean.
 ```clp
 link @clpp.io as Io;
 Io.Print("Loading");
-for (let dot in 3) { Io.Print("."); }
+for (auto dot in 3) { Io.Print("."); }
 Io.Print("\n");
 post("done");
 ```
@@ -81,11 +81,11 @@ Color names: `black red green yellow blue magenta cyan white`, their `bright*` v
 
 ```clp trecho
 link @clpp.io as Io;
-func bar(float fraction) {
+number bar(float fraction) {
   Io.ClearLine();
   Io.Color("green");
-  let filled = fraction * 20;
-  for (let i in 20) { Io.Print(i < filled ? "█" : "·"); }
+  const auto filled = fraction * 20;
+  for (auto i in 20) { Io.Print(i < filled ? "█" : "·"); }
   Io.Reset();
   Io.Print(" " .: (fraction * 100) .: "%");
 }
@@ -103,8 +103,8 @@ full implementation; other systems report that a call is not supported yet.
 link @clpp.input as Input;
 post(Input.ScreenWidth() .: "x" .: Input.ScreenHeight());
 post(Input.MouseX() .: ", " .: Input.MouseY());
-let color = Input.Pixel(10, 10);     << the screen pixel at (10, 10), 0xRRGGBB
-Input.ClickAt(color >= 0 ? 100 : 0, 100);
+const auto color = Input.Pixel(10, 10);     << the screen pixel at (10, 10), 0xRRGGBB
+Input.ClickAt(color >= 0 ? 100 : 0, 100, 0);
 ```
 
 | Function | Does |
@@ -140,7 +140,7 @@ link @clpp.input as Input;
 while (Input.Pixel(500, 400) != 0x2ECC71) {   << wait for the button to turn green
   Input.Wait(50);
 }
-Input.ClickAt(500, 400);
+Input.ClickAt(500, 400, 0);
 ```
 
 ## `@clpp.json`: JSON
@@ -150,11 +150,11 @@ dotted path.
 
 ```clp
 link @clpp.json as Json;
-let data = Json.Parse("{\"name\": \"Ada\", \"hp\": 90, \"items\": [\"sword\", \"map\"]}");
+const auto data = Json.Parse("{\"name\": \"Ada\", \"hp\": 90, \"items\": [\"sword\", \"map\"]}");
 post(data["name"]);
 post(Json.Get(data, "items.1"));
 post(Json.Has(data, "pos"));
-let mut save = Json.Object();
+auto save = Json.Object();
 save = Json.Set(save, "level", 7);
 post(Json.Stringify(save));
 ```
@@ -179,8 +179,8 @@ JSON pairs with `@clpp.fs` to load and save data files:
 ```clp trecho
 link @clpp.json as Json;
 link @clpp.fs as Fs;
-let config = Json.Parse(Fs.read("config.json"));
-let volume = Json.Get(config, "audio.volume");
+const auto config = Json.Parse(Fs.read("config.json"));
+const auto volume = Json.Get(config, "audio.volume");
 Fs.write("save.json", Json.Pretty(Json.Set(Json.Object(), "score", 1200)));
 ```
 

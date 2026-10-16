@@ -8,31 +8,31 @@ link "./ui/hud.clp" as Hud;
 link "./ui/inventory.clp" as Inventory;
 
 
-let mut inventoryOpen = false;
-let mut selectedSlot = -1;
-let mut toast = "Abra o inventário pelo HUD.";
+auto inventoryOpen = false;
+auto selectedSlot = -1;
+auto toast = "Abra o inventário pelo HUD.";
 
-func screen(float hp, float mp, bool invOpen, int slot) {
+any screen(float hp, float mp, bool invOpen, number slot) {
   if (invOpen) {
-    return Gui.Screen(color: Gfx.TRANSPARENT, children: list(
+    return Gui.Screen(Gui.ScreenOptions {color = Gfx.TRANSPARENT, children = list(
       Hud.layer(hp, mp),
       Inventory.layer(true, slot)
-    ));
+    )});
   }
-  return Gui.Screen(color: Gfx.TRANSPARENT, children: list(
+  return Gui.Screen(Gui.ScreenOptions {color = Gfx.TRANSPARENT, children = list(
     Hud.layer(hp, mp)
-  ));
+  )});
 }
 
-func backdrop() {
-  let w = Window.Width();
-  let h = Window.Height();
+void backdrop() {
+  const auto w = Window.Width();
+  const auto h = Window.Height();
   Gfx.Gradient(0, 0, w, h, 0x0D0818, 0x1A1035);
 }
 
-func poll_slot_click() -> int {
-  for (let i in 10) {
-    let id = "inv_" .: i .: "_btn";
+number poll_slot_click() {
+  for (auto i in 10) {
+    const auto id = "inv_" .: i .: "_btn";
     if (Gui.Clicked(id)) {
       return i;
     }
@@ -47,8 +47,8 @@ Window.Open("CL++ · HUD & Inventário (anime)", 960, 640);
 Window.SetFps(120);
 
 while (Window.Frame()) {
-  let hp = 55 + Axiom.PingPong(Window.Time() * 12, 20);
-  let mp = 40 + Axiom.PingPong(Window.Time() * 9, 25);
+  const auto hp = 55 + Axiom.PingPong(Window.Time() * 12, 20);
+  const auto mp = 40 + Axiom.PingPong(Window.Time() * 9, 25);
   backdrop();
   Gui.Render(screen(hp, mp, inventoryOpen, selectedSlot));
 
@@ -63,7 +63,7 @@ while (Window.Frame()) {
     toast = "Menu principal — em breve!";
   }
   if (inventoryOpen) {
-    let picked = poll_slot_click();
+    const auto picked = poll_slot_click();
     if (picked >= 0) {
       selectedSlot = picked;
       toast = "Slot " .: picked .: " selecionado.";

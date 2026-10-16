@@ -1,20 +1,85 @@
-# 10. Modules
+# 10. Modules and link
 
-Each `.clp` file is a module. `link` imports declarations from another file or a built-in `@clpp.*` module. An alias gives the imported names a prefix. Imported files can contain declarations and literal constants, but no top-level executable statements.
+CL++ connects source modules directly. **There are no header files:** declarations and implementations belong in the same source modules. `link` connects your program to another source file or a built-in module.
 
-```clp fragment
+## Built-in modules
+
+```clp
 link @clpp.axiom as Axiom;
-link "./player.clp" as PlayerModule;
-
 post(Axiom.Clamp(150, 0, 100));
 ```
+```output
+100
+```
 
-Without `as`, the final component of the module name becomes its alias with an initial capital letter. `using Alias.member;` brings a member into the current scope. `import` is also accepted as an import declaration.
+`as Axiom` names the alias. The current library exposes qualified calls through that alias. Its established API spelling must be checked separately from redesigned static type member access (`Type::Member`).
 
-File paths in `link` are resolved from the directory of the entry file passed to `clpp`, including links inside imported modules. For example, when running `clpp src/main.clp`, a module at `src/core/game.clp` imports `src/entities/ghost.clp` with `link "./entities/ghost.clp" as Ghost;`. Keep all project links relative to `src` in this setup. Running `clpp src/core/game.clp` directly gives that file a different entry directory, so its project links must be adjusted or the program should be started through `src/main.clp`.
+## Source modules
 
-The built-in modules are `@clpp.axiom` (game math), `@clpp.text` (strings), `@clpp.math`, `@clpp.fs` (files), `@clpp.os` (environment), `@clpp.http` (URLs), `@clpp.window` (window and input), `@clpp.gfx` (2D graphics), `@clpp.ui` and `@clpp.gui` (interfaces), `@clpp.audio`, `@clpp.io`, `@clpp.input` (automation), `@clpp.json`, and `@clpp.time`. Their APIs are covered in the [standard library](14-standard-library.md) and the final three guide chapters.
+```clp file=score.clp
+const number BONUS = 5;
+export number AddBonus(number points) { return points + BONUS; }
+```
 
-## Design a module boundary
+```clp
+link "./score.clp" as Score;
+post(Score.AddBonus(10));
+```
 
-Group declarations that change for the same reason. A combat rules module can export `damageFor` and `hit`, while a UI module renders the result. Keep top-level orchestration in the entry file and keep imports free of side effects. Use an alias when several modules export similarly named members. Import cycles are reported as errors, so move shared types to a lower-level model module instead of making two modules import each other. See the [modular combat project](20-modular-combat.md) for a complete directory layout.
+The function and constant are declared in `score.clp`; the entry file imports and calls them. Constants put `const` before the type. No companion declaration file is needed.
+
+`export` marks declarations that callers can use through the alias. Without it, declarations stay internal: `BONUS` is available to `AddBonus`, but callers cannot use `Score.BONUS`. Qualified types have distinct module identities. The compiler enforces exports for functions, definitions, aliases, scoped enums and constants. Completion through the module alias shows only exports.
+
+## Types across module boundaries
+
+Expose data definitions, aliases, scoped enums, functions, and constants explicitly:
+
+```clp file=entities.clp
+export def Player { string Name; number Health = 100; }
+export const number MAX_HEALTH = 100;
+export number StartingHealth() { return MAX_HEALTH; }
+```
+
+Callers refer to exports through their module alias. Module-local declarations cannot be accessed by another module. Exported functions can use internal helpers without exposing those helpers.
+
+## Relative path resolution
+
+Paths resolve relative to the file containing the link. A file at `src/core/game.clp` links to `src/entities/ghost.clp` using `link "../entities/ghost.clp" as Ghost;`. Moving the entry file does not change the meaning of that link. Nested imports and normalized-path cycle detection are covered by compiler tests.
+
+Static links initialize dependencies before their importers, before the entry statements execute. A normalized module path initializes only once per program run, even when linked under several aliases or through several dependencies. Cyclic imports are errors. An initializer failure stops execution before the entry file runs. Reading a binding before its initializer executes raises an error.
+
+## Library navigation
+
+| Purpose | Modules |
+| --- | --- |
+| Math and text | `@clpp.axiom`, `@clpp.math`, `@clpp.text` |
+| Files, environment, URLs | `@clpp.fs`, `@clpp.os`, `@clpp.http` |
+| Window, drawing, interfaces | `@clpp.window`, `@clpp.gfx`, `@clpp.ui`, `@clpp.gui` |
+| Audio and input/output | `@clpp.audio`, `@clpp.io`, `@clpp.input` |
+| Data and timing | `@clpp.json`, `@clpp.time` |
+
+See the [standard library](14-standard-library.md) and [modular combat](20-modular-combat.md). Module APIs do not replace the explanations of [definitions](07-structs-and-inheritance.md), [functions](06-functions.md), or [lexical syntax](02-lexical-syntax.md).
+
+## Internal state and initialization
+
+A module can retain private variables and execute setup code. Give state variables explicit initial values. Module state belongs to the running program, not to a process-global registry; rerunning the VM creates fresh state.
+
+```clp file=counter.clp
+number count = 0;
+export number Next() { count += 1; return count; }
+```
+
+```clp
+link "./counter.clp" as First;
+link "./sub/../counter.clp" as Second;
+post(First.Next());
+post(Second.Next());
+```
+```output
+1
+2
+```
+
+The entry file follows the same file-scope rules: its functions access its top-level bindings, and entry initializers execute in source order after dependencies. Each file binding requires an explicit initializer.
+
+Both aliases share the same binding. Functions and returned closures can retain access to private state. Workers and actors share that state with their execution context; synchronize compound updates explicitly. `const` fixes its binding and freezes reachable data through aliases. Exported constants may use computed initializers, not just literals. Destructive `move` from a shared module binding is rejected; shared state requires a separate ownership contract. Observable state uses the same typed `OnChange` rules as local observables.

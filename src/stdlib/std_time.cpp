@@ -1,9 +1,12 @@
 // @clpp.time — wall clock, monotonic clock, sleeping and dates.
 // @clpp.fs (writing half) — write, append, exists, remove, makeDir, isDir.
 
+#include "clpp/detail/utf8_path.hpp"
 #include "stdlib/host.hpp"
 
 #include <chrono>
+#include <cmath>
+#include <limits>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
@@ -61,6 +64,8 @@ CLPP_NATIVE(time_sleep) {
     return false;
   }
   const double milliseconds = args[0].number;
+  if (!std::isfinite(milliseconds) || milliseconds > std::numeric_limits<int>::max())
+    return fail(error, "Time.Sleep: duration outside native range");
   if (milliseconds > 0) {
     std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(milliseconds));
   }
@@ -101,6 +106,9 @@ CLPP_NATIVE(time_part) {  // 0 year, 1 month, 2 day, 3 hour, 4 minute, 5 second,
   if (args[0].text.find("..") != std::string::npos) {
     return fail(error, std::string(what) + ": paths with '..' are refused");
   }
+  if (args[0].text.find('\0') != std::string::npos) {
+    return fail(error, std::string(what) + ": paths containing NUL are refused");
+  }
   return true;
 }
 
@@ -108,7 +116,7 @@ CLPP_NATIVE(fs_write) {  // (path, text, append)
   if (!check_path(args, arity, 2, error, "Fs.write")) {
     return false;
   }
-  std::ofstream file(args[0].text, std::ios::binary | (num(args[2]) != 0 ? std::ios::app : std::ios::trunc));
+  std::ofstream file(clpp::detail::utf8_path(args[0].text), std::ios::binary | (num(args[2]) != 0 ? std::ios::app : std::ios::trunc));
   file.write(args[1].text.data(), static_cast<std::streamsize>(args[1].text.size()));
   out = boolean(static_cast<bool>(file));
   return true;
@@ -119,8 +127,9 @@ CLPP_NATIVE(fs_exists) {  // (path, 0 exists | 1 is directory)
     return false;
   }
   std::error_code failure;
-  const bool result = num(args[1]) != 0 ? std::filesystem::is_directory(args[0].text, failure)
-                                        : std::filesystem::exists(args[0].text, failure);
+  const auto path = clpp::detail::utf8_path(args[0].text);
+  const bool result = num(args[1]) != 0 ? std::filesystem::is_directory(path, failure)
+                                        : std::filesystem::exists(path, failure);
   out = boolean(result && !failure);
   return true;
 }
@@ -130,7 +139,7 @@ CLPP_NATIVE(fs_remove) {
     return false;
   }
   std::error_code failure;
-  out = boolean(std::filesystem::remove(args[0].text, failure) && !failure);  // a file or an empty folder
+  out = boolean(std::filesystem::remove(clpp::detail::utf8_path(args[0].text), failure) && !failure);  // a file or an empty folder
   return true;
 }
 
@@ -139,8 +148,9 @@ CLPP_NATIVE(fs_make_dir) {
     return false;
   }
   std::error_code failure;
-  std::filesystem::create_directories(args[0].text, failure);
-  out = boolean(!failure && std::filesystem::is_directory(args[0].text, failure));
+  const auto path = clpp::detail::utf8_path(args[0].text);
+  std::filesystem::create_directories(path, failure);
+  out = boolean(!failure && std::filesystem::is_directory(path, failure));
   return true;
 }
 
@@ -148,33 +158,39 @@ CLPP_NATIVE(fs_make_dir) {
 
 constexpr std::string_view kTimeSource = R"clp(<< @clpp.time: clocks, sleeping and the local date.
 
-func Now() -> float { return time::Now(); }
-func Clock() -> float { return time::Clock(); }
-func Sleep(float milliseconds) { time::Sleep(milliseconds); }
-func Format(string pattern) -> string { return time::Format(pattern); }
-func Date() -> string { return time::Format("%Y-%m-%d"); }
-func TimeOfDay() -> string { return time::Format("%H:%M:%S"); }
-func Year() -> int { return time::Part(0); }
-func Month() -> int { return time::Part(1); }
-func Day() -> int { return time::Part(2); }
-func Hour() -> int { return time::Part(3); }
-func Minute() -> int { return time::Part(4); }
-func Second() -> int { return time::Part(5); }
-func Weekday() -> int { return time::Part(6); }
-func DayOfYear() -> int { return time::Part(7); }
+export float Now() { return time::Now(); }
+export float Clock() { return time::Clock(); }
+export void Sleep(float milliseconds) { time::Sleep(milliseconds); }
+export string Format(string pattern) { return time::Format(pattern); }
+export string Date() { return time::Format("%Y-%m-%d"); }
+export string TimeOfDay() { return time::Format("%H:%M:%S"); }
+export number Year() { return time::Part(0); }
+export number Month() { return time::Part(1); }
+export number Day() { return time::Part(2); }
+export number Hour() { return time::Part(3); }
+export number Minute() { return time::Part(4); }
+export number Second() { return time::Part(5); }
+export number Weekday() { return time::Part(6); }
+export number DayOfYear() { return time::Part(7); }
 )clp";
 
 constexpr std::string_view kFsSource = R"clp(<< @clpp.fs: files. Paths containing ".." are refused, and code inside actor(...) cannot use files.
 
-func read(string path) -> string { return fs::read(path); }
-func size(string path) -> int { return fs::size(path); }
-func list(string path) { return fs::list(path); }
-func write(string path, string text) -> bool { return fs::Write(path, text, 0); }
-func append(string path, string text) -> bool { return fs::Write(path, text, 1); }
-func exists(string path) -> bool { return fs::Exists(path, 0); }
-func isDir(string path) -> bool { return fs::Exists(path, 1); }
-func remove(string path) -> bool { return fs::Remove(path); }
-func makeDir(string path) -> bool { return fs::MakeDir(path); }
+export string read(string path) { return fs::read(path); }
+export number size(string path) { return fs::size(path); }
+export array<string> list(string path) { return fs::list(path); }
+export bool write(string path, string text) { return fs::Write(path, text, 0); }
+export bool append(string path, string text) { return fs::Write(path, text, 1); }
+export bool exists(string path) { return fs::Exists(path, 0); }
+export bool isDir(string path) { return fs::Exists(path, 1); }
+export bool remove(string path) { return fs::Remove(path); }
+export bool makeDir(string path) { return fs::MakeDir(path); }
+export def FileInfo { bool exists; bool isDirectory; bool isFile; number size; number modifiedUnixMs; }
+export FileInfo Stat(string path) { return fs::Stat(path); }
+export string ReadText(string path, number maxBytes) { return fs::ReadText(path, maxBytes); }
+export array<number> ReadBytes(string path, number maxBytes) { return fs::ReadBytes(path, maxBytes); }
+export void WriteAtomic(string path, string text) { fs::WriteAtomic(path, text); }
+export void WriteBytesAtomic(string path, array<number> bytes) { fs::WriteBytesAtomic(path, bytes); }
 )clp";
 
 }  // namespace

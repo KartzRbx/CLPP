@@ -45,40 +45,42 @@ int main() {
     const int kind = i % 6;
     bool ok = false;
     if (kind == 0) {
-      ok = expect_output(mark(i) + "struct Box { int n; }\nBox b = Box(" + std::to_string(age) + ");\npost(b.n);\n",
+      ok = expect_output(mark(i) + "def Box { number n; }\nBox b = Box { n = " + std::to_string(age) + " };\npost(b.n);\n",
                          std::to_string(age) + "\n");
     } else if (kind == 1) {
-      ok = expect_output(mark(i) + "struct Animal { int age; }\nstruct Dog : Animal { int bones; }\nDog pet = Dog(" +
-                             std::to_string(age) + ", " + std::to_string(bones) + ");\npost(pet.age);\npost(pet.bones);\n",
+      ok = expect_output(mark(i) + "def Animal { number age; }\ndef Dog : Animal { number bones; }\nDog pet = Dog { age = " +
+                             std::to_string(age) + ", bones = " + std::to_string(bones) + " };\npost(pet.age);\npost(pet.bones);\n",
                          std::to_string(age) + "\n" + std::to_string(bones) + "\n");
     } else if (kind == 2) {
       ok = expect_output(
-          mark(i) + "struct Animal { int age; func speak() { return self.age; } }\n"
-                    "struct Dog : Animal { int bones; func speak() { return self.bones; } }\n"
-                    "Dog pet = Dog(" +
-              std::to_string(age) + ", " + std::to_string(bones) +
-              ");\nAnimal view = pet;\npost(view.speak());\npost(view.age);\n",
+          mark(i) + "def Animal { number age; number speak() { return @this.age; } }\n"
+                    "def Dog : Animal { number bones; number speak() { return @this.bones; } }\n"
+                    "Dog pet = Dog { age = " +
+              std::to_string(age) + ", bones = " + std::to_string(bones) +
+              " };\nAnimal view = pet;\npost(view.speak());\npost(view.age);\n",
           std::to_string(bones) + "\n" + std::to_string(age) + "\n");
     } else if (kind == 3) {
       ok = expect_output(
-          mark(i) + "struct Animal { int age; func speak() { return 1; } }\n"
-                    "struct Dog : Animal { int bones; }\n"
-                    "struct Puppy : Dog { int toys; func speak() { return self.toys; } }\n"
-                    "Puppy pup = Puppy(" +
-              std::to_string(age) + ", " + std::to_string(bones) + ", " + std::to_string(toys) +
-              ");\nAnimal any = pup;\npost(any.speak());\npost(any.age);\n",
+          mark(i) + "def Animal { number age; number speak() { return 1; } }\n"
+                    "def Dog : Animal { number bones; }\n"
+                    "def Puppy : Dog { number toys; number speak() { return @this.toys; } }\n"
+                    "Puppy pup = Puppy { age = " +
+              std::to_string(age) + ", bones = " + std::to_string(bones) + ", toys = " + std::to_string(toys) +
+              " };\nAnimal any = pup;\npost(any.speak());\npost(any.age);\n",
           std::to_string(toys) + "\n" + std::to_string(age) + "\n");
     } else if (kind == 4) {
       ok = expect_output(
-          mark(i) + "struct Counter { func add(int x) { return x; } }\n"
-                    "struct Plus : Counter { func add(int x) { return x + 1; } }\n"
-                    "Plus extra = Plus();\nCounter base = extra;\npost(base.add(" +
+          mark(i) + "def Counter { number add(number x) { return x; } }\n"
+          "def Plus : Counter { number add(number x) { return x + 1; } }\n"
+          "Plus extra = Plus {  };\n"
+          "Counter base = extra;\n"
+          "post(base.add(" +
               std::to_string(extra) + "));\n",
           std::to_string(extra + 1) + "\n");
     } else if (i % 2 == 0) {
-      ok = expect_fail(mark(i) + "struct Dog : Missing { int bones; }\n");
+      ok = expect_fail(mark(i) + "def Dog : Missing { number bones; }\n");
     } else {
-      ok = expect_fail(mark(i) + "struct Animal { int age; }\nstruct Dog : Animal { int age; }\n");
+      ok = expect_fail(mark(i) + "def Animal { number age; }\ndef Dog : Animal { number age; }\n");
     }
     if (!ok) {
       ++failures;

@@ -47,6 +47,12 @@ BytecodeReport verify_bytecode_report(const BytecodeChunk& chunk) {
     fail(BytecodeError::Version, 0, -1, "bytecode version");
     return report;
   }
+  for (const auto& value : chunk.constants) {
+    if (value.is_boolean() && value.number != 0 && value.number != 1) {
+      fail(BytecodeError::Constant, 0, -1, "invalid boolean constant");
+      return report;
+    }
+  }
   if (chunk.code.size() > 0xFFFF) {
     fail(BytecodeError::TooLarge, chunk.code.size(), -1, "register code too large");
     return report;
@@ -66,9 +72,16 @@ BytecodeReport verify_bytecode_report(const BytecodeChunk& chunk) {
   const std::vector<compiler::bytecode::Instruction>& instructions = decoded.instructions;
   const std::vector<int>& instruction_at = decoded.instruction_at;
 
+  std::uint16_t globals = 0; bool global_root = false;
+  for (const auto& instruction : instructions) if (instruction.op == compiler::Opcode::Globals) {
+    if (global_root || instruction.pc != chunk.entry) {
+      fail(BytecodeError::Operand, instruction.pc, -1, "module storage must be initialized once at entry"); return report;
+    }
+    global_root = true; globals = instruction.imm;
+  }
   for (const std::vector<std::uint16_t>& vtable : chunk.vtables) {
     for (const std::uint16_t function : vtable) {
-      if (function >= chunk.functions.size()) {
+      if (function != 65535 && function >= chunk.functions.size()) {
         fail(BytecodeError::Vtable, 0, -1, "register vtable");
         return report;
       }
@@ -122,17 +135,36 @@ BytecodeReport verify_bytecode_report(const BytecodeChunk& chunk) {
   for (std::size_t index = 0; index < instructions.size(); ++index) {
     const compiler::bytecode::Instruction& instruction = instructions[index];
     const std::uint8_t opcode = static_cast<std::uint8_t>(instruction.op);
-    if (opcode > static_cast<std::uint8_t>(compiler::Opcode::Host) || opcode == 55) {
+    if (opcode > static_cast<std::uint8_t>(compiler::Opcode::Event) || opcode == 55 || opcode == 85 || opcode == 86) {
       fail(BytecodeError::Opcode, instruction.pc, static_cast<int>(index), "register opcode");
       return report;
     }
     switch (instruction.op) {
+      case compiler::Opcode::MakeBoundMethod:
+        if (std::none_of(chunk.vtables.begin(), chunk.vtables.end(), [&](const auto& table) { return instruction.imm < table.size(); })) {
+          fail(BytecodeError::Vtable, instruction.pc, static_cast<int>(index), "register method slot"); return report;
+        }
+        break;
+      case compiler::Opcode::LoadGlobal:
+      case compiler::Opcode::StoreGlobal:
+      case compiler::Opcode::InitGlobal:
+      case compiler::Opcode::InitConstGlobal:
+      case compiler::Opcode::RawGlobal:
+        if (!global_root || instruction.imm >= globals) {
+          fail(BytecodeError::Operand, instruction.pc, static_cast<int>(index), "module binding out of range"); return report;
+        }
+        break;
       case compiler::Opcode::Const:
         if (instruction.imm >= chunk.constants.size()) {
           fail(BytecodeError::Constant, instruction.pc, static_cast<int>(index), "register constant");
           return report;
         }
         break;
+      case compiler::Opcode::BoxLocal:
+      case compiler::Opcode::LoadCell:
+      case compiler::Opcode::StoreCell:
+      case compiler::Opcode::ClearCell:
+      case compiler::Opcode::RawLoad:
       case compiler::Opcode::LoadLocal:
       case compiler::Opcode::StoreLocal:
       case compiler::Opcode::ClearLocal:
@@ -141,6 +173,7 @@ BytecodeReport verify_bytecode_report(const BytecodeChunk& chunk) {
           return report;
         }
         break;
+      case compiler::Opcode::MakeClosure:
       case compiler::Opcode::Call:
       case compiler::Opcode::Schedule:
       case compiler::Opcode::SpawnThread:
@@ -180,6 +213,16 @@ BytecodeReport verify_bytecode_report(const BytecodeChunk& chunk) {
           return report;
         }
         break;
+      case compiler::Opcode::Event: {
+        const auto operation = instruction.imm & 255;
+        const auto arity = instruction.imm >> 8;
+        const bool valid = (operation == 0 && arity == 0) ||
+            ((operation == 1 || operation == 5 || operation == 9) && arity == 2) ||
+            (operation == 2 && arity >= 1 && arity <= 8) ||
+            ((operation == 3 || operation == 4 || operation == 10 || operation == 11) && arity == 1);
+        if (!valid) { fail(BytecodeError::Operand, instruction.pc, static_cast<int>(index), "register event operand"); return report; }
+        break;
+      }
       default:
         break;
     }

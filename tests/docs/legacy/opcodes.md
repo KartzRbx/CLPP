@@ -23,8 +23,8 @@ Notação do efeito na pilha: `[a, b] → [c]` consome `a` e `b` (b no topo) e e
 | # | Opcode | Efeito |
 | --- | --- | --- |
 | 5–9 | `Add` `Sub` `Mul` `Div` `Mod` | `[a, b] → [a op b]`; vetores: `+`, `-` entre vetores, `*` e `/` por número |
-| 56 | `IntAdd` | soma de dois `int` sem verificação de tipo |
-| 76 | `IntDiv` | divisão de dois `int`, truncada em direção a zero |
+| 56 | `IntAdd` | soma de dois `number` sem verificação de tipo |
+| 76 | `IntDiv` | divisão de dois `number`, truncada em direção a zero |
 | 3 | `Concat` | `[a, b] → [texto(a) + texto(b)]`, qualquer valor |
 | 14 | `Not` | `[a] → [!a]` |
 | 15–20 | `Eq` `NotEq` `Less` `LessEq` `Greater` `GreaterEq` | `[a, b] → [bool]`; igualdade compara textos, structs, listas e vetores por valor |

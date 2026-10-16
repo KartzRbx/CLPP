@@ -5,7 +5,7 @@ import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 import { sidebar } from "./sidebar.js";
 
-// The CL++ TextMate grammar highlights ```clp code blocks, so the website and the editor agree.
+// The site and VS Code share one highlighting grammar.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const grammar = JSON.parse(
   fs.readFileSync(path.join(root, "tools/vscode/syntaxes/clpp.tmLanguage.json"), "utf8")

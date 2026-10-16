@@ -4,11 +4,23 @@
 
 #include <cstdint>
 #include <optional>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <vector>
 
 namespace clpp::stdlib {
+
+// Native UI/audio resources belong to one root execution. Workers share that execution.
+class HostExecution {
+ public:
+  HostExecution();
+  ~HostExecution();
+  HostExecution(const HostExecution&) = delete;
+  HostExecution& operator=(const HostExecution&) = delete;
+ private:
+  std::unique_lock<std::mutex> m_lock;
+};
 
 [[nodiscard]] std::optional<std::string> module_source(std::string_view path);
 
@@ -26,6 +38,7 @@ struct ModuleEntry {
 [[nodiscard]] int axiom_native(std::string_view name, std::size_t arity);
 [[nodiscard]] bool axiom_apply(std::uint8_t id, const Value* args, std::uint8_t arity, Value& out, std::string& error);
 void set_program_args(const std::vector<std::string>& args);
+[[nodiscard]] int program_exit_code();
 
 // Host libraries: natives that talk to the operating system or keep state between calls
 // (@clpp.window, @clpp.gfx, @clpp.ui, @clpp.json, @clpp.time and the writing half of @clpp.fs).

@@ -1,7 +1,7 @@
 # 17. Windows and graphics: `@clpp.window` and `@clpp.gfx`
 
 CL++ can open a real window and draw into it, with no external libraries: the window is native
-(Win32 on Windows) and all drawing is done on a software canvas by the compiler itself. The same
+(Win32 on Windows) and all drawing is done on a software canvas by the compiler it@this. The same
 program runs **headless** — with no window — when the `CLPP_HEADLESS` environment variable is set
 or the system has no window backend, so tests and build servers never block. In headless mode the
 canvas still works and `Window.Frame()` returns `false` after `CLPP_HEADLESS` frames (default 60).
@@ -28,7 +28,7 @@ run with `CLPP_HEADLESS=1 clpp hello.clp` draws one frame off screen and exits.
 
 ## Drawing
 
-Every shape takes a color as an `int` in the form `0xRRGGBB`. The top byte is **transparency**
+Every shape takes a color as an `number` in the form `0xRRGGBB`. The top byte is **transparency**
 (`0` opaque, `255` invisible), so a plain hex literal is an opaque color and `Gfx.Fade` /
 `Gfx.Rgba` make translucent ones.
 
@@ -37,10 +37,13 @@ Every shape takes a color as an `int` in the form `0xRRGGBB`. The top byte is **
 | `Gfx.Clear(color)` | fills the whole canvas |
 | `Gfx.Rect(x, y, w, h, color)` | a filled rectangle |
 | `Gfx.RoundRect(x, y, w, h, radius, color)` | rounded rectangle |
-| `Gfx.RectLine(x, y, w, h, [thickness,] color)` | rectangle outline |
+| `Gfx.RectLine(x, y, w, h, color)` | rectangle outline with thickness 1 |
+| `Gfx.RectLineWithThickness(x, y, w, h, thickness, color)` | rectangle outline with explicit thickness |
 | `Gfx.Circle(x, y, radius, color)` | filled circle (anti-aliased) |
-| `Gfx.CircleLine(x, y, radius, [thickness,] color)` | circle outline |
-| `Gfx.Line(x1, y1, x2, y2, [thickness,] color)` | a line |
+| `Gfx.CircleLine(x, y, radius, color)` | circle outline with thickness 1 |
+| `Gfx.CircleLineWithThickness(x, y, radius, thickness, color)` | circle outline with explicit thickness |
+| `Gfx.Line(x1, y1, x2, y2, color)` | a line with thickness 1 |
+| `Gfx.LineWithThickness(x1, y1, x2, y2, thickness, color)` | a line with explicit thickness |
 | `Gfx.Triangle(x1, y1, x2, y2, x3, y3, color)` | filled triangle |
 | `Gfx.Gradient(x, y, w, h, top, bottom)` | vertical gradient (`GradientH` for horizontal) |
 | `Gfx.Text(text, x, y, size, color)` | text (`size` in pixels, `y` is the top) |
@@ -119,7 +122,7 @@ into a new image.
 
 ```clp trecho
 link @clpp.gfx as Gfx;
-let logo = Gfx.LoadImage("logo.png");
+const auto logo = Gfx.LoadImage("logo.png");
 Gfx.Image(logo, 20, 20);
 Gfx.ImageScaled(logo, 200, 20, 64, 64);
 ```
@@ -169,7 +172,7 @@ it comes up.
 link @clpp.window as Window;
 link @clpp.gfx as Gfx;
 Window.Open("Move the dot", 400, 300);
-let mut x = 200.0;
+auto x = 200.0;
 while (Window.Frame()) {
   if (Window.KeyDown("Left")) { x -= 200 * Window.Delta(); }
   if (Window.KeyDown("Right")) { x += 200 * Window.Delta(); }

@@ -1,73 +1,73 @@
-<< OOP avançado: override, polimorfismo, herança múltipla, abstract, private e generics
+<< Métodos, @this, polimorfismo, uma base com armazenamento e interfaces sem campos.
 link @clpp.axiom as Axiom;
 
-struct Movable {
+def Movable {
   Vector2 position;
 
-  func label() -> string { return "unknown"; }
+  string label() { return "unknown"; }
 }
 
-struct Unit : Movable {
+def Unit : Movable {
   string name;
-  private int hp;
+  private number hp;
 
-  func revealHp() -> int { return @hp; }
+  number revealHp() { return @this.hp; }
 
-  override func label() -> string { return @name; }
+  override string label() { return @this.name; }
 
-  func damage(int amount) {
-    @hp = Axiom.Clamp(@hp - amount, 0, 100);
+  void damage(number amount) {
+    @this.hp = Axiom.Clamp(@this.hp - amount, 0, 100);
   }
 
-  func distanceTo(Unit other) {
-    return Axiom.Distance2(@position, other.position);
+  float distanceTo(Unit other) {
+    return Axiom.Distance2(@this.position, other.position);
   }
 }
 
-struct Boss : Unit {
-  int phase;
+def Boss : Unit {
+  number phase;
 
-  override func label() -> string { return "BOSS " .: @name; }
+  override string label() { return "BOSS " .: @this.name; }
 }
 
-abstract struct Shape {
-  abstract func area() -> float {}
+abstract def Shape {
+  abstract float area();
 }
 
-struct Square : Shape {
+def Square : Shape {
   float side;
 
-  override func area() -> float { return @side * @side; }
+  override float area() { return @this.side * @this.side; }
 }
 
-struct Armored { int armor; }
-struct Swift { int speed; }
-struct Elite : Armored, Swift { string codename; }
+def Armored { number armor; }
+abstract def Swift { abstract number Speed(); }
+def Elite : Armored, Swift { number speed; string codename; number Speed() { return @this.speed; } }
 
-struct Box<T> { T value; }
+def Box<T> { T value; }
 
-Movable scout = Unit(Vector2(0, 0), "Scout", 40);
-Boss king = Boss(Vector2(10, 0), "King", 90, 2);
+Movable scout = Unit { position = Vector2(0, 0), name = "Scout", hp = 40 };
+Boss king = Boss { position = Vector2(10, 0), name = "King", hp = 90, phase = 2 };
 
 post(scout.label());
 post(king.label());
 post(king.revealHp());
 
-Unit ally = Unit(Vector2(1, 5), "Ally", 50);
-Unit foe = Unit(Vector2(2, 5), "Foe", 30);
+Unit ally = Unit { position = Vector2(1, 5), name = "Ally", hp = 50 };
+Unit foe = Unit { position = Vector2(2, 5), name = "Foe", hp = 30 };
 post(ally.distanceTo(foe));
 
 scout.position.x = scout.position.x + 3;
 scout.position.y = scout.position.y + 4;
 post(scout.position.x);
 
-Square tile = Square(3);
+Square tile = Square { side = 3 };
 post(tile.area());
 
-Elite agent = Elite(12, 7, "Seven");
+Elite agent = Elite { armor = 12, speed = 7, codename = "Seven" };
 post(agent.armor .: "/" .: agent.speed .: " " .: agent.codename);
 
-Box<int> tier = Box<int>(3);
+Box<number> tier = Box<number> { value = 3 };
 post(tier.value);
 
 king.damage(25);

@@ -43,7 +43,7 @@ int run_repl(std::istream& in, std::ostream& out, std::ostream& err) {
     const CompileResult compiled = Compiler{}.compile(source);
     if (!compiled.ok()) {
       for (const Diagnostic& diagnostic : compiled.diagnostics) {
-        err << diagnostic.location.line << ':' << diagnostic.location.column << ": " << diagnostic.message << '\n';
+        err << diagnostic.location.line << ':' << diagnostic.location.column << ": " << diagnostic.formatted_message() << '\n';
       }
       continue;
     }

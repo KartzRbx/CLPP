@@ -30,16 +30,19 @@ constexpr std::array kKeywords = {
     KeywordEntry{"buffer", TokenType::KwBuffer},
     KeywordEntry{"case", TokenType::KwCase},
     KeywordEntry{"catch", TokenType::KwCatch},
+    KeywordEntry{"class", TokenType::KwClass},
     KeywordEntry{"const", TokenType::KwConst},
     KeywordEntry{"constexpr", TokenType::KwConstexpr},
     KeywordEntry{"continue", TokenType::KwContinue},
     KeywordEntry{"cout", TokenType::KwCout},
     KeywordEntry{"decltype", TokenType::KwDecltype},
+    KeywordEntry{"def", TokenType::KwDef},
     KeywordEntry{"default", TokenType::KwDefault},
-    KeywordEntry{"double", TokenType::KwDouble},
+    KeywordEntry{"do", TokenType::KwDo},
     KeywordEntry{"else", TokenType::KwElse},
     KeywordEntry{"endl", TokenType::KwEndl},
     KeywordEntry{"enum", TokenType::KwEnum},
+    KeywordEntry{"export", TokenType::KwExport},
     KeywordEntry{"extern", TokenType::KwExtern},
     KeywordEntry{"false", TokenType::KwFalse},
     KeywordEntry{"final", TokenType::KwFinal},
@@ -51,17 +54,15 @@ constexpr std::array kKeywords = {
     KeywordEntry{"if", TokenType::KwIf},
     KeywordEntry{"import", TokenType::KwImport},
     KeywordEntry{"in", TokenType::KwIn},
-    KeywordEntry{"int", TokenType::KwInt},
     KeywordEntry{"join", TokenType::KwJoin},
-    KeywordEntry{"let", TokenType::KwLet},
     KeywordEntry{"link", TokenType::KwLink},
     KeywordEntry{"match", TokenType::KwMatch},
     KeywordEntry{"move", TokenType::KwMove},
-    KeywordEntry{"mut", TokenType::KwMut},
     KeywordEntry{"namespace", TokenType::KwNamespace},
     KeywordEntry{"new", TokenType::KwNew},
     KeywordEntry{"not", TokenType::KwNot},
     KeywordEntry{"null", TokenType::KwNull},
+    KeywordEntry{"number", TokenType::KwNumber},
     KeywordEntry{"observable", TokenType::KwObservable},
     KeywordEntry{"operator", TokenType::KwOperator},
     KeywordEntry{"or", TokenType::KwOr},
@@ -69,6 +70,7 @@ constexpr std::array kKeywords = {
     KeywordEntry{"parallel", TokenType::KwParallel},
     KeywordEntry{"pcall", TokenType::KwPcall},
     KeywordEntry{"post", TokenType::KwPost},
+    KeywordEntry{"pragma", TokenType::KwPragma},
     KeywordEntry{"private", TokenType::KwPrivate},
     KeywordEntry{"public", TokenType::KwPublic},
     KeywordEntry{"report", TokenType::KwReport},
@@ -78,14 +80,17 @@ constexpr std::array kKeywords = {
     KeywordEntry{"signal", TokenType::KwSignal},
     KeywordEntry{"spawn", TokenType::KwSpawn},
     KeywordEntry{"static", TokenType::KwStatic},
+    KeywordEntry{"static_cast", TokenType::KwStaticCast},
     KeywordEntry{"string", TokenType::KwString},
     KeywordEntry{"struct", TokenType::KwStruct},
     KeywordEntry{"switch", TokenType::KwSwitch},
     KeywordEntry{"task", TokenType::KwTask},
+    KeywordEntry{"template", TokenType::KwTemplate},
     KeywordEntry{"thread", TokenType::KwThread},
     KeywordEntry{"true", TokenType::KwTrue},
     KeywordEntry{"try", TokenType::KwTry},
     KeywordEntry{"type", TokenType::KwType},
+    KeywordEntry{"typename", TokenType::KwTypename},
     KeywordEntry{"using", TokenType::KwUsing},
     KeywordEntry{"variant", TokenType::KwVariant},
     KeywordEntry{"void", TokenType::KwVoid},
@@ -97,11 +102,8 @@ constexpr std::array kKeywords = {
 constexpr std::string_view kUnterminatedString = "unterminated string";
 constexpr std::string_view kUnterminatedTemplate = "unterminated template string";
 constexpr std::string_view kUnterminatedBlockComment = "unterminated block comment";
-constexpr std::string_view kUnterminatedDocComment = "unterminated doc comment";
 constexpr std::string_view kInvalidSeparator = "invalid numeric separator";
 constexpr std::string_view kInvalidLiteral = "invalid numeric literal";
-constexpr std::string_view kUseAnd = "use 'and' instead of '&&'";
-constexpr std::string_view kUseOr = "use 'or' instead of '||'";
 constexpr std::string_view kUnexpectedCharacter = "unexpected character";
 constexpr std::string_view kControlCharacter = "control character";
 
@@ -229,10 +231,15 @@ LexResult Lexer::tokenize() {
     const std::size_t start = m_cursor;
     const SourceLocation start_loc{m_line, m_column};
 
+    if (peek() == '<' && peek_next() == '<' && peek_at(2) == '[') {
+      advance(); advance(); advance();
+      if (!skip_block_comment()) report(start_loc, slice(start), kUnterminatedBlockComment);
+      continue;
+    }
     if (peek() == '<' && peek_next() == '<') {
       advance();
       advance();
-      consume_less_less_comment(start_loc, start, tokens);
+      skip_line_comment();
       continue;
     }
 
@@ -549,13 +556,13 @@ void Lexer::skip_whitespace() {
   }
 }
 
-void Lexer::skip_line_comment_after_ll() {
+void Lexer::skip_line_comment() {
   while (!at_line_end()) {
     advance();
   }
 }
 
-bool Lexer::skip_block_comment_after_lbracket() {
+bool Lexer::skip_block_comment() {
   while (!is_at_end()) {
     if (peek() == ']' && peek_next() == '>' && peek_at(2) == '>') {
       advance();
@@ -566,68 +573,6 @@ bool Lexer::skip_block_comment_after_lbracket() {
     advance();
   }
   return false;
-}
-
-void Lexer::consume_less_less_comment(const SourceLocation start_loc, const std::size_t comment_start,
-                                      std::vector<Token>& tokens) {
-  const CursorState after_ll = save_state();
-
-  // Doc opener after <<: <<[[]] or <<[[]]] (optional second ] before body)
-  if (peek_at(0) == '[' && peek_at(1) == '[' && peek_at(2) == ']') {
-    std::size_t opener_len = 3;
-    if (peek_at(3) == ']') {
-      opener_len = 4;
-    }
-    for (std::size_t i = 0; i < opener_len; ++i) {
-      advance();
-    }
-
-    const std::size_t content_start = m_cursor;
-    while (!is_at_end()) {
-      if (peek() == '>' && peek_next() == '>') {
-        const std::string_view text = m_source.substr(content_start, m_cursor - content_start);
-        tokens.push_back(make_token(TokenType::DocComment, text, start_loc));
-        advance();
-        advance();
-        return;
-      }
-      advance();
-    }
-
-    const std::string_view span = m_source.substr(comment_start, m_cursor - comment_start);
-    report(start_loc, span, kUnterminatedDocComment);
-    tokens.push_back(make_token(TokenType::Invalid, span, start_loc));
-    return;
-  }
-
-  restore_state(after_ll);
-
-  if (peek() == '[') {
-    advance();
-    if (!skip_block_comment_after_lbracket()) {
-      const std::string_view span = m_source.substr(comment_start, m_cursor - comment_start);
-      report(start_loc, span, kUnterminatedBlockComment);
-    }
-    return;
-  }
-
-  if (peek() == '!') {
-    const CursorState saved = save_state();
-    advance();
-    const std::size_t word_start = m_cursor;
-    while (!is_at_end() && is_identifier_continue(peek())) {
-      advance();
-    }
-    const std::string_view word = m_source.substr(word_start, m_cursor - word_start);
-    if (word == "strict" || word == "nonstrict" || word == "nocheck") {
-      tokens.push_back(make_token(TokenType::Mode, word, start_loc));
-      skip_line_comment_after_ll();
-      return;
-    }
-    restore_state(saved);
-  }
-
-  skip_line_comment_after_ll();
 }
 
 Token Lexer::make_token(const TokenType type, const std::string_view text, const SourceLocation loc) {
@@ -832,6 +777,16 @@ bool Lexer::skip_template_body() {
 bool Lexer::skip_balanced_braces() {
   int depth = 1;
   while (!at_line_end()) {
+    if (peek() == '<' && peek_next() == '<') {
+      advance(); advance();
+      if (peek() == '[') {
+        advance();
+        if (!skip_block_comment()) return false;
+      } else {
+        skip_line_comment();
+      }
+      continue;
+    }
     if (peek() == '\\') {
       advance();
       if (!at_line_end()) {
@@ -997,14 +952,12 @@ std::string_view token_type_to_string(TokenType type) {
     case TokenType::TemplateHead: return "TemplateHead";
     case TokenType::TemplateMiddle: return "TemplateMiddle";
     case TokenType::TemplateTail: return "TemplateTail";
-    case TokenType::DocComment: return "DocComment";
     case TokenType::KwAnd: return "and";
     case TokenType::KwOr: return "or";
     case TokenType::KwNot: return "not";
     case TokenType::KwVoid: return "void";
-    case TokenType::KwInt: return "int";
+    case TokenType::KwNumber: return "number";
     case TokenType::KwFloat: return "float";
-    case TokenType::KwDouble: return "double";
     case TokenType::KwString: return "string";
     case TokenType::KwBool: return "bool";
     case TokenType::KwAuto: return "auto";
@@ -1013,15 +966,17 @@ std::string_view token_type_to_string(TokenType type) {
     case TokenType::KwTrue: return "true";
     case TokenType::KwType: return "type";
     case TokenType::KwFalse: return "false";
+    case TokenType::KwDef:
+      return "def";
     case TokenType::KwStruct: return "struct";
     case TokenType::KwConst: return "const";
     case TokenType::KwStatic: return "static";
+    case TokenType::KwStaticCast: return "static_cast";
     case TokenType::KwConstexpr: return "constexpr";
     case TokenType::KwNew: return "new";
     case TokenType::KwLink: return "link";
     case TokenType::KwAs: return "as";
     case TokenType::KwFrom: return "from";
-    case TokenType::KwLet: return "let";
     case TokenType::KwJoin: return "join";
     case TokenType::KwThread: return "thread";
     case TokenType::KwAtomic: return "atomic";
@@ -1029,16 +984,19 @@ std::string_view token_type_to_string(TokenType type) {
     case TokenType::KwMove: return "move";
     case TokenType::KwOperator: return "operator";
     case TokenType::KwVariant: return "variant";
-    case TokenType::KwMut: return "mut";
     case TokenType::KwImport: return "import";
     case TokenType::KwUsing: return "using";
     case TokenType::KwEnum: return "enum";
+    case TokenType::KwClass: return "class";
+    case TokenType::KwExport: return "export";
     case TokenType::KwExtern: return "extern";
     case TokenType::KwAbstract: return "abstract";
     case TokenType::KwOverride: return "override";
+    case TokenType::KwPragma: return "pragma";
     case TokenType::KwPrivate: return "private";
     case TokenType::KwIf: return "if";
     case TokenType::KwElse: return "else";
+    case TokenType::KwDo: return "do";
     case TokenType::KwWhile: return "while";
     case TokenType::KwFor: return "for";
     case TokenType::KwIn: return "in";
@@ -1070,6 +1028,8 @@ std::string_view token_type_to_string(TokenType type) {
     case TokenType::KwPublic: return "public";
     case TokenType::KwFinal: return "final";
     case TokenType::KwNamespace: return "namespace";
+    case TokenType::KwTemplate: return "template";
+    case TokenType::KwTypename: return "typename";
     case TokenType::KwWhere: return "where";
     case TokenType::KwTry: return "try";
     case TokenType::KwCatch: return "catch";
@@ -1117,7 +1077,6 @@ std::string_view token_type_to_string(TokenType type) {
     case TokenType::Ampersand: return "&";
     case TokenType::Caret: return "^";
     case TokenType::BitNot: return "~";
-    case TokenType::Mode: return "mode";
     case TokenType::Scope: return "::";
     case TokenType::SignalConnect: return "~>";
   }

@@ -1,0 +1,18 @@
+{
+  "languages": {
+    "CL++": {
+      "lsp_document_colors": "inlay"
+    }
+  },
+  "lsp": {
+    "clangd": {
+      "binary": {
+        "arguments": [
+          "--background-index",
+          "--clang-tidy",
+          "--query-driver=C:/msys64/ucrt64/bin/g++.exe,C:/msys64/ucrt64/bin/gcc.exe"
+        ]
+      }
+    }
+  }
+}

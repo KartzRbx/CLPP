@@ -10,6 +10,16 @@ namespace clpp::stdlib {
 
 namespace {
 
+std::mutex& execution_mutex() { static std::mutex mutex; return mutex; }
+
+void reset_resources() {
+  host::reset_audio();
+  host::reset_window();
+  host::reset_gui();
+  host::reset_ui();
+  host::reset_gfx();
+}
+
 [[nodiscard]] const std::vector<host::Entry>& registry() {
   static const std::vector<host::Entry> table = [] {
     std::vector<host::Entry> entries;
@@ -23,12 +33,18 @@ namespace {
     host::add_gui(entries);
     host::add_audio(entries);
     host::add_input(entries);
+    host::add_json_typed(entries);  // Append to retain existing serialized native IDs.
+    host::add_tooling(entries);
+    host::add_cli_files(entries);
     return entries;
   }();
   return table;
 }
 
 }  // namespace
+
+HostExecution::HostExecution() : m_lock(execution_mutex()) { reset_resources(); host::reset_process_status(); }
+HostExecution::~HostExecution() { reset_resources(); }
 
 int host_native(const std::string_view name, const std::size_t arity) {
   const std::vector<host::Entry>& table = registry();

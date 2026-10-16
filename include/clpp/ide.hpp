@@ -26,9 +26,9 @@ struct Item {
   std::string detail;
   Kind kind{Kind::Keyword};
   std::string sort_text{"5"};
-  std::string insert_text;    // empty: insert the label
+  std::string insert_text{};    // empty: insert the label
   bool snippet{false};        // insert_text uses LSP snippet syntax ($1, ${1:name}, $0)
-  std::string documentation;  // markdown
+  std::string documentation{};  // markdown
 };
 
 struct Signature {
@@ -100,6 +100,7 @@ struct SemanticToken {
 };
 
 [[nodiscard]] std::vector<SemanticToken> semantic_tokens(std::string_view source, const ModuleLoader& modules = {});
+[[nodiscard]] std::vector<SemanticToken> semantic_tokens(const AnalysisResult& analysis);
 
 // Delta encoding of LSP `textDocument/semanticTokens`. Without `source`, columns and lengths stay in
 // bytes (the compiler's unit); with it they are converted to UTF-16 code units, which is what the
@@ -118,7 +119,8 @@ struct KeywordDoc {
 };
 [[nodiscard]] const KeywordDoc* keyword_doc(std::string_view word);
 
-[[nodiscard]] std::string format_source(std::string_view source);
+[[nodiscard]] std::string format_source(std::string_view source, std::uint32_t tab_size = 2,
+                                      bool insert_spaces = true);
 
 [[nodiscard]] Info inspect(std::string_view source, std::uint32_t line, std::uint32_t column,
                               const ModuleLoader& modules = {});

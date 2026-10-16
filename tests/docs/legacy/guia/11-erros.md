@@ -17,7 +17,7 @@ jogo.clp:30:5: runtime error: index out of range: 5 (size 3)
 Um erro de execução dentro de `try` desvia para o `catch`, que recebe a mensagem. O programa continua depois do bloco.
 
 ```clp
-let mut inventory = list("espada");
+auto inventory = list("espada");
 try {
   post(inventory[3]);
   post("não chega aqui");
@@ -37,7 +37,7 @@ O nome entre parênteses é opcional: `catch { ... }` também vale.
 Erros dentro de funções chamadas no `try` também são capturados:
 
 ```clp
-func divide(int a, int b) -> int { return a / b; }
+number divide(number a, number b) { return a / b; }
 try {
   post(divide(10, 0));
 } catch (e) {
@@ -54,7 +54,7 @@ division by zero
 `report(valor)` interrompe a execução com o valor como mensagem. Use para situações que não deveriam acontecer.
 
 ```clp
-func loadLevel(int id) {
+void loadLevel(number id) {
   if (id < 1) {
     report("nível inválido: " .: id);
   }
@@ -80,7 +80,7 @@ Sem `try`, o programa para e o erro é impresso com a posição.
 `warn(valor)` escreve `warning: valor` na saída de erros (stderr) e **não** interrompe nada. Útil para registrar algo suspeito sem parar o jogo.
 
 ```clp
-let fps = 24;
+const auto fps = 24;
 if (fps < 30) {
   warn("fps baixo: " .: fps);
 }

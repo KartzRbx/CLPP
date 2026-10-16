@@ -1,27 +1,70 @@
 # Lexer
 
-The lexer in `src/core/lexer/lexer.cpp` turns source into tokens and diagnostics. `Lexer(const std::string&)` borrows its source string, so the source must outlive the resulting token views. Errors produce an `Invalid` token and a diagnostic while parsing continues.
+The lexer recognizes the current source spelling and reserves removed keywords to issue syntax errors. Reserved obsolete words are excluded from completion and highlighting. See [implementation status](status.md). Token names and internal APIs are implementation details, not additional language features.
 
-## Line endings and comments
+## What a lexer does
 
-LF (`\n`), CRLF (`\r\n`), and CR (`\r`) terminate lines and line comments. `<<` starts a line comment, `<<[ ... ]>>` a block comment, `<<[[]] ... >>` a documentation comment, and `<<!strict`/`<<!nocheck` a file directive. `//` produces two `/` operator tokens.
+The lexer separates source into tokens before parsing. In `number score = 10;`, the tokens are a type keyword, a name, `=`, an integer literal, and `;`. Parsing decides how those tokens form a declaration; type checking decides whether the value fits the declared type.
 
-## Literal tokens
+## Whitespace and positions
 
-| Source | Token |
+Spaces, tabs, and line breaks separate words. Indentation is for readability; braces delimit bodies. A line break does not replace a statement semicolon. Diagnostics should identify the source file, line, and column so a developer can locate the offending token.
+
+## Names and keywords
+
+Identifiers begin with a letter or `_`, followed by letters, digits, or `_`. Use ASCII names for portability. Names are case sensitive: `score` and `Score` differ. Keywords such as `const`, `def`, and `return` have special meaning and cannot serve as ordinary variable names. [Identifiers](identifiers.md) explains names separately; [Keywords](keywords.md) groups the vocabulary by topic.
+
+## Comments and checking mode
+
+| Source | Meaning |
 | --- | --- |
-| `42`, `3.5`, `1e3`, `0xFF`, `0b1010` | `Number` |
-| `"..."`, `'...'` | `StringLiteral` |
-| Backtick text with `${expr}` | `TemplateString` |
+| `<< text` | Comment through the end of the line |
+| `<<[ text ]>>` | Block comment; may span lines |
+| `pragma strict;` | File checking directive, compiler-tested |
 
-Underscores separate digits only within the same numeric component: `10_000` and `0xFF_00_FF` are accepted, while `10_`, `1__0`, and `0x_FF` produce `invalid numeric separator`. Decimal parsing is locale-independent.
+Comments do not execute. Use a separate `<<` on each line of a longer note. Documentation-comment syntax and additional checking modes are not yet specified here. Read [Comments](comments.md) for examples.
 
-## Operators and keywords
+## Numeric literals
 
-The lexer recognizes arithmetic, assignment, comparison, bitwise, punctuation, `.:`, `..`, `...`, `::`, `~>`, `=>`, and `@`. Word operators are `and`, `or`, `not`, `shl`, and `shr`. Keywords are looked up in a sorted table and exported to the editor through `keyword_names()`. See [Keywords and operators](keywords.md).
+| Source | Value |
+| --- | --- |
+| `42` | Decimal integer |
+| `0xFF` | Hexadecimal integer |
+| `0b1010` | Binary integer |
+| `3.5` | Floating-point value |
+| `1e3` | Scientific notation |
+| `10_000` | Integer with digit separators |
 
-`@` is always a separate token. After `link`, it begins a standard library module path; inside a method, `@hp` means `self.hp`; elsewhere, it addresses the shared program table.
+A separator belongs between digits in the same numeric component. A base prefix requires digits and an exponent requires an exponent value. The sign in `-42` is an operator before the number. [Literals](literals.md) explains when to choose each form.
 
-## Diagnostics
+## Strings and templates
 
-The lexer reports unterminated strings, templates, block or documentation comments; misplaced numeric separators; incomplete hexadecimal, binary, or exponent literals; and unexpected characters. A string interrupted by a newline does not consume the rest of the source file.
+Single and double quotes delimit text strings. Escape sequences include `\n`, `\t`, `\\`, `\"`, and `\'`. Backtick templates insert a value through `${expression}`; `\${` writes the interpolation marker literally. Literal decoding and interpolation happen after tokenization.
+
+## Symbols
+
+The lexer must distinguish multi-character symbols from their shorter prefixes: `<=` from `<`, `+=` from `+`, and `...` from `..` and `.`. Parentheses, brackets, braces, commas, colons, and semicolons are separate punctuation tokens.
+
+- `.` selects a member; `::` selects a scoped case such as `Element::Fire` or an established native member.
+- `.:` concatenates text; `..` denotes a range or slice boundary.
+- `=>` introduces a match arm. Anonymous callbacks use `func (...) -> Type { ... }`.
+- `~>` registers a signal callback with its internal cleanup manager; `event::Clear()` disconnects managed subscriptions.
+- `@` begins a standard-library module path after `link`; `@this` selects the method receiver. Other receiver shortcuts and arbitrary annotations are rejected.
+- `and`, `or`, `not`, `shl`, and `shr` are word operators.
+
+The parser determines the meaning of a symbol in context. See [Punctuation](punctuation.md) and [Operators](../guide/04-operators.md).
+
+## Errors belong to different stages
+
+Excessive recursive syntax is rejected with `syntax nesting limit exceeded`
+instead of overflowing the compiler's native stack. Expressions, unary chains,
+statement nesting and type annotations each have a budget of 80 active parser
+entries. Ordinary code, including 64 nested grouping parentheses, is tested.
+This is a compiler resource limit, not a replacement for runtime recursion rules.
+Iterative operator, call, index and member chains also have a maximum expression
+tree depth of 128 edges. This catches flat source that would otherwise build an
+unsafe recursive tree; a chain of 128 numeric terms remains tested and supported.
+
+Malformed digits, unfinished strings, unfinished comments, and unknown characters are lexical errors. Missing punctuation is a parser error. Assigning an incompatible value is a type error. A runtime failure occurs after compilation, for example when executing an invalid operation. Read [Errors](../guide/11-errors.md) to understand those stages.
+
+Implementation token families currently include integer and floating-point literals rather than one generic number token. Template tokenization may split interpolated text into head, middle, and tail segments. These internal details do not change the source spelling taught here.

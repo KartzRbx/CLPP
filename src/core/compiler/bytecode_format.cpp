@@ -20,6 +20,21 @@ bool decode(const std::vector<std::uint8_t>& code, DecodedChunk& decoded) {
       return true;
     };
     switch (instruction.op) {
+      case Opcode::Globals:
+      case Opcode::LoadGlobal:
+      case Opcode::StoreGlobal:
+      case Opcode::InitGlobal:
+      case Opcode::InitConstGlobal:
+      case Opcode::RawGlobal:
+      case Opcode::MakeClosure:
+      case Opcode::MakeBoundMethod:
+      case Opcode::Invoke:
+      case Opcode::InvokeThread:
+      case Opcode::BoxLocal:
+      case Opcode::LoadCell:
+      case Opcode::StoreCell:
+      case Opcode::ClearCell:
+      case Opcode::RawLoad:
       case Opcode::Const:
       case Opcode::LoadLocal:
       case Opcode::StoreLocal:
@@ -37,13 +52,13 @@ bool decode(const std::vector<std::uint8_t>& code, DecodedChunk& decoded) {
       case Opcode::Axiom:
       case Opcode::Std:
       case Opcode::Host:
+      case Opcode::Event:
       case Opcode::MakeStruct:
       case Opcode::GetSelf:
       case Opcode::SetSelf:
       case Opcode::Parallel:
       case Opcode::Protect:
       case Opcode::ClearLocal:
-      case Opcode::SelfBack:
       case Opcode::ListPush:
       case Opcode::ListPop:
       case Opcode::ListInsert:

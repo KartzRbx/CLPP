@@ -83,3 +83,38 @@ pre.mermaid {
     grid-template-columns: 1fr;
   }
 }
+
+.clpp-product-promise {
+  max-width: 52rem;
+  font-size: 1.15rem;
+  line-height: 1.6;
+}
+
+.sl-markdown-content img.clpp-card-logo {
+  display: block;
+  width: 40px;
+  height: 40px;
+  margin: 0 0 0.75rem;
+}
+
+.clpp-start-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding: 1.5rem;
+  border: 1px solid var(--sl-color-hairline);
+  border-radius: 0.75rem;
+  background: var(--sl-color-bg-nav);
+}
+
+.sl-markdown-content .clpp-start-banner img {
+  width: 64px;
+  height: 64px;
+  margin: 0;
+}
+
+.clpp-start-banner p {
+  margin: 0.35rem 0 0.75rem;
+}

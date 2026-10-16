@@ -8,7 +8,7 @@
 int main() {
   int failures = 0;
   for (int i = 0; i < 800; ++i) {
-    const std::string source = "async func add(a, b) { return a + b; }\npost(await add(" + std::to_string(i) +
+    const std::string source = "async number add(number a, number b) { return a + b; }\npost(await add(" + std::to_string(i) +
                                ", 1));\n";
     const clpp::CompileResult compiled = clpp::Compiler{}.compile(source);
     std::ostringstream out;
@@ -24,7 +24,7 @@ int main() {
     }
   }
   for (int i = 0; i < 200; ++i) {
-    const std::string source = "async func add(a, b) { return a + b; }\nint x = add(" + std::to_string(i) + ", 1);\n";
+    const std::string source = "async number add(number a, number b) { return a + b; }\nnumber x = add(" + std::to_string(i) + ", 1);\n";
     const clpp::CompileResult compiled = clpp::Compiler{}.compile(source);
     if (compiled.ok() || !compiled.chunk.code.empty()) {
       ++failures;

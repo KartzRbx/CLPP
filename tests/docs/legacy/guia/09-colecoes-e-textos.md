@@ -5,7 +5,7 @@
 `list(...)` cria uma lista com qualquer tipo de valor. Os índices começam em 0.
 
 ```clp
-let mut inventory = list("espada", "poção", "mapa");
+auto inventory = list("espada", "poção", "mapa");
 post(inventory[0]);
 post(len(inventory));
 inventory[1] = "elixir";
@@ -32,7 +32,7 @@ Estas funções alteram a variável passada como primeiro argumento (que precisa
 | `remove(xs, i)` | remove a posição `i` | o elemento removido |
 
 ```clp
-let mut queue = list();
+auto queue = list();
 push(queue, "ana");
 push(queue, "bia");
 push(queue, "caio");
@@ -60,12 +60,12 @@ caio
 | `for (let x in xs)` | percorre os elementos (capítulo 5) |
 
 ```clp
-let scores = list(40, 95, 70);
+const auto scores = list(40, 95, 70);
 post(sort(scores));
 post(find(scores, 95));
 post(find(scores, 12));
-let mut total = 0;
-for (let s in scores) { total += s; }
+auto total = 0;
+for (auto s in scores) { total += s; }
 post(total / len(scores));
 ```
 
@@ -81,10 +81,10 @@ post(total / len(scores));
 `array<T>` diz ao compilador o tipo dos elementos. Isso permite acessar campos de structs dentro da lista e pega erros de tipo cedo.
 
 ```clp
-struct Enemy { string name; int hp; }
-array<Enemy> wave = array<Enemy>(Enemy("slime", 10), Enemy("orc", 40));
+def Enemy { string name; number hp; }
+array<Enemy> wave = array<Enemy>(Enemy { name = "slime", hp = 10 }, Enemy { name = "orc", hp = 40 });
 wave[0].hp -= 4;
-for (let e in wave) {
+for (auto e in wave) {
   post(e.name .: ": " .: e.hp);
 }
 ```
@@ -97,7 +97,9 @@ orc: 40
 ### Desmontar
 
 ```clp
-let (x, y) = list(3, 4);
+const auto pair = list(3, 4);
+const auto x = pair[0];
+const auto y = pair[1];
 post(x * y);
 ```
 
@@ -110,13 +112,13 @@ post(x * y);
 `dictionary<K, V>(chave1, valor1, chave2, valor2, ...)` associa chaves a valores.
 
 ```clp
-dictionary<string, int> prices = dictionary<string, int>("espada", 150, "poção", 20);
+dictionary<string, number> prices = dictionary<string, number>("espada", 150, "poção", 20);
 post(prices["poção"]);
 prices["escudo"] = 90;     << chave nova
 prices["espada"] -= 30;    << chave existente
 post(prices);
 post(len(prices));
-for (let item in prices) {
+for (auto item in prices) {
   post(item .: " custa " .: prices[item]);
 }
 post(remove(prices, "poção"));
@@ -179,7 +181,7 @@ post(buffer::size(packet));
 Textos são imutáveis e em UTF-8: índices, `len` e `for … in` contam caracteres, não bytes.
 
 ```clp
-let word = "coração";
+const auto word = "coração";
 post(len(word));
 post(word[4]);
 post(word[0 .. 4]);
@@ -213,13 +215,13 @@ coração!
 ```clp
 link @clpp.text as Text;
 
-let line = "  nome=Ada;nivel=7  ";
-let fields = Text.split(Text.trim(line), ";");
-for (let field in fields) {
-  let pair = Text.split(field, "=");
+const auto line = "  nome=Ada;nivel=7  ";
+const auto fields = Text.split(Text.trim(line), ";");
+for (auto field in fields) {
+  const auto pair = Text.split(field, "=");
   post(Text.upper(pair[0]) .: " -> " .: pair[1]);
 }
-let level = Text.toNumber(Text.split(fields[1], "=")[1]);
+const auto level = Text.toNumber(Text.split(fields[1], "=")[1]);
 post(level + 1);
 ```
 
@@ -234,8 +236,8 @@ NIVEL -> 7
 `.:` aceita qualquer valor (capítulo 4). Templates (capítulo 2) costumam ser mais legíveis para frases com vários valores:
 
 ```clp
-let name = "Ada";
-let pos = Vector2(3, 4);
+const auto name = "Ada";
+const auto pos = Vector2(3, 4);
 post(`${name} está em ${pos}`);
 ```
 

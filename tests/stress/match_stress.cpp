@@ -8,12 +8,12 @@
 int main() {
   int failures = 0;
   for (int i = 0; i < 800; ++i) {
-    const std::string source = "let n = " + std::to_string(i) +
+    const std::string source = "const auto n = " + std::to_string(i) +
                                ";\n"
                                "match (n) {\n"
-                               "  0 ~> post(0);\n"
-                               "  1 ~> post(1);\n"
-                               "  _ guard n > 1 ~> post(2);\n"
+                               "  0 => post(0);\n"
+                               "  1 => post(1);\n"
+                               "  _ guard n > 1 => post(2);\n"
                                "}\n";
     const clpp::CompileResult compiled = clpp::Compiler{}.compile(source);
     std::ostringstream out;
@@ -30,7 +30,7 @@ int main() {
     }
   }
   for (int i = 0; i < 200; ++i) {
-    const std::string source = "match (\"v" + std::to_string(i) + "\") { 1 ~> post(1); }\n";
+    const std::string source = "match (\"v" + std::to_string(i) + "\") { 1 => post(1); }\n";
     const clpp::CompileResult compiled = clpp::Compiler{}.compile(source);
     if (compiled.ok() || !compiled.chunk.code.empty()) {
       ++failures;

@@ -1,0 +1,17 @@
+number value = 7;
+value += 3; value -= 1; value *= 2; value /= 3; value %= 5;
+value++; value--;
+post(value);
+post(2 + 3 * 4);
+post(-2 * 3);
+post(not false and true or false);
+post(!false && true || false);
+post((1 shl 3) | 2);
+post(8 shr 2);
+post(7 & 3);
+post(7 ^ 3);
+post(~0);
+post(static_cast<number>(3.9));
+post(2 < 3 and 2 <= 2 and 3 > 2 and 3 >= 3 and 2 != 3 and 2 == 2);
+post(value == 1 ? "one" : "other");
+post("sum: " .: (2 + 3));

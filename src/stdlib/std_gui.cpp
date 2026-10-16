@@ -3,7 +3,7 @@
 // The program describes the interface as a tree of elements with named properties and renders it
 // every frame; the library lays it out, draws it with the @clpp.ui look and reports events:
 //
-//   let screen = Gui.Screen(children: list(
+//   const auto screen = Gui.Screen(children: list(
 //     Gui.Frame(id: "menu", anchor: "center", width: 320, children: list(
 //       Gui.Text(text: "My game", size: 28, bold: true),
 //       Gui.Button(id: "play", text: "Play", style: "primary"),
@@ -94,7 +94,7 @@ Gui g_gui;
 
 [[nodiscard]] bool flag_prop(const Node& node, const std::string_view key, const bool fallback) {
   const Value* value = prop(node, key);
-  return value != nullptr && value->is_number() ? value->number != 0 : fallback;
+  return value != nullptr && value->is_boolean() ? value->number != 0 : fallback;
 }
 
 // Colors: -1 means "the theme decides", -2 means "no fill".
@@ -129,31 +129,31 @@ bool build(const Value& value, Node& node, const std::string& path, const int de
     error = "Gui.Render: the element tree is too deep";
     return false;
   }
-  if (!value.is_struct() || value.number != 0 || value.fields.size() % 2 != 0) {
+  if (!value.is_struct() || value.number != 0 || value.field_count() % 2 != 0) {
     error = "Gui.Render: expected an element made by Gui.Frame, Gui.Button, ... (got another value)";
     return false;
   }
-  for (std::size_t index = 0; index + 1 < value.fields.size(); index += 2) {
-    const Value& key = value.fields[index];
+  for (std::size_t index = 0; index + 1 < value.field_count(); index += 2) {
+    const Value& key = value.field(index);
     if (!key.is_string()) {
       error = "Gui.Render: element keys must be strings";
       return false;
     }
-    if (key.text == "kind" && value.fields[index + 1].is_string()) {
-      node.kind = value.fields[index + 1].text;
+    if (key.text == "kind" && value.field(index + 1).is_string()) {
+      node.kind = value.field(index + 1).text;
     } else if (key.text == "children") {
-      const Value& children = value.fields[index + 1];
+      const Value& children = value.field(index + 1);
       if (children.is_struct()) {
-        for (std::size_t child = 0; child < children.fields.size(); ++child) {
+        for (std::size_t child = 0; child < children.field_count(); ++child) {
           Node built;
-          if (!build(children.fields[child], built, path + "/" + std::to_string(child), depth + 1, error)) {
+          if (!build(children.field(child), built, path + "/" + std::to_string(child), depth + 1, error)) {
             return false;
           }
           node.children.push_back(std::move(built));
         }
       }
     } else {
-      node.props.emplace_back(key.text, value.fields[index + 1]);
+      node.props.emplace_back(key.text, value.field(index + 1));
     }
   }
   if (node.kind.empty()) {
@@ -796,7 +796,8 @@ CLPP_NATIVE(gui_set) {  // (id, which, value)
       state.value = num(args[2]);
       break;
     case 1:
-      state.on = num(args[2]) != 0;
+      if (!args[2].is_boolean()) return fail(error, "Gui.Set: toggle/checkbox value must be a bool");
+      state.on = args[2].number != 0;
       break;
     case 2:
       state.text = args[2].is_string() ? args[2].text : std::string{};
@@ -817,70 +818,86 @@ constexpr std::string_view kGuiSource = R"clp(<< @clpp.gui: declarative interfac
 << anchor: "top-left", "top", "top-right", "left", "center", "right", "bottom-left", "bottom", "bottom-right".
 << Colors: -1 = theme color, -2 = no fill (rows and columns are transparent by default).
 
-func Screen(int color = -1, children = list()) {
-  return list("kind", "screen", "color", color, "children", children);
+export def ScreenOptions { number color = -1; any children = list(); }
+export any Screen(ScreenOptions options) {
+  return list("kind", "screen", "color", options.color, "children", options.children);
 }
-func Frame(string id = "", string title = "", string anchor = "", float x = 0, float y = 0, float width = 0, float height = 0, string layout = "vertical", string align = "stretch", float padding = -1, float gap = -1, int color = -1, float radius = -1, bool shadow = true, bool border = true, bool glass = false, string appear = "", bool visible = true, children = list()) {
-  return list("kind", "frame", "id", id, "title", title, "anchor", anchor, "anchor_given", anchor != "", "x", x, "y", y, "width", width, "height", height, "layout", layout, "align", align, "padding", padding, "gap", gap, "color", color, "radius", radius, "shadow", shadow, "border", border, "glass", glass, "appear", appear, "visible", visible, "children", children);
+export def FrameOptions { string id = ""; string title = ""; string anchor = ""; float x = 0; float y = 0; float width = 0; float height = 0; string layout = "vertical"; string align = "stretch"; float padding = -1; float gap = -1; number color = -1; float radius = -1; bool shadow = true; bool border = true; bool glass = false; string appear = ""; bool visible = true; any children = list(); }
+export any Frame(FrameOptions options) {
+  return list("kind", "frame", "id", options.id, "title", options.title, "anchor", options.anchor, "anchor_given", options.anchor != "", "x", options.x, "y", options.y, "width", options.width, "height", options.height, "layout", options.layout, "align", options.align, "padding", options.padding, "gap", options.gap, "color", options.color, "radius", options.radius, "shadow", options.shadow, "border", options.border, "glass", options.glass, "appear", options.appear, "visible", options.visible, "children", options.children);
 }
-func Row(string id = "", float gap = -1, string align = "start", float height = 0, float padding = 0, int color = -2, bool visible = true, children = list()) {
-  return list("kind", "row", "id", id, "gap", gap, "align", align, "height", height, "padding", padding, "color", color, "shadow", false, "border", false, "visible", visible, "children", children);
+export def RowOptions { string id = ""; float gap = -1; string align = "start"; float height = 0; float padding = 0; number color = -2; bool visible = true; any children = list(); }
+export any Row(RowOptions options) {
+  return list("kind", "row", "id", options.id, "gap", options.gap, "align", options.align, "height", options.height, "padding", options.padding, "color", options.color, "shadow", false, "border", false, "visible", options.visible, "children", options.children);
 }
-func Column(string id = "", float gap = -1, string align = "stretch", float width = 0, float padding = 0, int color = -2, bool visible = true, children = list()) {
-  return list("kind", "column", "id", id, "gap", gap, "align", align, "width", width, "padding", padding, "color", color, "shadow", false, "border", false, "visible", visible, "children", children);
+export def ColumnOptions { string id = ""; float gap = -1; string align = "stretch"; float width = 0; float padding = 0; number color = -2; bool visible = true; any children = list(); }
+export any Column(ColumnOptions options) {
+  return list("kind", "column", "id", options.id, "gap", options.gap, "align", options.align, "width", options.width, "padding", options.padding, "color", options.color, "shadow", false, "border", false, "visible", options.visible, "children", options.children);
 }
-func Text(string text = "", float size = 0, int color = -1, bool bold = false, bool muted = false, string align = "left", string id = "", string anchor = "", float x = 0, float y = 0, string appear = "", bool visible = true) {
-  return list("kind", "text", "text", text, "size", size, "color", color, "bold", bold, "muted", muted, "align", align, "id", id, "anchor", anchor, "x", x, "y", y, "appear", appear, "visible", visible);
+export def TextOptions { string text = ""; float size = 0; number color = -1; bool bold = false; bool muted = false; string align = "left"; string id = ""; string anchor = ""; float x = 0; float y = 0; string appear = ""; bool visible = true; }
+export any Text(TextOptions options) {
+  return list("kind", "text", "text", options.text, "size", options.size, "color", options.color, "bold", options.bold, "muted", options.muted, "align", options.align, "id", options.id, "anchor", options.anchor, "x", options.x, "y", options.y, "appear", options.appear, "visible", options.visible);
 }
-func Button(string id = "", string text = "Button", string style = "normal", int color = -1, float width = 0, float height = 0, bool grow = false, string anchor = "", float x = 0, float y = 0, string appear = "", bool visible = true) {
-  return list("kind", "button", "id", id, "text", text, "style", style, "color", color, "width", width, "height", height, "grow", grow, "anchor", anchor, "x", x, "y", y, "appear", appear, "visible", visible);
+export def ButtonOptions { string id = ""; string text = "Button"; string style = "normal"; number color = -1; float width = 0; float height = 0; bool grow = false; string anchor = ""; float x = 0; float y = 0; string appear = ""; bool visible = true; }
+export any Button(ButtonOptions options) {
+  return list("kind", "button", "id", options.id, "text", options.text, "style", options.style, "color", options.color, "width", options.width, "height", options.height, "grow", options.grow, "anchor", options.anchor, "x", options.x, "y", options.y, "appear", options.appear, "visible", options.visible);
 }
-func Toggle(string id = "", string text = "", bool value = false, bool visible = true) {
-  return list("kind", "toggle", "id", id, "text", text, "value", value, "visible", visible);
+export def ToggleOptions { string id = ""; string text = ""; bool value = false; bool visible = true; }
+export any Toggle(ToggleOptions options) {
+  return list("kind", "toggle", "id", options.id, "text", options.text, "value", options.value, "visible", options.visible);
 }
-func Checkbox(string id = "", string text = "", bool value = false, bool visible = true) {
-  return list("kind", "checkbox", "id", id, "text", text, "value", value, "visible", visible);
+export def CheckboxOptions { string id = ""; string text = ""; bool value = false; bool visible = true; }
+export any Checkbox(CheckboxOptions options) {
+  return list("kind", "checkbox", "id", options.id, "text", options.text, "value", options.value, "visible", options.visible);
 }
-func Slider(string id = "", string text = "", float min = 0, float max = 100, float value = 0, float step = 0, float width = 0, bool visible = true) {
-  return list("kind", "slider", "id", id, "text", text, "min", min, "max", max, "value", value, "step", step, "width", width, "visible", visible);
+export def SliderOptions { string id = ""; string text = ""; float min = 0; float max = 100; float value = 0; float step = 0; float width = 0; bool visible = true; }
+export any Slider(SliderOptions options) {
+  return list("kind", "slider", "id", options.id, "text", options.text, "min", options.min, "max", options.max, "value", options.value, "step", options.step, "width", options.width, "visible", options.visible);
 }
-func TextBox(string id = "", string text = "", string placeholder = "", string value = "", float width = 0, bool visible = true) {
-  return list("kind", "textbox", "id", id, "text", text, "placeholder", placeholder, "value", value, "width", width, "visible", visible);
+export def TextBoxOptions { string id = ""; string text = ""; string placeholder = ""; string value = ""; float width = 0; bool visible = true; }
+export any TextBox(TextBoxOptions options) {
+  return list("kind", "textbox", "id", options.id, "text", options.text, "placeholder", options.placeholder, "value", options.value, "width", options.width, "visible", options.visible);
 }
-func Choice(string id = "", string text = "", string options = "A|B", int value = 0, float width = 0, bool visible = true) {
-  return list("kind", "choice", "id", id, "text", text, "options", options, "value", value, "width", width, "visible", visible);
+export def ChoiceOptions { string id = ""; string text = ""; string options = "A|B"; number value = 0; float width = 0; bool visible = true; }
+export any Choice(ChoiceOptions options) {
+  return list("kind", "choice", "id", options.id, "text", options.text, "options", options.options, "value", options.value, "width", options.width, "visible", options.visible);
 }
-func Progress(string text = "", float value = 0, int color = -1, float width = 0, string id = "", bool visible = true) {
-  return list("kind", "progress", "text", text, "value", value, "color", color, "width", width, "id", id, "visible", visible);
+export def ProgressOptions { string text = ""; float value = 0; number color = -1; float width = 0; string id = ""; bool visible = true; }
+export any Progress(ProgressOptions options) {
+  return list("kind", "progress", "text", options.text, "value", options.value, "color", options.color, "width", options.width, "id", options.id, "visible", options.visible);
 }
-func Image(string path = "", int image = 0, float width = 0, float height = 0, string anchor = "", float x = 0, float y = 0, string id = "", bool visible = true) {
-  return list("kind", "image", "path", path, "image", image, "width", width, "height", height, "anchor", anchor, "x", x, "y", y, "id", id, "visible", visible);
+export def ImageOptions { string path = ""; number image = 0; float width = 0; float height = 0; string anchor = ""; float x = 0; float y = 0; string id = ""; bool visible = true; }
+export any Image(ImageOptions options) {
+  return list("kind", "image", "path", options.path, "image", options.image, "width", options.width, "height", options.height, "anchor", options.anchor, "x", options.x, "y", options.y, "id", options.id, "visible", options.visible);
 }
-func Spacer(float size = 12) {
-  return list("kind", "spacer", "size", size);
+export def SpacerOptions { float size = 12; }
+export any Spacer(SpacerOptions options) {
+  return list("kind", "spacer", "size", options.size);
 }
-func Divider() {
+export any Divider() {
   return list("kind", "divider");
 }
 
-func Render(root) { gui::Render(root); }
-func Clicked(string id) -> bool { return gui::Query(id, 0); }
-func Changed(string id) -> bool { return gui::Query(id, 1); }
-func Hovered(string id) -> bool { return gui::Query(id, 2); }
-func Pressed(string id) -> bool { return gui::Query(id, 3); }
-func Focused(string id) -> bool { return gui::Query(id, 4); }
-func Events() { return gui::Events(); }
-func Value(string id) -> float { return gui::Get(id, 0); }
-func IsOn(string id) -> bool { return gui::Get(id, 1); }
-func GetText(string id) -> string { return gui::Get(id, 2); }
-func Selected(string id) -> int { return gui::Get(id, 3); }
-func SetValue(string id, float value) { gui::Set(id, 0, value); }
-func SetOn(string id, bool on) { gui::Set(id, 1, on); }
-func SetText(string id, string text) { gui::Set(id, 2, text); }
-func SetSelected(string id, int index) { gui::Set(id, 3, index); }
+export void Render(any root) { gui::Render(root); }
+export bool Clicked(string id) { return gui::Query(id, 0); }
+export bool Changed(string id) { return gui::Query(id, 1); }
+export bool Hovered(string id) { return gui::Query(id, 2); }
+export bool Pressed(string id) { return gui::Query(id, 3); }
+export bool Focused(string id) { return gui::Query(id, 4); }
+export any Events() { return gui::Events(); }
+export float Value(string id) { return gui::Get(id, 0); }
+export bool IsOn(string id) { return gui::Get(id, 1); }
+export string GetText(string id) { return gui::Get(id, 2); }
+export number Selected(string id) { return gui::Get(id, 3); }
+export void SetValue(string id, float value) { gui::Set(id, 0, value); }
+export void SetOn(string id, bool on) { gui::Set(id, 1, on); }
+export void SetText(string id, string text) { gui::Set(id, 2, text); }
+export void SetSelected(string id, number index) { gui::Set(id, 3, index); }
 )clp";
 
 }  // namespace
+
+void reset_gui() { g_gui = Gui{}; }
 
 void add_gui(std::vector<Entry>& table) {
   table.insert(table.end(), {

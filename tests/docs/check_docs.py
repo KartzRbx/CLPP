@@ -1,21 +1,4 @@
-"""Every code example in the documentation is a test.
-
-Rules for code fences in docs/**/*.md:
-
-  ```clp                 -> must compile and run without errors
-  ```clp                 followed right away by an ```output fence -> stdout must match it exactly
-  ```clp error           followed by ```output -> must fail; the first error message must contain that text
-  ```clp file=name.clp   -> written to the example folder (for `link "./name.clp"`), not run
-  ```clp fragment        -> shown for reading only (not run)
-
-The Portuguese markers of the first version of the guide (saida, erro, arquivo=, trecho) are
-still accepted.
-
-Programs run with CLPP_HEADLESS=3, so examples that open a window (Window.Open) run three frames
-off screen and exit instead of waiting for someone to close the window.
-
-Usage: python tests/docs/check_docs.py <clpp> [docs folder]
-"""
+"Every code example in the documentation is a test.\n\nRules for code fences in docs<<[]>>*.md:\n\n  ```clp                 -> must compile and run without errors\n  ```clp                 followed right away by an ```output fence -> stdout must match it exactly\n  ```clp error           followed by ```output -> must fail; the first error message must contain that text\n  ```clp file=name.clp   -> written to the example folder (for `link \"./name.clp\"`), not run\n  ```clp fragment        -> incomplete excerpt for reading only (not run)\n  ```clp target          -> author-defined syntax awaiting compiler work (counted separately, not run)\n\nThe Portuguese markers of the first version of the guide (saida, erro, arquivo=, trecho) are\nstill accepted.\n\nPrograms run with CLPP_HEADLESS=3, so examples that open a window (Window.Open) run three frames\noff screen and exit instead of waiting for someone to close the window.\n\nUsage: python tests/docs/check_docs.py <clpp> [docs folder]\n"
 import os
 import re
 import subprocess
@@ -44,9 +27,13 @@ def main():
     # Enough frames that a simulated press-and-release (down, render, up, render) completes in a
     # windowed example; examples that just draw a frame and exit are unaffected.
     environment = dict(os.environ, CLPP_HEADLESS="8")
-    failures = checked = 0
-    for folder, _, files in os.walk(root):
-        for name in sorted(files):
+    failures = checked = target_skipped = 0
+    folders = [(folder, sorted(files)) for folder, _, files in os.walk(root)]
+    canonical_docs = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "docs"))
+    if os.path.abspath(root) == canonical_docs:
+        folders.append((os.path.dirname(canonical_docs), ["README.md"]))
+    for folder, files in folders:
+        for name in files:
             if not name.endswith(".md"):
                 continue
             path = os.path.join(folder, name)
@@ -59,6 +46,9 @@ def main():
                     if not words or words[0] != "clp":
                         continue
                     options = words[1:]
+                    if "target" in options:
+                        target_skipped += 1
+                        continue
                     target = next((o.split("=", 1)[1] for o in options if o.startswith(("file=", "arquivo="))), None)
                     if target:
                         with open(os.path.join(work, target), "w", encoding="utf-8", newline="\n") as f:
@@ -85,7 +75,7 @@ def main():
                     if not ok:
                         failures += 1
                         print(f"FAIL {where}\n  expected:\n{expected}\n  got:\n{detail}\n")
-    print(f"{checked} examples checked, {failures} failure(s)")
+    print(f"{checked} executable examples checked, {failures} failure(s); {target_skipped} target-specification blocks excluded (not compiler tests)")
     sys.exit(1 if failures else 0)
 
 

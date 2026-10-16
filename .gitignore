@@ -30,6 +30,8 @@ install_manifest.txt
 compile_commands.json
 
 # Testing
+__pycache__/
+*.pyc
 Testing/
 
 # OS
@@ -49,3 +51,5 @@ www/sidebar.js
 # Generated deploy and release artifacts
 .deploy-gh-pages/
 release-artifacts/
+
+www/src/content/docs/handbook/

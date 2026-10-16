@@ -1,14 +1,14 @@
-struct Point {
-  int x;
-  int y;
+def Point {
+  number x;
+  number y;
 }
 
-enum Color {
+enum class Color {
   Red,
   Green,
   Blue
 }
 
-Point p = Point(3, 4);
+Point p = Point { x = 3, y = 4 };
 post(p.x + p.y);
-post(Color.Green);
+post(Color::Green);

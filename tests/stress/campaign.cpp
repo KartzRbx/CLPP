@@ -105,15 +105,15 @@ Tally lex_phase(const int count) {
     if (kind == 0) {
       source = "post(" + nstr(i % 1000) + " + 2);\n";
     } else if (kind == 1) {
-      source = "<< sim " + nstr(i) + "\nlet mut x = " + nstr(i % 50) + ";\n";
+      source = "<< sim " + nstr(i) + "\nauto x = " + nstr(i % 50) + ";\n";
     } else if (kind == 2) {
-      source = "func add(int a, int b) { return a + b; }\n";
+      source = "number add(number a, number b) { return a + b; }\n";
     } else if (kind == 3) {
       source = "\"unterminated";
     } else if (kind == 4) {
       source = std::string("a\r\nb\0c", 6);
     } else {
-      source = "<<[ block " + nstr(i % 3) + " ]>>\npost(1);\n";
+      source = "<<[ block " + nstr(i % 3) + " */\npost(1);\n";
     }
     clpp::Lexer lexer(source);
     const clpp::LexResult result = lexer.tokenize();
@@ -151,19 +151,19 @@ Tally conform_phase(Runner& runner, const int count) {
         ok = runner.output_is("post(" + nstr(n) + " + 2 * 3);\n", nstr(n + 6) + "\n");
         break;
       case 1:
-        ok = runner.output_is("let mut x = " + nstr(n) + ";\nx = x + 1;\npost(x);\n", nstr(n + 1) + "\n");
+        ok = runner.output_is("auto x = " + nstr(n) + ";\nx = x + 1;\npost(x);\n", nstr(n + 1) + "\n");
         break;
       case 2:
-        ok = runner.output_is("let mut s = 0;\nfor (let i in " + nstr(limit) + ") { s = s + i; }\npost(s);\n",
+        ok = runner.output_is("auto s = 0;\nfor (auto i in " + nstr(limit) + ") { s = s + i; }\npost(s);\n",
                               nstr(sum) + "\n");
         break;
       case 3:
-        ok = runner.output_is("let mut s = 0;\nlet mut i = 0;\nwhile (i < " + nstr(limit) +
+        ok = runner.output_is("auto s = 0;\nauto i = 0;\nwhile (i < " + nstr(limit) +
                                   ") { s = s + i;\ni = i + 1; }\npost(s);\n",
                               nstr(sum) + "\n");
         break;
       case 4:
-        ok = runner.output_is("func add(int a, int b) { return a + b; }\npost(add(" + nstr(n) + ", 1));\n",
+        ok = runner.output_is("number add(number a, number b) { return a + b; }\npost(add(" + nstr(n) + ", 1));\n",
                               nstr(n + 1) + "\n");
         break;
       case 5:
@@ -173,23 +173,23 @@ Tally conform_phase(Runner& runner, const int count) {
         ok = runner.output_is("post(\"AZ\"[" + nstr(n % 2) + "]);\n", n % 2 == 0 ? "65\n" : "90\n");
         break;
       case 7:
-        ok = runner.output_is("constexpr x = " + nstr(n) + " + 2;\npost(x);\n", nstr(n + 2) + "\n");
+        ok = runner.output_is("constexpr number x = " + nstr(n) + " + 2;\npost(x);\n", nstr(n + 2) + "\n");
         break;
       case 8:
         ok = runner.output_is("post(\"v\" .: " + nstr(n) + ");\n", "v" + nstr(n) + "\n");
         break;
       case 9:
-        ok = runner.output_is("struct Box { int n; }\nBox b = Box(" + nstr(n) + ");\npost(b.n);\n", nstr(n) + "\n");
+        ok = runner.output_is("def Box { number n; }\nBox b = Box { n = " + nstr(n) + " };\npost(b.n);\n", nstr(n) + "\n");
         break;
       case 10:
         ok = runner.output_is(
-            "struct Animal { int age; }\nstruct Dog : Animal { int bones; }\nDog pet = Dog(" + nstr(n) + ", " +
-                nstr(n % 5) + ");\npost(pet.age);\npost(pet.bones);\n",
+            "def Animal { number age; }\ndef Dog : Animal { number bones; }\nDog pet = Dog { age = " + nstr(n) + ", bones = " +
+                nstr(n % 5) + " };\npost(pet.age);\npost(pet.bones);\n",
             nstr(n) + "\n" + nstr(n % 5) + "\n");
         break;
       default:
-        ok = runner.output_is("observable int coins = " + nstr(n) +
-                                  ";\ncoins.OnChange(func (int v) { post(v); });\ncoins = " + nstr(n + 1) + ";\n",
+        ok = runner.output_is("observable number coins = " + nstr(n) +
+                                  ";\ncoins.OnChange(func (number v) -> void { post(v); });\ncoins = " + nstr(n + 1) + ";\n",
                               nstr(n + 1) + "\n");
         break;
     }
@@ -209,28 +209,28 @@ Tally error_phase(Runner& runner, const int count) {
     bool ok = false;
     switch (i % 8) {
       case 0:
-        ok = runner.rejects("let x = 1;\nlet x = 2;\n");
+        ok = runner.rejects("const auto x = 1;\nconst auto x = 2;\n");
         break;
       case 1:
-        ok = runner.rejects("let x = 1;\nx = 2;\n");
+        ok = runner.rejects("const auto x = 1;\nx = 2;\n");
         break;
       case 2:
         ok = runner.rejects("post(missing());\n");
         break;
       case 3:
-        ok = runner.rejects("int x = \"hi\";\n");
+        ok = runner.rejects("number x = \"hi\";\n");
         break;
       case 4:
-        ok = runner.rejects("let a =\npost(1);\n");
+        ok = runner.rejects("const auto a =\npost(1);\n");
         break;
       case 5:
-        ok = runner.rejects("struct D : B, C { int n; }\n");
+        ok = runner.rejects("def D : B, C { number n; }\n");
         break;
       case 6:
-        ok = runner.rejects("<<!strict\nfunc f(x) { return x; }\n");
+        ok = runner.rejects("pragma strict;\nnumber f(x) { return x; }\n");
         break;
       default:
-        ok = runner.rejects("<<!strict\ntype State = \"Idle\" | \"Running\";\nlet state: State = \"Dead\";\n");
+        ok = runner.rejects("pragma strict;\ndef State = \"Idle\" | \"Running\";\nconst State state = \"Dead\";\n");
         break;
     }
     ++tally.ran;
@@ -255,7 +255,7 @@ Tally fuzz_phase(Runner& runner, const int count) {
       source.push_back(static_cast<char>(32 + ((i / 3) % 90)));
       source += " \xff\npost(" + nstr(i % 20) + ");\n";
     } else if (i % 3 == 1) {
-      source = "let a =\n#\nint x = " + nstr(i % 9) + ";\npost(x);\n";
+      source = "const auto a =\n#\nnumber x = " + nstr(i % 9) + ";\npost(x);\n";
     } else {
       source = "post(\"open\npost(1);\n";
     }
@@ -272,7 +272,7 @@ Tally ide_phase(const int count) {
   Tally tally{"ide"};
   const auto start = std::chrono::steady_clock::now();
   for (int i = 0; i < count; ++i) {
-    const std::string source = "let score = " + nstr(i % 100) + ";\npost(score);\n";
+    const std::string source = "const auto score = " + nstr(i % 100) + ";\npost(score);\n";
     const clpp::ide::Info info = clpp::ide::inspect(source, 1, 6);
     bool ok = true;
     for (const clpp::Diagnostic& diagnostic : info.diagnostics) {
@@ -298,19 +298,19 @@ Tally runtime_phase(Runner& runner, const int count) {
     const int kind = i % 20;
     if (kind == 0) {
       ok = runner.output_is(
-          "func step() {\n  coroutine.yield(1);\n  return 2;\n}\nlet co = coroutine.create(step);\n"
+          "number step() {\n  coroutine.yield(1);\n  return 2;\n}\nconst auto co = coroutine.create(step);\n"
           "post(coroutine.resume(co));\npost(coroutine.resume(co));\n",
           "1\n2\n");
     } else if (kind == 1) {
-      ok = runner.output_is("func twice(int n) { return n + n; }\npost(actor(twice, " + nstr(i % 30) + "));\n",
+      ok = runner.output_is("number twice(number n) { return n + n; }\npost(actor(twice, " + nstr(i % 30) + "));\n",
                             nstr((i % 30) * 2) + "\n");
     } else if (kind == 2) {
       ok = runner.output_is("post(pcall(1 / " + nstr(i % 2) + "));\n", i % 2 == 0 ? "0\n" : "1\n");
     } else if (kind == 3) {
-      ok = runner.output_is("@coins = " + nstr(i % 15) + ";\n@this.coins = @coins + 5;\npost(@coins);\n",
+      ok = runner.output_is("number coins = " + nstr(i % 15) + ";\ncoins = coins + 5;\npost(coins);\n",
                             nstr((i % 15) + 5) + "\n");
     } else if (kind == 4) {
-      const clpp::CompileResult compiled = clpp::Compiler{}.compile("func dive() { dive(); }\ndive();\n");
+      const clpp::CompileResult compiled = clpp::Compiler{}.compile("void dive() { dive(); }\ndive();\n");
       if (!compiled.ok()) {
         ok = false;
       } else {
@@ -322,7 +322,7 @@ Tally runtime_phase(Runner& runner, const int count) {
       }
     } else {
       ok = runner.output_is(
-          "extern func strlen(string s);\nlet v = list(3, 1, 2);\nlet s = sort(v);\npost(s[0]);\npost(strlen(\"CL++\"));\n",
+          "extern number strlen(string s);\nconst auto v = list(3, 1, 2);\nconst auto s = sort(v);\npost(s[0]);\npost(strlen(\"CL++\"));\n",
           "1\n4\n");
     }
     ++tally.ran;
@@ -372,12 +372,12 @@ Tally axiom_phase(Runner& runner) {
   const auto start = std::chrono::steady_clock::now();
   const std::string source =
       "link @clpp.Axion as Axiom;\n"
-      "let mut i = 0;\n"
-      "let mut bad = 0;\n"
-      "let mut sum = 0;\n"
+      "auto i = 0;\n"
+      "auto bad = 0;\n"
+      "auto sum = 0;\n"
       "while (i < 150000) {\n"
-      "  let mut x = i % 100;\n"
-      "  let mut c = Axiom.Clamp(x, 0, 10);\n"
+      "  auto x = i % 100;\n"
+      "  auto c = Axiom.Clamp(x, 0, 10);\n"
       "  sum = sum + c;\n"
       "  if (x <= 10) { if (c != x) { bad = bad + 1; } }\n"
       "  if (x > 10) { if (c != 10) { bad = bad + 1; } }\n"
@@ -433,7 +433,7 @@ Bench bench_run(const int count) {
 }
 
 Bench bench_axiom(const int iters) {
-  const std::string source = "link @clpp.Axion as Axiom;\nlet mut i = 0;\nlet mut s = 0;\nwhile (i < " + nstr(iters) +
+  const std::string source = "link @clpp.Axion as Axiom;\nauto i = 0;\nauto s = 0;\nwhile (i < " + nstr(iters) +
                              ") {\n  s = s + Axiom.Clamp(i % 20, 0, 10);\n  i = i + 1;\n}\npost(s);\n";
   const clpp::CompileResult compiled = clpp::Compiler{}.compile(source);
   if (!compiled.ok()) {

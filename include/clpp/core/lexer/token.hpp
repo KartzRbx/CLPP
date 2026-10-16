@@ -10,6 +10,8 @@ namespace clpp {
 struct SourceLocation {
   std::uint32_t line{1};
   std::uint32_t column{1};
+  // Index into the analyzed/chunk source file table; zero is the entry source.
+  std::uint32_t source{0};
 };
 
 enum class TokenType {
@@ -27,9 +29,8 @@ enum class TokenType {
 
   // Types & values
   KwVoid,
-  KwInt,
+  KwNumber,
   KwFloat,
-  KwDouble,
   KwString,
   KwBool,
   KwAuto,
@@ -40,16 +41,19 @@ enum class TokenType {
   KwFalse,
 
   // Declarations
+  KwTemplate,
+  KwTypename,
+  KwDef,
+  KwExport,
   KwStruct,
   KwConst,
   KwStatic,
+  KwStaticCast,
   KwConstexpr,
   KwNew,
   KwLink,
   KwAs,
   KwFrom,
-  KwLet,
-  KwMut,
   KwJoin,
   KwThread,
   KwAtomic,
@@ -60,14 +64,17 @@ enum class TokenType {
   KwImport,
   KwUsing,
   KwEnum,
+  KwClass,
   KwExtern,
   KwAbstract,
   KwOverride,
+  KwPragma,
   KwPrivate,
 
   // Control flow
   KwIf,
   KwElse,
+  KwDo,
   KwWhile,
   KwFor,
   KwIn,
@@ -169,11 +176,9 @@ enum class TokenType {
   Ampersand,
   Caret,
   BitNot,
-  Mode,
 
   SignalConnect,
 
-  DocComment,
 };
 
 struct Token {
@@ -188,6 +193,13 @@ struct Diagnostic {
   std::string_view span;
   // Owned, so a diagnostic stays readable after the analysis that produced it is gone.
   std::string message;
+  std::string expected_type{};
+  std::string actual_type{};
+
+  [[nodiscard]] std::string formatted_message() const {
+    if (expected_type.empty() || actual_type.empty()) return message;
+    return message + ": expected " + expected_type + ", received " + actual_type;
+  }
 };
 
 struct LexResult {

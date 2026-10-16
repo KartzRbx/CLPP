@@ -11,7 +11,7 @@ int main() {
   int failures = 0;
   const auto modules = [](const std::string_view path) -> std::optional<std::string> {
     if (path == "./math.clp") {
-      return std::string("func add(a, b) { return a + b; }\n");
+      return std::string("export number add(number a, number b) { return a + b; }\n");
     }
     return std::nullopt;
   };

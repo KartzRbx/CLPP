@@ -16,15 +16,19 @@ const std::vector<ModuleEntry>& module_catalog() {
       {"@clpp.input", "Input", "Desktop automation (AutoHotkey style): move/click mouse, press keys, hotkeys, type text, read screen"},
       {"@clpp.io", "Io", "Console: Print without newline, ReadLine, ReadKey, ReadNumber, colors, cursor, Clear"},
       {"@clpp.text", "Text", "Text: trim, lower, upper, contains, split, replace, startsWith, endsWith, repeat, toNumber, indexOf, joinAll"},
-      {"@clpp.fs", "Fs", "Files: read, write, append, exists, remove, list, makeDir, size"},
+      {"@clpp.fs", "Fs", "Files: bounded text/bytes, atomic writes, metadata, directories and legacy text I/O"},
       {"@clpp.math", "Math", "Basic math: abs"},
       {"@clpp.os", "Os", "Process: env"},
+      {"@clpp.process", "Process", "Child processes: Run, streams, timeout, environment, status and ExecutablePath"},
+      {"@clpp.path", "Path", "Paths: current/temp directory, lexical operations, Canonical and Equivalent"},
       {"@clpp.http", "Http", "URLs: host"},
   };
   return catalog;
 }
 
 std::optional<std::string> module_source(const std::string_view path) {
+  if (path == "@clpp.process") return std::string(host::process_source());
+  if (path == "@clpp.path") return std::string(host::path_source());
   if (path == "@clpp.axiom" || path == "@clpp.Axion" || path == "@clpp.libs.axiom" || path == "@clpp.libs.Axion" ||
       path == "@clpp.mathutils") {
     return std::string(axiom_source());
@@ -61,7 +65,7 @@ std::optional<std::string> module_source(const std::string_view path) {
   }
   if (path == "@clpp.math") {
     return std::string(
-        "func abs(n) {\n"
+        "export any abs(any n) {\n"
         "  if (n < 0) {\n"
         "    return 0 - n;\n"
         "  }\n"
@@ -70,28 +74,28 @@ std::optional<std::string> module_source(const std::string_view path) {
   }
   if (path == "@clpp.text") {
     return std::string(
-        "func trim(string text) -> string { return string::trim(text); }\n"
-        "func lower(string text) -> string { return string::lower(text); }\n"
-        "func upper(string text) -> string { return string::upper(text); }\n"
-        "func contains(string text, string part) -> bool { return string::contains(text, part); }\n"
-        "func split(string text, string separator) { return string::split(text, separator); }\n"
-        "func replace(string text, string target, string replacement) -> string { return string::replace(text, target, replacement); }\n"
-        "func startsWith(string text, string part) -> bool { return string::starts_with(text, part); }\n"
-        "func endsWith(string text, string part) -> bool { return string::ends_with(text, part); }\n"
-        "func repeat(string text, int count) -> string { return string::repeat(text, count); }\n"
-        "func toNumber(string text) -> float { return string::to_number(text); }\n"
-        "func indexOf(string text, string part) -> int { return string::index_of(text, part); }\n"
-        "func joinAll(parts, string separator) -> string { return string::join_list(parts, separator); }\n");
+        "export string trim(string text) { return string::trim(text); }\n"
+        "export string lower(string text) { return string::lower(text); }\n"
+        "export string upper(string text) { return string::upper(text); }\n"
+        "export bool contains(string text, string part) { return string::contains(text, part); }\n"
+        "export array<string> split(string text, string separator) { return string::split(text, separator); }\n"
+        "export string replace(string text, string target, string replacement) { return string::replace(text, target, replacement); }\n"
+        "export bool startsWith(string text, string part) { return string::starts_with(text, part); }\n"
+        "export bool endsWith(string text, string part) { return string::ends_with(text, part); }\n"
+        "export string repeat(string text, number count) { return string::repeat(text, count); }\n"
+        "export float toNumber(string text) { return string::to_number(text); }\n"
+        "export number indexOf(string text, string part) { return string::index_of(text, part); }\n"
+        "export string joinAll(array<string> parts, string separator) { return string::join_list(parts, separator); }\n");
   }
   if (path == "@clpp.os") {
     return std::string(
-        "func env(string name) -> string {\n"
+        "export string env(string name) {\n"
         "  return os::env(name);\n"
         "}\n");
   }
   if (path == "@clpp.http") {
     return std::string(
-        "func host(string url) -> string {\n"
+        "export string host(string url) {\n"
         "  return http::host(url);\n"
         "}\n");
   }

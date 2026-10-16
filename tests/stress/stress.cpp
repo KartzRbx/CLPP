@@ -78,14 +78,14 @@ int main() {
     const int b = (i / 251) % 251;
     const int c = (i / (251 * 251)) % 17;
     const int value = (a + b) * (c + 1);
-    expect_output("let a = " + std::to_string(a) + ";\nlet b = " + std::to_string(b) +
-                      ";\nlet c = " + std::to_string(c) + ";\npost((a + b) * (c + 1));\n",
+    expect_output("const auto a = " + std::to_string(a) + ";\nconst auto b = " + std::to_string(b) +
+                      ";\nconst auto c = " + std::to_string(c) + ";\npost((a + b) * (c + 1));\n",
                   std::to_string(value) + "\n");
   }
 
   for (int i = 0; i < 100000; ++i) {
     const int value = i % 10000;
-    expect_output("let x = " + std::to_string(value) + ";\npost(x);\n", std::to_string(value) + "\n");
+    expect_output("const auto x = " + std::to_string(value) + ";\npost(x);\n", std::to_string(value) + "\n");
   }
 
   for (int i = 0; i < 100000; ++i) {
@@ -97,7 +97,7 @@ int main() {
   for (int i = 0; i < 50000; ++i) {
     const int limit = (i % 15) + 1;
     const int sum = limit * (limit + 1) / 2;
-    expect_output("let mut total = 0;\nlet mut i = 1;\nwhile (i <= " + std::to_string(limit) +
+    expect_output("auto total = 0;\nauto i = 1;\nwhile (i <= " + std::to_string(limit) +
                       ") {\n  total = total + i;\n  i = i + 1;\n}\npost(total);\n",
                   std::to_string(sum) + "\n");
   }

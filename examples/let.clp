@@ -1,2 +1,2 @@
-let x = 1 + 2;
+const auto x = 1 + 2;
 post(x);

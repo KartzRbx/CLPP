@@ -72,6 +72,7 @@ def main():
     os.makedirs(os.path.dirname(out), exist_ok=True)
     entries = [(os.path.join(HERE, name), "extension/" + name) for name in FILES]
     entries.append((os.path.join(ROOT, "LICENSE"), "extension/LICENSE.txt"))
+    entries.append((os.path.join(ROOT, "THIRD_PARTY_NOTICES.txt"), "extension/THIRD_PARTY_NOTICES.txt"))
     if args.exe:
         entries.append((args.exe, "extension/bin/win32-x64/clpp-vm.exe"))
     types = sorted({os.path.splitext(target)[1] for _, target in entries} | {".vsixmanifest"})

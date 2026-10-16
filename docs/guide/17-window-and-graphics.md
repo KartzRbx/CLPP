@@ -8,6 +8,8 @@ canvas still works and `Window.Frame()` returns `false` after `CLPP_HEADLESS` fr
 
 ## The frame loop
 
+Native resources belong to the current program execution. On completion, including an unhandled error, the VM waits for its workers, closes the window and releases the canvas, loaded/captured images, image cache, font/glyph resources and interface state. A later execution starts fresh; native numeric handles are valid only within the execution that created them. This does not add block-scope destructors. Embedders running independent root VMs in one process serialize these executions because the native drawing/audio backend is shared; callbacks and workers within an execution retain access until completion.
+
 A program owns its loop. `Window.Open` creates the window and `Window.Frame()` shows the last
 frame, waits for the frame rate and reads input; it returns `false` when the window is closed.
 
@@ -24,11 +26,11 @@ while (Window.Frame()) {
 ```
 
 Run it and a window appears; press its close button (or Alt+F4) to end the loop. The same file
-run with `CLPP_HEADLESS=1 clpp hello.clp` draws one frame off screen and exits.
+run with `CLPP_HEADLESS=1 clpp-vm hello.clp` draws one frame off screen and exits.
 
 ## Drawing
 
-Every shape takes a color as an `int` in the form `0xRRGGBB`. The top byte is **transparency**
+Every shape takes a color as an `number` in the form `0xRRGGBB`. The top byte is **transparency**
 (`0` opaque, `255` invisible), so a plain hex literal is an opaque color and `Gfx.Fade` /
 `Gfx.Rgba` make translucent ones.
 
@@ -37,10 +39,13 @@ Every shape takes a color as an `int` in the form `0xRRGGBB`. The top byte is **
 | `Gfx.Clear(color)` | fills the whole canvas |
 | `Gfx.Rect(x, y, w, h, color)` | a filled rectangle |
 | `Gfx.RoundRect(x, y, w, h, radius, color)` | rounded rectangle |
-| `Gfx.RectLine(x, y, w, h, [thickness,] color)` | rectangle outline |
+| `Gfx.RectLine(x, y, w, h, color)` | rectangle outline with thickness 1 |
+| `Gfx.RectLineWithThickness(x, y, w, h, thickness, color)` | rectangle outline with explicit thickness |
 | `Gfx.Circle(x, y, radius, color)` | filled circle (anti-aliased) |
-| `Gfx.CircleLine(x, y, radius, [thickness,] color)` | circle outline |
-| `Gfx.Line(x1, y1, x2, y2, [thickness,] color)` | a line |
+| `Gfx.CircleLine(x, y, radius, color)` | circle outline with thickness 1 |
+| `Gfx.CircleLineWithThickness(x, y, radius, thickness, color)` | circle outline with explicit thickness |
+| `Gfx.Line(x1, y1, x2, y2, color)` | a line with thickness 1 |
+| `Gfx.LineWithThickness(x1, y1, x2, y2, thickness, color)` | a line with explicit thickness |
 | `Gfx.Triangle(x1, y1, x2, y2, x3, y3, color)` | filled triangle |
 | `Gfx.Gradient(x, y, w, h, top, bottom)` | vertical gradient (`GradientH` for horizontal) |
 | `Gfx.Text(text, x, y, size, color)` | text (`size` in pixels, `y` is the top) |
@@ -59,7 +64,7 @@ Gfx.Circle(230, 90, 45, Gfx.Fade(Gfx.ORANGE, 0.8));
 post(Gfx.Save("demo.png"));
 ```
 
-```saida
+```output
 true
 ```
 
@@ -76,7 +81,7 @@ post(Gfx.Red(0xFF8800) .: "," .: Gfx.Green(0xFF8800) .: "," .: Gfx.Blue(0xFF8800
 post(Gfx.Mix(0x000000, 0xFFFFFF, 0.5));
 ```
 
-```saida
+```output
 16746496
 16746496
 255,136,0
@@ -107,7 +112,7 @@ Gfx.Text("Retro 8-bit", 10, 20, 12, Gfx.GREEN);
 post(Gfx.TextWidth("Retro 8-bit", 12) > 0);
 ```
 
-```saida
+```output
 true
 ```
 
@@ -117,9 +122,9 @@ true
 and `Gfx.ImageScaled` draws it at a size. `Gfx.Capture(x, y, w, h)` snapshots part of the canvas
 into a new image.
 
-```clp trecho
+```clp fragment
 link @clpp.gfx as Gfx;
-let logo = Gfx.LoadImage("logo.png");
+number logo = Gfx.LoadImage("logo.png");
 Gfx.Image(logo, 20, 20);
 Gfx.ImageScaled(logo, 200, 20, 64, 64);
 ```
@@ -142,7 +147,7 @@ Gfx.Effect("vignette", 0.6);
 post(Gfx.Save("effects.png"));
 ```
 
-```saida
+```output
 true
 ```
 
@@ -165,11 +170,11 @@ it comes up.
 | `Window.Delta()` | seconds since the last frame (for frame-rate-independent motion) |
 | `Window.Time()` | seconds since `Window.Open` |
 
-```clp trecho
+```clp fragment
 link @clpp.window as Window;
 link @clpp.gfx as Gfx;
 Window.Open("Move the dot", 400, 300);
-let mut x = 200.0;
+float x = 200.0;
 while (Window.Frame()) {
   if (Window.KeyDown("Left")) { x -= 200 * Window.Delta(); }
   if (Window.KeyDown("Right")) { x += 200 * Window.Delta(); }
@@ -194,7 +199,7 @@ post(Window.MouseDown(Window.LEFT));
 post(Window.MouseX());
 ```
 
-```saida
+```output
 true
 100
 ```

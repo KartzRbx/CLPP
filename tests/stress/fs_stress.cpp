@@ -34,7 +34,7 @@ int main() {
     }
   }
   for (int i = 0; i < 200; ++i) {
-    const std::string source = "link @clpp.fs as Fs;\nint x = Fs.size(" + std::to_string(i) + ");\n";
+    const std::string source = "link @clpp.fs as Fs;\nnumber x = Fs.size(" + std::to_string(i) + ");\n";
     const clpp::CompileResult compiled = clpp::Compiler{}.compile(source);
     if (compiled.ok() || !compiled.chunk.code.empty()) {
       ++failures;

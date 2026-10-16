@@ -19,15 +19,15 @@ jobs:
           - name: Linux release + benchmarks
             os: ubuntu-24.04
             preset: release
-            test_preset: ""
+            test_preset: release
           - name: macOS Clang
             os: macos-14
-            preset: debug
-            test_preset: debug
+            preset: release
+            test_preset: release
           - name: Windows MSVC
             os: windows-2022
-            preset: debug
-            test_preset: debug
+            preset: release
+            test_preset: release
     steps:
       - uses: actions/checkout@v4
 
@@ -62,8 +62,81 @@ jobs:
         run: ctest --test-dir build/${{ matrix.preset }} --output-on-failure -j 2
 
       - name: Benchmarks
-        if: matrix.preset == 'release'
+        if: matrix.preset == 'release' && runner.os == 'Linux'
         run: python benchmarks/run.py build/release/src/clpp-vm --runs 5 --markdown >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Isolated CLI installation
+        if: matrix.preset == 'release'
+        run: python tests/distribution/test_install.py build/release
+
+      - name: Portable CLI archive
+        if: matrix.preset == 'release'
+        run: cpack --config build/release/CPackConfig.cmake -B build/distribution
+
+      - name: Release runtime asset
+        if: matrix.preset == 'release' && runner.os != 'Windows'
+        run: python tools/distribution/package_release.py build/${{ matrix.preset }} --out build/release-assets
+
+      - uses: actions/upload-artifact@v4
+        if: matrix.preset == 'release' && runner.os != 'Windows'
+        with:
+          name: vm-runtime-${{ runner.os }}-${{ runner.arch }}
+          path: build/release-assets/*
+
+      - name: Adversarial compiler inputs
+        run: python tests/stress/core_validation.py build/${{ matrix.preset }}/src/clpp-vm${{ runner.os == 'Windows' && '.exe' || '' }} --fuzz 250 --report build/${{ matrix.preset }}/core-audit.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: core-validation-${{ matrix.preset }}-${{ runner.os }}
+          path: |
+            build/${{ matrix.preset }}/core-audit.json
+            build/${{ matrix.preset }}/Testing/Temporary/LastTest.log
+
+  windows-sanitizers:
+    name: Windows LLVM ASan + UBSan
+    runs-on: windows-2022
+    env:
+      ASAN_OPTIONS: halt_on_error=1:detect_leaks=0
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Verified portable LLVM toolchain
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri 'https://github.com/mstorsjo/llvm-mingw/releases/download/20261006/llvm-mingw-20261006-ucrt-x86_64.zip' -OutFile llvm-mingw.zip
+          $digest = (Get-FileHash -LiteralPath llvm-mingw.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($digest -ne '317492c456aa27ee607a5919f1d2d38dcdc1112516a24d0bf4b00d078f52d17a') { throw 'LLVM archive digest mismatch' }
+          Expand-Archive -LiteralPath llvm-mingw.zip -DestinationPath toolchains
+          "$PWD/toolchains/llvm-mingw-20261006-ucrt-x86_64/bin" >> $env:GITHUB_PATH
+      - name: Configure
+        shell: pwsh
+        run: |
+          cmake -S . -B build/windows-sanitizers -G Ninja '-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/llvm-mingw-x86_64.cmake' "-DLLVM_MINGW=$PWD/toolchains/llvm-mingw-20261006-ucrt-x86_64" '-DCMAKE_BUILD_TYPE=Debug' '-DCMAKE_CXX_FLAGS_DEBUG=-O1 -gline-tables-only' -DCLPP_SANITIZE_ADDRESS=ON -DCLPP_SANITIZE_UNDEFINED=ON
+      - name: Build
+        run: cmake --build build/windows-sanitizers -j 2
+      - name: Editor installer regressions
+        run: |
+          npm ci --prefix tools/zed/grammar --ignore-scripts --no-audit --no-fund
+          node --test tests/zed/test_installer.cjs
+      - name: Test
+        run: ctest --test-dir build/windows-sanitizers --output-on-failure
+      - name: Mutated compiler inputs
+        run: python tests/stress/core_validation.py build/windows-sanitizers/src/clpp-vm.exe --fuzz 250 --report build/windows-sanitizers/core-audit.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-sanitizers-report
+          path: |
+            build/windows-sanitizers/core-audit.json
+            build/windows-sanitizers/Testing/Temporary/LastTest.log
 
   windows-package:
     name: Windows exe + VS Code extension
@@ -76,16 +149,40 @@ jobs:
           tar xf llvm-mingw.tar.xz
           echo "LLVM_MINGW=$PWD/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64" >> "$GITHUB_ENV"
           sudo apt-get update && sudo apt-get install -y ninja-build
-      - name: Cross-compile clpp-vm.exe
+      - name: Cross-compile clpp.exe
         run: |
           cmake -S . -B build-win -G Ninja -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/llvm-mingw-x86_64.cmake -DCLPP_BUILD_TESTS=OFF
           cmake --build build-win --target clpp
       - name: Package the extension
-        run: python3 tools/vscode/package_vsix.py --exe build-win/src/clpp-vm.exe
+        run: |
+          python3 tools/vscode/package_vsix.py --exe build-win/src/clpp-vm.exe
+          python3 tools/distribution/package_release.py build-win --platform windows-x64 --out dist
       - uses: actions/upload-artifact@v4
         with:
           name: clpp-vm-windows
           path: |
             build-win/src/clpp-vm.exe
             dist/*.vsix
+            dist/*.zip
+            dist/*.sha256
+
+  windows-install-check:
+    name: Extracted Windows package smoke test
+    needs: windows-package
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/download-artifact@v4
+        with:
+          name: clpp-vm-windows
+          path: package-artifacts
+      - name: Verify bundled executable without build-tool DLLs
+        shell: pwsh
+        run: |
+          $archive = (Get-ChildItem -LiteralPath package-artifacts -Filter '*.vsix' -Recurse | Select-Object -First 1).FullName
+          if (-not $archive) { throw 'VSIX artifact missing' }
+          python tests/vscode/test_package.py $archive

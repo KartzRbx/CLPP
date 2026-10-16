@@ -1,5 +1,5 @@
 << Recursão: os 10 primeiros números de Fibonacci
-func fib(n) {
+number fib(number n) {
     if (n < 2) {
         return n;
     }
@@ -7,9 +7,9 @@ func fib(n) {
 }
 
 void init(){
-    for (let mut i = 0; i < 10; i += 1) {
+    for (number i = 0; i < 10; i += 1) {
         post(fib(i));
-    }   
+    }
 }
 
 init();

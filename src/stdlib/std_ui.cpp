@@ -311,7 +311,7 @@ CLPP_NATIVE(ui_button_at) {  // (label, x, y, w, h)
 }
 
 CLPP_NATIVE(ui_checkbox) {  // (label, value, style: 0 checkbox | 1 switch) -> value
-  if (arity != 3 || !args[0].is_string()) {
+  if (arity != 3 || !args[0].is_string() || !args[1].is_boolean() || !args[2].is_number()) {
     return fail(error, "Ui.Checkbox: expected (string label, bool value)");
   }
   if (!ready(error)) {
@@ -319,7 +319,7 @@ CLPP_NATIVE(ui_checkbox) {  // (label, value, style: 0 checkbox | 1 switch) -> v
   }
   const std::string id = widget_id(args[0].text);
   const Box box = next_box(widget_height());
-  bool value = num(args[1]) != 0;
+  bool value = args[1].number != 0;
   if (clicked(id, box)) {
     value = !value;
   }
@@ -422,7 +422,7 @@ CLPP_NATIVE(ui_input) {  // (label, value, placeholder) -> value
 
 CLPP_NATIVE(ui_choice) {  // (label, "A|B|C", selected) -> selected
   if (arity != 3 || !args[0].is_string() || !args[1].is_string() || !args[2].is_number()) {
-    return fail(error, "Ui.Choice: expected (string label, string options \"A|B|C\", int selected)");
+    return fail(error, "Ui.Choice: expected (string label, string options \"A|B|C\", number selected)");
   }
   if (!ready(error)) {
     return false;
@@ -474,41 +474,48 @@ CLPP_NATIVE(ui_cursor) {  // (0 x | 1 y | 2 width) of the next widget slot
 constexpr std::string_view kUiSource = R"clp(<< @clpp.ui: immediate-mode widgets drawn with @clpp.gfx, driven by @clpp.window input.
 << Call the widgets every frame; each returns what the user did ("Label##id" for repeated labels).
 
-func Theme(string name) { ui::Theme(name); }
-func Accent(int color) { ui::Accent(color); }
-func FontSize(float size) { ui::FontSize(size); }
-func Background() -> int { return ui::Color(0); }
-func PanelColor() -> int { return ui::Color(1); }
-func TextColor() -> int { return ui::Color(2); }
-func MutedColor() -> int { return ui::Color(3); }
-func AccentColor() -> int { return ui::Color(4); }
-func BorderColor() -> int { return ui::Color(5); }
-func Panel(string title, float x, float y, float width, float height) { ui::Panel(title, x, y, width, height); }
-func EndPanel() { ui::EndPanel(); }
-func Row(int columns) { ui::Row(columns); }
-func Label(string text) { ui::Label(text, 0); }
-func Muted(string text) { ui::Label(text, 1); }
-func Heading(string text) { ui::Label(text, 2); }
-func Separator() { ui::Separator(); }
-func Space(float pixels) { ui::Space(pixels); }
-func Button(string label) -> bool { return ui::Button(label, 0); }
-func PrimaryButton(string label) -> bool { return ui::Button(label, 1); }
-func GhostButton(string label) -> bool { return ui::Button(label, 2); }
-func ButtonAt(string label, float x, float y, float width, float height) -> bool { return ui::ButtonAt(label, x, y, width, height); }
-func Checkbox(string label, bool value) -> bool { return ui::Checkbox(label, value, 0); }
-func Toggle(string label, bool value) -> bool { return ui::Checkbox(label, value, 1); }
-func Slider(string label, float value, float min, float max) -> float { return ui::Slider(label, value, min, max); }
-func Progress(string label, float fraction) { ui::Progress(label, fraction); }
-func Input(string label, string value) -> string { return ui::Input(label, value, ""); }
-func InputHint(string label, string value, string placeholder) -> string { return ui::Input(label, value, placeholder); }
-func Choice(string label, string options, int selected) -> int { return ui::Choice(label, options, selected); }
-func Hovered() -> bool { return ui::Hovered(); }
-func CursorX() -> float { return ui::Cursor(0); }
-func CursorY() -> float { return ui::Cursor(1); }
-func ContentWidth() -> float { return ui::Cursor(2); }
+export void Theme(string name) { ui::Theme(name); }
+export void Accent(number color) { ui::Accent(color); }
+export void FontSize(float size) { ui::FontSize(size); }
+export number Background() { return ui::Color(0); }
+export number PanelColor() { return ui::Color(1); }
+export number TextColor() { return ui::Color(2); }
+export number MutedColor() { return ui::Color(3); }
+export number AccentColor() { return ui::Color(4); }
+export number BorderColor() { return ui::Color(5); }
+export void Panel(string title, float x, float y, float width, float height) { ui::Panel(title, x, y, width, height); }
+export void EndPanel() { ui::EndPanel(); }
+export void Row(number columns) { ui::Row(columns); }
+export void Label(string text) { ui::Label(text, 0); }
+export void Muted(string text) { ui::Label(text, 1); }
+export void Heading(string text) { ui::Label(text, 2); }
+export void Separator() { ui::Separator(); }
+export void Space(float pixels) { ui::Space(pixels); }
+export bool Button(string label) { return ui::Button(label, 0); }
+export bool PrimaryButton(string label) { return ui::Button(label, 1); }
+export bool GhostButton(string label) { return ui::Button(label, 2); }
+export bool ButtonAt(string label, float x, float y, float width, float height) { return ui::ButtonAt(label, x, y, width, height); }
+export bool Checkbox(string label, bool value) { return ui::Checkbox(label, value, 0); }
+export bool Toggle(string label, bool value) { return ui::Checkbox(label, value, 1); }
+export float Slider(string label, float value, float min, float max) { return ui::Slider(label, value, min, max); }
+export void Progress(string label, float fraction) { ui::Progress(label, fraction); }
+export string Input(string label, string value) { return ui::Input(label, value, ""); }
+export string InputHint(string label, string value, string placeholder) { return ui::Input(label, value, placeholder); }
+export number Choice(string label, string options, number selected) { return ui::Choice(label, options, selected); }
+export bool Hovered() { return ui::Hovered(); }
+export float CursorX() { return ui::Cursor(0); }
+export float CursorY() { return ui::Cursor(1); }
+export float ContentWidth() { return ui::Cursor(2); }
 )clp";
 
 }  // namespace
+
+void reset_ui() {
+  g_ui = State{};
+  ui_style() = Style{};
+  std::string error;
+  set_theme("dark", error);
+}
 
 void add_ui(std::vector<Entry>& table) {
   table.insert(table.end(), {

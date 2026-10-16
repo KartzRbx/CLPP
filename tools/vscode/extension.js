@@ -9,7 +9,7 @@
 //   1. setting `clpp.serverPath`
 //   2. the binary bundled in this extension: bin/<platform>-<arch>/clpp-vm(.exe)
 //   3. `clpp-vm` / `clpp-vm.exe` on PATH
-//   4. the installer location: %LOCALAPPDATA%\Programs\CLPP-VM\clpp-vm.exe (Windows) or ~/.local/bin/clpp-vm
+//   4. the installer location: %LOCALAPPDATA%\Programs\CLPP-VM\bin\clpp-vm.exe (Windows) or ~/.local/bin/clpp-vm
 
 "use strict";
 
@@ -69,6 +69,12 @@ function findServer(context) {
     process.platform === "win32"
       ? path.join(process.env.LOCALAPPDATA || "", "Programs", "CLPP-VM", "clpp-vm.exe")
       : path.join(os.homedir(), ".local", "bin", "clpp-vm");
+  const nativeInstalled = process.platform === "win32"
+    ? path.join(process.env.LOCALAPPDATA || "", "Programs", "CLPP-VM", "bin", "clpp-vm.exe")
+    : path.join(os.homedir(), ".local", "bin", "clpp-vm");
+  if (fs.existsSync(nativeInstalled)) {
+    return { path: nativeInstalled, source: "installer" };
+  }
   if (fs.existsSync(installed)) {
     return { path: installed, source: "installer" };
   }
@@ -305,6 +311,8 @@ class Client {
         processId: process.pid,
         clientInfo: { name: "vscode", version: vscode.version },
         rootUri: folder ? folder.uri.toString() : null,
+        workspaceFolders: (vscode.workspace.workspaceFolders || []).map(item =>
+          ({ uri: item.uri.toString(), name: item.name || "workspace" })),
         capabilities: { general: { positionEncodings: ["utf-16"] } },
       })
       .then((result) => {
@@ -448,6 +456,14 @@ class Client {
                 }
                 if (wordRange && !item.label.includes("/")) {
                   completion.range = wordRange;
+                }
+                if (item.textEdit && item.textEdit.range) {
+                  completion.range = toRange(item.textEdit.range);
+                  completion.insertText = item.textEdit.newText;
+                }
+                if (item.additionalTextEdits) {
+                  completion.additionalTextEdits = item.additionalTextEdits.map(edit =>
+                    new vscode.TextEdit(toRange(edit.range), edit.newText));
                 }
                 if (item.command) {
                   completion.command = { title: item.command.title, command: item.command.command };
@@ -744,7 +760,7 @@ function pushMatch(colors, document, text, match, color) {
   colors.push(new vscode.ColorInformation(new vscode.Range(start, end), color));
 }
 
-function collectDocumentColors(document) {
+function collectDocumentColors(document, includeHexLiterals = true) {
   const text = document.getText();
   const colors = [];
 
@@ -767,9 +783,11 @@ function collectDocumentColors(document) {
     pushMatch(colors, document, text, match, parseGfxHexString(match[1]));
   }
 
-  const litRe = /\b0[xX][0-9A-Fa-f_]+\b/g;
-  for (let match = litRe.exec(text); match; match = litRe.exec(text)) {
-    pushMatch(colors, document, text, match, hexLiteralColor(match[0]));
+  if (includeHexLiterals) {
+    const litRe = /\b0[xX][0-9A-Fa-f_]+\b/g;
+    for (let match = litRe.exec(text); match; match = litRe.exec(text)) {
+      pushMatch(colors, document, text, match, hexLiteralColor(match[0]));
+    }
   }
 
   return colors;
@@ -787,19 +805,23 @@ function colorPresentations(color) {
   const out = [
     new vscode.ColorPresentation(`0x${hex6}`, `CL++ color 0x${hex6}`),
     new vscode.ColorPresentation(`Gfx.Rgb(${r}, ${g}, ${b})`, "Gfx.Rgb"),
-    new vscode.ColorPresentation(`#${hex6}`, "CSS hex"),
+    new vscode.ColorPresentation(`Gfx.Hex("#${hex6}")`, "Gfx.Hex"),
   ];
   if (color.alpha < 0.999) {
     out.splice(1, 0, new vscode.ColorPresentation(`0x${hex8}`, `CL++ color with alpha 0x${hex8}`));
-    out.push(new vscode.ColorPresentation(`Gfx.Rgb(${r}, ${g}, ${b}, ${clampByte(color.alpha * 255)})`, "Gfx.Rgb + alpha"));
+    out.push(new vscode.ColorPresentation(`Gfx.Rgba(${r}, ${g}, ${b}, ${clampByte(color.alpha * 255)})`, "Gfx.Rgba"));
   }
   return out;
 }
 
 function registerClppColorProvider() {
   return vscode.languages.registerColorProvider(LANGUAGE, {
-    provideDocumentColors(document) {
-      return collectDocumentColors(document);
+    async provideDocumentColors(document, token) {
+      if (!client) return collectDocumentColors(document);
+      const result = await client.request("textDocument/documentColor", docParams(document), token);
+      const shared = (result || []).map(item => new vscode.ColorInformation(toRange(item.range),
+        new vscode.Color(item.color.red, item.color.green, item.color.blue, item.color.alpha)));
+      return [...shared, ...collectDocumentColors(document, false)];
     },
     provideColorPresentations(color) {
       return colorPresentations(color);

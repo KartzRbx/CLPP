@@ -4,21 +4,21 @@
 #include <memory>
 #include <utility>
 #include <vector>
+#include <unordered_set>
 
 namespace clpp::vm {
 
 void mark_value(Value& value) {
-  if (value.is_struct() || value.is_task()) {
-    for (Value& field : value.fields) {
-      mark_value(field);
+  std::vector<Value> pending{value};
+  std::unordered_set<const void*> visited;
+  while (!pending.empty()) {
+    Value current = std::move(pending.back()); pending.pop_back();
+    if ((current.is_struct() || current.is_task() || current.is_closure() || current.is_cell() || current.is_resource()) && visited.insert(current.identity()).second) {
+      for (auto& field : current.snapshot_fields()) pending.push_back(std::move(field));
     }
-  }
-  if (!value.is_table() || value.table == nullptr || value.table->marked) {
-    return;
-  }
-  value.table->marked = true;
-  for (std::pair<std::string, Value>& entry : value.table->entries) {
-    mark_value(entry.second);
+    if (!current.is_table() || current.table == nullptr || current.table->marked) continue;
+    current.table->marked = true;
+    for (auto& entry : current.table->entries) pending.push_back(entry.second);
   }
 }
 
