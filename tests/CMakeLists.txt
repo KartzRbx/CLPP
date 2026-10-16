@@ -146,6 +146,9 @@ if(Python3_Interpreter_FOUND)
   add_test(NAME "LSP formatter preserves the full example corpus"
            COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/lsp/test_formatter.py" $<TARGET_FILE:clpp>)
   set_tests_properties("LSP formatter preserves the full example corpus" PROPERTIES LABELS "lsp;contract" TIMEOUT 240)
+  add_test(NAME "LSP auto import accepts workspace and native modules"
+           COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/lsp/test_auto_import.py" $<TARGET_FILE:clpp>)
+  set_tests_properties("LSP auto import accepts workspace and native modules" PROPERTIES LABELS "lsp;contract" TIMEOUT 120)
   if(CLPP_SANITIZE_ADDRESS)
     add_executable(clpp_reporter_probe runtime/catch_reporter.cpp)
     target_link_libraries(clpp_reporter_probe PRIVATE Catch2::Catch2WithMain)

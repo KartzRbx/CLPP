@@ -305,6 +305,8 @@ class Client {
         processId: process.pid,
         clientInfo: { name: "vscode", version: vscode.version },
         rootUri: folder ? folder.uri.toString() : null,
+        workspaceFolders: (vscode.workspace.workspaceFolders || []).map(item =>
+          ({ uri: item.uri.toString(), name: item.name || "workspace" })),
         capabilities: { general: { positionEncodings: ["utf-16"] } },
       })
       .then((result) => {
@@ -448,6 +450,14 @@ class Client {
                 }
                 if (wordRange && !item.label.includes("/")) {
                   completion.range = wordRange;
+                }
+                if (item.textEdit && item.textEdit.range) {
+                  completion.range = toRange(item.textEdit.range);
+                  completion.insertText = item.textEdit.newText;
+                }
+                if (item.additionalTextEdits) {
+                  completion.additionalTextEdits = item.additionalTextEdits.map(edit =>
+                    new vscode.TextEdit(toRange(edit.range), edit.newText));
                 }
                 if (item.command) {
                   completion.command = { title: item.command.title, command: item.command.command };

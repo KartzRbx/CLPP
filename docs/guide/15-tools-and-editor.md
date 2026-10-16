@@ -40,6 +40,22 @@ lines. Consecutive variable declarations stay grouped. Original literal contents
 and inline comments are preserved; input with malformed literals is left alone.
 The VS Code grammar recognizes generic types even before spacing is normalized.
 
+## Import suggestions
+
+Type a module filename's base name, select its completion and accept it. For
+example, accepting `Alerts` can insert `link "./lib/Alerts.clp" as Alerts;` above
+your code. Native modules offer the same behavior, such as `Json` inserting
+`link @clpp.json as Json;`. This uses ordinary `link` syntax and works for project
+`.clp` modules generally, without an application-specific module list.
+
+Suggestions include the source path, so equal names in different directories
+remain distinguishable. Existing imports are reused; local names take priority.
+Comments, strings and member access do not trigger new imports. The filename
+index excludes generated output and hidden directories and refreshes when the
+editor reports file creation/deletion or saves a document. Files with separators
+in their names get a valid alias, for example `notice-tools.clp` becomes
+`notice_tools`.
+
 ## Build and test
 
 ```text

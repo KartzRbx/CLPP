@@ -37,3 +37,6 @@
 {"date": "2026-10-15", "layer": "composed-site-regression", "total": 1, "passed": 1, "failed": 0, "verdict": "PASS"}
 {"date": "2026-10-15", "layer": "composed-site-all-links", "total": 1, "passed": 1, "failed": 0, "verdict": "PASS"}
 {"date": "2026-10-15", "layer": "isolated-local-vm-runtime", "total": 1, "passed": 1, "failed": 0, "verdict": "PASS"}
+{"date": "2026-10-15", "layer": "auto-import-full-ctest", "total": 535, "passed": 535, "failed": 0, "verdict": "PASS"}
+{"date": "2026-10-15", "layer": "auto-import-asan-ubsan-lsp", "total": 9, "passed": 9, "failed": 0, "verdict": "PASS"}
+{"date": "2026-10-15", "layer": "auto-import-installed-lsp", "total": 9, "passed": 9, "failed": 0, "verdict": "PASS"}

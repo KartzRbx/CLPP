@@ -31,7 +31,19 @@ The extension ships with `clpp-vm.exe` for Windows x64. On other systems install
 - `CL++: Restart language server`
 - `CL++: Show output`
 
-## Local source update 0.10.6
+## Local source update 0.10.7
+
+Accepting a module completion inserts its `link` automatically. This works for
+project `.clp` files and the native module catalog. Completion details show the
+relative path for ambiguous names. Existing imports and visible names take
+precedence, and the feature stays out of comments, strings and member lists.
+Generated/dependency output directories (`build`, `dist`, `target`, `node_modules`
+and hidden directories) are excluded from the bounded filename index. New or
+deleted files refresh through editor file notifications or saving a document.
+
+The LSP reuses up to four active analysis graphs across diagnostics and editor
+requests. Buffer edits, dependency changes and closed unsaved buffers invalidate
+the cache; request timeouts are unchanged.
 
 Format Document respects VS Code's indentation options, keeps loop headers and
 initializers together, normalizes generic type brackets and retains inline

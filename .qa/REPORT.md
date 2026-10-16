@@ -4,6 +4,33 @@ The author now authorizes general CLI support, site/installer review, local inst
 and GitHub publication after validation. The primary user's Combat edit is preserved.
 Historical local-only stages below describe their scope at that time.
 
+## Auto-import completion — 2026-10-15
+
+Generic module suggestions now use project `.clp` filenames and the native module
+catalog. Accepting a suggestion inserts an ordinary relative `link` declaration
+and the module alias through standard LSP edits. Existing imports, local names,
+comments, strings, ambiguous filenames, Unicode paths, CRLF and file-index updates
+have regression coverage. VS Code maps both primary and additional edits.
+An invalidated, four-entry analysis cache avoids reanalyzing the same document
+for every queued editor request; unsaved, closed and watched dependencies are tested.
+
+Validation: 535/535 CTest checks; 9/9 real-LSP scenarios under ASan/UBSan;
+9/9 against the compiler actually installed with VS Code extension 0.10.7;
+provider tests and extracted-package execution passed. The extension is installed
+and its compiler digest matches the validated build. Reload an existing editor
+window to activate it. Visible acceptance in a real editor window remains a manual
+check; provider tests apply the same returned edits to actual source text.
+The previous integrated commit 2646e5f passed all GitHub platform and docs jobs,
+including macOS; the new auto-import changes still require their own remote run.
+
+| Layer | Ran | Passed | Real bugs | Flaky | Stale |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| CTest | 535 | 535 | 0 | 0 | 0 |
+| Instrumented LSP | 9 | 9 | 0 | 0 | 0 |
+| Installed LSP | 9 | 9 | 0 | 0 | 0 |
+
+Verdict: SHIP for local auto-import installation; final release awaits the full audit and final-artifact CI.
+
 ## Composed documentation and local runtime installation — 2026-10-15
 
 The actual integrated-site gate found two distinct issues: VM English prose

@@ -100,6 +100,7 @@ struct SemanticToken {
 };
 
 [[nodiscard]] std::vector<SemanticToken> semantic_tokens(std::string_view source, const ModuleLoader& modules = {});
+[[nodiscard]] std::vector<SemanticToken> semantic_tokens(const AnalysisResult& analysis);
 
 // Delta encoding of LSP `textDocument/semanticTokens`. Without `source`, columns and lengths stay in
 // bytes (the compiler's unit); with it they are converted to UTF-16 code units, which is what the

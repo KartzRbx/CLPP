@@ -25,6 +25,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clpp-ext-"));
   fs.writeFileSync(path.join(dir, "shapes.clp"),
     "export def Animal {\n  number legs;\n  number speak() { return @this.legs; }\n}\nexport def Dog : Animal {\n  number bones;\n}\nexport number area(number w, number h) { return w * h; }\n");
+  fs.writeFileSync(path.join(dir, 'AlertModule.clp'), 'export string Ping() { return "ok"; }\n');
   const context = { subscriptions: [], asAbsolutePath: (p) => path.join(__dirname, "../../tools/vscode", p) };
   await extension.activate(context);
 
@@ -86,6 +87,20 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     edits[0].range.end.line === 2 && edits[0].range.end.character === formatInput.split('\n')[2].length, edits);
   const tabEdits = await providers.format.provideDocumentFormattingEdits(doc, { tabSize: 4, insertSpaces: false }, token);
   check("format: editor tabs are honored", tabEdits.length === 1 && tabEdits[0].newText.includes('\n\tpost('), tabEdits);
+
+  mock.__test.change(doc, 'post(AlertM.Ping());');
+  await sleep(100);
+  const imports = await providers.completion.provideCompletionItems(doc, P(0, 11), token);
+  const autoImport = imports.items.find(item => item.label === 'AlertModule' && item.detail.startsWith('Auto-import:'));
+  check("auto import: VS Code maps the main and additional edits", autoImport &&
+    autoImport.insertText === 'AlertModule' && autoImport.range && autoImport.additionalTextEdits &&
+    autoImport.additionalTextEdits[0].newText.includes('link "./AlertModule.clp" as AlertModule;'), autoImport);
+  mock.__test.change(doc, 'AlertM.Ping();');
+  await sleep(100);
+  const firstImports = await providers.completion.provideCompletionItems(doc, P(0, 6), token);
+  const firstImport = firstImports.items.find(item => item.label === 'AlertModule' && item.detail.startsWith('Auto-import:'));
+  check("auto import: first-word acceptance has no overlapping edits", firstImport &&
+    firstImport.insertText.includes('link "./AlertModule.clp" as AlertModule;\n\nAlertModule') && !firstImport.additionalTextEdits, firstImport);
 
   await extension.deactivate();
   console.log(`${failures} failure(s)`);

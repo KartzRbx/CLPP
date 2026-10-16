@@ -1658,7 +1658,10 @@ const std::vector<std::string_view>& semantic_token_modifiers() {
 }
 
 std::vector<SemanticToken> semantic_tokens(const std::string_view source, const ModuleLoader& modules) {
-  const AnalysisResult analysis = analyze_program(source, modules);
+  return semantic_tokens(analyze_program(source, modules));
+}
+
+std::vector<SemanticToken> semantic_tokens(const AnalysisResult& analysis) {
   const parser::Program& program = analysis.program;
   const std::vector<Token>& tokens = analysis.tokens;
   Highlighter highlighter(tokens);
