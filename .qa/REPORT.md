@@ -23,6 +23,9 @@ Local evidence:
 - ASan/UBSan CTest: 543/543, including concurrent compilation, malformed transport,
   native resources, all examples and documentation. Windows leak detection is
   unavailable; these results do not substitute for a leak detector.
+- Additional ASan/UBSan adversarial run: 552/552 passed (500 mutations), seed 20261016.
+- Zed installer: both regressions passed, including preservation of custom PATH/env,
+  compiler snapshots, presence server and theme/comments.
 - Independent Python oracles: 192 scenarios match both Debug and Release.
 - Adversarial checks: 1,552 cases passed, seed 20261016, including 1,500 mutated
   inputs checked without executing their native effects.

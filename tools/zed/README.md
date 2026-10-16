@@ -37,7 +37,9 @@ JSONC parser. It preserves other settings and their comments. Restart Zed or
 reload extensions and open `.clp`; the language picker should show **CL++**.
 
 The installer snapshots this checkout's compiler into a content-addressed
-directory in the installed extension and supplies its UCRT64 DLL search path.
+directory in the installed extension and preserves its configured environment.
+The production Windows runtime is statically linked and needs no compiler SDK
+directory on PATH. Instrumented development builds require their matching runtime.
 Rebuilding the checkout does not replace or require stopping the live server.
 Reinstall to select a newly built compiler. For a separate build/package use
 `node tools/zed/install-local.cjs --package <directory> --compiler <executable>`.

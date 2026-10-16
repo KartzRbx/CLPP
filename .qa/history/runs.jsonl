@@ -47,3 +47,5 @@
 {"date": "2026-10-16", "layer": "0110-intellisense-functional", "total": 10000, "passed": 10000, "failed": 0, "verdict": "PASS"}
 {"date": "2026-10-16", "layer": "0110-editor-discovery", "total": 3, "passed": 3, "failed": 0, "verdict": "PASS"}
 {"date": "2026-10-16", "layer": "0110-installer-repeats", "total": 5, "passed": 5, "failed": 0, "verdict": "PASS"}
+{"date": "2026-10-16", "layer": "0110-instrumented-adversarial", "total": 552, "passed": 552, "failed": 0, "verdict": "PASS"}
+{"date": "2026-10-16", "layer": "0110-zed-installer", "total": 2, "passed": 2, "failed": 0, "verdict": "PASS"}

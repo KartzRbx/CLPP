@@ -7,9 +7,9 @@
 //
 // Server lookup order (first hit wins), same idea as the Zig/Rust/Go extensions:
 //   1. setting `clpp.serverPath`
-//   2. the binary bundled in this extension: bin/<platform>-<arch>/clpp(.exe)
-//   3. `clpp` / `clpp.exe` on PATH
-//   4. the installer location: %LOCALAPPDATA%\Programs\CLPP\clpp.exe (Windows) or ~/.local/bin/clpp
+//   2. the binary bundled in this extension: bin/<platform>-<arch>/clpp-vm(.exe)
+//   3. `clpp-vm` / `clpp-vm.exe` on PATH
+//   4. the installer location: %LOCALAPPDATA%\Programs\CLPP-VM\bin\clpp-vm.exe (Windows) or ~/.local/bin/clpp-vm
 
 "use strict";
 

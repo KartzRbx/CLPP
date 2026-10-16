@@ -17,6 +17,7 @@ test('regression: editor compiler snapshot survives rebuild and preserves presen
     const settings = path.join(roaming, 'Zed/settings.json');
     fs.writeFileSync(settings, '// preserve this comment\n' + JSON.stringify({
       theme: 'My theme', languages: { 'CL++': { language_servers: ['clpp', 'clpp_discord_presence'] } },
+      lsp: { clpp: { binary: { env: { PATH: 'user-selected-path', CUSTOM: 'preserved' } } } },
     }));
     const pkg = path.join(dir, 'package');
     fs.mkdirSync(path.join(pkg, 'grammars'), { recursive: true });
@@ -37,6 +38,7 @@ test('regression: editor compiler snapshot survives rebuild and preserves presen
     assert.equal(fs.readFileSync(data.lsp.clpp.binary.path, 'utf8'), 'compiler version two');
     assert.deepEqual(data.languages['CL++'].language_servers, ['clpp', 'clpp_discord_presence']);
     assert.equal(data.theme, 'My theme');
+    assert.deepEqual(data.lsp.clpp.binary.env, { PATH: 'user-selected-path', CUSTOM: 'preserved' });
     assert.ok(fs.readFileSync(settings, 'utf8').startsWith('// preserve this comment'));
     assert.ok(fs.readdirSync(path.dirname(settings)).some(name => name.endsWith('.bak')));
   } finally {

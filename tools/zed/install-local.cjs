@@ -37,7 +37,7 @@ const update = (keys, value) => {
 };
 update(['lsp', 'clpp', 'binary', 'path'], installedExecutable);
 update(['lsp', 'clpp', 'binary', 'arguments'], ['--lsp']);
-update(['lsp', 'clpp', 'binary', 'env', 'PATH'], `C:\\msys64\\ucrt64\\bin;${process.env.PATH}`);
+// Production runtime is statically linked; preserve the user's binary environment.
 update(['languages', 'CL++', 'tab_size'], 2);
 update(['languages', 'CL++', 'language_servers'], [...new Set([
   'clpp', ...(currentSettings.languages?.['CL++']?.language_servers || []).filter(id => id !== '!clpp'),

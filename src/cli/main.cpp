@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
   SetConsoleCP(CP_UTF8);
 #endif
   const auto print_help = [](std::ostream& out) {
-    out << "Usage: clpp <script.clp> [args...]\n";
+    out << "Usage: clpp-vm <script.clp> [args...]\n";
     out << "       clpp-vm --check <script.clp>\n";
     out << "       clpp-vm --repl\n";
     out << "       clpp-vm --lsp\n";

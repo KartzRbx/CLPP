@@ -19,6 +19,9 @@ def main():
     version = re.search(r'project\(clpp VERSION ([\d.]+)', (ROOT / 'CMakeLists.txt').read_text()).group(1)
     reported = subprocess.run([str(args.compiler.resolve()), '--version'], capture_output=True, text=True, check=True, timeout=10)
     assert reported.stdout.strip().endswith(' ' + version), reported.stdout
+    product = reported.stdout.split()[0]
+    help_text = subprocess.run([str(args.compiler.resolve()), '--help'], capture_output=True, text=True, check=True, timeout=10)
+    assert f'Usage: {product} <script.clp>' in help_text.stdout, help_text.stdout
     package = json.loads((ROOT / 'tools/vscode/package.json').read_text(encoding='utf8'))
     assert package['version'] == version
     assert f"$Version = '{version}'" in (ROOT / 'scripts/install-vm.ps1').read_text()
