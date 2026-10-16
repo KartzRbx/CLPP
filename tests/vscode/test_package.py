@@ -26,6 +26,8 @@ def main():
         package = destination / 'extension'
         metadata = json.loads((package / 'package.json').read_text(encoding='utf8'))
         assert (package / metadata['main']).is_file(), 'missing extension entry point'
+        assert (package / 'LICENSE.txt').is_file(), 'project license missing'
+        assert 'Niels Lohmann' in (package / 'THIRD_PARTY_NOTICES.txt').read_text(encoding='utf8'), 'dependency notices missing'
         grammar = package / 'syntaxes/clpp.tmLanguage.json'
         rules = json.loads(grammar.read_text(encoding='utf8'))['repository']
         assert rules['comment-line']['begin'] == r'<<(?!\[)'

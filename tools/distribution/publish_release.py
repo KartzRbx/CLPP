@@ -29,6 +29,7 @@ def main():
             assert archive.testzip() is None
             metadata = json.loads(archive.read('release.json'))
             assert metadata['product'] == 'CLPP-VM' and metadata['version'] == version
+            assert archive.read('share/clpp/THIRD_PARTY_NOTICES.txt') == (ROOT / 'THIRD_PARTY_NOTICES.txt').read_bytes()
             assert archive_path.name == f"clpp-vm-{version}-{metadata['platform']}.zip"
             platforms.add(metadata['platform'])
             if metadata['platform'] == 'windows-x64':
@@ -43,8 +44,11 @@ def main():
         assert archive.testzip() is None
         package = json.loads(archive.read('extension/package.json'))
         assert package['version'] == version and package['publisher'] == 'kartzrbx'
+        assert archive.read('extension/THIRD_PARTY_NOTICES.txt') == (ROOT / 'THIRD_PARTY_NOTICES.txt').read_bytes()
         assert archive.read('extension/bin/win32-x64/clpp-vm.exe') == files['clpp-vm.exe'], 'VSIX and portable runtime differ'
     files[extensions[0].name] = extensions[0].read_bytes()
+    files['LICENSE'] = (ROOT / 'LICENSE').read_bytes()
+    files['THIRD_PARTY_NOTICES.txt'] = (ROOT / 'THIRD_PARTY_NOTICES.txt').read_bytes()
     installer = (ROOT / 'scripts/install-vm.ps1').read_bytes()
     assert f"$Version = '{version}'".encode() in installer
     files['install-vm.ps1'] = installer

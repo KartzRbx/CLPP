@@ -37,6 +37,7 @@ def main():
                     'To uninstall a portable extraction, remove only its own extracted directory.\n'
                     'Documentation: https://kartzrbx.github.io/CLPP/\n')
     files = {f'bin/{name}': args.compiler.read_bytes(), 'share/clpp/LICENSE': (ROOT / 'LICENSE').read_bytes(),
+             'share/clpp/THIRD_PARTY_NOTICES.txt': (ROOT / 'THIRD_PARTY_NOTICES.txt').read_bytes(),
              'INSTALL.md': instructions.encode('utf8'),
              'release.json': (json.dumps(dict(product='CLPP-VM', version=version, platform=args.platform,
                                               executable=f'bin/{name}'), indent=2) + '\n').encode('utf8')}

@@ -10,7 +10,7 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 $root = [IO.Path]::GetFullPath($Prefix)
 $manifestPath = Join-Path $root '.clpp-vm-install.json'
-$owned = @('bin/clpp-vm.exe', 'share/clpp/LICENSE', 'INSTALL.md', 'release.json')
+$owned = @('bin/clpp-vm.exe', 'share/clpp/LICENSE', 'share/clpp/THIRD_PARTY_NOTICES.txt', 'INSTALL.md', 'release.json')
 # Never follow a junction/symlink into another installation, even on uninstall.
 foreach ($relative in @('.clpp-vm-install.json') + $owned) {
     $cursor = Join-Path $root $relative

@@ -51,6 +51,10 @@ was addressed with bounded retries, then five consecutive installer runs passed.
 The first generated generic closure lacked a required `where T: number` bound;
 the generator was corrected without weakening the language checker.
 
+Distribution notices for embedded JSON and applicable LLVM/MinGW runtimes are
+preserved in source, CMake installation, ZIP and VSIX packages. The final-layout
+portable archive, Windows installer and extracted VSIX smoke tests all passed.
+
 Distribution now has deterministic platform ZIPs, version identity tests, a
 pinned checksum-verifying Windows installer and a publication workflow that
 requires successful CI and documentation for the exact main commit. Official

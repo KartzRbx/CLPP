@@ -29,6 +29,7 @@ def main():
         compiler = prefix / 'bin' / ('clpp-vm.exe' if os.name == 'nt' else 'clpp-vm')
         assert compiler.is_file(), 'installed CLI missing'
         assert (prefix / 'share/clpp/LICENSE').is_file(), 'license missing'
+        assert (prefix / 'share/clpp/THIRD_PARTY_NOTICES.txt').is_file(), 'dependency notices missing'
         environment = dict(os.environ)
         if os.name == 'nt':
             windows = next((value for key, value in environment.items()
