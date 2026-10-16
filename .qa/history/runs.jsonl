@@ -49,3 +49,4 @@
 {"date": "2026-10-16", "layer": "0110-installer-repeats", "total": 5, "passed": 5, "failed": 0, "verdict": "PASS"}
 {"date": "2026-10-16", "layer": "0110-instrumented-adversarial", "total": 552, "passed": 552, "failed": 0, "verdict": "PASS"}
 {"date": "2026-10-16", "layer": "0110-zed-installer", "total": 2, "passed": 2, "failed": 0, "verdict": "PASS"}
+{"date": "2026-10-16", "layer": "0110-final-public-documentation", "total": 213, "passed": 213, "failed": 0, "excluded_targets": 19, "verdict": "PASS"}

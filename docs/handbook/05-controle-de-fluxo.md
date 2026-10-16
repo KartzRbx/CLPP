@@ -131,7 +131,7 @@ left
 right
 ```
 
-The target checker must ensure that every case is handled. Omitting `Direction::Right` should identify the missing case; adding another case later should reveal matches that need updating. `CLPP0501` is a proposed diagnostic identifier from the supplied design, not a guarantee of the current checkout. Match arms use `=>`; the old delimiter is rejected.
+The checker rejects non-exhaustive matches over finite alternatives, duplicate cases and unreachable arms. Omitting a required enum case reports `non-exhaustive match`; a detailed list of missing case names and the proposed `CLPP0501` identifier are not current diagnostic guarantees. Match arms use `=>`; the old delimiter is rejected.
 
 ### Matching literal unions
 
@@ -162,7 +162,7 @@ auto target=Target { Health=100 }; Attack(null); Attack(target); post(target.Hea
 90
 ```
 
-Read this as “require a target; otherwise return.” After the guard, the intended checker narrows the optional value to `Target`.
+Read this as “require a target; otherwise return.” After an exiting guard, the checker narrows the optional value to `Target`.
 
 ### Keeping the main path flat
 

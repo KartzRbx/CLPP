@@ -47,7 +47,7 @@ The Pacman and Combat references include expected failures, recovery behavior, a
 
 ## Using a release
 
-Read a release's own notes before assuming that it implements this target specification. Installing the existing VSIX does not add pending syntax. Small executable examples without a target notice demonstrate overlap with the current implementation; complete target projects need the compiler update.
+Install the matching 0.11.0 runtime and VSIX for the current language contracts. Executable examples are checked against the compiler and their displayed output. Blocks explicitly marked target remain deferred proposals or host/application requirements; installing the release does not implement those proposals.
 
 ## VM and transpiler use cases
 

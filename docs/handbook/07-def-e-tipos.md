@@ -9,7 +9,7 @@ The complete examples below execute in the documentation suite and compare their
 
 Programs describe players, items, attacks, and maps. `def` gives those concepts names. Read [Mental model](./02-modelo-mental.md) for the intended object identity rules.
 
-`def` replaces the old data-declaration spelling in new source. Deprecation warnings and automatic migration still require verified compiler work; see [Reference](./14-referencia.md).
+`def` is the current data-declaration spelling. The legacy keyword is rejected, rather than accepted with a warning. Migrate source explicitly; no automatic migration command is supplied. See [Reference](./14-referencia.md).
 
 ## One keyword, several type forms
 

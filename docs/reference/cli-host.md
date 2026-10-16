@@ -1,10 +1,10 @@
 # CLI host APIs for development tools
 
-These APIs are implemented in the current source checkout for tools written in
-CL++. They require rebuilding the C++ VM; an older installed editor compiler may
-not contain them. They are application-independent host APIs.
-Windows process/Unicode behavior has a dedicated real-child-process test harness;
-Linux/macOS execution still requires validation on those platforms.
+These application-independent APIs are included in CL++ VM 0.11.0 for tools
+written in CL++. Install the matching runtime/editor release; older installed
+compilers may not contain them. Real child-process, storage and path contracts
+run in Windows, Linux and macOS CI. Archive names identify the tested platform
+and architecture; this does not imply every native desktop/device API is portable.
 
 ## Arguments, terminal and controlled status
 

@@ -5,7 +5,7 @@ description: Ordered arrays, keyed dictionaries, mathematical vectors, iteration
 
 # Collections
 
-> **Target syntax; compiler support pending.** These chapters preserve the author-provided language design. Source labels such as “exists” do not prove implementation. CL++ officially targets its own bytecode VM. Luau/Roblox examples describe a possible transpiler written **in CL++**, not an official compiler backend. See [compiler status](../reference/status.md).
+> **Current collection contract.** The complete examples below execute in the documentation suite. Optional missing-key lookup remains an explicitly deferred target block; the current dictionary reports an absent key as an error. Luau/Roblox examples describe an application written in CL++, not an official backend. See [compiler status](../reference/status.md).
 
 A collection holds several values under one name. The supplied design discusses `array`, `dictionary`, and mathematical vectors. The current VM supplies arrays, dictionaries, and `Vector2`, `Vector3`, and `Vector4`. The source's Luau `vector` comparison is not a new official backend or a verified CL++ type spelling.
 

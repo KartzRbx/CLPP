@@ -171,7 +171,7 @@ Official CL++ execution uses its own VM. This manual makes no general claim that
 - Context attributes in an application's input language are not equivalent to a borrow checker or server-request validation.
 - An application can generate another language, but this does not create an official target backend or engine integration for CL++.
 
-Function-parameter defaults have been removed following the author-confirmed explicit-interface rule. Configuration defaults belong to fields of def options objects. Overloads and legacy named-call syntax still require cleanup; numeric conversions, lambdas, narrowing, function aliases and generics have separate implementation and validation contracts.
+Function-parameter defaults have been removed following the author-confirmed explicit-interface rule. Configuration defaults belong to fields of def options objects. Overloads and legacy named-call syntax are rejected; numeric conversions, lambdas, narrowing, function aliases and generics have executable regression coverage.
 
 ## Migration to `def`
 
@@ -201,7 +201,7 @@ ana.Health = 80; post(ana.Health);
 4. Use `Type { Field = value }` for named initialization, without a leading dot. Preserve `object.Field` access.
 5. Review object identity. `def`, arrays and dictionaries use shared references; construct independent objects explicitly when migrating code that relied on copies.
 6. Keep declarations and imports in `.clp` source modules without introducing headers.
-7. Once the compiler supports the required contracts, test construction, aliases, argument mutation, events, and application policies.
+7. Test construction, aliases, argument mutation and events against the current VM; validate application policies in the application project.
 
 `clpp fmt` and `clpp fix --def` are proposed tools, not currently available commands. The verified CLI runs `clpp-vm program.clp`, a REPL, and the language server. A transpiler written in CL++ must implement its own generation workflow. See [Errors and tools](12-erros-e-ferramentas.md).
 

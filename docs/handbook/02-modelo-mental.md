@@ -18,7 +18,7 @@ source .clp → tokens → syntax tree → names and scopes → type checks → 
 
 | Stage | Responsibility | Typical failure |
 | --- | --- | --- |
-| Directives | Interpret requested checking modes, such as target `pragma` forms | Unknown or unsupported directive |
+| Directives | Interpret `pragma strict;` and `pragma nostrict;` at the start of a file | Unknown or unsupported directive |
 | Lexer | Separate source characters into tokens | Invalid character or unfinished literal |
 | Parser | Build a syntax tree | Missing punctuation or malformed declaration |
 | Name resolution | Determine which declaration each name refers to | Unresolved name |
@@ -34,10 +34,10 @@ Not every target check exists yet. A syntax error may prevent a usable tree from
 | --- | --- | --- |
 | `number`, `float`, `bool`, `string` | Describe distinct accepted values | The VM operates on runtime values; types are not a claim of Luau emission |
 | `number` versus `float` | Distinguish counts from fractional measurements | Current integer division discards the fractional part |
-| `def` | Describe a named object type or alias | Target object identity still requires implementation |
-| `optional<T>` | Require absence handling before contained-value use | Target representation and narrowing need alignment |
+| `def` | Describe a named object type or alias | Nominal objects have shared reference identity; aliases retain the same object |
+| `optional<T>` | Require absence handling before contained-value use | Distinct null values; null checks and exiting guards narrow contained values |
 | Context annotations | Express proposed checking constraints | Host-specific authority rules belong to the host project |
-| `const` | Prohibit reassignment of a binding | Typed target spelling needs parser migration |
+| `const` | Prohibit reassignment of a binding | Reassignment is rejected; reachable objects and collections freeze transitively |
 
 A type annotation is not validation of data arriving from an external API. Conversion, rejection, and failure behavior require explicit contracts and tests.
 

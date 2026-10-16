@@ -39,6 +39,10 @@ Local evidence:
 - Windows installer passed five consecutive isolated runs. After adding a
   junction/symlink guard, the extended regression again passed install/update,
   checksum rejection, ownership, unrelated-file preservation and junction safety.
+- Final public documentation text audit removed stale claims that object identity,
+  const, collections, overload rejection and CLI portability still awaited implementation.
+  All 213 executable documentation examples passed again after this audit; 19 targets
+  remain explicitly excluded.
 - Documentation policy: 55 sources, 250 CL++ blocks, 388 Markdown links;
   composed VM/Luau generated links and assets passed. The 19 target blocks remain
   explicitly excluded proposals/host effects, not passed compiler examples.

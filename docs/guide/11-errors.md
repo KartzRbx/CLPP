@@ -69,7 +69,7 @@ catch (error) { post("Player unavailable"); }
 Player unavailable
 ```
 
-For an expected domain outcome, return explicitly modeled data. The target success/error wrapper contract is not settled; see [types and alternatives](08-enums-variants-option-result.md).
+For an expected domain outcome, return explicitly modeled data or an `optional<T>` when absence is the contract. Built-in `Option`/`Result` wrappers and constructors are removed; see [types and alternatives](08-enums-variants-option-result.md).
 
 ## Editor and diagnostic reference
 

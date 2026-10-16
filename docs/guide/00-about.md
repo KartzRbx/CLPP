@@ -10,7 +10,7 @@ The [handbook introduction](../handbook/00-o-que-e-o-clpp.md) explains this clas
 
 ## Language first
 
-The target language uses typed variables, `const` for fixed values, `def` for types, functions with their return type before the name, typed loops, and `.clp` modules without headers. The author's handwritten Combat program is the reference for this writing style.
+The current language uses typed variables, `const` for fixed values, `def` for types, functions with their return type before the name, typed loops, and `.clp` modules without headers. The author's handwritten Combat program is the reference for this writing style.
 
 Start with [Learn CL++ from zero](00-language-tour.md), then follow the separate lessons for declarations, operators, flow, functions, types, and modules. The [syntax map](../reference/syntax.md) and [lexer reference](../reference/lexer.md) explain the writing rules directly.
 
@@ -23,8 +23,15 @@ Start with [Learn CL++ from zero](00-language-tour.md), then follow the separate
 
 The [standard library](14-standard-library.md) explains the existing APIs separately from language syntax. Complete project chapters show how the intended language organizes application code.
 
-## A compiler update is pending
+## Current release and future proposals
 
-The current repository uses C++20, bytecode, and a VM, but portions of its public syntax still reflect an older design. This site documents the author's target language first. Target specification blocks do not count as passing executable tests; they do not claim the complete example already runs. See [Implementation status](../reference/status.md).
+CL++ VM 0.11.0 implements the current syntax and contracts documented by the
+executable examples: typed declarations, generics, modules, reference captures,
+events and checked type-first expressions. Removed syntax is rejected.
+The [implementation status](../reference/status.md) separates these contracts from
+deferred proposals, native-device coverage and application-specific host policy.
+The 19 target specification blocks remain excluded from compiler tests.
 
-The VM's existing historical benchmarks are described in [Performance](16-performance.md). They do not measure a compiler implementation of all the target syntax.
+[Performance](16-performance.md) explains the benchmark method and its limits.
+Output checks and elapsed measurements describe the actual VM; they are not a
+promise that every program is faster than another language.

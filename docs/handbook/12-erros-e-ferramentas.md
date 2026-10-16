@@ -55,7 +55,7 @@ Read the identifier, message, filename, line, and column. Correct the reported c
 | `CLPP0904` | Error | Definition inaccessible outside its module | Review visibility in the `.clp` source module |
 | `CLPP0905` | Error | Incompatible signature | Review arguments and return type |
 | `CLPP1001` | Hint | Logical alias used where style prefers symbols | Review for `&&`, `||`, or `!` |
-| `CLPP1002` | Hint | Alternative `!def` spelling used | Prefer `def`; alias support remains pending |
+| `CLPP1002` | Hint | Alternative `!def` spelling used | Use `def`; `!def` is not a supported alias |
 
 A catalogue advertised as implemented must be generated or checked against actual compiler definitions. This design table is not a manifest of available features.
 
@@ -66,7 +66,7 @@ A catalogue advertised as implemented must be generated or checked against actua
 | `a and b` | `a && b` | Lexer recognizes the alias; style hint is separate |
 | `a or b` | `a || b` | Lexer recognizes the alias; style hint is separate |
 | `not a` | `!a` | Lexer recognizes the alias; style hint is separate |
-| `!def` | `def` | Proposed alias requires implementation |
+| `!def` | `def` | Unsupported historical proposal; use the current spelling |
 | Old data keyword | `def` | Manual migration; review behavior separately |
 | `let` or `mut` | Type/`auto`, with `const` for fixed values | Rejected by the current parser |
 
