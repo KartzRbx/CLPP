@@ -31,7 +31,12 @@ The extension ships with `clpp-vm.exe` for Windows x64. On other systems install
 - `CL++: Restart language server`
 - `CL++: Show output`
 
-## Local source update 0.10.7
+## Local source update 0.10.8
+
+Expression keywords such as `await`, `spawn`, `return` and `thread` are no longer
+mistaken for type/function declaration prefixes by the fallback grammar. This
+also applies to parenthesized expressions. Theme colors continue to come from
+the selected editor theme.
 
 Accepting a module completion inserts its `link` automatically. This works for
 project `.clp` files and the native module catalog. Completion details show the
