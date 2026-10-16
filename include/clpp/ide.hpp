@@ -26,9 +26,9 @@ struct Item {
   std::string detail;
   Kind kind{Kind::Keyword};
   std::string sort_text{"5"};
-  std::string insert_text;    // empty: insert the label
+  std::string insert_text{};    // empty: insert the label
   bool snippet{false};        // insert_text uses LSP snippet syntax ($1, ${1:name}, $0)
-  std::string documentation;  // markdown
+  std::string documentation{};  // markdown
 };
 
 struct Signature {

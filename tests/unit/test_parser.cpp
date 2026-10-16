@@ -155,7 +155,7 @@ TEST_CASE("authored comments are source trivia and C++ comments are rejected", "
 }
 
 TEST_CASE("excessive syntax nesting produces a diagnostic rather than native stack overflow", "[parser][limits]") {
-  for (const std::string source : {
+  for (const std::string& source : {
       "post(" + std::string(128, '(') + "1" + std::string(128, ')') + ");",
       "post(" + std::string(256, '!') + "true);",
       [] { std::string code; for(int i=0;i<256;++i) code+="if (true) {"; return code + "post(1);" + std::string(256, '}'); }(),

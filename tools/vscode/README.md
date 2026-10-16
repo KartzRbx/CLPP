@@ -31,7 +31,7 @@ The extension ships with `clpp-vm.exe` for Windows x64. On other systems install
 - `CL++: Restart language server`
 - `CL++: Show output`
 
-## Local source update 0.10.8
+## Release update 0.11.0
 
 Expression keywords such as `await`, `spawn`, `return` and `thread` are no longer
 mistaken for type/function declaration prefixes by the fallback grammar. This

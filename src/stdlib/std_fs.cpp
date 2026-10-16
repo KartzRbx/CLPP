@@ -1,3 +1,4 @@
+#include "clpp/detail/utf8_path.hpp"
 #include "clpp/stdlib.hpp"
 
 #include <cctype>
@@ -13,7 +14,7 @@ namespace clpp::stdlib {
 
 double file_size(const std::string_view path) {
   if (path.find('\0') != std::string_view::npos || path.find("..") != std::string_view::npos) return -1;
-  std::ifstream file(std::filesystem::u8path(path), std::ios::binary | std::ios::ate);
+  std::ifstream file(clpp::detail::utf8_path(path), std::ios::binary | std::ios::ate);
   if (!file) {
     return -1;
   }
@@ -210,7 +211,7 @@ bool std_apply(const std::uint8_t id, const Value* args, const std::uint8_t arit
       error = "runtime error";
       return false;
     }
-    std::ifstream file(std::filesystem::u8path(text), std::ios::binary);
+    std::ifstream file(clpp::detail::utf8_path(text), std::ios::binary);
     if (!file) {
       out = Value::string_of("");
       return true;
@@ -225,7 +226,7 @@ bool std_apply(const std::uint8_t id, const Value* args, const std::uint8_t arit
     }
     std::vector<Value> names;
     std::error_code failure;
-    for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(std::filesystem::u8path(text), failure)) {
+    for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(clpp::detail::utf8_path(text), failure)) {
       if (failure) {
         break;
       }

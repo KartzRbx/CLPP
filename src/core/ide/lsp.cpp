@@ -11,6 +11,7 @@
 //   from disk, so completion across files follows what the user sees.
 // - Unknown requests get MethodNotFound instead of silence, so the client never waits.
 
+#include "clpp/detail/utf8_path.hpp"
 #include "clpp/ide.hpp"
 #include "clpp/semantic.hpp"
 #include "clpp/stdlib.hpp"
@@ -92,7 +93,7 @@ constexpr int kServerNotInitialized = -32002;
   if (decoded.size() >= 3 && decoded[0] == '/' && decoded[2] == ':') {
     decoded.erase(0, 1);
   }
-  return std::filesystem::u8path(decoded).lexically_normal();
+  return clpp::detail::utf8_path(decoded).lexically_normal();
 }
 
 [[nodiscard]] std::string path_utf8(const std::filesystem::path& path) {
@@ -267,7 +268,7 @@ class Server {
   [[nodiscard]] ModuleLoader loader_for(const std::string& uri) const {
     const std::filesystem::path base = uri_to_path(uri).parent_path();
     return [this, base](const std::string_view path) -> std::optional<std::string> {
-      const std::filesystem::path target = (base / std::filesystem::u8path(path)).lexically_normal();
+      const std::filesystem::path target = (base / clpp::detail::utf8_path(path)).lexically_normal();
       const auto open = m_documents.find(key_of(target));
       if (open != m_documents.end()) {
         return open->second.text;  // unsaved edits in another tab win over the disk
@@ -404,7 +405,7 @@ class Server {
       json item{{"range", range(doc.text, line, column, static_cast<std::uint32_t>(diagnostic.span.size()))},
                 {"severity", 1},
                 {"source", "clpp"},
-                {"message", diagnostic.message}};
+                {"message", diagnostic.formatted_message()}};
       diagnostics.push_back(std::move(item));
     }
     notify("textDocument/publishDiagnostics",
@@ -573,7 +574,7 @@ class Server {
           {"documentSymbolProvider", true},
           {"semanticTokensProvider",
            {{"legend", {{"tokenTypes", token_types}, {"tokenModifiers", token_modifiers}}}, {"full", true}}}}},
-        {"serverInfo", {{"name", "clpp"}, {"version", "0.10.1"}}}};
+        {"serverInfo", {{"name", "clpp-vm"}, {"version", CLPP_VERSION}}}};
   }
 
   void handle_document_request(const std::string& method, const json& id, const json& params, Document& doc) {
@@ -782,7 +783,7 @@ class Server {
         return;
       }
       const std::filesystem::path target =
-          (uri_to_path(doc.uri).parent_path() / std::filesystem::u8path(info.definition_path)).lexically_normal();
+          (uri_to_path(doc.uri).parent_path() / clpp::detail::utf8_path(info.definition_path)).lexically_normal();
       const std::optional<std::string> module_text = loader_for(doc.uri)(info.definition_path);
       const std::string target_text = module_text.value_or(std::string{});
       reply(id, json{{"uri", path_to_uri(target)},
@@ -861,7 +862,7 @@ class Server {
     for (const auto& item : items) occupied.insert(item.at("label").get<std::string>());
     for (const auto& link : analysis.links) {
       occupied.insert(link.alias);
-      imported.insert(!link.path.empty() && link.path.front() == '@' ? link.path : key_of((base / std::filesystem::u8path(link.path)).lexically_normal()));
+      imported.insert(!link.path.empty() && link.path.front() == '@' ? link.path : key_of((base / clpp::detail::utf8_path(link.path)).lexically_normal()));
     }
     std::size_t insertion = 0;
     if (!lexed.tokens.empty() && lexed.tokens.front().type != TokenType::Eof) {
@@ -947,7 +948,7 @@ class Server {
     std::string folder_part = typed;
     const std::size_t slash = folder_part.find_last_of('/');
     folder_part = slash == std::string::npos ? std::string{} : folder_part.substr(0, slash + 1);
-    const std::filesystem::path folder = (base / std::filesystem::u8path(folder_part)).lexically_normal();
+    const std::filesystem::path folder = (base / clpp::detail::utf8_path(folder_part)).lexically_normal();
     std::error_code error;
     for (const auto& entry : std::filesystem::directory_iterator(folder, error)) {
       const std::string name = path_utf8(entry.path().filename());

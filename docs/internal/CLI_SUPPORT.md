@@ -25,7 +25,7 @@ The local immutable validated snapshot is recorded in
 `build/validated-cli/latest.json` (ignored build artifact). Read its compilerPath,
 SHA-256, capability list and evidence rather than using a binary currently being
 rebuilt. This prevents linker locks and mid-build changes in consuming tools.
-The local VS Code 0.10.6 package includes these APIs and the layout/literal-safe formatter;
+The 0.11.0 editor package includes these APIs and the layout/literal-safe formatter;
 reload an existing editor host before relying on it. No Cluaupp file was edited.
 
 ## Remaining general infrastructure
@@ -36,7 +36,8 @@ reload an existing editor host before relying on it. No Cluaupp file was edited.
 - [ ] General dependency/analysis API or versioned IR for external developer tools.
   The source language does not expose the existing C++ parser/checker yet.
 - [ ] Standalone source-program executable generation and associated packaging.
-- [ ] Validate new native primitives on actual Linux/macOS/MSVC runners.
+- [ ] Confirm the final 0.11.0 artifacts on actual Linux/macOS/MSVC runners;
+  the prior integrated baseline passed all of these platforms.
 - [ ] Broader native package/resource review remains separate from this CLI slice.
 
 ## Requested delivery gates

@@ -12,7 +12,7 @@ namespace clpp {
 
 namespace {
 
-SourceLocation emit_origin{};
+thread_local SourceLocation emit_origin{};
 thread_local const std::vector<std::uint16_t>* emit_boxed = nullptr;
 thread_local std::size_t operand_opcode = 0;
 
@@ -143,6 +143,10 @@ void emit_u16(BytecodeChunk& chunk, const std::uint16_t value) {
     case parser::Expr::Kind::Update:
     case parser::Expr::Kind::Cast:
     case parser::Expr::Kind::Ascribe:
+    case parser::Expr::Kind::Closure:
+    case parser::Expr::Kind::Invoke:
+    case parser::Expr::Kind::Observe:
+    case parser::Expr::Kind::Event:
       return compiler::Opcode::Nop;
   }
   return compiler::Opcode::Nop;
@@ -1227,6 +1231,7 @@ void leave_tries(BytecodeChunk& chunk, const std::size_t destination_depth) {
   }
   chunk.functions.resize(program.functions.size());
   for (const parser::Function& function : program.functions) {
+    emit_origin = function.name_location;
     if (function.index == 65535 || function.is_extern) {
       if (function.is_extern && function.index != 65535) {
         chunk.functions[function.index].arity = static_cast<std::uint16_t>(function.params.size());
@@ -1269,6 +1274,7 @@ void leave_tries(BytecodeChunk& chunk, const std::size_t destination_depth) {
   }
   chunk.entry = static_cast<std::uint16_t>(chunk.code.size());
   chunk.local_count = program.local_count;
+  emit_origin = {1, 1, 0};
   emit_boxed = nullptr;
   if (!program.globals.empty()) { emit_op(chunk, compiler::Opcode::Globals); emit_u16(chunk, static_cast<std::uint16_t>(program.globals.size())); }
   for (const auto& initialize : program.functions) if (initialize.module_init) {
@@ -1290,6 +1296,8 @@ void leave_tries(BytecodeChunk& chunk, const std::size_t destination_depth) {
 
 ClirEmitResult emit_clir(const AnalysisResult& analysis) {
   ClirEmitResult result;
+  emit_origin = {};
+  result.chunk.source_files = analysis.source_files;
   result.diagnostics = analysis.diagnostics;
   if (analysis.ok() && !emit_program(analysis.program, result.chunk, result.diagnostics)) {
     result.chunk = {};

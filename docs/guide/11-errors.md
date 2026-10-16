@@ -2,6 +2,27 @@
 
 Lexical errors concern characters and tokens; syntax errors concern statement structure; name errors concern unresolved declarations; type errors concern incompatible values. The compiler reports these before execution with a source file, line, and column. A runtime failure happens while the program runs, for example an invalid collection index or division by zero.
 
+## Source origin and type details
+
+Runtime errors inside an imported function identify the imported file, line and
+column, including nested modules and observed/unobserved worker failures. They
+do not reuse the entry filename with an imported line number. Native module
+identities retain their `@clpp` path. The VM preserves this origin through CLIR
+serialization; a full formatted call stack is not currently exposed by the CLI.
+
+For declarations, assignments, return values, field construction and ordinary
+function arguments, known incompatible types include the expected and received
+types. For example, `number count = "bad";` reports:
+
+```text
+type mismatch: expected number, received "bad"
+```
+
+The received value is a literal type when available. A nonnumeric argument to
+`join` identifies the numeric thread-handle requirement. CLI, REPL and LSP use
+the same formatted diagnostic. Some operator/constraint errors still use their
+own shorter explanations; this does not add a new implicit conversion rule.
+
 ## Catching runtime failures
 
 `try { ... } catch (name) { ... }` runs the protected block. A runtime error jumps to `catch`, whose binding contains the error message. Compilation errors cannot be caught this way.

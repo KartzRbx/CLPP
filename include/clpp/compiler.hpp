@@ -33,6 +33,8 @@ struct BytecodeChunk {
   std::vector<FunctionBytecode> functions;
   std::vector<std::vector<std::uint16_t>> vtables;
   std::vector<SourceMapEntry> source_map;
+  // Paths are relative to the entry source; native modules retain @clpp names.
+  std::vector<std::string> source_files;
   std::uint16_t local_count{0};
   std::uint16_t entry{0};
   std::uint16_t version{kBytecodeFormatVersion};

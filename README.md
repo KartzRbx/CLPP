@@ -45,7 +45,7 @@ Run `clpp-vm hello.clp`, or open the file in VS Code and press **Ctrl+F5**.
 
 ## <img src="assets/brand/clpp-32.png" width="28" height="28" alt=""> Install
 
-Download the `.vsix` from [**Releases**](https://github.com/KartzRbx/CLPP/releases). In VS Code or Cursor, select **Extensions → ⋯ → Install from VSIX…**, then reload the window. The extension bundles the compiler for **Windows x64**.
+Download the 0.11.0 `.vsix` or platform runtime ZIP from [**Releases**](https://github.com/KartzRbx/CLPP/releases/tag/v0.11.0). In VS Code or Cursor, select **Extensions → ⋯ → Install from VSIX…**, then reload the window. The extension bundles the compiler for **Windows x64**.
 
 <details>
 <summary><strong>CLI, Linux/macOS, and building from source</strong></summary>

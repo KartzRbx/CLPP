@@ -4,6 +4,71 @@ The author now authorizes general CLI support, site/installer review, local inst
 and GitHub publication after validation. The primary user's Combat edit is preserved.
 Historical local-only stages below describe their scope at that time.
 
+## VM 0.11.0 candidate audit — 2026-10-16
+
+Current verdict: local validation passed; publication still requires the exact
+integrated revision to pass remote CI, final installation and artifact checks.
+
+The external developer's imported-error reproduction was confirmed: the CLI
+reported the entry filename for a failure in another module. Source identities
+now survive nested imports, worker errors and CLIR serialization. Sequential and
+concurrent compilation regressions protect diagnostic origins. Type mismatches
+now retain expected/received types and expose them in CLI/LSP/REPL output.
+CLIR container revision is 4; instruction format remains 12. Old containers are
+rejected rather than interpreted with the wrong layout.
+
+Local evidence:
+- Normal CTest: 544/544; the subsequently registered editor-discovery contract
+  passed separately (three Windows/POSIX/precedence scenarios).
+- ASan/UBSan CTest: 543/543, including concurrent compilation, malformed transport,
+  native resources, all examples and documentation. Windows leak detection is
+  unavailable; these results do not substitute for a leak detector.
+- Independent Python oracles: 192 scenarios match both Debug and Release.
+- Adversarial checks: 1,552 cases passed, seed 20261016, including 1,500 mutated
+  inputs checked without executing their native effects.
+- IntelliSense: 10,000 scenarios, zero functional failures; median 0.629 ms,
+  p95 2.457 ms, p99 5.788 ms. One 54.738 ms sample exceeded the 50 ms short-request
+  target; five fresh-process reproductions were 1.001–3.643 ms. This outlier is
+  retained rather than omitted. Maximum 226.152 ms includes larger-budget cases.
+- Five benchmarks verified outputs against Python, with five runs each. Execution
+  plus startup/compilation medians range 0.922–15.416 s; --check 0.041–0.084 s.
+  Most execution cases were slower than Python; no general speed claim is made.
+- Windows installer passed five consecutive isolated runs. After adding a
+  junction/symlink guard, the extended regression again passed install/update,
+  checksum rejection, ownership, unrelated-file preservation and junction safety.
+- Documentation policy: 55 sources, 250 CL++ blocks, 388 Markdown links;
+  composed VM/Luau generated links and assets passed. The 19 target blocks remain
+  explicitly excluded proposals/host effects, not passed compiler examples.
+
+Failure triage: the first local run exposed a stale new test expecting `any`
+to reject a numeric operation, although the established contract checks it at
+runtime. The test now checks a known string rejection and explicitly preserves
+dynamic `any`. A Windows cleanup failure after executing the staged compiler
+was addressed with bounded retries, then five consecutive installer runs passed.
+The first generated generic closure lacked a required `where T: number` bound;
+the generator was corrected without weakening the language checker.
+
+Distribution now has deterministic platform ZIPs, version identity tests, a
+pinned checksum-verifying Windows installer and a publication workflow that
+requires successful CI and documentation for the exact main commit. Official
+runtime name remains `clpp-vm`, separate from the independent Luau compiler.
+
+Dedicated SAST/secret scanners, test-suite mutation tools, TSan, physical native
+devices and visual editor acceptance are not covered by these automated runs.
+Streaming/cancellable processes, file watching, content hashing, source-level
+compiler APIs and standalone source-program executables remain future work.
+
+| Layer | Ran | Passed | Real bugs | Flaky | Stale |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Normal CTest | 544 | 544 | 0 unresolved | 0 | 1 corrected |
+| ASan/UBSan CTest | 543 | 543 | 0 unresolved | 0 | 0 |
+| Differential oracles | 192 | 192 | 0 | 0 | 1 generator corrected |
+| Adversarial inputs | 1552 | 1552 | 0 | 0 | 0 |
+| IntelliSense functional | 10000 | 10000 | 0 | 1 timing outlier retained | 0 |
+
+Verdict: DON'T SHIP until the exact integration and final artifact gates below
+are completed; the local candidate is passing.
+
 ## Auto-import completion — 2026-10-15
 
 Generic module suggestions now use project `.clp` filenames and the native module

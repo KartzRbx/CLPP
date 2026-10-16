@@ -101,6 +101,7 @@ add_library(clpp_tools STATIC
   core/repl/repl.cpp
 )
 target_link_libraries(clpp_tools PUBLIC clpp_vm clpp_front PRIVATE nlohmann_json::nlohmann_json)
+target_compile_definitions(clpp_tools PRIVATE CLPP_VERSION="${PROJECT_VERSION}")
 clpp_configure_target(clpp_tools)
 
 # Everything at once, for the CLI, the tests and existing embedders.
@@ -108,11 +109,13 @@ add_library(clpp_core INTERFACE)
 target_link_libraries(clpp_core INTERFACE clpp_tools clpp_vm clpp_compiler clpp_front clpp_std)
 
 add_executable(clpp cli/main.cpp)
-# The C++20 VM is a separate product from the Rust/Luau compiler.
+# Separate from the independent Luau compiler.
 set_target_properties(clpp PROPERTIES OUTPUT_NAME "clpp-vm")
+target_compile_definitions(clpp PRIVATE CLPP_VERSION="${PROJECT_VERSION}")
 if(WIN32)
   enable_language(RC)
-  target_sources(clpp PRIVATE cli/clpp.rc)  # icon + version info in Explorer
+  configure_file(cli/clpp.rc.in "${CMAKE_CURRENT_BINARY_DIR}/clpp.rc" @ONLY)
+  target_sources(clpp PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/clpp.rc")
 endif()
 target_link_libraries(clpp PRIVATE clpp_core)
 if(WIN32)

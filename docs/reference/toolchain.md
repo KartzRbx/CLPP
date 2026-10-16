@@ -21,6 +21,13 @@ cmake --build --preset release
 
 The current bytecode format is version 12. Booleans have a distinct runtime kind and CLIR literal tag; malformed boolean payloads are rejected. Async tasks use cooperative scheduling and event operations include checked `Wait` suspension. Method slots are shared across nominal interface views; an absent method occupies the reserved invalid target `65535`, checked at dispatch. Observable registration returns a connection handle. Typed event operations have checked operation/arity operands and shared runtime signal/connection values. Bound method construction has its own checked instruction, retaining the receiver and resolved virtual target. Function records preserve whether indirect invocation must produce a pending async task. CLIR serialization keeps this flag and rejects unknown flags, truncated records and incompatible versions. Older compiled files must be rebuilt with the matching compiler; an installed compiler or extension is not updated by rebuilding this checkout.
 
+The CLIR test container is revision **4**, separately from instruction format
+12. It stores each source position's source-file index and a bounded file table.
+Deserialization rejects invalid source indices, malformed/truncated tables and
+incompatible container revisions. Rebuild older containers with this compiler.
+`VirtualMachine::error_location().source` indexes `BytecodeChunk::source_files`;
+the entry source uses index zero, whose empty path is supplied by the host.
+
 ## Embedded compiler diagnostics
 
 `CompileResult` and `ClirEmitResult` retain immutable storage for diagnostic
@@ -28,18 +35,13 @@ source spans. The spans remain readable after the analyzed source and module
 buffers are destroyed, and after copying or moving the result. Keep a result
 alive when retaining its diagnostic views; copying a `Diagnostic` alone does
 not transfer the result's storage. Successful compilation does not allocate
-diagnostic span storage.
+diagnostic span storage. `Diagnostic::expected_type` and `actual_type` carry
+known mismatch details; `formatted_message()` combines them for display while
+`message` retains the diagnostic category.
 
 ## Editor
 
 The CL++ VS Code extension in `tools/vscode/` uses the compiler's language server (`clpp-vm --lsp`) for diagnostics, completion, hover, and navigation. The repository also supports clangd for C++ development through `compile_commands.json`.
-
-The local Zed installer runs an immutable compiler snapshot from the installed
-extension, separate from build outputs. Reinstall after rebuilding to select the
-new compiler. It accepts `--package <directory>` and `--compiler <executable>` for
-separate builds. If Zed reports `server shut down`, reload the language server or
-reopen the CL++ buffer after installation; syntax colors alone do not establish
-that completion, hover and semantic tokens are connected.
 
 The local Zed installer runs an immutable compiler snapshot from the installed
 extension, separate from build outputs. Reinstall after rebuilding to select the

@@ -4,7 +4,7 @@ This handbook teaches CL++'s target syntax. **CL++ officially compiles to byteco
 
 ## Install the current executable
 
-Build this checkout to use the current language and the `clpp-vm` executable. Existing [GitHub Releases](https://github.com/KartzRbx/CLPP/releases) have their own versioned contracts; the published 0.10.1 assets still use `clpp.exe` and predate these changes. A locally packaged VSIX includes the matching compiler, and `clpp.serverPath` can select an explicit executable. No updated release has been published from this checkout.
+On Windows x64, obtain the VSIX extension from [GitHub Releases](https://github.com/KartzRbx/CLPP/releases). In VS Code, use **Extensions → … → Install from VSIX**. The extension includes the compiler; `clpp.serverPath` can select another executable. Put `clpp-vm.exe` on your `PATH` if you want to use it from a terminal.
 
 To build the current source, install CMake 3.20+, Ninja, and a C++20 compiler:
 

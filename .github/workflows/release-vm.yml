@@ -1,0 +1,62 @@
+name: Publish validated VM release
+
+on:
+  workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: Successful CI run on this exact main commit
+        required: true
+        type: string
+      docs_run_id:
+        description: Successful Documentation validation run on this exact main commit
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: publish-vm-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify successful workflows and exact source revision
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_RUN_ID: ${{ inputs.ci_run_id }}
+          DOCS_RUN_ID: ${{ inputs.docs_run_id }}
+        run: |
+          python - <<'PY'
+          import json,os,subprocess
+          for variable,workflow in [('CI_RUN_ID','CI'),('DOCS_RUN_ID','Documentation validation')]:
+              run_id=os.environ[variable]
+              assert run_id.isdecimal()
+              run=json.loads(subprocess.check_output(['gh','run','view',run_id,'--json','headSha,headBranch,status,conclusion,workflowName']))
+              assert run['headSha']==os.environ['GITHUB_SHA'] and run['headBranch']=='main',run
+              assert run['status']=='completed' and run['conclusion']=='success' and run['workflowName']==workflow,run
+          PY
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.ci_run_id }}
+          pattern: vm-runtime-*
+          path: build/release-artifacts
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.ci_run_id }}
+          name: clpp-vm-windows
+          path: build/release-artifacts/windows
+      - name: Validate identity checksums and publish immutable assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/distribution/publish_release.py build/release-artifacts --publish

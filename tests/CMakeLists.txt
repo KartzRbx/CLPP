@@ -28,6 +28,7 @@ add_executable(clpp_unit_tests
   unit/test_vm.cpp
   unit/test_ide.cpp
   unit/test_regressions.cpp
+  unit/test_source_origins.cpp
 )
 
 target_link_libraries(clpp_unit_tests PRIVATE clpp_core Catch2::Catch2WithMain)
@@ -134,6 +135,25 @@ endif()
 # End-to-end language server test: the same JSON-RPC traffic VS Code sends.
 find_package(Python3 COMPONENTS Interpreter QUIET)
 if(Python3_Interpreter_FOUND)
+  add_test(NAME "CLI LSP editor and installer release versions agree"
+           COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/distribution/test_versions.py" $<TARGET_FILE:clpp>)
+  set_tests_properties("CLI LSP editor and installer release versions agree" PROPERTIES LABELS "distribution;contract" TIMEOUT 60)
+  if(NOT CLPP_SANITIZE_ADDRESS AND NOT CLPP_SANITIZE_UNDEFINED)
+    add_test(NAME "portable release archive runs outside the source tree"
+             COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/distribution/test_release_archive.py" $<TARGET_FILE:clpp>)
+    set_tests_properties("portable release archive runs outside the source tree" PROPERTIES LABELS "distribution" TIMEOUT 120)
+    if(WIN32)
+      add_test(NAME "Windows installer upgrade verification and uninstall"
+               COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/distribution/test_windows_installer.py" $<TARGET_FILE:clpp>)
+      set_tests_properties("Windows installer upgrade verification and uninstall" PROPERTIES LABELS "distribution" TIMEOUT 240)
+    endif()
+  endif()
+  add_test(NAME "language semantics match independent generated oracles"
+           COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/stress/differential_validation.py" $<TARGET_FILE:clpp>)
+  set_tests_properties("language semantics match independent generated oracles" PROPERTIES LABELS "core;contract" TIMEOUT 180)
+  add_test(NAME "CLI imported runtime diagnostics preserve source paths"
+           COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/runtime/module_diagnostics.py" $<TARGET_FILE:clpp>)
+  set_tests_properties("CLI imported runtime diagnostics preserve source paths" PROPERTIES LABELS "core;contract" TIMEOUT 60)
   add_test(NAME "CLI filesystem Unicode and NUL paths"
            COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/runtime/filesystem_host.py" $<TARGET_FILE:clpp>)
   set_tests_properties("CLI filesystem Unicode and NUL paths" PROPERTIES LABELS "tooling;contract" TIMEOUT 60)
@@ -193,6 +213,9 @@ endif()
 # The VS Code extension, activated against a mocked `vscode` API and the real server.
 find_program(NODE_EXECUTABLE node)
 if(NODE_EXECUTABLE)
+  add_test(NAME "editor discovers the installed native VM layout"
+           COMMAND ${NODE_EXECUTABLE} --test "${CMAKE_SOURCE_DIR}/tests/vscode/test_discovery.cjs")
+  set_tests_properties("editor discovers the installed native VM layout" PROPERTIES LABELS "lsp;distribution" TIMEOUT 30)
   add_test(NAME "vscode extension"
            COMMAND ${NODE_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/vscode/test_extension.js" $<TARGET_FILE:clpp>
            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/tests/vscode")

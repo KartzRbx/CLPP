@@ -14,6 +14,7 @@ thread_local const std::vector<parser::EnumDecl>* active_enums = nullptr;
 thread_local const std::vector<parser::TypeAlias>* active_aliases = nullptr;
 thread_local const std::vector<parser::StructDecl>* active_structs = nullptr;
 thread_local parser::CheckMode active_mode = parser::CheckMode::Nonstrict;
+thread_local const parser::Program* active_program = nullptr;
 
 struct Type {
   enum class Kind {
@@ -830,6 +831,20 @@ void mismatch(const parser::Expr& expr, std::vector<Diagnostic>& diagnostics) {
   diagnostics.push_back(Diagnostic{expr.location, expr.span, "type mismatch"});
 }
 
+[[nodiscard]] std::string source_type(const Type& type, const parser::Program& program);
+
+[[nodiscard]] std::string diagnostic_type(const Type& type) {
+  if (type == kAny) return "any";
+  if (type == kNull) return "null";
+  return active_program ? source_type(type, *active_program) : std::string{};
+}
+
+void mismatch(const parser::Expr& expr, std::vector<Diagnostic>& diagnostics, const Type& expected, const Type& actual) {
+  mismatch(expr, diagnostics);
+  diagnostics.back().expected_type = diagnostic_type(expected);
+  diagnostics.back().actual_type = diagnostic_type(actual);
+}
+
 [[nodiscard]] bool method_signature_compatible(const Signature& base, const Signature& implementation,
                                                 const std::vector<StructInfo>& structs, const Type& receiver) {
   if (base.params.size() != implementation.params.size() || base.is_async != implementation.is_async) return false;
@@ -1188,7 +1203,7 @@ void check_function_constraints(const parser::Expr& expr, const Signature& signa
         const Type arg = check_expr(expr.args[index], bindings, signatures, structs, diagnostics);
         const Type expected = specialize_type(fields[index], structs[expr.slot], supplied);
         if (expected == kError || !accepts_value(expected, arg, expr.args[index])) {
-          mismatch(expr.args[index], diagnostics);
+          mismatch(expr.args[index], diagnostics, expected, arg);
         }
       }
       Type result{Type::Kind::Struct, expr.slot};
@@ -1340,7 +1355,7 @@ void check_function_constraints(const parser::Expr& expr, const Signature& signa
       check_function_constraints(expr, *signature, context, arguments, signatures, structs, diagnostics);
       for (std::size_t index = 0; index < args.size() && index < signature->params.size(); ++index) {
         const Type expected = specialize_type(signature->params[index], context, arguments);
-        if (expected == kError || !accepts_value(expected, args[index], expr.args[index])) mismatch(expr.args[index], diagnostics);
+        if (expected == kError || !accepts_value(expected, args[index], expr.args[index])) mismatch(expr.args[index], diagnostics, expected, args[index]);
       }
       const Type result = specialize_type(signature->result, context, arguments);
       if (result == kError) mismatch(expr, diagnostics);
@@ -1389,6 +1404,8 @@ void check_function_constraints(const parser::Expr& expr, const Signature& signa
         const Type handle = check_expr(*expr.left, bindings, signatures, structs, diagnostics);
         if (!is_numeric(handle) && handle != kError) {
           mismatch(*expr.left, diagnostics);
+          diagnostics.back().expected_type = "numeric thread handle for join";
+          diagnostics.back().actual_type = diagnostic_type(handle);
         }
       }
       return kAny;
@@ -1746,7 +1763,7 @@ void check_stmts(const std::vector<parser::Stmt>& statements, std::vector<Bindin
       if (declared == kError) {
         diagnostics.push_back(Diagnostic{stmt.name_location, stmt.name_span, "unknown type"});
       } else if (!accepts_value(declared, value, stmt.expr)) {
-        mismatch(stmt.expr, diagnostics);
+        mismatch(stmt.expr, diagnostics, declared, value);
       }
       Type stored = declared == kAny ? value : declared;
       // `auto name = "Ada";` holds a string, not the literal type "Ada": otherwise every later
@@ -1765,7 +1782,7 @@ void check_stmts(const std::vector<parser::Stmt>& statements, std::vector<Bindin
       const Type value = check_expr(stmt.expr, bindings, signatures, structs, diagnostics);
       const Type destination = check_expr(stmt.place, bindings, signatures, structs, diagnostics);
       if (destination != kError && !accepts_value(destination, value, stmt.expr)) {
-        mismatch(stmt.expr, diagnostics);
+        mismatch(stmt.expr, diagnostics, destination, value);
       }
       continue;
     }
@@ -1773,7 +1790,7 @@ void check_stmts(const std::vector<parser::Stmt>& statements, std::vector<Bindin
       const Type value = check_expr(stmt.expr, bindings, signatures, structs, diagnostics);
       for (auto binding = bindings.rbegin(); binding != bindings.rend(); ++binding) {
         if (binding->name != stmt.name) continue;
-        if (binding->declared != kError && !accepts_value(binding->declared, value, stmt.expr)) mismatch(stmt.expr, diagnostics);
+        if (binding->declared != kError && !accepts_value(binding->declared, value, stmt.expr)) mismatch(stmt.expr, diagnostics, binding->declared, value);
         // A write invalidates any refinement of the previous value.
         binding->type = binding->declared;
         break;
@@ -1789,7 +1806,7 @@ void check_stmts(const std::vector<parser::Stmt>& statements, std::vector<Bindin
       }
       const Type value = check_expr(stmt.expr, bindings, signatures, structs, diagnostics);
       if (!accepts_value(return_type, value, stmt.expr)) {
-        mismatch(stmt.expr, diagnostics);
+        mismatch(stmt.expr, diagnostics, return_type, value);
       }
       continue;
     }
@@ -2133,6 +2150,7 @@ void check_stmts(const std::vector<parser::Stmt>& statements, std::vector<Bindin
 }
 
 struct ActiveTypesGuard {
+  const parser::Program* program = active_program;
   decltype(active_enums) enums = active_enums;
   decltype(active_aliases) aliases = active_aliases;
   decltype(active_structs) structs = active_structs;
@@ -2140,6 +2158,7 @@ struct ActiveTypesGuard {
   const TypeScope* function = active_function_types;
   const std::vector<StructInfo>* info = active_type_info;
   ~ActiveTypesGuard() {
+    active_program = program;
     active_enums = enums; active_aliases = aliases;
     active_structs = structs; active_mode = mode; active_function_types = function; active_type_info = info;
   }
@@ -2362,6 +2381,8 @@ std::optional<std::string> default_owner_type(const parser::Program& program, co
 }
 
 void Solver::check(const parser::Program& program, std::vector<Diagnostic>& diagnostics) {
+  const ActiveTypesGuard restore;
+  active_program = &program;
   active_mode = program.mode;
   active_structs = &program.structs;
   active_enums = &program.enums;

@@ -3281,10 +3281,12 @@ std::optional<Expr> Parser::parse_template() {
       Lexer lexer(hole);
       LexResult lexed = lexer.tokenize();
       for (Token& hole_token : lexed.tokens) {
+        hole_token.location.source = token.location.source;
         hole_token.location.line = token.location.line;
         hole_token.location.column += hole_column - 1;
       }
       for (Diagnostic& diagnostic : lexed.diagnostics) {
+        diagnostic.location.source = token.location.source;
         diagnostic.location.line = token.location.line;
         diagnostic.location.column += hole_column - 1;
       }
@@ -3350,7 +3352,8 @@ std::optional<Expr> Parser::finish_postfix(Expr expr) {
       call.left = std::make_unique<Expr>(std::move(expr));
       if (!check(TokenType::CloseParen)) do {
         auto argument = parse_expression(); if (!argument) return std::nullopt; call.args.push_back(std::move(*argument));
-        if (!check(TokenType::Comma)) break; advance();
+        if (!check(TokenType::Comma)) break;
+        advance();
       } while (!is_at_end());
       if (!consume(TokenType::CloseParen, "expected ')'")) return std::nullopt;
       expr = std::move(call); continue;

@@ -1099,15 +1099,15 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
             if (field.name != name) {
               continue;
             }
-            const std::string owner = field.owner.empty() ? decl->name : field.owner;
+            const std::string declaring_owner = field.owner.empty() ? decl->name : field.owner;
             const std::string type = field.type_name.empty() ? "auto" : field.type_name;
             info.has_hover = true;
             info.hover.text = name + ": " + type;
-            info.hover_markdown = code_block(type + " " + owner + "." + name);
-            if (owner != bare_type(base_type)) {
-              info.hover_markdown += "\n\nInherited from `" + owner + "`";
+            info.hover_markdown = code_block(type + " " + declaring_owner + "." + name);
+            if (declaring_owner != bare_type(base_type)) {
+              info.hover_markdown += "\n\nInherited from `" + declaring_owner + "`";
             }
-            const parser::StructDecl* declaring = find_struct(program, owner);
+            const parser::StructDecl* declaring = find_struct(program, declaring_owner);
             const parser::Field* original = &field;
             if (declaring != nullptr) {
               for (const parser::Field& candidate : declaring->fields) {
@@ -1119,7 +1119,7 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
             info.has_definition = original->name_location.line != 0;
             info.definition = original->name_location;
             info.definition_length = static_cast<std::uint32_t>(name.size());
-            if (const ModuleInfo* module = origin_of_type(analysis, owner)) {
+            if (const ModuleInfo* module = origin_of_type(analysis, declaring_owner)) {
               info.definition_path = module->path;
             }
             break;

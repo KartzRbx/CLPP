@@ -7,9 +7,9 @@
 //
 // Server lookup order (first hit wins), same idea as the Zig/Rust/Go extensions:
 //   1. setting `clpp.serverPath`
-//   2. the binary bundled in this extension: bin/<platform>-<arch>/clpp-vm(.exe)
-//   3. `clpp-vm` / `clpp-vm.exe` on PATH
-//   4. the installer location: %LOCALAPPDATA%\Programs\CLPP-VM\clpp-vm.exe (Windows) or ~/.local/bin/clpp-vm
+//   2. the binary bundled in this extension: bin/<platform>-<arch>/clpp(.exe)
+//   3. `clpp` / `clpp.exe` on PATH
+//   4. the installer location: %LOCALAPPDATA%\Programs\CLPP\clpp.exe (Windows) or ~/.local/bin/clpp
 
 "use strict";
 
@@ -69,6 +69,12 @@ function findServer(context) {
     process.platform === "win32"
       ? path.join(process.env.LOCALAPPDATA || "", "Programs", "CLPP-VM", "clpp-vm.exe")
       : path.join(os.homedir(), ".local", "bin", "clpp-vm");
+  const nativeInstalled = process.platform === "win32"
+    ? path.join(process.env.LOCALAPPDATA || "", "Programs", "CLPP-VM", "bin", "clpp-vm.exe")
+    : path.join(os.homedir(), ".local", "bin", "clpp-vm");
+  if (fs.existsSync(nativeInstalled)) {
+    return { path: nativeInstalled, source: "installer" };
+  }
   if (fs.existsSync(installed)) {
     return { path: installed, source: "installer" };
   }

@@ -1592,6 +1592,7 @@ TEST_CASE("CLIR round trip executes literals functions and virtual methods", "[b
     REQUIRE(restored.source_map[i].pc == compiled.chunk.source_map[i].pc);
     REQUIRE(restored.source_map[i].location.line == compiled.chunk.source_map[i].location.line);
     REQUIRE(restored.source_map[i].location.column == compiled.chunk.source_map[i].location.column);
+    REQUIRE(restored.source_map[i].location.source == compiled.chunk.source_map[i].location.source);
   }
   std::ostringstream output;
   clpp::VirtualMachine vm;
@@ -1697,7 +1698,8 @@ TEST_CASE("CLIR preserves async callback scheduling and captured task arguments"
   CHECK(clpp::serialize_clir(restored) == bytes);
   auto old = bytes; old[6] = 5; old[7] = 0;
   CHECK(clpp::deserialize_clir(old).version == 0);
-  std::size_t suffix = 2 + 4 + compiled.chunk.source_map.size() * 10;
+  std::size_t suffix = 2 + 4 + compiled.chunk.source_map.size() * 14 + 4;
+  for (const auto& file : compiled.chunk.source_files) suffix += 4 + file.size();
   for (const auto& table : compiled.chunk.vtables) suffix += 2 + table.size() * 2;
   const auto first_function = bytes.size() - suffix - compiled.chunk.functions.size() * 8;
   auto invalid_flags = bytes; invalid_flags[first_function + 6] = 2;

@@ -30,6 +30,7 @@ struct ModuleInfo {
 
 struct AnalysisResult {
   std::deque<std::string> source_buffers;
+  std::vector<std::string> source_files;
   parser::Program program;
   std::vector<Token> tokens;
   std::vector<Diagnostic> diagnostics;

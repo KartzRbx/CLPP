@@ -537,7 +537,7 @@ TEST_CASE("lexer line comment at eof has no diagnostic", "[lexer]") {
 }
 
 TEST_CASE("line comment ends at LF, CRLF and a lone CR", "[lexer][crlf]") {
-  for (const std::string source : {std::string("<< note\npost"), std::string("<< note\r\npost"),
+  for (const std::string& source : {std::string("<< note\npost"), std::string("<< note\r\npost"),
                                    std::string("<< note\rpost")}) {
     clpp::Lexer lexer(source);
     const clpp::LexResult result = lexer.tokenize();

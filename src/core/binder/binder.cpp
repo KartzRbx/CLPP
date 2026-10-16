@@ -22,9 +22,9 @@ struct Local {
   std::uint16_t slot{0};
   std::string type_name;
   bool constant{false};
-  std::string value;
+  std::string value{};
   bool observable{false};
-  std::string optional_origin;
+  std::string optional_origin{};
   bool global{false};
 };
 
@@ -39,8 +39,8 @@ struct FuncRef {
   bool is_override{false};
   bool is_final{false};
   std::uint16_t extern_id{0};
-  std::string return_type;
-  std::vector<std::string> type_params;
+  std::string return_type{};
+  std::vector<std::string> type_params{};
   std::size_t owner_type_param_count{0};
 };
 
@@ -54,7 +54,7 @@ struct StructRef {
   std::vector<std::string> fields;
   std::vector<std::string> field_owners;
   std::vector<std::string> field_types;
-  std::vector<std::string> type_params;
+  std::vector<std::string> type_params{};
   std::vector<std::shared_ptr<parser::Expr>> field_defaults;
   std::vector<char> private_fields;
   std::vector<std::string> method_names;
@@ -165,15 +165,6 @@ void narrow_optional(const parser::Expr& condition, const bool truth, std::vecto
   }
   return false;
 }
-
-
-[[nodiscard]] bool is_builtin_type(const std::string_view name) {
-  return name.empty() || name == "number" || name == "float" || name == "float" || name == "string" || name == "bool" ||
-         name == "void" || name == "Vector2" || name == "Vector3" || name == "Vector4" || name == "buffer" ||
-         name == "task";
-}
-
-
 
 
 [[nodiscard]] int find_local(const std::vector<Local>& locals, const std::string_view name) {
@@ -1110,8 +1101,8 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
           if (field < constructed->field_defaults.size() && constructed->field_defaults[field] != nullptr) {
             const auto* declaration = find_struct(structs, constructed->field_owners[field]);
             const auto declared_field = declaration ? find_field(*declaration, constructed->fields[field]) : -1;
-            const auto& expected = declared_field >= 0 ? declaration->field_types[declared_field] : constructed->field_types[field];
-            if (!bind_default(*constructed->field_defaults[field], functions, structs, enums, diagnostics, expected, constructed->field_owners[field])) return;
+            const auto& field_expected = declared_field >= 0 ? declaration->field_types[declared_field] : constructed->field_types[field];
+            if (!bind_default(*constructed->field_defaults[field], functions, structs, enums, diagnostics, field_expected, constructed->field_owners[field])) return;
             ordered[field] = clone_expr(*constructed->field_defaults[field]);
             if (active_program) {
               const auto owner = typechecker::default_owner_type(*active_program, expr.value, constructed->field_owners[field], active_function);
@@ -2148,8 +2139,8 @@ void bind(parser::Program& program, std::vector<Diagnostic>& diagnostics) {
       if (field.default_value != nullptr) {
         const auto* declaration = find_struct(structs, field.owner);
         const auto declared_field = declaration ? find_field(*declaration, field.name) : -1;
-        const auto& expected = declared_field >= 0 ? declaration->field_types[declared_field] : field.type_name;
-        (void)bind_default(*field.default_value, functions, structs, enums, diagnostics, expected, field.owner);
+        const auto& field_expected = declared_field >= 0 ? declaration->field_types[declared_field] : field.type_name;
+        (void)bind_default(*field.default_value, functions, structs, enums, diagnostics, field_expected, field.owner);
       }
     }
   }

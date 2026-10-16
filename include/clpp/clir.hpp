@@ -22,10 +22,10 @@ struct ClirEmitResult {
 
 [[nodiscard]] RegChunk lower_to_vm(const BytecodeChunk& chunk);
 
-// Complete test container for CLIR bytecode version 2. The container revision is separate from the
+// Complete test container for CLIR. The container revision is separate from the
 // bytecode version; this is not a stable distribution format. Invalid input returns
 // an empty chunk with version 0. Runtime heap values are not constant-pool literals.
-inline constexpr std::uint16_t kClirContainerVersion = 3;
+inline constexpr std::uint16_t kClirContainerVersion = 4;
 [[nodiscard]] std::string serialize_clir(const BytecodeChunk& chunk);
 [[nodiscard]] BytecodeChunk deserialize_clir(std::string_view bytes);
 

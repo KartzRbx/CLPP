@@ -6,7 +6,31 @@ CL++ is a compiled, general-purpose language designed for games. A `.clp` source
 
 ## Install
 
-Build the current CL++ VM from this checkout using the commands below. The existing [0.10.1 release](https://github.com/KartzRbx/CLPP/releases/tag/v0.10.1) predates these language updates and used the executable name `clpp.exe`; its assets have not been renamed or replaced. The current C++ tool is `clpp-vm`, separate from the Rust/Luau `clpp` compiler. No new release has been published from this checkout.
+Install **[CL++ VM 0.11.0](https://github.com/KartzRbx/CLPP/releases/tag/v0.11.0)** from GitHub Releases.
+Choose the runtime ZIP for your operating system and architecture, verify its
+SHA-256 against `SHA256SUMS`, and extract it into a directory you own. Run
+`bin/clpp-vm --version` (`bin/clpp-vm.exe --version` on Windows); it should report
+version 0.11.0. This VM is separate from the independent Luau compiler named `clpp`.
+
+On Windows x64, install `clpp-language-0.11.0.vsix` through **Extensions → … →
+Install from VSIX**. It includes the matching VM for IntelliSense and running files.
+Other systems use the runtime ZIP through the `clpp.serverPath` editor setting.
+Reload an open editor after updating its extension.
+
+The Windows release also includes `install-vm.ps1`. Download it from the same
+release, then run `powershell -NoProfile -ExecutionPolicy Bypass -File .\install-vm.ps1`.
+It installs into `%LOCALAPPDATA%/Programs/CLPP-VM`, verifies the pinned version and
+archive checksum, and preserves PATH and unrelated files. Run the script again
+to update, or add `-Uninstall` to remove the files it owns. `-Prefix` chooses a
+different directory. Portable ZIP installations can be removed by deleting only
+their extracted directory. Neither method requires administrator access.
+An existing unowned file is never silently overwritten. For a verified older VM
+installed without a manifest, use `-AdoptExisting`, or choose a fresh prefix.
+
+Windows packages target x64; Linux packages target Ubuntu 24.04 x64. macOS archive
+names identify the native architecture actually built and tested. Build from
+source for a platform without a matching archive. Runtime and headless checks do
+not imply that every desktop/audio adapter is available on every host.
 
 To build from source, install CMake 3.20+, Ninja, and a C++20 compiler, then run:
 
@@ -52,7 +76,7 @@ Run `clpp-vm hello.clp`. In VS Code, open the file and press **Ctrl+F5**. Both l
 
 ## Program structure
 
-A file can contain `link` imports, declarations (typed functions, `def`, `enum class`), constants, and top-level statements. Top-level statements execute in order in the file passed to `clpp-vm`. Imported files contain declarations and constants only, so importing a module does not run arbitrary code.
+A file can contain `link` imports, declarations (typed functions, `def`, `enum class`), constants, and top-level statements. Top-level statements execute in order in the file passed to `clpp`. Imported files contain declarations and constants only, so importing a module does not run arbitrary code.
 
 ```clp
 link @clpp.axiom as Axiom;

@@ -1,4 +1,4 @@
-// Regression tests for the problems found in the CL++ rework review (see docs/CHANGES.md).
+// Regression tests for the problems found in the CL++ rework review.
 #include "clpp/clir.hpp"
 #include "clpp/compiler.hpp"
 #include "clpp/core/lexer/lexer.hpp"

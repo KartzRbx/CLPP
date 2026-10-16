@@ -1055,7 +1055,7 @@ bool VirtualMachine::execute_registers(const RegChunk& lowered) {
           m_error = "type error";
           return false;
         }
-        const auto type_index = static_cast<std::uint16_t>(m_stack[a].number) - 1;
+        const auto type_index = static_cast<std::size_t>(static_cast<std::uint16_t>(m_stack[a].number) - 1);
         if (type_index >= m_chunk.vtables.size() || d >= m_chunk.vtables[type_index].size()) {
           m_error = "type error";
           return false;
@@ -1203,7 +1203,7 @@ bool VirtualMachine::execute_registers(const RegChunk& lowered) {
       case RegOp::MakeBoundMethod: {
         const Value receiver = *dest;
         if (!receiver.is_struct() || receiver.number < 1) { m_error = "invalid method receiver"; if (recover()) continue; return false; }
-        const auto type = static_cast<std::uint16_t>(receiver.number) - 1;
+        const auto type = static_cast<std::size_t>(static_cast<std::uint16_t>(receiver.number) - 1);
         if (type >= m_chunk.vtables.size() || d >= m_chunk.vtables[type].size()) { m_error = "invalid method slot"; return false; }
         const auto callee = m_chunk.vtables[type][d];
         if (callee >= m_chunk.functions.size() || m_chunk.functions[callee].arity == 0) { m_error = "invalid method"; return false; }
@@ -1701,7 +1701,6 @@ bool VirtualMachine::execute_registers(const RegChunk& lowered) {
           std::size_t remaining = at;
           const std::string& text = object.text;
           while (offset < text.size() && remaining > 0) {
-            const auto lead = static_cast<unsigned char>(text[offset]);
             offset += utf8_width(text, offset);
             --remaining;
           }

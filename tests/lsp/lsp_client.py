@@ -9,6 +9,7 @@ class Client:
         self.root = root
         r = self.req("initialize", {"processId": os.getpid(), "rootUri": "file://" + root, "capabilities": {}})
         self.caps = r["result"]["capabilities"] if r and "result" in r else None
+        self.server_info = r["result"].get("serverInfo") if r and "result" in r else None
         self.notify("initialized", {})
     def _read(self):
         f = self.p.stdout

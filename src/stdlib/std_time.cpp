@@ -1,6 +1,7 @@
 // @clpp.time — wall clock, monotonic clock, sleeping and dates.
 // @clpp.fs (writing half) — write, append, exists, remove, makeDir, isDir.
 
+#include "clpp/detail/utf8_path.hpp"
 #include "stdlib/host.hpp"
 
 #include <chrono>
@@ -115,7 +116,7 @@ CLPP_NATIVE(fs_write) {  // (path, text, append)
   if (!check_path(args, arity, 2, error, "Fs.write")) {
     return false;
   }
-  std::ofstream file(std::filesystem::u8path(args[0].text), std::ios::binary | (num(args[2]) != 0 ? std::ios::app : std::ios::trunc));
+  std::ofstream file(clpp::detail::utf8_path(args[0].text), std::ios::binary | (num(args[2]) != 0 ? std::ios::app : std::ios::trunc));
   file.write(args[1].text.data(), static_cast<std::streamsize>(args[1].text.size()));
   out = boolean(static_cast<bool>(file));
   return true;
@@ -126,7 +127,7 @@ CLPP_NATIVE(fs_exists) {  // (path, 0 exists | 1 is directory)
     return false;
   }
   std::error_code failure;
-  const auto path = std::filesystem::u8path(args[0].text);
+  const auto path = clpp::detail::utf8_path(args[0].text);
   const bool result = num(args[1]) != 0 ? std::filesystem::is_directory(path, failure)
                                         : std::filesystem::exists(path, failure);
   out = boolean(result && !failure);
@@ -138,7 +139,7 @@ CLPP_NATIVE(fs_remove) {
     return false;
   }
   std::error_code failure;
-  out = boolean(std::filesystem::remove(std::filesystem::u8path(args[0].text), failure) && !failure);  // a file or an empty folder
+  out = boolean(std::filesystem::remove(clpp::detail::utf8_path(args[0].text), failure) && !failure);  // a file or an empty folder
   return true;
 }
 
@@ -147,7 +148,7 @@ CLPP_NATIVE(fs_make_dir) {
     return false;
   }
   std::error_code failure;
-  const auto path = std::filesystem::u8path(args[0].text);
+  const auto path = clpp::detail::utf8_path(args[0].text);
   std::filesystem::create_directories(path, failure);
   out = boolean(!failure && std::filesystem::is_directory(path, failure));
   return true;

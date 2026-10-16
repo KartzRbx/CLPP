@@ -184,10 +184,12 @@ bool executable_valid(const BytecodeChunk& chunk) {
 }
 
 bool source_map_valid(const BytecodeChunk& chunk) {
+  for (const auto& file : chunk.source_files) if (file.find('\0') != std::string::npos) return false;
   std::uint16_t previous = 0;
   bool first = true;
   for (const auto& entry : chunk.source_map) {
     if (entry.pc >= chunk.code.size() || entry.location.line == 0 || entry.location.column == 0 ||
+        (entry.location.source != 0 && entry.location.source >= chunk.source_files.size()) ||
         (!first && entry.pc < previous)) return false;
     first = false;
     previous = entry.pc;
@@ -225,6 +227,12 @@ std::string serialize_clir(const BytecodeChunk& chunk) {
     append_u16(out, entry.pc);
     append_u32(out, entry.location.line);
     append_u32(out, entry.location.column);
+    append_u32(out, entry.location.source);
+  }
+  append_u32(out, count32(chunk.source_files.size()));
+  for (const auto& file : chunk.source_files) {
+    append_u32(out, count32(file.size()));
+    out.append(file);
   }
   return out;
 }
@@ -271,11 +279,20 @@ BytecodeChunk deserialize_clir(const std::string_view bytes) {
     chunk.vtables.push_back(std::move(table));
   }
   std::uint32_t source_count = 0;
-  if (!reader.u32(source_count) || source_count > reader.remaining.size() / 10) return invalid_chunk();
+  if (!reader.u32(source_count) || source_count > reader.remaining.size() / 14) return invalid_chunk();
   for (std::uint32_t i = 0; i < source_count; ++i) {
     SourceMapEntry entry;
-    if (!reader.u16(entry.pc) || !reader.u32(entry.location.line) || !reader.u32(entry.location.column)) return invalid_chunk();
+    if (!reader.u16(entry.pc) || !reader.u32(entry.location.line) || !reader.u32(entry.location.column) ||
+        !reader.u32(entry.location.source)) return invalid_chunk();
     chunk.source_map.push_back(entry);
+  }
+  std::uint32_t file_count = 0;
+  if (!reader.u32(file_count) || file_count > reader.remaining.size() / 4) return invalid_chunk();
+  for (std::uint32_t i = 0; i < file_count; ++i) {
+    std::uint32_t size = 0;
+    if (!reader.u32(size) || size > reader.remaining.size()) return invalid_chunk();
+    chunk.source_files.emplace_back(reader.remaining.substr(0, size));
+    reader.remaining.remove_prefix(size);
   }
   if (!reader.remaining.empty() || !source_map_valid(chunk) || !executable_valid(chunk)) return invalid_chunk();
   return chunk;

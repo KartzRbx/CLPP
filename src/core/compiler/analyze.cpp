@@ -87,6 +87,7 @@ struct ImportContext {
   const ModuleLoader& modules;
   std::vector<std::string>& stack;
   std::deque<std::string>& source_buffers;
+  std::vector<std::string>& source_files;
   std::vector<Diagnostic>& diagnostics;
   std::vector<ModuleInfo>* record;  // only the top-level file records its modules for the IDE
   std::deque<std::string>& owned_text;
@@ -141,7 +142,7 @@ AnalysisResult analyze_impl(std::string_view source, const ModuleLoader& modules
   const Diagnostic& first = checked.diagnostics.front();
   context.diagnostics.push_back(Diagnostic{link.path_location, span,
                                            "error in module " + link.path + " (" + std::to_string(first.location.line) +
-                                               ":" + std::to_string(first.location.column) + "): " + first.message});
+                                               ":" + std::to_string(first.location.column) + "): " + first.formatted_message()});
   return false;
 }
 
@@ -178,8 +179,11 @@ AnalysisResult analyze_impl(std::string_view source, const ModuleLoader& modules
     }
     context.source_buffers.push_back(std::move(*loaded));
     const std::size_t buffer_index = context.source_buffers.size() - 1;
+    context.source_files.push_back(link.path);
     Lexer lexer(context.source_buffers.back());
-    const LexResult lexed = lexer.tokenize();
+    LexResult lexed = lexer.tokenize();
+    for (auto& token : lexed.tokens) token.location.source = static_cast<std::uint32_t>(buffer_index);
+    for (auto& diagnostic : lexed.diagnostics) diagnostic.location.source = static_cast<std::uint32_t>(buffer_index);
     parser::Parser parser(lexed.tokens, lexed.diagnostics);
     parser::ParseResult parsed = parser.parse();
     if (!module_is_clean(context.source_buffers.back(), link, context, span)) {
@@ -356,6 +360,7 @@ AnalysisResult analyze_impl(const std::string_view source, const ModuleLoader& m
                             std::vector<std::string>& stack) {
   AnalysisResult result;
   result.source_buffers.emplace_back(source);
+  result.source_files.emplace_back(stack.empty() ? "" : stack.back());
   Lexer lexer(result.source_buffers.front());
   const LexResult lexed = lexer.tokenize();
   result.tokens = lexed.tokens;
@@ -364,7 +369,7 @@ AnalysisResult analyze_impl(const std::string_view source, const ModuleLoader& m
   result.diagnostics = std::move(parsed.diagnostics);
   result.program = std::move(parsed.program);
   result.links = result.program.links;
-  ImportContext context{modules, stack, result.source_buffers, result.diagnostics, &result.modules, result.owned_text};
+  ImportContext context{modules, stack, result.source_buffers, result.source_files, result.diagnostics, &result.modules, result.owned_text};
   (void)import_links(result.program, context, true);
   // Entry files and imported files have the same file-scope binding rules.
   for (auto& stmt : result.program.statements) if (stmt.kind == parser::Stmt::Kind::VariableDecl) stmt.module_global = true;
@@ -421,6 +426,8 @@ AnalysisResult analyze_impl(const std::string_view source, const ModuleLoader& m
   display_symbols.insert(display_symbols.end(), result.program.resolved_functions.begin(), result.program.resolved_functions.end());
   for (auto& diagnostic : result.diagnostics) {
     diagnostic.message = module_types::display(std::move(diagnostic.message), display_symbols);
+    diagnostic.expected_type = module_types::display(std::move(diagnostic.expected_type), display_symbols);
+    diagnostic.actual_type = module_types::display(std::move(diagnostic.actual_type), display_symbols);
   }
   return result;
 }

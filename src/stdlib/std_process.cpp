@@ -3,6 +3,7 @@
 #define _GNU_SOURCE
 #endif
 #endif
+#include "clpp/detail/utf8_path.hpp"
 #include "stdlib/host.hpp"
 #include "clpp/stdlib.hpp"
 
@@ -110,8 +111,8 @@ bool decode(const Value* args, const std::uint8_t arity, Request& request, std::
     return fail(error, "Process.Run: invalid Options (timeout 1..86400000 ms, output limit 1..67108864 bytes)");
   }
   request.directory = options.field(0).text.empty() ? std::filesystem::current_path()
-      : std::filesystem::absolute(std::filesystem::u8path(options.field(0).text)).lexically_normal();
-  request.executable = std::filesystem::u8path(args[0].text);
+      : std::filesystem::absolute(clpp::detail::utf8_path(options.field(0).text)).lexically_normal();
+  request.executable = clpp::detail::utf8_path(args[0].text);
   if (!request.executable.is_absolute()) request.executable = request.directory / request.executable;
   request.executable = request.executable.lexically_normal();
   if (!std::filesystem::is_directory(request.directory)) return fail(error, "Process.Run: working directory does not exist");
@@ -449,8 +450,8 @@ bool equivalent_paths(const Value* args, const std::uint8_t arity, Value& out, s
     if (arity != 2 || !args[0].is_string() || !args[1].is_string() || !no_nul(args[0].text) || !no_nul(args[1].text))
       return fail(error, "Path.Equivalent: expected paths without NUL bytes");
     std::error_code failure;
-    const auto first = std::filesystem::u8path(args[0].text);
-    const auto second = std::filesystem::u8path(args[1].text);
+    const auto first = clpp::detail::utf8_path(args[0].text);
+    const auto second = clpp::detail::utf8_path(args[1].text);
     if (!std::filesystem::exists(first) || !std::filesystem::exists(second))
       return fail(error, "Path.Equivalent: both paths must exist");
     const bool equivalent = std::filesystem::equivalent(first, second, failure);
@@ -499,10 +500,10 @@ bool path_operation(const Value* args, const std::uint8_t arity, Value& out, std
     if (operation == 0) path = std::filesystem::current_path();
     else if (operation == 1) path = std::filesystem::temp_directory_path();
     else {
-      path = std::filesystem::u8path(args[0].text);
-      if (operation == 3) path /= std::filesystem::u8path(args[1].text);
+      path = clpp::detail::utf8_path(args[0].text);
+      if (operation == 3) path /= clpp::detail::utf8_path(args[1].text);
       if (operation == 4 && !path.is_absolute()) {
-        auto base = args[1].text.empty() ? std::filesystem::current_path() : std::filesystem::absolute(std::filesystem::u8path(args[1].text));
+        auto base = args[1].text.empty() ? std::filesystem::current_path() : std::filesystem::absolute(clpp::detail::utf8_path(args[1].text));
         path = base / path;
       }
       if (operation == 5) path = path.parent_path();

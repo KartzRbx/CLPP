@@ -22,12 +22,12 @@ jobs:
             test_preset: release
           - name: macOS Clang
             os: macos-14
-            preset: debug
-            test_preset: debug
+            preset: release
+            test_preset: release
           - name: Windows MSVC
             os: windows-2022
-            preset: debug
-            test_preset: debug
+            preset: release
+            test_preset: release
     steps:
       - uses: actions/checkout@v4
 
@@ -62,7 +62,7 @@ jobs:
         run: ctest --test-dir build/${{ matrix.preset }} --output-on-failure -j 2
 
       - name: Benchmarks
-        if: matrix.preset == 'release'
+        if: matrix.preset == 'release' && runner.os == 'Linux'
         run: python benchmarks/run.py build/release/src/clpp-vm --runs 5 --markdown >> "$GITHUB_STEP_SUMMARY"
 
       - name: Isolated CLI installation
@@ -72,6 +72,16 @@ jobs:
       - name: Portable CLI archive
         if: matrix.preset == 'release'
         run: cpack --config build/release/CPackConfig.cmake -B build/distribution
+
+      - name: Release runtime asset
+        if: matrix.preset == 'release' && runner.os != 'Windows'
+        run: python tools/distribution/package_release.py build/${{ matrix.preset }} --out build/release-assets
+
+      - uses: actions/upload-artifact@v4
+        if: matrix.preset == 'release' && runner.os != 'Windows'
+        with:
+          name: vm-runtime-${{ runner.os }}-${{ runner.arch }}
+          path: build/release-assets/*
 
       - name: Adversarial compiler inputs
         run: python tests/stress/core_validation.py build/${{ matrix.preset }}/src/clpp-vm${{ runner.os == 'Windows' && '.exe' || '' }} --fuzz 250 --report build/${{ matrix.preset }}/core-audit.json
@@ -139,19 +149,23 @@ jobs:
           tar xf llvm-mingw.tar.xz
           echo "LLVM_MINGW=$PWD/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64" >> "$GITHUB_ENV"
           sudo apt-get update && sudo apt-get install -y ninja-build
-      - name: Cross-compile clpp-vm.exe
+      - name: Cross-compile clpp.exe
         run: |
           cmake -S . -B build-win -G Ninja -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/llvm-mingw-x86_64.cmake -DCLPP_BUILD_TESTS=OFF
           cmake --build build-win --target clpp
       - name: Package the extension
-        run: python3 tools/vscode/package_vsix.py --exe build-win/src/clpp-vm.exe
+        run: |
+          python3 tools/vscode/package_vsix.py --exe build-win/src/clpp-vm.exe
+          python3 tools/distribution/package_release.py build-win --platform windows-x64 --out dist
       - uses: actions/upload-artifact@v4
         with:
           name: clpp-vm-windows
           path: |
             build-win/src/clpp-vm.exe
             dist/*.vsix
+            dist/*.zip
+            dist/*.sha256
 
   windows-install-check:
     name: Extracted Windows package smoke test
