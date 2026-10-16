@@ -312,6 +312,11 @@ bool pipe_pair(Fd& read, Fd& write) {
 bool execute(const Request& request, Result& result, std::string& error) {
   Fd in_read, in_write, out_read, out_write, err_read, err_write;
   if (!pipe_pair(in_read, in_write) || !pipe_pair(out_read, out_write) || !pipe_pair(err_read, err_write)) return fail(error, "Process.Run: cannot create pipes");
+#ifdef __APPLE__
+  // Darwin supports disabling SIGPIPE on this descriptor without changing the
+  // host application's process-wide signal disposition.
+  if (fcntl(in_write.value, F_SETNOSIGPIPE, 1) == -1) return fail(error, "Process.Run: cannot protect the input pipe");
+#endif
   std::vector<std::string> arguments{request.executable.native()};
   arguments.insert(arguments.end(), request.arguments.begin(), request.arguments.end());
   std::vector<char*> argv;
