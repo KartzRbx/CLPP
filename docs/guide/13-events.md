@@ -6,9 +6,15 @@ A signal carries a typed notification. An observable represents changing state. 
 
 Declare `signal<T> name;` for one payload, `signal<A,B>` for two, or `signal<>` for no payload. The current VM supports up to seven payloads. `Connect` retains a checked callback and returns a `connection` handle. `Fire` checks every payload against the declared types.
 
+Editor completion offers `Connect`, `Once`, `Fire`, `Clear` and `Wait` after a signal's `::`.
+Typing the first `:` also offers these operations alongside `is<Type>`; accepting an event
+operation inserts the missing second colon. `Connect` and `Once` insert a callback with
+explicit payload types and editable parameter names. A connection offers `::Disconnect()`,
+`::Connected()` and the `.Connected` status property. `Wait` still requires an async function.
+
 ```clp
 signal<number> damaged;
-auto connection = damaged::Connect(func(amount) -> void {
+auto connection = damaged::Connect(func(number amount) -> void {
   post("Damage: " .: amount);
 });
 damaged::Fire(15);

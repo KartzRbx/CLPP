@@ -78,6 +78,10 @@ struct Member {
   if (!stmt.declared_type.empty()) {
     return stmt.declared_type;
   }
+  if (stmt.expr.kind == parser::Expr::Kind::Event) {
+    if (stmt.expr.runtime_op == 0) return stmt.expr.value;
+    if (stmt.expr.runtime_op == 1 || stmt.expr.runtime_op == 5 || stmt.expr.runtime_op == 9) return "connection";
+  }
   if (stmt.expr.kind == parser::Expr::Kind::String) {
     return "string";
   }
@@ -115,8 +119,7 @@ void walk_stmts(const std::vector<parser::Stmt>& statements, const std::uint32_t
     if (stmt.kind == parser::Stmt::Kind::VariableDecl || stmt.kind == parser::Stmt::Kind::ForIn ||
         stmt.kind == parser::Stmt::Kind::Signal || stmt.kind == parser::Stmt::Kind::Using) {
       const bool function = stmt.kind == parser::Stmt::Kind::Using;
-      const std::string detail = function ? "func" : stmt.kind == parser::Stmt::Kind::Signal ? "signal"
-                                 : display_type(stmt, symbols);
+      const std::string detail = function ? "func" : display_type(stmt, symbols);
       const std::uint32_t symbol_end_line = stmt.kind == parser::Stmt::Kind::ForIn ? next_line : end_line;
       const std::uint32_t symbol_end_column = stmt.kind == parser::Stmt::Kind::ForIn ? next_column : end_column;
       Symbol symbol{stmt.name, detail, function ? Kind::Function : Kind::Variable, stmt.name_location.line,
@@ -574,13 +577,69 @@ void add_struct_members(const std::string& type, const std::string& prefix, cons
   }
 }
 
+void complete_event_members(const std::string& type, const std::string& prefix, const parser::Program& program,
+                            const bool scope_access, std::vector<Item>& items) {
+  const auto resource = typechecker::resource_type(program, type, nullptr);
+  if (resource && resource->starts_with("signal<") && scope_access) {
+    const std::string payload = resource->substr(7, resource->size() - 8);
+    const auto parameters = typechecker::callback_parameters(program, "(" + payload + ")->void", nullptr);
+    if (parameters) {
+      std::string typed_parameters, fire_parameters, fire_arguments;
+      for (std::size_t index = 0; index < parameters->size(); ++index) {
+        const std::string separator = index == 0 ? "" : ", ";
+        const std::string name = "arg" + std::to_string(index + 1);
+        const std::string placeholder = "${" + std::to_string(index + 1) + ":" + name + "}";
+        typed_parameters += separator + (*parameters)[index] + " " + placeholder;
+        fire_parameters += separator + (*parameters)[index] + " " + name;
+        fire_arguments += separator + placeholder;
+      }
+      const auto offer = [&](const std::string& name, const std::string& detail, const std::string& insertion,
+                             const bool snippet, const std::string& documentation) {
+        if (!matches_prefix(name, prefix)) return;
+        Item item{name, detail, Kind::Method};
+        item.insert_text = insertion;
+        item.snippet = snippet;
+        item.documentation = code_block(detail) + "\n\n" + documentation;
+        add_unique(items, std::move(item));
+      };
+      for (const std::string name : {"Connect", "Once"}) {
+        offer(name, "connection " + name + "((" + payload + ") -> void callback)",
+              name + "(func(" + typed_parameters + ") -> void {\n\t$0\n})", true,
+              name == "Once" ? "Connects an explicitly typed callback for the next emission only."
+                             : "Connects an explicitly typed callback; returns a connection handle.");
+      }
+      offer("Fire", "void Fire(" + fire_parameters + ")", "Fire(" + fire_arguments + ")" +
+            (parameters->empty() ? "" : "$0"), !parameters->empty(), "Emits the signal's typed payload.");
+      offer("Clear", "void Clear()", "Clear()", false, "Disconnects this signal's listeners.");
+      const std::string result = parameters->empty() ? "void" : parameters->size() == 1 ? parameters->front()
+                                                                                     : "tuple<" + payload + ">";
+      offer("Wait", result + " Wait()", "Wait()", false,
+            "Waits for the next emission. Only valid inside an async function.");
+    }
+  } else if (resource && *resource == "connection") {
+    if (scope_access && matches_prefix("Disconnect", prefix)) {
+      Item item{"Disconnect", "void Disconnect()", Kind::Method};
+      item.insert_text = "Disconnect()";
+      item.documentation = code_block(item.detail) + "\n\nDisconnects this listener.";
+      add_unique(items, std::move(item));
+    }
+    if (matches_prefix("Connected", prefix)) {
+      Item item{"Connected", scope_access ? "bool Connected()" : "bool Connected", scope_access ? Kind::Method : Kind::Field};
+      item.insert_text = scope_access ? "Connected()" : "Connected";
+      item.documentation = code_block(item.detail) + "\n\nWhether this listener is still connected.";
+      add_unique(items, std::move(item));
+    }
+  }
+}
+
 void complete_members(const std::string& owner, const std::string& prefix, const AnalysisResult& analysis,
                       const std::vector<Symbol>& symbols, const std::vector<Token>& tokens, const std::uint32_t line,
-                      const std::uint32_t column, std::vector<Item>& items) {
+                      const std::uint32_t column, const bool scope_access, std::vector<Item>& items) {
   const parser::Program& program = analysis.program;
   const std::string viewer = enclosing_struct(program, tokens, line, column);
   std::string type = owner == "@this" && !viewer.empty() ? viewer : type_of_name(owner, symbols, line, column);
   const std::string bare = bare_type(type);
+  complete_event_members(type, prefix, program, scope_access, items);
   if (bare == "Vector3" || bare == "Vector2" || bare == "Vector4") {
     for (const char* field : {"x", "y", "z", "w"}) {
       if (bare == "Vector2" && (field[0] == 'z' || field[0] == 'w')) {
@@ -939,6 +998,18 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
       add_unique(info.completions, std::move(item));
     }
   } else if (type_test_member) {
+    // Offer native :: operations on the first colon too. Acceptance inserts the
+    // missing colon; is<Type> keeps its existing single-colon syntax.
+    const Token* receiver = previous_of(anchor);
+    if (receiver != nullptr && receiver->type == TokenType::Identifier) {
+      std::vector<Item> operations;
+      complete_event_members(type_of_name(std::string(receiver->lexeme), symbols, line, column), prefix, program,
+                             true, operations);
+      for (auto& operation : operations) {
+        operation.insert_text = ":" + operation.insert_text;
+        add_unique(info.completions, std::move(operation));
+      }
+    }
     if (matches_prefix("is", prefix)) {
       Item item{"is", "bool is<Type>", Kind::Method};
       item.insert_text = "is<${1:Type}>$0";
@@ -979,7 +1050,8 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
       }
     }
   } else if (members) {
-    complete_members(owner, prefix, analysis, symbols, tokens, line, column, info.completions);
+    complete_members(owner, prefix, analysis, symbols, tokens, line, column,
+                     anchor != nullptr && anchor->type == TokenType::Scope, info.completions);
   } else if (!info.link_path_completion) {
     for (const Symbol& symbol : symbols) {
       if (!visible(symbol, line, column) || !matches_prefix(symbol.name, prefix)) {
