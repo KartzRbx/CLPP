@@ -71,6 +71,38 @@ PrintScore(42);
 
 The failing branch exits. After the guard, the checker knows the value is present. Here the absent score prints nothing, while the present score prints 42.
 
+## Optional conditions and omitted fields
+
+An omitted `optional<T>` field defaults to `null` unless the field declares an explicit default. Required fields still need a value or a declared default. This also applies to imported definitions, aliases, inherited fields and generic specializations.
+
+For optional values, conditions and `!` test **null and boolean false**. Zero, an empty string and an empty collection are present values. `if`, `guard`, loops, ternary conditions and the operands of `and`/`or` use this same rule. Short-circuit operators evaluate only the operands they need; each operand is evaluated once. Existing non-optional numeric conditions retain their numeric behavior.
+
+```clp
+def Human {
+  string name;
+  optional<number> cpf;
+}
+bool CreateBankAccount(Human target) {
+  guard (target.cpf) else { return false; }
+  return true;
+}
+post(CreateBankAccount(Human { name = "Kartz" }));
+post(CreateBankAccount(Human { name = "Kartz", cpf = 0 }));
+optional<bool> enabled = false;
+post(!enabled);
+optional<number> zero = 0;
+post(!zero);
+```
+
+```output
+false
+true
+true
+false
+```
+
+Use `value != null` when `false` is a valid value you want to keep. A successful optional condition narrows a local variable to its payload type; the failure branch can still contain either `null` or `false`. Assigning to a refined variable invalidates its refinement. Repeated object field reads are not automatically refined across mutations: store the field in a local variable before using its payload.
+
 ## Unions and literal unions
 
 ```clp

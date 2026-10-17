@@ -195,6 +195,16 @@ with tempfile.TemporaryDirectory() as ws:
     check("return type hover shows the literal union definition",
           'def Outcome = "ongoing" | "team_a" | "team_b";' in value, value)
 
+    # Optional fields and direct guards must agree with command-line compilation.
+    edit('def Human { string name; optional<number> cpf; }\n'
+         'bool CreateBankAccount(Human target) { guard(target.cpf) else { return false; } return true; }\n'
+         'auto person = Human { name = "Kartz" }; post(CreateBankAccount(person)); post(!person.cpf);\n')
+    c.pos(uri, "textDocument/hover", 2, 6)  # response fences the preceding diagnostic publication
+    check("omitted optional field and optional guard have no editor diagnostics", not c.diags.get(uri), c.diags.get(uri))
+    edit('number Read(optional<number> value) { guard(value) else { return 0; } value = null; return value + 1; }\n')
+    c.pos(uri, "textDocument/hover", 0, 13)
+    check("editor retains errors after optional refinement is invalidated", bool(c.diags.get(uri)), c.diags.get(uri))
+
     # Document colors work without semantic compilation and exclude strings/comments.
     palette = "const auto PANEL = 0x141025;\nconst auto PORTRAIT = 0x2D1B4E;\nconst auto HP = 0xFF5A8A;\nconst auto MP = 0x5EC8FF;\n<< 0xFFFFFF\npost(\"0x123456\");\npost(\"😀\"); auto tint=0x80_FF0000;\nauto small=0xFF;\n"
     edit(palette)

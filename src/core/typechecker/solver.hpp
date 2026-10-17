@@ -48,6 +48,10 @@ struct LocalType {
 [[nodiscard]] std::optional<std::string> default_owner_type(const parser::Program& program,
     const std::string& constructed, const std::string& owner, const parser::Function* scope);
 
+// Optional fields after alias, generic and inherited-field substitution.
+[[nodiscard]] std::vector<bool> implicit_null_fields(const parser::Program& program,
+    const std::string& constructed, const parser::Function* scope);
+
 class Solver {
  public:
   void check(const parser::Program& program, std::vector<Diagnostic>& diagnostics);

@@ -227,6 +227,8 @@ See [advanced types](../guide/08-enums-variants-option-result.md) and
 Executable: `examples/language/06_types_callbacks.clp`,
 `examples/capabilities/02_generic_pipeline.clp`.
 
+Optional fields omitted from an initializer use `null` when no explicit field default exists. Optional conditions and optional negation treat only `null` and boolean `false` as falsy; zero and empty strings are present. This rule applies to `if`, `guard`, loops, ternary conditions and short-circuit logical operands. Non-optional numeric conditions keep their existing behavior.
+
 ## 8. Functions and closures
 
 Named functions use `Result Name(Type argument, Type other) { ... }`.

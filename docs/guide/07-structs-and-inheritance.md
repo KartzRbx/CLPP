@@ -77,7 +77,7 @@ post(hero.Health); << Intended result: 100.
 100
 ```
 
-Write the type, braces, and `Field = value` entries separated by commas, without a dot before the field name. An omitted field uses its declared default. A required field without a default must be supplied. The compiler rejects unknown fields, duplicate entries and incompatible initializer types.
+Write the type, braces, and `Field = value` entries separated by commas, without a dot before the field name. An omitted field uses its declared default. An `optional<T>` field without an explicit default becomes `null`; other required fields without a default must be supplied. The compiler rejects unknown fields, duplicate entries and incompatible initializer types.
 
 ## Aliases
 

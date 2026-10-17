@@ -600,7 +600,22 @@ void emit_u16(BytecodeChunk& chunk, const std::uint16_t value) {
       diagnostics.push_back(Diagnostic{{}, {}, "invalid expression"});
       return false;
     }
-    emit_op(chunk, compiler::Opcode::Not);
+    if (expr.runtime_op == 1) {
+      // Evaluate once; null and the boolean false are absent/falsy, but zero is present.
+      emit_op(chunk, compiler::Opcode::Dup);
+      if (!emit_const(chunk, Value::null_of(), diagnostics)) return false;
+      emit_op(chunk, compiler::Opcode::Eq);
+      const auto present_jump = emit_jump(chunk, compiler::Opcode::JumpIfFalse);
+      emit_op(chunk, compiler::Opcode::Pop);
+      if (!emit_const(chunk, Value::boolean_of(true), diagnostics)) return false;
+      const auto end_jump = emit_jump(chunk, compiler::Opcode::Jump);
+      if (!patch_jump(chunk, present_jump, diagnostics)) return false;
+      if (!emit_const(chunk, Value::boolean_of(false), diagnostics)) return false;
+      emit_op(chunk, compiler::Opcode::Eq);
+      if (!patch_jump(chunk, end_jump, diagnostics)) return false;
+    } else {
+      emit_op(chunk, compiler::Opcode::Not);
+    }
     return true;
   }
   if (expr.kind == parser::Expr::Kind::And || expr.kind == parser::Expr::Kind::Or) {
