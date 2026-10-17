@@ -789,6 +789,7 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
   bool members = false;
   bool self = false;
   bool link_module = false;
+  bool type_test_member = false;
   std::string owner;
   const auto previous_of = [&](const Token* token) { return token == nullptr ? nullptr : token_before(tokens, *token); };
   const Token* anchor = current;  // the token right before what is being typed
@@ -802,7 +803,22 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
     prefix = std::string(current->lexeme.substr(0, std::min<std::size_t>(offset, current->lexeme.size())));
     anchor = previous_of(current);
   }
-  if (anchor != nullptr && anchor->type == TokenType::Dot) {
+  if (anchor != nullptr && anchor->type == TokenType::Colon) {
+    const Token* receiver = previous_of(anchor);
+    const Token* before_receiver = previous_of(receiver);
+    const bool runtime_name = receiver != nullptr && receiver->type == TokenType::Identifier &&
+        ((before_receiver && (before_receiver->type == TokenType::Dot || before_receiver->type == TokenType::Scope ||
+                              before_receiver->type == TokenType::At)) ||
+         std::any_of(symbols.begin(), symbols.end(), [&](const Symbol& symbol) {
+           return symbol.name == receiver->lexeme && visible(symbol, line, column) &&
+               (symbol.kind == Kind::Variable || symbol.kind == Kind::Constant || symbol.kind == Kind::Function);
+         }));
+    type_test_member = receiver != nullptr &&
+        (runtime_name || receiver->type == TokenType::CloseParen ||
+         receiver->type == TokenType::CloseBracket || receiver->type == TokenType::IntLiteral ||
+         receiver->type == TokenType::FloatLiteral || receiver->type == TokenType::StringLiteral ||
+         receiver->type == TokenType::KwTrue || receiver->type == TokenType::KwFalse || receiver->type == TokenType::KwNull);
+  } else if (anchor != nullptr && anchor->type == TokenType::Dot) {
     const Token* qualifier = previous_of(anchor);
     // `link @clpp.` / `link @clpp.li`
     const Token* at = previous_of(qualifier);
@@ -892,7 +908,17 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
     }
   }
 
-  if (link_module) {
+  if (type_test_member) {
+    if (matches_prefix("is", prefix)) {
+      Item item{"is", "bool is<Type>", Kind::Method};
+      item.insert_text = "is<${1:Type}>$0";
+      item.snippet = true;
+      item.sort_text = "0";
+      item.documentation = code_block("value:is<Type>") +
+          "\n\nTests the runtime type once. A successful test narrows a local variable on the matching path. No call parentheses.";
+      add_unique(info.completions, std::move(item));
+    }
+  } else if (link_module) {
     const bool after_at = anchor != nullptr && anchor->type == TokenType::At;
     if (after_at) {
       add_unique(info.completions, Item{"clpp", "standard library", Kind::Module});
@@ -1779,6 +1805,12 @@ std::vector<SemanticToken> semantic_tokens(const AnalysisResult& analysis) {
     const std::string name(token.lexeme);
     const Token* previous = index > 0 ? &tokens[index - 1] : nullptr;
 
+    if (name == "is" && previous && previous->type == TokenType::Colon &&
+        next && next->type == TokenType::Less) {
+      highlighter.paint(token, kSemanticMethod, 0);
+      continue;
+    }
+
     // `link @clpp.axiom`: the pieces of a module path
     if (in_link_path(tokens, index)) {
       highlighter.paint(token, kSemanticNamespace, kSemanticDefaultLibrary);
@@ -2030,7 +2062,8 @@ std::string format_source(const std::string_view source, const std::uint32_t tab
     const auto& base = lexed.tokens[index - 1];
     const bool named_type = base.type == TokenType::Identifier && (!base.lexeme.empty() &&
         (type_names.contains(base.lexeme) || std::isupper(static_cast<unsigned char>(base.lexeme.front())) != 0));
-    if (!named_type && base.type != TokenType::KwTemplate && base.type != TokenType::KwStaticCast) continue;
+    const bool type_test = base.lexeme == "is" && index >= 2 && lexed.tokens[index - 2].type == TokenType::Colon;
+    if (!named_type && !type_test && base.type != TokenType::KwTemplate && base.type != TokenType::KwStaticCast) continue;
     std::size_t depth = 1, end = index + 1;
     for (; end < lexed.tokens.size(); ++end) {
       const auto type = lexed.tokens[end].type;
@@ -2146,6 +2179,8 @@ std::string format_source(const std::string_view source, const std::uint32_t tab
         if (token.type == TokenType::OpenParen && original_gap && base > 0 && base < lexed.tokens.size() &&
             lexed.tokens[base - 1].type == TokenType::OpenParen) needs_space = true;
       }
+      if ((token.type == TokenType::Colon && token_index + 1 < lexed.tokens.size() && lexed.tokens[token_index + 1].lexeme == "is") ||
+          (previous == TokenType::Colon && token.lexeme == "is")) needs_space = false;
       if (token.type == TokenType::PlusPlus || token.type == TokenType::MinusMinus ||
           previous == TokenType::PlusPlus || previous == TokenType::MinusMinus) needs_space = false;
       if ((needs_space || original_call_gap) && !formatted.empty() && formatted.back() != ' ' && formatted.back() != '\t') {

@@ -93,6 +93,7 @@ primary          = number | string_literal | template | 'true' | 'false' | 'null
                  | '(', type, expression, ')'
                  | scoped_name | lambda | '(', expression, ')'
                  | primary, '(', [ arguments ], ')'
+                 | primary, ':', 'is', '<', type, '>'
                  | primary, '.', identifier
                  | primary, '[', expression, ']'
                  | type, '{', [ field_initializers ], '}'
@@ -140,3 +141,5 @@ as operations rather than additional grammar productions. Parser recognition of
 an internal token does not override the documented runtime restrictions.
 
 The [lexer](lexer.md) defines names, literals, whitespace, and comments. [Types](../guide/08-enums-variants-option-result.md), [Functions](../guide/06-functions.md), and [Modules](../guide/10-modules.md) define meaning and visibility. [Concurrency](../guide/12-concurrency.md) and [Events](../guide/13-events.md) describe the tested scheduling and subscription contracts. [Future proposals](future-proposals.md) remain separate from implemented features.
+
+The postfix `value:is<Type>` test is not a call. Combine its boolean result with `and` or `or`; see [runtime type tests](../guide/08-enums-variants-option-result.md#runtime-type-tests).

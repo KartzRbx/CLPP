@@ -4,6 +4,9 @@
   "scopeName": "source.clpp",
   "patterns": [
     {
+      "include": "#type-test"
+    },
+    {
       "include": "#comment-block"
     },
     {
@@ -255,6 +258,17 @@
       "captures": {
         "1": {
           "name": "entity.name.type.clpp"
+        }
+      }
+    },
+    "type-test": {
+      "match": "(:)(is)\\b(?=\\s*<)",
+      "captures": {
+        "1": {
+          "name": "keyword.operator.clpp"
+        },
+        "2": {
+          "name": "entity.name.function.member.clpp"
         }
       }
     }

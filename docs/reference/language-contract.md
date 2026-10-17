@@ -198,6 +198,8 @@ owner parameters through inherited fields/methods. See [definitions](def.md) and
 [inheritance](../guide/07-structs-and-inheritance.md).
 Executable: `examples/language/05_objects.clp`, `examples/automation.clp`.
 
+The postfix type test is `value:is<Type>` (no call parentheses). It returns bool, evaluates the operand once, and refines a local on a proven matching path, including short-circuit `and` and exiting guards. Nominal inheritance and imported type names retain their identity. Targets whose identity is erased at runtime are diagnosed. See [runtime type tests](../guide/08-enums-variants-option-result.md#runtime-type-tests).
+
 ## 7. Aliases, enums, optionals and generics
 
 `def Name = Type;` aliases a type. `def Outcome = "ongoing" | "team_a" | "team_b";`

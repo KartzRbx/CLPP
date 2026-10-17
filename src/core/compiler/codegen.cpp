@@ -142,6 +142,7 @@ void emit_u16(BytecodeChunk& chunk, const std::uint16_t value) {
     case parser::Expr::Kind::Ternary:
     case parser::Expr::Kind::Update:
     case parser::Expr::Kind::Cast:
+    case parser::Expr::Kind::TypeTest:
     case parser::Expr::Kind::Ascribe:
     case parser::Expr::Kind::Closure:
     case parser::Expr::Kind::Invoke:
@@ -188,6 +189,17 @@ void emit_u16(BytecodeChunk& chunk, const std::uint16_t value) {
   }
   if (expr.kind == parser::Expr::Kind::Ascribe) {
     return expr.left && emit_expr(*expr.left, chunk, diagnostics);
+  }
+  if (expr.kind == parser::Expr::Kind::TypeTest) {
+    if (!expr.left || !emit_expr(*expr.left, chunk, diagnostics)) return false;
+    std::string descriptor;
+    for (const auto tag : expr.targets) {
+      descriptor.push_back(static_cast<char>(tag & 255));
+      descriptor.push_back(static_cast<char>(tag >> 8));
+    }
+    if (!emit_const(chunk, Value::string_of(std::move(descriptor)), diagnostics)) return false;
+    emit_op(chunk, compiler::Opcode::TypeTest);
+    return true;
   }
   if (expr.kind == parser::Expr::Kind::Cast) {
     if (!expr.left || !emit_expr(*expr.left, chunk, diagnostics)) return false;

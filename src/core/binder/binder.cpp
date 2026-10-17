@@ -132,6 +132,16 @@ void narrow_optional(const parser::Expr& condition, const bool truth, std::vecto
     narrow_optional(*condition.right, truth, locals);
     return;
   }
+  if (condition.kind == parser::Expr::Kind::TypeTest && condition.left &&
+      condition.left->kind == parser::Expr::Kind::Name && truth) {
+    for (auto local = locals.rbegin(); local != locals.rend(); ++local) {
+      if (local->name != condition.left->value || (condition.left->global && !local->global)) continue;
+      if (local->optional_origin.empty()) local->optional_origin = local->type_name;
+      local->type_name = condition.value;
+      break;
+    }
+    return;
+  }
   if (condition.kind == parser::Expr::Kind::Name && truth) {
     for (auto local = locals.rbegin(); local != locals.rend(); ++local) {
       if (local->name != condition.value) continue;
@@ -620,6 +630,10 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
       expr.left->value = "$array_initializer";
       expr.left->location = expr.location; expr.left->span = expr.span;
     }
+  }
+  if (expr.kind == parser::Expr::Kind::TypeTest) {
+    if (expr.left) bind_expr(*expr.left, locals, functions, structs, enums, diagnostics);
+    return;
   }
   if (expr.kind == parser::Expr::Kind::Ascribe) {
     if (expr.left) bind_expr(*expr.left, locals, functions, structs, enums, diagnostics, expr.value);
@@ -1463,6 +1477,7 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
 
 [[nodiscard]] std::string inferred_type(const parser::Expr& expr, const std::vector<Local>& locals,
                                         const std::vector<StructRef>& structs) {
+  if (expr.kind == parser::Expr::Kind::TypeTest) return "bool";
   if (expr.kind == parser::Expr::Kind::Ascribe) return expr.value;
   if (expr.kind == parser::Expr::Kind::Construct && !expr.value.empty()) {
     return expr.value;

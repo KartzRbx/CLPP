@@ -9,6 +9,7 @@ Keep CL++ syntax and semantics consistent across the compiler, CLI, LSP, VS Code
 - [x] Guard, if, loops, ternaries and short-circuit operators evaluate operands once.
 - [x] Refinement rejects unsafe reads after assignment and on a failing presence branch.
 - [x] Full suite: 548/548; focused ASan/UBSan checks and LSP contracts passed; local VS Code/Zed compiler paths updated.
+- [x] Postfix `value:is<Type>` with narrowing, runtime checks, method highlighting and `value:` completion; documentation and installed VS Code/Zed updated.
 - [ ] Publish the patch and update the public site after validation.
 
 ## Language and editor audit

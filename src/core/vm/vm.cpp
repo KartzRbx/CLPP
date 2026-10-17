@@ -961,6 +961,33 @@ bool VirtualMachine::execute_registers(const RegChunk& lowered) {
       case RegOp::Not:
         dest->set_boolean(!is_truthy(*left));
         break;
+      case RegOp::TypeTest: {
+        if (!right->is_string() || right->text.empty() || right->text.size() % 2 != 0) {
+          m_error = "invalid runtime type descriptor"; return false;
+        }
+        bool matches = false;
+        for (std::size_t offset = 0; offset < right->text.size(); offset += 2) {
+          const auto tag = static_cast<unsigned char>(right->text[offset]) |
+              (static_cast<unsigned int>(static_cast<unsigned char>(right->text[offset + 1])) << 8);
+          switch (tag) {
+            case 0: matches = true; break;
+            case 1: matches = matches || left->is_integer(); break;
+            case 2: matches = matches || left->kind == Value::Kind::Number; break;
+            case 3: matches = matches || left->is_boolean(); break;
+            case 4: matches = matches || left->is_string(); break;
+            case 5: matches = matches || left->is_null(); break;
+            case 6: matches = matches || left->is_vector(); break;
+            case 7: matches = matches || left->is_buffer(); break;
+            case 8: matches = matches || left->kind == Value::Kind::Signal; break;
+            case 9: matches = matches || left->kind == Value::Kind::Connection; break;
+            default:
+              if (tag < 16) { m_error = "invalid runtime type descriptor"; return false; }
+              matches = matches || (left->is_struct() && left->number == tag - 15);
+          }
+        }
+        dest->set_boolean(matches);
+        break;
+      }
       case RegOp::Eq:
       case RegOp::NotEq:
         if (left->is_string() && right->is_string()) {

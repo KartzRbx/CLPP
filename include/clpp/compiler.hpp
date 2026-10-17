@@ -13,7 +13,7 @@
 
 namespace clpp {
 
-inline constexpr std::uint16_t kBytecodeFormatVersion = 12;
+inline constexpr std::uint16_t kBytecodeFormatVersion = 13;
 
 struct FunctionBytecode {
   std::uint16_t arity{0};

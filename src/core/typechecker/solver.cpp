@@ -101,6 +101,8 @@ void optional_condition(const parser::Expr& expr, const Type& type, const std::v
   condition.left = std::make_unique<parser::Expr>(std::move(negative));
 }
 
+Type type_test_target(const parser::Expr& expr);
+
 void narrow_condition(const parser::Expr& condition, const bool truth, std::vector<Binding>& bindings) {
   if (condition.kind == parser::Expr::Kind::Not && condition.left != nullptr) {
     if (condition.runtime_op == 1 && condition.left->kind == parser::Expr::Kind::Name) {
@@ -120,6 +122,16 @@ void narrow_condition(const parser::Expr& condition, const bool truth, std::vect
        (condition.kind == parser::Expr::Kind::Or && !truth)) && condition.left != nullptr && condition.right != nullptr) {
     narrow_condition(*condition.left, truth, bindings);
     narrow_condition(*condition.right, truth, bindings);
+    return;
+  }
+  if (condition.kind == parser::Expr::Kind::TypeTest && condition.left &&
+      condition.left->kind == parser::Expr::Kind::Name && truth) {
+    for (auto binding = bindings.rbegin(); binding != bindings.rend(); ++binding) {
+      if (binding->name != condition.left->value || (condition.left->global && !binding->global)) continue;
+      const Type target = type_test_target(condition);
+      if (target != kError) binding->type = target;
+      break;
+    }
     return;
   }
   if (condition.kind == parser::Expr::Kind::Name && truth) {
@@ -978,6 +990,41 @@ void mismatch(const parser::Expr& expr, std::vector<Diagnostic>& diagnostics, co
   return true;
 }
 
+Type type_test_target(const parser::Expr& expr) {
+  return active_type_info ? named_type(expr.value, *active_type_info) : kError;
+}
+
+// Runtime tags identify nominal definitions; erased generic arguments cannot safely refine a value.
+bool runtime_type_tags(const Type& type, const std::vector<StructInfo>& structs, std::vector<std::uint16_t>& tags) {
+  switch (type.kind) {
+    case Type::Kind::Any: tags.push_back(0); return true;
+    case Type::Kind::Int: tags.push_back(1); return true;
+    case Type::Kind::Float: tags.push_back(2); return true;
+    case Type::Kind::Bool: tags.push_back(3); return true;
+    case Type::Kind::String: tags.push_back(4); return true;
+    case Type::Kind::Null: tags.push_back(5); return true;
+    case Type::Kind::Vector3: tags.push_back(6); return true;
+    case Type::Kind::Buffer: tags.push_back(7); return true;
+    case Type::Kind::Signal: return false;  // Payload signatures are erased at runtime.
+    case Type::Kind::Connection: tags.push_back(9); return true;
+    case Type::Kind::Optional:
+      tags.push_back(5);
+      return type.parts.size() == 1 && runtime_type_tags(type.parts[0], structs, tags);
+    case Type::Kind::Union:
+      for (const auto& part : type.parts) if (!runtime_type_tags(part, structs, tags)) return false;
+      return !type.parts.empty();
+    case Type::Kind::Struct:
+      if (!type.parts.empty() || type.index >= structs.size() || type.index >= 65520) return false;
+      for (std::size_t index = 0; index < structs.size() && index < 65520; ++index) {
+        const Type candidate{Type::Kind::Struct, static_cast<std::uint16_t>(index)};
+        if (index == type.index || base_view(candidate, type.index).kind != Type::Kind::Error)
+          tags.push_back(static_cast<std::uint16_t>(index + 16));
+      }
+      return true;
+    default: return false;
+  }
+}
+
 [[nodiscard]] Type check_expr(const parser::Expr& expr, const std::vector<Binding>& bindings,
                               const std::vector<Signature>& signatures, const std::vector<StructInfo>& structs,
                               std::vector<Diagnostic>& diagnostics);
@@ -1092,6 +1139,21 @@ void check_function_constraints(const parser::Expr& expr, const Signature& signa
         return kError;
       }
       return target;
+    }
+    case parser::Expr::Kind::TypeTest: {
+      if (expr.left) (void)check_expr(*expr.left, bindings, signatures, structs, diagnostics);
+      const Type target = named_type(expr.value, structs);
+      auto& tags = const_cast<parser::Expr&>(expr).targets;
+      tags.clear();
+      if (target == kError || target == kVoid) {
+        diagnostics.push_back(Diagnostic{expr.location, expr.span, "unknown or invalid type in :is test"});
+        return kError;
+      }
+      if (!runtime_type_tags(target, structs, tags)) {
+        diagnostics.push_back(Diagnostic{expr.location, expr.span, "type has no preserved runtime identity for :is test"});
+        return kError;
+      }
+      return kBool;
     }
     case parser::Expr::Kind::Cast: {
       const Type target = named_type(expr.value, structs);

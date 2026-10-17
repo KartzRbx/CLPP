@@ -970,6 +970,62 @@ TEST_CASE("optional conditions agree across guards loops and short circuit expre
   }
 }
 
+TEST_CASE("postfix is tests imported nominal types and narrows short circuit operands", "[regression][type-test]") {
+  const Run result = run(
+      "link \"./Human.clp\" as H; any kartz = H.Human { name = \"Kartz\", age = 18 };\n"
+      "post(kartz:is<H.Human> and kartz.cpf == null);\n"
+      "any other = 0; post(other:is<H.Human> and other.cpf == null);\n"
+      "number Age(any value) { guard(value:is<H.Human>) else { return -1; } return value.age; }\n"
+      "post(Age(kartz)); post(Age(false));\n"
+      "def Robot { string name; number age; optional<number> cpf; }\n"
+      "any robot = Robot { name = \"Robot\", age = 18 }; post(robot:is<H.Human>);\n"
+      "def Child : H.Human { number rank = 1; } any child = Child { name = \"Child\", age = 9 };\n"
+      "post(child:is<H.Human>); post(child:is<Child>); post(kartz:is<Child>);\n"
+      "def Person = H.Human; post(kartz:is<Person>);\n",
+      {{"./Human.clp", "export def Human { string name; number age; optional<number> cpf; }"}});
+  INFO(result.error); INFO(result.detail);
+  REQUIRE(result.compiled); REQUIRE(result.ran);
+  CHECK(result.output == "true\nfalse\n18\n-1\nfalse\ntrue\ntrue\nfalse\ntrue\n");
+}
+
+TEST_CASE("postfix is distinguishes primitive types and evaluates its operand once", "[regression][type-test]") {
+  const std::string source =
+      "any value = 0; post(value:is<number>); post(value:is<float>); post(value:is<bool>);\n"
+      "any decimal = 0.0; post(decimal:is<float>); post(decimal:is<number>);\n"
+      "any flag = false; post(flag:is<bool>); post(flag:is<number>);\n"
+      "any text = \"\"; post(text:is<string>); post(text:is<number | string>);\n"
+      "any absent = null; post(absent:is<optional<number>>); post(absent:is<any>);\n"
+      "number calls = 0; any Read() { calls += 1; return 1; } post(Read():is<number>); post(calls);\n"
+      "def Mixed = number | string; number Code(Mixed item) { if(item:is<number>) { return item + 1; } return 0; }\n"
+      "post(Code(2)); post(Code(\"text\"));\n"
+      "post(false:is<bool>); post(null:is<optional<number>>); post(\"x\":is<string>); post(1:is<number>);\n";
+  const Run result = run(source);
+  INFO(result.error); INFO(result.detail);
+  REQUIRE(result.compiled); REQUIRE(result.ran);
+  CHECK(result.output == "true\nfalse\nfalse\ntrue\nfalse\ntrue\nfalse\ntrue\ntrue\ntrue\ntrue\ntrue\n1\n3\n0\ntrue\ntrue\ntrue\ntrue\n");
+  const auto compiled = clpp::Compiler{}.compile(source);
+  const auto restored = clpp::deserialize_clir(clpp::serialize_clir(compiled.chunk));
+  clpp::VirtualMachine vm; std::ostringstream output; vm.set_output(output); vm.load(restored);
+  REQUIRE(vm.run()); CHECK(output.str() == result.output);
+}
+
+TEST_CASE("postfix is rejects malformed unknown and erased type tests", "[regression][type-test]") {
+  for (const char* source : {
+      "any value = 1; post(value:is);", "any value = 1; post(value:is<>);",
+      "any value = 1; post(value:is<Missing>);", "any value = 1; post(value:is<void>);",
+      "any value = 1; post(value:is<number>());",
+      "def Box<T> { T value; } any value = Box<number> { value = 1 }; post(value:is<Box<number>>);",
+      "any value = 1; post(value:is<array<number>>);",
+      "signal<number> changed; post(changed:is<signal<number>>);",
+      "signal<> changed; post(changed:is<signal<>>);",
+      "enum class State { Ready } any value = State::Ready; post(value:is<State>);",
+      "number Read(optional<number> value) { if(value:is<number>) { value = null; return value + 1; } return 0; }",
+      "number Read(optional<number> value) { if(!value:is<number>) { return value + 1; } return 0; }"}) {
+    INFO(source);
+    CHECK_FALSE(clpp::Compiler{}.compile(source).ok());
+  }
+}
+
 TEST_CASE("optional rejects incompatible types and unsafe use before narrowing", "[regression][optional]") {
   for (const char* source : {
       "number value = null;", "optional<number> value = \"bad\";",

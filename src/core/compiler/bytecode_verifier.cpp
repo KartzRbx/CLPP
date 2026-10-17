@@ -135,7 +135,7 @@ BytecodeReport verify_bytecode_report(const BytecodeChunk& chunk) {
   for (std::size_t index = 0; index < instructions.size(); ++index) {
     const compiler::bytecode::Instruction& instruction = instructions[index];
     const std::uint8_t opcode = static_cast<std::uint8_t>(instruction.op);
-    if (opcode > static_cast<std::uint8_t>(compiler::Opcode::Event) || opcode == 55 || opcode == 85 || opcode == 86) {
+    if (opcode > static_cast<std::uint8_t>(compiler::Opcode::TypeTest) || opcode == 55 || opcode == 85 || opcode == 86) {
       fail(BytecodeError::Opcode, instruction.pc, static_cast<int>(index), "register opcode");
       return report;
     }
