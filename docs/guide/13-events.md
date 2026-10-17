@@ -4,7 +4,7 @@ A signal carries a typed notification. An observable represents changing state. 
 
 ## Typed signals and connections
 
-**Candidate editor update (0.11.1, not yet published):** completion offers `Connect`, `Once`, `Fire`, `Clear` and `Wait` after `signal::`. Typing the first `:` also offers these beside `is<Type>`; acceptance inserts the second colon. `Connect` and `Once` insert callbacks with explicit payload types and editable argument names. Connections offer `::Disconnect()`, `::Connected()` and `.Connected`. See [release status](../reference/release-status.md) for the validated source and installation status.
+**Candidate editor update (0.11.1, not yet published):** completion offers `Connect`, `Once`, `Fire`, `Clear` and `Wait` after `signal::`. Typing the first `:` also offers these beside `is<Type>`; acceptance inserts the second colon. `Connect` and `Once` insert callbacks with explicit payload types and editable argument names. Connections offer `::Disconnect()`, `::Connected()` and `.Connected`. Imported payloads keep their source spelling, such as `H.Human`, inside accepted callbacks. See [release status](../reference/release-status.md) for the validated source and installation status.
 
 Declare `signal<T> name;` for one payload, `signal<A,B>` for two, or `signal<>` for no payload. The current VM supports up to seven payloads. `Connect` retains a checked callback and returns a `connection` handle. `Fire` checks every payload against the declared types.
 
