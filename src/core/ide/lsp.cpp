@@ -560,7 +560,7 @@ class Server {
          {{"positionEncoding", "utf-16"},
           {"textDocumentSync", {{"openClose", true}, {"change", 1}, {"save", {{"includeText", false}}}}},
           {"completionProvider",
-           {{"triggerCharacters", json::array({".", "@", "\"", "/", ":"})}, {"resolveProvider", false}}},
+           {{"triggerCharacters", json::array({".", "@", "\"", "/", ":", "{", ","})}, {"resolveProvider", false}}},
           {"signatureHelpProvider", {{"triggerCharacters", json::array({"(", ","})}, {"retriggerCharacters", json::array({","})}}},
           {"hoverProvider", true},
           {"definitionProvider", true},

@@ -79,6 +79,8 @@ post(hero.Health); << Intended result: 100.
 
 Write the type, braces, and `Field = value` entries separated by commas, without a dot before the field name. An omitted field uses its declared default. An `optional<T>` field without an explicit default becomes `null`; other required fields without a default must be supplied. The compiler rejects unknown fields, duplicate entries and incompatible initializer types.
 
+In the editor, completion inside the braces offers accessible fields from that definition and its bases, including imported definitions. Fields already supplied are excluded. Generic field types use the constructor's concrete type arguments. Hover and Go to Definition on an initializer key resolve to its declaring field; keys receive property highlighting. Suggestions also work while a field name is unfinished.
+
 ## Aliases
 
 ```clp

@@ -41,6 +41,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const speak = list.items.find((i) => i.label === "speak");
   check("completion items carry documentation", speak && speak.documentation && speak.documentation.value.includes("speak"), speak);
 
+  const initializer = 'link "./shapes.clp" as Shapes;\nauto dog = Shapes.Dog { legs = 4, bo };\n';
+  const fieldStart = initializer.split('\n')[1].indexOf('bo }');
+  mock.__test.change(doc, initializer);
+  list = await providers.completion.provideCompletionItems(doc, P(1, fieldStart + 2), token);
+  const bones = list.items.find(item => item.label === 'bones');
+  check("initializer completion replaces only the field prefix", bones && bones.detail === 'number' &&
+    bones.insertText === 'bones' && bones.range.start.character === fieldStart && bones.range.end.character === fieldStart + 2, bones);
+
   mock.__test.change(doc, 'link "./shapes.clp" as Shapes;\npost(Shapes.area(1, 2));\nconst auto x = 1;\nx = 2;\n');
   await sleep(300);
   const hover = await providers.hover.provideHover(doc, P(1, 14), token);

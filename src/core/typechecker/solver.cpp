@@ -2498,6 +2498,38 @@ std::optional<std::string> default_owner_type(const parser::Program& program, co
   const auto result = source_type(viewed, program); return result.empty() ? std::nullopt : std::optional<std::string>{result};
 }
 
+std::vector<InitializerField> initializer_fields(const parser::Program& program, const std::string& constructed,
+                                                const parser::Function* scope) {
+  const ActiveTypesGuard restore;
+  active_program = &program;
+  active_mode = program.mode;
+  active_structs = &program.structs; active_enums = &program.enums;
+  active_aliases = &program.aliases; active_function_types = nullptr;
+  std::vector<Diagnostic> diagnostics;
+  const auto structs = build_data_types(program, diagnostics); active_type_info = &structs;
+  TypeScope caller;
+  if (scope) { caller = function_scope(*scope, structs, program); active_function_types = &caller; }
+  const Type data = named_type(constructed, structs);
+  if (data.kind != Type::Kind::Struct || data.index >= structs.size()) return {};
+  const auto& declaration = program.structs[data.index];
+  std::vector<InitializerField> result;
+  result.reserve(declaration.fields.size());
+  for (std::size_t index = 0; index < declaration.fields.size(); ++index) {
+    const auto& field = declaration.fields[index];
+    const auto owner = field.owner.empty() ? declaration.name : field.owner;
+    auto location = field.name_location;
+    for (const auto& original : program.structs) {
+      if (original.name != owner) continue;
+      for (const auto& candidate : original.fields)
+        if (candidate.name == field.name) { location = candidate.name_location; break; }
+      break;
+    }
+    const Type type = specialize_type(structs[data.index].fields[index], structs[data.index], data.parts);
+    result.push_back(InitializerField{field.name, source_type(type, program), owner, location, field.is_private});
+  }
+  return result;
+}
+
 std::vector<bool> implicit_null_fields(const parser::Program& program, const std::string& constructed,
                                        const parser::Function* scope) {
   const ActiveTypesGuard restore;

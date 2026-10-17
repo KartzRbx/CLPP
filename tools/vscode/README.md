@@ -33,6 +33,17 @@ The extension ships with `clpp-vm.exe` for Windows x64. On other systems install
 
 ## Release update 0.11.0
 
+### Development update (unreleased)
+
+Object initializer completion offers accessible fields from local or imported
+definitions, includes inherited fields with specialized generic types, and
+excludes fields already supplied. Typing `{` or `,` requests suggestions; typing
+a partial field name filters them. Initializer keys support field hover,
+Go to Definition and property coloring, including their original imported or
+inherited declaration.
+
+### Published 0.11.0 behavior
+
 Expression keywords such as `await`, `spawn`, `return` and `thread` are no longer
 mistaken for type/function declaration prefixes by the fallback grammar. This
 also applies to parenthesized expressions. Theme colors continue to come from

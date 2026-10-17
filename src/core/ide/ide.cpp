@@ -5,6 +5,8 @@
 #include "clpp/semantic.hpp"
 #include "clpp/stdlib.hpp"
 #include "core/compiler/analyze.hpp"
+#include "core/ide/initializers.hpp"
+#include "core/typechecker/solver.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -698,6 +700,15 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
   const parser::Program& program = analysis.program;
   const std::vector<Token>& tokens = analysis.tokens;
   Info info;
+  const detail::InitializerIndex initializers(program, tokens);
+  std::unordered_map<std::size_t, std::vector<typechecker::InitializerField>> initializer_cache;
+  const auto initializer_fields = [&](const std::size_t index) -> const std::vector<typechecker::InitializerField>& {
+    if (const auto found = initializer_cache.find(index); found != initializer_cache.end()) return found->second;
+    const auto& context = initializers.contexts[index];
+    auto type = context.type;
+    module_types::annotation(type, program.resolved_types);
+    return initializer_cache.emplace(index, typechecker::initializer_fields(program, type, context.scope)).first->second;
+  };
   info.diagnostics = analysis.diagnostics;
   // One problem, one squiggle: drop a second diagnostic at the same position (for example
   // "type mismatch" right after "undefined name").
@@ -908,7 +919,26 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
     }
   }
 
-  if (type_test_member) {
+  const auto initializer_position = initializers.at(tokens, line, column);
+  if (initializer_position.context != detail::InitializerIndex::none) {
+    const auto& context = initializers.contexts[initializer_position.context];
+    const auto key = initializer_position.key;
+    std::string field_prefix;
+    if (key != detail::InitializerIndex::none)
+      field_prefix = std::string(tokens[key].lexeme.substr(0, column - tokens[key].location.column));
+    const auto viewer = enclosing_struct(program, tokens, line, column);
+    for (const auto& field : initializer_fields(initializer_position.context)) {
+      if ((field.is_private && viewer != field.owner) || !matches_prefix(field.name, field_prefix)) continue;
+      const auto used = context.used.find(field.name);
+      const bool editing = key != detail::InitializerIndex::none && tokens[key].lexeme == field.name &&
+          key + 1 < tokens.size() && tokens[key + 1].type == TokenType::Equal;
+      if (used != context.used.end() && used->second > (editing ? 1u : 0u)) continue;
+      Item item{field.name, field.type.empty() ? "auto" : field.type, Kind::Field};
+      item.insert_text = field.name;
+      item.documentation = code_block(item.detail + " " + field.owner + "." + field.name);
+      add_unique(info.completions, std::move(item));
+    }
+  } else if (type_test_member) {
     if (matches_prefix("is", prefix)) {
       Item item{"is", "bool is<Type>", Kind::Method};
       item.insert_text = "is<${1:Type}>$0";
@@ -1054,6 +1084,29 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
     }
   }
   if (word != nullptr && word->type == TokenType::Identifier) {
+    const auto token_index = static_cast<std::size_t>(word - tokens.data());
+    const auto context = initializers.keys[token_index];
+    if (context != detail::InitializerIndex::none) {
+      const auto viewer = enclosing_struct(program, tokens, line, column);
+      for (const auto& field : initializer_fields(context)) {
+        if (field.name != word->lexeme || (field.is_private && viewer != field.owner)) continue;
+        const auto type = field.type.empty() ? "auto" : field.type;
+        info.has_hover = true;
+        info.hover.text = field.name + ": " + type;
+        info.hover_markdown = code_block(type + " " + field.owner + "." + field.name);
+        info.hover.location = field.location;
+        info.has_definition = field.location.line != 0;
+        info.definition = field.location;
+        info.definition_length = static_cast<std::uint32_t>(field.name.size());
+        if (const auto* module = origin_of_type(analysis, field.owner)) {
+          info.definition_path = module->path;
+          info.hover_markdown += "\n\nFrom `" + module->path + "`";
+        }
+        break;
+      }
+    }
+  }
+  if (word != nullptr && word->type == TokenType::Identifier && !info.has_hover) {
     const std::string name(word->lexeme);
     const Token* dot = previous_of(word);
     const Token* base = dot != nullptr && (dot->type == TokenType::Dot || dot->type == TokenType::Scope) ? previous_of(dot) : nullptr;
@@ -1691,6 +1744,7 @@ std::vector<SemanticToken> semantic_tokens(const AnalysisResult& analysis) {
   const parser::Program& program = analysis.program;
   const std::vector<Token>& tokens = analysis.tokens;
   Highlighter highlighter(tokens);
+  const detail::InitializerIndex initializers(program, tokens);
   constexpr SourceLocation kForever{0xFFFFFFFF, 0xFFFFFFFF};
 
   // --- 1. declarations of this file -------------------------------------------------------
@@ -1804,6 +1858,11 @@ std::vector<SemanticToken> semantic_tokens(const AnalysisResult& analysis) {
     }
     const std::string name(token.lexeme);
     const Token* previous = index > 0 ? &tokens[index - 1] : nullptr;
+
+    if (initializers.keys[index] != detail::InitializerIndex::none) {
+      highlighter.paint(token, kSemanticProperty, 0);
+      continue;
+    }
 
     if (name == "is" && previous && previous->type == TokenType::Colon &&
         next && next->type == TokenType::Less) {

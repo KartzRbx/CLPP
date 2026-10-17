@@ -194,6 +194,9 @@ if(Python3_Interpreter_FOUND)
   add_test(NAME "lsp end to end"
            COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/lsp/test_lsp.py" $<TARGET_FILE:clpp>)
   set_tests_properties("lsp end to end" PROPERTIES LABELS lsp TIMEOUT 120)
+  add_test(NAME "LSP initializer fields preserve type and declaration ownership"
+           COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/lsp/test_initializers.py" $<TARGET_FILE:clpp>)
+  set_tests_properties("LSP initializer fields preserve type and declaration ownership" PROPERTIES LABELS "lsp;regression" TIMEOUT 120)
   if(CLPP_SANITIZE_ADDRESS OR CLPP_SANITIZE_UNDEFINED)
     # Instrumented correctness/responsiveness is a separate gate. Normal Debug
     # and Release builds retain the original 50 ms deployed-runtime threshold.

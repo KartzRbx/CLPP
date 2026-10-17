@@ -50,3 +50,5 @@
 {"date": "2026-10-16", "layer": "0110-instrumented-adversarial", "total": 552, "passed": 552, "failed": 0, "verdict": "PASS"}
 {"date": "2026-10-16", "layer": "0110-zed-installer", "total": 2, "passed": 2, "failed": 0, "verdict": "PASS"}
 {"date": "2026-10-16", "layer": "0110-final-public-documentation", "total": 213, "passed": 213, "failed": 0, "excluded_targets": 19, "verdict": "PASS"}
+{"date": "2026-10-17", "layer": "initializer-full", "total": 552, "passed": 552, "failed": 0, "verdict": "SHIP-local-patch", "new_failures": []}
+{"date": "2026-10-17", "layer": "initializer-protocol-four-builds", "total": 196, "passed": 196, "failed": 0, "verdict": "SHIP-local-patch", "new_failures": []}
