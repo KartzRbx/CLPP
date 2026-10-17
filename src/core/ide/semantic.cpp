@@ -2,7 +2,9 @@
 
 #include "core/parser/ast.hpp"
 
+#include <algorithm>
 #include <string_view>
+#include <unordered_set>
 
 namespace clpp {
 
@@ -109,6 +111,25 @@ SemanticSnapshot build_snapshot(const AnalysisResult& analysis) {
         symbol.id = capture.source_scope * 65536u + capture.origin_slot;
       }
     }
+  }
+  // Failed binding leaves the AST's default slot in place. It is not a real
+  // reference to slot zero (often the first parameter/local in a function).
+  // Only entry-buffer diagnostics apply: imported errors use their own source.
+  if (!analysis.source_buffers.empty()) {
+    const auto begin = reinterpret_cast<std::uintptr_t>(analysis.source_buffers.front().data());
+    const auto end = begin + analysis.source_buffers.front().size();
+    std::unordered_set<std::uint64_t> unresolved;
+    for (const auto& diagnostic : analysis.diagnostics) {
+      if (diagnostic.message != "undefined name" &&
+          diagnostic.message != "callback requires an unambiguous explicitly specialized function") continue;
+      const auto address = reinterpret_cast<std::uintptr_t>(diagnostic.span.data());
+      if (address >= begin && address < end)
+        unresolved.insert((static_cast<std::uint64_t>(diagnostic.location.line) << 32) | diagnostic.location.column);
+    }
+    std::erase_if(snapshot.symbols, [&](const auto& symbol) {
+      return !symbol.declaration && unresolved.contains(
+          (static_cast<std::uint64_t>(symbol.location.line) << 32) | symbol.location.column);
+    });
   }
   return snapshot;
 }

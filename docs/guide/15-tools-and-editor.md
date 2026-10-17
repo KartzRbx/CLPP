@@ -40,6 +40,19 @@ lines. Consecutive variable declarations stay grouped. Original literal contents
 and inline comments are preserved; input with malformed literals is left alone.
 The VS Code grammar recognizes generic types even before spacing is normalized.
 
+References and Rename currently cover variables and parameters in the current
+document, including captured references and shadowed names. Rename rejects
+reserved words, invalid identifiers and changes that would capture another
+binding. Renaming fields, types, methods or symbols across a workspace is not
+provided by this refactoring interface. Reference results honor the editor's
+option to include or exclude the declaration.
+
+Open-buffer changes use increasing document versions. Older notifications and
+malformed edit ranges cannot replace the current buffer. UTF-16 positions are
+used for editor edits and navigation, including text after emoji. The synchronous
+server safely ignores late cancellation notifications; it does not interrupt an
+analysis already running.
+
 ## Import suggestions
 
 Type a module filename's base name, select its completion and accept it. For

@@ -14,7 +14,8 @@ Module._resolveFilename = function (request, ...rest) {
 };
 
 process.env.CLPP_SERVER_PATH = path.resolve(process.argv[2]);
-const extension = require("../../tools/vscode/extension.js");
+const extensionRoot = process.env.CLPP_EXTENSION_ROOT || path.resolve(__dirname, '../../tools/vscode');
+const extension = require(path.join(extensionRoot, 'extension.js'));
 const { providers, diagnostics, TextDocument } = mock.__test;
 let failures = 0;
 const check = (name, ok, detail) => { console.log((ok ? "PASS " : "FAIL ") + name + (ok ? "" : "  -> " + JSON.stringify(detail))); if (!ok) failures++; };
@@ -26,7 +27,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   fs.writeFileSync(path.join(dir, "shapes.clp"),
     "export def Animal {\n  number legs;\n  number speak() { return @this.legs; }\n}\nexport def Dog : Animal {\n  number bones;\n}\nexport number area(number w, number h) { return w * h; }\n");
   fs.writeFileSync(path.join(dir, 'AlertModule.clp'), 'export string Ping() { return "ok"; }\n');
-  const context = { subscriptions: [], asAbsolutePath: (p) => path.join(__dirname, "../../tools/vscode", p) };
+  const context = { subscriptions: [], asAbsolutePath: (p) => path.join(extensionRoot, p) };
   await extension.activate(context);
 
   const file = path.join(dir, "main.clp");
@@ -48,6 +49,25 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const bones = list.items.find(item => item.label === 'bones');
   check("initializer completion replaces only the field prefix", bones && bones.detail === 'number' &&
     bones.insertText === 'bones' && bones.range.start.character === fieldStart && bones.range.end.character === fieldStart + 2, bones);
+
+  mock.__test.change(doc, 'number score = 1;\npost(score);\n');
+  const uses = await providers.references.provideReferences(doc, P(1, 7), { includeDeclaration: false }, token);
+  check("references provider excludes the declaration when requested", uses.length === 1 && uses[0].range.start.line === 1, uses);
+  const prepared = await providers.rename.prepareRename(doc, P(1, 7), token);
+  check("rename preparation selects only the identifier", prepared.placeholder === 'score' && prepared.range.start.character === 5 && prepared.range.end.character === 10, prepared);
+  const renamed = await providers.rename.provideRenameEdits(doc, P(1, 7), 'points', token);
+  check("rename maps all binding edits to WorkspaceEdit", renamed.edits.length === 2 && renamed.edits.every(edit => edit.text === 'points'), renamed);
+  let refusedRename = false;
+  try { await providers.rename.provideRenameEdits(doc, P(1, 7), 'if', token); }
+  catch (error) { refusedRename = error.message.includes('identifier'); }
+  check("rename provider propagates an invalid-name rejection", refusedRename);
+  let cancel;
+  const pendingHover = providers.hover.provideHover(doc, P(1, 7), { onCancellationRequested(callback) { cancel = callback; return { dispose() {} }; } });
+  await Promise.resolve(); // Client.request awaits initialization before registering cancellation.
+  cancel();
+  await pendingHover;
+  const afterCancel = await providers.hover.provideHover(doc, P(1, 7), token);
+  check("cancelling a provider request leaves following requests usable", Boolean(afterCancel), afterCancel);
 
   mock.__test.change(doc, 'link "./shapes.clp" as Shapes;\npost(Shapes.area(1, 2));\nconst auto x = 1;\nx = 2;\n');
   await sleep(300);

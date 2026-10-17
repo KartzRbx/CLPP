@@ -52,3 +52,32 @@
 {"date": "2026-10-16", "layer": "0110-final-public-documentation", "total": 213, "passed": 213, "failed": 0, "excluded_targets": 19, "verdict": "PASS"}
 {"date": "2026-10-17", "layer": "initializer-full", "total": 552, "passed": 552, "failed": 0, "verdict": "SHIP-local-patch", "new_failures": []}
 {"date": "2026-10-17", "layer": "initializer-protocol-four-builds", "total": 196, "passed": 196, "failed": 0, "verdict": "SHIP-local-patch", "new_failures": []}
+{"date": "2026-10-17", "layer": "editor-audit-before", "total": 57, "passed": 49, "failed": 8, "verdict": "DON'T SHIP", "new_failures": ["references exclude the declaration on request", "rename rejects invalid identifier ''", "rename rejects invalid identifier 'if'", "rename rejects invalid identifier 'two words'", "rename rejects invalid identifier 'a.b'", "rename rejects invalid identifier '123name'", "rename rejects invalid identifier 'next\\npost(1);'", "out-of-order document versions cannot replace current code"]}
+{"date": "2026-10-17", "layer": "editor-audit-refactor-before", "total": 61, "passed": 58, "failed": 3, "verdict": "DON'T SHIP", "new_failures": ["rename rejects duplicate or captured bindings number target = 1; number taken = 2; post(tar@@get);", "rename rejects duplicate or captured bindings number target = 1; void Work() { number taken = 2; post(tar@@get); }", "rename rejects duplicate or captured bindings number taken = 1; void Work() { number target = 2; post(tar@@get); post(taken); }"]}
+{"date": "2026-10-17", "layer": "editor-audit-incremental-before", "total": 63, "passed": 62, "failed": 1, "verdict": "DON'T SHIP", "new_failures": ["reversed edit ranges cannot corrupt the buffer"]}
+{"date": "2026-10-17", "layer": "editor-audit-params-before", "total": 66, "passed": 62, "failed": 4, "verdict": "DON'T SHIP", "new_failures": ["reversed edit ranges cannot corrupt the buffer", "invalid request parameters are diagnosed and recover hover", "invalid request parameters are diagnosed and recover rename", "invalid request parameters are diagnosed and recover completion"]}
+{"date": "2026-10-17", "layer": "editor-audit-format", "total": 75, "passed": 74, "failed": 1, "verdict": "DON'T SHIP", "new_failures": ["semantics/optional-guard"]}
+{"date": "2026-10-17", "layer": "editor-audit-focused", "total": 67, "passed": 67, "failed": 0, "verdict": "SHIP-local-audit", "new_failures": []}
+{"date": "2026-10-17", "layer": "editor-audit-full", "total": 553, "passed": 552, "failed": 1, "verdict": "DON'T SHIP", "new_failures": ["vscode extension"]}
+{"date": "2026-10-17", "layer": "editor-audit-full-final", "total": 553, "passed": 552, "failed": 1, "verdict": "DON'T SHIP", "new_failures": ["LSP editor recovery refactoring and compiler parity"]}
+{"date": "2026-10-17", "layer": "editor-audit-complete", "total": 553, "passed": 553, "failed": 0, "verdict": "SHIP-local-audit", "new_failures": []}
+{"date": "2026-10-17", "layer": "editor-audit-latency-repeat-1", "total": 67, "passed": 67, "failed": 0, "verdict": "SHIP-local-audit", "new_failures": []}
+{"date": "2026-10-17", "layer": "editor-audit-latency-repeat-2", "total": 67, "passed": 67, "failed": 0, "verdict": "SHIP-local-audit", "new_failures": []}
+{"date": "2026-10-17", "layer": "editor-audit-latency-repeat-3", "total": 67, "passed": 67, "failed": 0, "verdict": "SHIP-local-audit", "new_failures": []}
+{"date": "2026-10-17", "layer": "editor-audit-latency-repeat-4", "total": 67, "passed": 67, "failed": 0, "verdict": "SHIP-local-audit", "new_failures": []}
+{"date": "2026-10-17", "layer": "editor-audit-latency-repeat-5", "total": 67, "passed": 67, "failed": 0, "verdict": "SHIP-local-audit", "new_failures": []}
+{"date": "2026-10-17", "layer": "editor-audit-optimized", "total": 67, "passed": 67, "failed": 0, "verdict": "SHIP-local-audit", "new_failures": []}
+{"date": "2026-10-17", "layer": "editor-audit-asan-protocol", "total": 67, "passed": 67, "failed": 0, "verdict": "SHIP-local-audit", "new_failures": []}
+{"date": "2026-10-17", "layer": "editor-audit-asan-formatter", "total": 75, "passed": 75, "failed": 0, "verdict": "SHIP-local-audit", "new_failures": []}
+{"date": "2026-10-17", "layer": "editor-audit-normal-formatter", "total": 75, "passed": 75, "failed": 0, "verdict": "SHIP-local-audit", "new_failures": []}
+{"date": "2026-10-17", "layer": "editor-audit-core", "total": 2100, "passed": 2100, "failed": 0, "verdict": "SHIP-local-audit", "new_failures": []}
+{"date": "2026-10-17", "layer": "editor-audit-asan-core", "total": 564, "passed": 564, "failed": 0, "verdict": "SHIP-local-audit", "new_failures": []}
+{"date": "2026-10-17", "layer": "editor-audit-asan-fresh", "total": 180, "passed": 180, "failed": 0, "verdict": "SHIP-local-audit", "new_failures": []}
+{"date": "2026-10-17", "layer": "editor-audit-completion-final", "total": 10001, "passed": 10001, "failed": 0, "verdict": "SHIP-local-audit", "new_failures": []}
+{"date": "2026-10-17", "layer": "editor-audit-installed-protocol", "total": 67, "passed": 67, "failed": 0, "verdict": "SHIP-local-audit", "new_failures": []}
+{"date": "2026-10-17", "layer": "editor-audit-release-gate", "total": 554, "passed": 554, "failed": 0, "verdict": "SHIP-local-audit", "new_failures": []}
+{"date": "2026-10-17", "layer": "editor-audit-unresolved-before", "total": 68, "passed": 66, "failed": 2, "verdict": "DON'T SHIP", "new_failures": ["unresolved names cannot alias the first parameter during refactoring", "out-of-scope names do not acquire references from an expired binding"]}
+{"date": "2026-10-17", "layer": "editor-audit-focused", "total": 69, "passed": 69, "failed": 0, "verdict": "SHIP-local-audit", "new_failures": []}
+{"date": "2026-10-17", "layer": "editor-audit-optimized", "total": 69, "passed": 69, "failed": 0, "verdict": "SHIP-local-audit", "new_failures": []}
+{"date": "2026-10-17", "layer": "editor-audit-asan-protocol", "total": 69, "passed": 69, "failed": 0, "verdict": "SHIP-local-audit", "new_failures": []}
+{"date": "2026-10-17", "layer": "editor-audit-installed-protocol", "total": 69, "passed": 69, "failed": 0, "verdict": "SHIP-local-audit", "new_failures": []}

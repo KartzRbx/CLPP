@@ -42,6 +42,15 @@ a partial field name filters them. Initializer keys support field hover,
 Go to Definition and property coloring, including their original imported or
 inherited declaration.
 
+Rename validates identifier spelling and preserves binding identity, rejecting
+name collisions and captures. VS Code displays the rejection reason. References
+honor the declaration filter. Out-of-order buffer versions and invalid edit
+batches cannot replace current source. External method definitions such as
+`number Point::Sum()` distinguish the owner type from the method in fallback
+highlighting. Refactoring currently covers variables and parameters within one
+document; workspace/type/member renaming and interruption of running analysis
+remain outside that interface.
+
 ### Published 0.11.0 behavior
 
 Expression keywords such as `await`, `spawn`, `return` and `thread` are no longer

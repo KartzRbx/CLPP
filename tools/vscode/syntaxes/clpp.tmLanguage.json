@@ -25,6 +25,9 @@
       "include": "#link"
     },
     {
+      "include": "#declaration-method"
+    },
+    {
       "include": "#declaration-function"
     },
     {
@@ -183,6 +186,15 @@
         "2": {
           "name": "entity.name.namespace.clpp"
         }
+      }
+    },
+    "declaration-method": {
+      "match": "\\b(?!(?:pragma|export|abstract|async|const|constexpr|def|template|typename|enum|class|extern|final|func|link|as|operator|override|private|public|static_cast|where|thread|await|break|continue|case|catch|default|else|for|guard|if|in|join|match|move|parallel|pcall|return|spawn|switch|try|do|while|and|or|not|shl|shr|decltype)\\b)([A-Za-z_\\x{00C0}-\\x{024F}][\\w.\\x{00C0}-\\x{024F}]*(?:\\s*<[^;\\n(){}]+>)?)\\s+([A-Za-z_\\x{00C0}-\\x{024F}][\\w.\\x{00C0}-\\x{024F}]*)(?:\\s*<[^;\\n(){}]+>)?\\s*(::)\\s*([A-Za-z_\\x{00C0}-\\x{024F}][\\w\\x{00C0}-\\x{024F}]*)(?=\\s*\\()",
+      "captures": {
+        "1": { "name": "storage.type.clpp" },
+        "2": { "name": "entity.name.type.clpp" },
+        "3": { "name": "punctuation.accessor.clpp" },
+        "4": { "name": "entity.name.function.member.clpp" }
       }
     },
     "declaration-function": {

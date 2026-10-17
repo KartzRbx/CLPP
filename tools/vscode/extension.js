@@ -391,12 +391,13 @@ class Client {
     });
   }
 
-  async request(method, params, token) {
+  async request(method, params, token, throwErrors = false) {
     await this.ready;
     try {
       return await this.connection.request(method, params, token);
     } catch (error) {
       log(`${method}: ${error.message}`);
+      if (throwErrors) throw error;
       return undefined;
     }
   }
@@ -556,7 +557,7 @@ class Client {
           return { range: toRange(result.range), placeholder: result.placeholder };
         },
         async provideRenameEdits(document, position, newName, token) {
-          const result = await self.request("textDocument/rename", { ...posParams(document, position), newName }, token);
+          const result = await self.request("textDocument/rename", { ...posParams(document, position), newName }, token, true);
           return result ? toWorkspaceEdit(result) : undefined;
         },
       })
