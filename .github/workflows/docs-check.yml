@@ -21,7 +21,9 @@ jobs:
       - name: Validate the VS Code grammar with TextMate and Oniguruma
         run: node tests/vscode/test_grammar.mjs
       - name: Validate and build VM documentation
-        run: npm run build --prefix www
+        run: |
+          node --test tests/docs/test_content_links.cjs
+          npm run build --prefix www
       - name: Check out the independent Luau documentation
         if: hashFiles('scripts/compose-luau-docs.mjs') != ''
         uses: actions/checkout@v4

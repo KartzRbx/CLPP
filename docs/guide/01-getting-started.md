@@ -6,6 +6,8 @@ CL++ is a compiled, general-purpose language designed for games. A `.clp` source
 
 ## Install
 
+**Release status:** public downloads remain at 0.11.0. Candidate 0.11.1 has passed validation but is not published yet. See [release status and candidate changes](../reference/release-status.md).
+
 Install **[CL++ VM 0.11.0](https://github.com/KartzRbx/CLPP/releases/tag/v0.11.0)** from GitHub Releases.
 Choose the runtime ZIP for your operating system and architecture, verify its
 SHA-256 against `SHA256SUMS`, and extract it into a directory you own. Run

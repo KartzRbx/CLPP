@@ -51,6 +51,7 @@ function toPage(source, sourcePath) {
   body = body.replace(/```ebnf\b/g, "```text");
   // Repository Markdown paths do not resolve to routes on the published site.
   body = body.replace(/\]\(([^)\s]+\.md)(#[^)]+)?\)/g, (match, href, fragment = "") => {
+    if (/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(href)) return match;
     const target = path.relative(docs, path.resolve(path.dirname(sourcePath), href)).replaceAll("\\", "/");
     if (target.startsWith("../") || !target.endsWith(".md")) {
       throw new Error(`Unsupported documentation link in ${sourcePath}: ${href}`);

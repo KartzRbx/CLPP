@@ -1,6 +1,6 @@
 # Language and compiler status
 
-The primary language specification on this site follows the author's handwritten Combat example and corrected language handbook. Named initializers use `Field = value` without a leading dot; object access still uses `object.Field`. The table below records the implemented and tested contracts. Remaining native, proposed and host-specific examples are marked separately; platform, sanitizer and distribution validation are still required before a release is considered complete.
+The primary language specification on this site follows the author's handwritten Combat example and corrected language handbook. Named initializers use `Field = value` without a leading dot; object access still uses `object.Field`. The table below records the implemented and tested contracts. Remaining native, proposed and host-specific examples are marked separately. Platform, sanitizer and distribution checks passed for candidate 0.11.1 on 2026-10-17; publication remains pending. See [release status](release-status.md) for the tested source and platforms. Native physical-device coverage remains separate.
 
 Source blocks marked `clp target` define specification examples. The marker is not displayed as an automatic warning on each example. These blocks remain excluded from executable example tests until their complete behavior is verified; they are never counted as passing compiler tests.
 
@@ -46,6 +46,8 @@ The compiler rejects `struct`, named `func Name(...)` declarations, callback bod
 The Pacman and Combat references include expected failures, recovery behavior, and proposed diagnostic codes. They specify what future compiler work must test. No new diagnostic code is guaranteed merely because it appeared in an example. See [Errors and diagnostics](../guide/11-errors.md) for error categories, positions, and pending behaviors.
 
 ## Using a release
+
+See [release status and validated candidate](release-status.md) for the 2026-10-17 platform results and candidate-only 0.11.1 changes. Public download instructions stay pinned to 0.11.0 until publication.
 
 Install the matching 0.11.0 runtime and VSIX for the current language contracts. Executable examples are checked against the compiler and their displayed output. Blocks explicitly marked target remain deferred proposals or host/application requirements; installing the release does not implement those proposals.
 
