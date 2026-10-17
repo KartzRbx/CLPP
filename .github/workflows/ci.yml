@@ -191,5 +191,25 @@ jobs:
         shell: pwsh
         run: |
           $archive = (Get-ChildItem -LiteralPath package-artifacts -Filter '*.vsix' -Recurse | Select-Object -First 1).FullName
+          $compiler = (Get-ChildItem -LiteralPath package-artifacts -Filter 'clpp-vm.exe' -Recurse | Select-Object -First 1).FullName
           if (-not $archive) { throw 'VSIX artifact missing' }
-          python tests/vscode/test_package.py $archive
+          if (-not $compiler) { throw 'Runtime executable missing' }
+          python tests/vscode/test_package.py $archive --compiler $compiler
+          if ($LASTEXITCODE) { throw 'Bundled runtime validation failed' }
+      - name: Verify installation upgrade and packaged language server
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $compiler = (Get-ChildItem -LiteralPath package-artifacts -Filter 'clpp-vm.exe' -Recurse | Select-Object -First 1).FullName
+          gh release download v0.11.0 --repo KartzRbx/CLPP --pattern clpp-vm-0.11.0-windows-x64.zip --pattern SHA256SUMS --dir build/previous-release
+          if ($LASTEXITCODE) { throw 'Previous release download failed' }
+          python tests/distribution/test_windows_installer.py $compiler --previous-archive build/previous-release/clpp-vm-0.11.0-windows-x64.zip --previous-checksums build/previous-release/SHA256SUMS
+          if ($LASTEXITCODE) { throw 'Installer lifecycle or cross-version upgrade failed' }
+          python tests/lsp/test_editor_audit.py $compiler --large --junit build/packaged-editor.xml
+          if ($LASTEXITCODE) { throw 'Packaged language server validation failed' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-package-validation
+          path: build/packaged-editor.xml
