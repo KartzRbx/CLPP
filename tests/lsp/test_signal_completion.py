@@ -31,7 +31,7 @@ def main():
             value = response['result']
             return value['items'] if isinstance(value, dict) else value
 
-        def check(name, source, expected, excluded=(), typed=False, colon_insertion=False):
+        def check(name, source, expected, excluded=(), typed=False, colon_insertion=False, accept=False):
             try:
                 items = completion(source)
                 by_name = {item['label']: item for item in items}
@@ -46,7 +46,10 @@ def main():
                     assert item['insertTextFormat'] == 2, item
                 if colon_insertion:
                     assert by_name['Connect']['insertText'].startswith(':Connect('), by_name['Connect']
-                if typed or colon_insertion:
+                if accept:
+                    assert 'H.Human' in by_name['Connect']['insertText'], by_name['Connect']
+                    assert '$m' not in by_name['Connect']['insertText'], by_name['Connect']
+                if typed or colon_insertion or accept:
                     insertion = re.sub(r'\$\{\d+:([^}]*)\}', r'\1', by_name['Connect']['insertText'])
                     insertion = re.sub(r'\$\d+', '', insertion)
                     start = len(source)
@@ -78,7 +81,7 @@ def main():
             check('constructed signal infers payload', 'auto changed = signal<number, string>();\nchanged::', methods, typed=True)
             check('nested generic payload', 'signal<tuple<number, string>> changed;\nchanged::', methods)
             check('signal type alias', 'def Changed = signal<number, string>;\nChanged changed = signal<number, string>();\nchanged::', methods)
-            check('imported signal payload', 'link "./Human.clp" as H;\nsignal<H.Human, string> joined;\njoined::', methods)
+            check('imported signal payload', 'link "./Human.clp" as H;\nsignal<H.Human, string> joined;\njoined::', methods, accept=True)
             check('explicit connection scope', 'signal<number> changed;\nconnection subscription = changed::Connect(func(number value) -> void {});\nsubscription::', ['Disconnect', 'Connected'], ['Connect'])
             check('inferred connection scope', 'signal<number> changed;\nauto subscription = changed::Connect(func(number value) -> void {});\nsubscription::', ['Disconnect', 'Connected'], ['Connect'])
             check('connection dot exposes status', 'signal<number> changed;\nconnection subscription = changed::Connect(func(number value) -> void {});\nsubscription.', ['Connected'])

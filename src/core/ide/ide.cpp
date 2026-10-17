@@ -1517,6 +1517,7 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
   for (auto& item : info.completions) {
     display(item.detail);
     display(item.documentation);
+    display(item.insert_text);
   }
   for (auto& symbol : info.symbols) display(symbol.detail);
   return info;
