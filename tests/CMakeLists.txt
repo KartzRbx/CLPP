@@ -203,6 +203,9 @@ if(Python3_Interpreter_FOUND)
   add_test(NAME "LSP signal and connection method completion"
            COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/lsp/test_signal_completion.py" $<TARGET_FILE:clpp>)
   set_tests_properties("LSP signal and connection method completion" PROPERTIES LABELS "lsp;regression" TIMEOUT 120)
+  add_test(NAME "scope operations runtime and editor contract"
+           COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/lsp/test_scope_contract.py" $<TARGET_FILE:clpp>)
+  set_tests_properties("scope operations runtime and editor contract" PROPERTIES LABELS "lsp;regression;contract" TIMEOUT 120)
   add_test(NAME "LSP editor recovery refactoring and compiler parity"
            COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/lsp/test_editor_audit.py" $<TARGET_FILE:clpp> --large)
   set_tests_properties("LSP editor recovery refactoring and compiler parity" PROPERTIES LABELS "lsp;regression;contract" TIMEOUT 180 RUN_SERIAL TRUE)

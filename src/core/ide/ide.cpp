@@ -270,7 +270,7 @@ void add_unique(std::vector<Item>& items, Item item) {
   }
   if (ending != nullptr && (containing == nullptr || ending->type == TokenType::Identifier ||
                             ending->type == TokenType::Dot || ending->type == TokenType::At ||
-                            ending->type == TokenType::Scope)) {
+                            ending->type == TokenType::Scope || ending->type == TokenType::Colon)) {
     return ending;
   }
   return containing != nullptr ? containing : ending;
@@ -534,8 +534,14 @@ void add_unique(std::vector<Item>& items, Item item) {
 }
 
 void add_struct_members(const std::string& type, const std::string& prefix, const parser::Program& program,
-                        const std::string& viewer, std::vector<Item>& items) {
-  const std::vector<const parser::StructDecl*> chain = lineage(program, type);
+                        const std::string& viewer, std::vector<Item>& items, const parser::Function* scope = nullptr) {
+  const std::string concrete = typechecker::member_owner_type(program, type, scope).value_or(type);
+  const std::vector<const parser::StructDecl*> chain = lineage(program, concrete);
+  std::unordered_map<std::string, std::string> field_types;
+  if (!chain.empty()) {
+    for (const auto& field : typechecker::initializer_fields(program, concrete, scope))
+      field_types.emplace(field.name, field.type);
+  }
   for (std::size_t level = 0; level < chain.size(); ++level) {
     const parser::StructDecl& decl = *chain[level];
     for (const parser::Field& field : decl.fields) {
@@ -546,11 +552,14 @@ void add_struct_members(const std::string& type, const std::string& prefix, cons
       if (!matches_prefix(field.name, prefix)) {
         continue;
       }
-      Item item{field.name, field.type_name.empty() ? "auto" : field.type_name, Kind::Field};
+      const auto resolved = field_types.find(field.name);
+      const std::string field_type = resolved != field_types.end() ? resolved->second
+          : field.type_name.empty() ? "auto" : field.type_name;
+      Item item{field.name, field_type, Kind::Field};
       if (owner != chain.front()->name) {
         item.detail += "  (inherited from " + owner + ")";
       }
-      item.documentation = code_block((field.type_name.empty() ? "auto" : field.type_name) + " " + owner + "." + field.name);
+      item.documentation = code_block(field_type + " " + owner + "." + field.name);
       add_unique(items, std::move(item));
     }
     const std::string methods = decl.name + ".";
@@ -566,10 +575,21 @@ void add_struct_members(const std::string& type, const std::string& prefix, cons
         continue;
       }
       Item item{label, signature_text(function), Kind::Method};
+      if (concrete.find('<') != std::string::npos) {
+        parser::Expr member;
+        member.kind = parser::Expr::Kind::Member;
+        member.value = label;
+        member.left = std::make_unique<parser::Expr>();
+        member.left->kind = parser::Expr::Kind::Name;
+        member.left->value = "$completion_receiver";
+        const std::vector<typechecker::LocalType> locals{{"$completion_receiver", concrete, true}};
+        if (const auto signature = typechecker::expression_type(program, member, locals, scope))
+          item.detail = label + ": " + *signature;
+      }
+      item.documentation = code_block(item.detail);
       if (decl.name != chain.front()->name) {
         item.detail += "  (inherited from " + decl.name + ")";
       }
-      item.documentation = code_block(signature_text(function));
       item.insert_text = label + (params_text(function).empty() ? "()" : "($1)$0");
       item.snippet = !params_text(function).empty();
       add_unique(items, std::move(item));
@@ -578,11 +598,11 @@ void add_struct_members(const std::string& type, const std::string& prefix, cons
 }
 
 void complete_event_members(const std::string& type, const std::string& prefix, const parser::Program& program,
-                            const bool scope_access, std::vector<Item>& items) {
-  const auto resource = typechecker::resource_type(program, type, nullptr);
+                            const bool scope_access, std::vector<Item>& items, const parser::Function* scope = nullptr) {
+  const auto resource = typechecker::resource_type(program, type, scope);
   if (resource && resource->starts_with("signal<") && scope_access) {
     const std::string payload = resource->substr(7, resource->size() - 8);
-    const auto parameters = typechecker::callback_parameters(program, "(" + payload + ")->void", nullptr);
+    const auto parameters = typechecker::callback_parameters(program, "(" + payload + ")->void", scope);
     if (parameters) {
       std::string typed_parameters, fire_parameters, fire_arguments;
       for (std::size_t index = 0; index < parameters->size(); ++index) {
@@ -610,7 +630,7 @@ void complete_event_members(const std::string& type, const std::string& prefix, 
       }
       offer("Fire", "void Fire(" + fire_parameters + ")", "Fire(" + fire_arguments + ")" +
             (parameters->empty() ? "" : "$0"), !parameters->empty(), "Emits the signal's typed payload.");
-      offer("Clear", "void Clear()", "Clear()", false, "Disconnects this signal's listeners.");
+      offer("Clear", "void Clear()", "Clear()", false, "Disconnects this signal's managed subscriptions created with ~>Connect.");
       const std::string result = parameters->empty() ? "void" : parameters->size() == 1 ? parameters->front()
                                                                                      : "tuple<" + payload + ">";
       offer("Wait", result + " Wait()", "Wait()", false,
@@ -634,12 +654,13 @@ void complete_event_members(const std::string& type, const std::string& prefix, 
 
 void complete_members(const std::string& owner, const std::string& prefix, const AnalysisResult& analysis,
                       const std::vector<Symbol>& symbols, const std::vector<Token>& tokens, const std::uint32_t line,
-                      const std::uint32_t column, const bool scope_access, std::vector<Item>& items) {
+                      const std::uint32_t column, const bool scope_access, std::vector<Item>& items,
+                      const parser::Function* scope = nullptr) {
   const parser::Program& program = analysis.program;
   const std::string viewer = enclosing_struct(program, tokens, line, column);
   std::string type = owner == "@this" && !viewer.empty() ? viewer : type_of_name(owner, symbols, line, column);
   const std::string bare = bare_type(type);
-  complete_event_members(type, prefix, program, scope_access, items);
+  complete_event_members(type, prefix, program, scope_access, items, scope);
   if (bare == "Vector3" || bare == "Vector2" || bare == "Vector4") {
     for (const char* field : {"x", "y", "z", "w"}) {
       if (bare == "Vector2" && (field[0] == 'z' || field[0] == 'w')) {
@@ -653,9 +674,9 @@ void complete_members(const std::string& owner, const std::string& prefix, const
       }
     }
   }
-  add_struct_members(type, prefix, program, viewer, items);
+  add_struct_members(type, prefix, program, viewer, items, scope);
   if (type != owner) {
-    add_struct_members(owner, prefix, program, viewer, items);
+    add_struct_members(owner, prefix, program, viewer, items, scope);
   }
   if (const parser::EnumDecl* decl = find_enum(program, owner)) {
     for (std::size_t index = 0; index < decl->variants.size(); ++index) {
@@ -788,14 +809,51 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
 
   std::vector<Symbol> symbols;
   std::vector<std::string> self_fields;
+  // Imported declarations have coordinates in another file; declaration order
+  // is not a lexical scope boundary, especially for callbacks imported with methods.
+  std::vector<std::size_t> closing_brace(tokens.size(), tokens.size()), braces;
+  for (std::size_t index = 0; index < tokens.size(); ++index) {
+    if (tokens[index].type == TokenType::OpenBrace) braces.push_back(index);
+    else if (tokens[index].type == TokenType::CloseBrace && !braces.empty()) {
+      closing_brace[braces.back()] = index;
+      braces.pop_back();
+    }
+  }
+  const parser::Function* enclosing_scope = nullptr;
   for (std::size_t index = 0; index < program.functions.size(); ++index) {
     const parser::Function& function = program.functions[index];
     if (function.imported) continue;
     std::uint32_t end_line = 0xFFFFFFFF;
     std::uint32_t end_column = 0xFFFFFFFF;
-    if (index + 1 < program.functions.size()) {
-      end_line = program.functions[index + 1].name_location.line;
-      end_column = program.functions[index + 1].name_location.column;
+    auto start = std::lower_bound(tokens.begin(), tokens.end(), function.name_location,
+        [](const Token& token, const SourceLocation location) {
+          return before(token.location.line, token.location.column, location.line, location.column);
+        });
+    int parameters = 0;
+    bool has_body = false;
+    for (auto part = start; part != tokens.end(); ++part) {
+      if (part->type == TokenType::OpenParen) ++parameters;
+      else if (part->type == TokenType::CloseParen) --parameters;
+      else if (parameters == 0 && part->type == TokenType::Semicolon) {
+        end_line = part->location.line;
+        end_column = part->location.column + 1;
+        break;
+      }
+      else if (parameters == 0 && part->type == TokenType::OpenBrace) {
+        has_body = true;
+        const auto close = closing_brace[static_cast<std::size_t>(part - tokens.begin())];
+        if (close < tokens.size()) {
+          end_line = tokens[close].location.line;
+          end_column = tokens[close].location.column + 1;
+        }
+        break;
+      }
+    }
+    if (has_body && !before(line, column, function.name_location.line, function.name_location.column) &&
+        before(line, column, end_line, end_column) &&
+        (enclosing_scope == nullptr || before(enclosing_scope->name_location.line, enclosing_scope->name_location.column,
+                                              function.name_location.line, function.name_location.column))) {
+      enclosing_scope = &function;
     }
     const bool module_function = origin_of_function(analysis, function.name) != nullptr;
     if (function.name.find('.') == std::string::npos) {
@@ -964,6 +1022,70 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
       }
     }
   }
+  // Ask the checker for a complete receiver expression rather than treating the
+  // last field/call token as a variable name. Reuse the retained, bound AST.
+  if (anchor != nullptr && (anchor->type == TokenType::Scope || anchor->type == TokenType::Colon)) {
+    const Token* receiver = previous_of(anchor);
+    const Token* separator = previous_of(receiver);
+    const bool compound = receiver != nullptr &&
+        (receiver->type == TokenType::CloseParen || receiver->type == TokenType::CloseBracket ||
+         (separator != nullptr && separator->type == TokenType::Dot));
+    if (compound) {
+      const auto anchor_index = static_cast<std::size_t>(anchor - tokens.data());
+      const Token* target = anchor->type == TokenType::Scope
+          ? (anchor_index + 1 < tokens.size() ? &tokens[anchor_index + 1] : nullptr) : receiver;
+      if (anchor->type == TokenType::Colon && receiver->type == TokenType::CloseParen) {
+        const Token* walk = receiver;
+        int depth = 0;
+        while (walk != nullptr) {
+          if (walk->type == TokenType::CloseParen) ++depth;
+          else if (walk->type == TokenType::OpenParen && --depth == 0) break;
+          walk = previous_of(walk);
+        }
+        const Token* callee = previous_of(walk);
+        target = callee != nullptr && callee->type == TokenType::Identifier ? callee
+            : walk != nullptr && walk + 1 < receiver ? walk + 1 : nullptr;
+      }
+      const parser::Expr* selected = nullptr;
+      const auto expression = [&](const auto& visit, const parser::Expr& value) -> void {
+        if (target != nullptr && value.location.line == target->location.line &&
+            value.location.column == target->location.column) {
+          if (anchor->type == TokenType::Scope && value.kind == parser::Expr::Kind::Member && value.left)
+            selected = value.left.get();
+          else if (anchor->type == TokenType::Colon &&
+                   (value.kind == parser::Expr::Kind::Name || value.kind == parser::Expr::Kind::Member ||
+                    value.kind == parser::Expr::Kind::Call)) selected = &value;
+        }
+        if (value.left) visit(visit, *value.left);
+        if (value.right) visit(visit, *value.right);
+        for (const auto& argument : value.args) visit(visit, argument);
+      };
+      const auto statements = [&](const auto& visit, const std::vector<parser::Stmt>& body) -> void {
+        for (const auto& statement : body) {
+          expression(expression, statement.expr);
+          expression(expression, statement.place);
+          visit(visit, statement.then_body); visit(visit, statement.else_body);
+          visit(visit, statement.init); visit(visit, statement.step);
+          for (const auto& arm : statement.arms) visit(visit, arm.body);
+        }
+      };
+      statements(statements, enclosing_scope ? enclosing_scope->body : program.statements);
+      if (selected != nullptr) {
+        std::unordered_map<std::string, const Symbol*> bindings;
+        for (const auto& symbol : symbols) {
+          if (symbol.kind != Kind::Variable || !visible(symbol, line, column)) continue;
+          auto [entry, inserted] = bindings.emplace(symbol.name, &symbol);
+          if (!inserted && before(entry->second->line, entry->second->column, symbol.line, symbol.column)) entry->second = &symbol;
+        }
+        std::vector<typechecker::LocalType> locals;
+        for (const auto& [name, symbol] : bindings) locals.push_back({name, symbol->detail, true});
+        if (const auto resolved = typechecker::expression_type(program, *selected, locals, enclosing_scope)) {
+          owner = *resolved;
+          if (anchor->type == TokenType::Scope) { members = true; self = false; }
+        }
+      }
+    }
+  }
   // `link "./fi|` — the host (LSP) lists files; the compiler only says where.
   if (current != nullptr && (current->type == TokenType::StringLiteral || current->type == TokenType::Invalid)) {
     const Token* keyword = previous_of(current);
@@ -1001,10 +1123,10 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
     // Offer native :: operations on the first colon too. Acceptance inserts the
     // missing colon; is<Type> keeps its existing single-colon syntax.
     const Token* receiver = previous_of(anchor);
-    if (receiver != nullptr && receiver->type == TokenType::Identifier) {
+    if (receiver != nullptr && (!owner.empty() || receiver->type == TokenType::Identifier)) {
       std::vector<Item> operations;
-      complete_event_members(type_of_name(std::string(receiver->lexeme), symbols, line, column), prefix, program,
-                             true, operations);
+      complete_event_members(owner.empty() ? type_of_name(std::string(receiver->lexeme), symbols, line, column) : owner,
+                             prefix, program, true, operations, enclosing_scope);
       for (auto& operation : operations) {
         operation.insert_text = ":" + operation.insert_text;
         add_unique(info.completions, std::move(operation));
@@ -1051,7 +1173,7 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
     }
   } else if (members) {
     complete_members(owner, prefix, analysis, symbols, tokens, line, column,
-                     anchor != nullptr && anchor->type == TokenType::Scope, info.completions);
+                     anchor != nullptr && anchor->type == TokenType::Scope, info.completions, enclosing_scope);
   } else if (!info.link_path_completion) {
     for (const Symbol& symbol : symbols) {
       if (!visible(symbol, line, column) || !matches_prefix(symbol.name, prefix)) {

@@ -33,6 +33,39 @@ The CL++ VS Code extension provides syntax highlighting, diagnostics while typin
 
 The extension uses `clpp-vm --lsp`, so its analysis is based on the same compiler as a command-line build. On Windows x64, the VSIX includes `clpp-vm.exe`. The `clpp.serverPath` setting can point to another executable.
 
+Member completion includes accessible inherited fields and methods, and named
+initializers offer inherited fields without suggesting private fields or methods.
+An explicitly typed callback parameter has the same members as an ordinary
+variable of that type. Generic object members show their concrete types, such as
+`number` for the value of `Box<number>`.
+
+```clp
+def Named {
+  string Name = "Kartz";
+  string Read() { return @this.Name; }
+}
+def Player : Named {
+  signal<number> Changed = signal<number>();
+}
+Player player = Player {};
+signal<Player> joined;
+connection handler = joined::Connect(func(Player person) -> void {
+  post(person.Read());
+  person.Changed::Fire(15);
+});
+joined::Fire(player);
+handler::Disconnect();
+```
+
+```output
+Kartz
+```
+
+In this example, `person.` offers `Name`, `Read` and `Changed`, and
+`person.Changed::` offers the signal operations. Completing `Connect` after the
+first `:` inserts the second colon and an explicitly typed callback. The type
+test keeps its separate `value:is<Type>` spelling.
+
 **Format Document** uses the editor's tab width and spaces/tabs preference.
 It keeps `for` headers together, attaches initializer punctuation, normalizes
 generic brackets such as `array<T>` and separates statement groups with blank

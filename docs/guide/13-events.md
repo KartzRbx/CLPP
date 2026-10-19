@@ -12,6 +12,11 @@ operation inserts the missing second colon. `Connect` and `Once` insert a callba
 explicit payload types and editable parameter names. A connection offers `::Disconnect()`,
 `::Connected()` and the `.Connected` status property. `Wait` still requires an async function.
 
+The same suggestions apply to typed signal fields (`player.Joined::`), returned
+signals (`GetSignal()::`), parenthesized receivers (`(changed)::`) and parameters
+inside generic functions. Accepting a callback suggestion preserves imported
+type names and the enclosing generic parameters.
+
 ```clp
 signal<number> damaged;
 auto connection = damaged::Connect(func(number amount) -> void {

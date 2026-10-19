@@ -692,9 +692,9 @@ std::optional<Stmt> Parser::parse_statement() {
     }
     return parse_initialized_name(declared_type);
   }
-  if (check(TokenType::At) || check(TokenType::KwJoin) || check(TokenType::KwAwait) || check(TokenType::KwSpawn) ||
+  if (check(TokenType::At) || check(TokenType::OpenParen) || check(TokenType::KwJoin) || check(TokenType::KwAwait) || check(TokenType::KwSpawn) ||
       (is_callable_name(peek().type) &&
-       (peek_at(1).type == TokenType::OpenBracket || peek_at(1).type == TokenType::OpenParen || peek_at(1).type == TokenType::Scope ||
+       (starts_generic_call(1) || peek_at(1).type == TokenType::OpenBracket || peek_at(1).type == TokenType::OpenParen || peek_at(1).type == TokenType::Scope ||
         (peek_at(1).type == TokenType::Dot && peek_at(2).type == TokenType::Identifier &&
          peek_at(3).type == TokenType::OpenParen)))) {
     std::optional<Expr> expr = parse_expression();
@@ -702,7 +702,8 @@ std::optional<Stmt> Parser::parse_statement() {
       synchronize();
       return std::nullopt;
     }
-    if (!consume(TokenType::Semicolon, "expected ';'")) {
+    const bool incomplete_member = check(TokenType::Colon);
+    if (!consume(TokenType::Semicolon, "expected ';'") && !incomplete_member && !expr->missing && expr->kind != Expr::Kind::Member) {
       synchronize();
       return std::nullopt;
     }
