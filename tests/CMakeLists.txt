@@ -183,6 +183,9 @@ if(Python3_Interpreter_FOUND)
   add_test(NAME "core adversarial validation"
            COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/stress/core_validation.py" $<TARGET_FILE:clpp>)
   set_tests_properties("core adversarial validation" PROPERTIES LABELS "stress;core" TIMEOUT 180)
+  add_test(NAME "adversarial QA refuses sanitizer reports"
+           COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/stress/test_qa_harness.py")
+  set_tests_properties("adversarial QA refuses sanitizer reports" PROPERTIES LABELS "core;regression" TIMEOUT 30)
   add_test(NAME "all example sources use current syntax"
            COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/examples/check_sources.py" $<TARGET_FILE:clpp>)
   set_tests_properties("all example sources use current syntax" PROPERTIES LABELS examples TIMEOUT 120)
@@ -194,6 +197,18 @@ if(Python3_Interpreter_FOUND)
   add_test(NAME "lsp end to end"
            COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/lsp/test_lsp.py" $<TARGET_FILE:clpp>)
   set_tests_properties("lsp end to end" PROPERTIES LABELS lsp TIMEOUT 120)
+  add_test(NAME "LSP initializer fields preserve type and declaration ownership"
+           COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/lsp/test_initializers.py" $<TARGET_FILE:clpp>)
+  set_tests_properties("LSP initializer fields preserve type and declaration ownership" PROPERTIES LABELS "lsp;regression" TIMEOUT 120)
+  add_test(NAME "LSP signal and connection method completion"
+           COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/lsp/test_signal_completion.py" $<TARGET_FILE:clpp>)
+  set_tests_properties("LSP signal and connection method completion" PROPERTIES LABELS "lsp;regression" TIMEOUT 120)
+  add_test(NAME "scope operations runtime and editor contract"
+           COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/lsp/test_scope_contract.py" $<TARGET_FILE:clpp>)
+  set_tests_properties("scope operations runtime and editor contract" PROPERTIES LABELS "lsp;regression;contract" TIMEOUT 120)
+  add_test(NAME "LSP editor recovery refactoring and compiler parity"
+           COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/lsp/test_editor_audit.py" $<TARGET_FILE:clpp> --large)
+  set_tests_properties("LSP editor recovery refactoring and compiler parity" PROPERTIES LABELS "lsp;regression;contract" TIMEOUT 180 RUN_SERIAL TRUE)
   if(CLPP_SANITIZE_ADDRESS OR CLPP_SANITIZE_UNDEFINED)
     # Instrumented correctness/responsiveness is a separate gate. Normal Debug
     # and Release builds retain the original 50 ms deployed-runtime threshold.

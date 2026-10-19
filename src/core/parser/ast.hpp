@@ -57,7 +57,7 @@ struct Expr {
     Range,
     Ternary,
     Update,
-    Cast, Ascribe, Closure, Invoke, Observe, Event
+    Cast, Ascribe, TypeTest, Closure, Invoke, Observe, Event
   };
 
   Kind kind{Kind::String};

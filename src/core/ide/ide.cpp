@@ -5,6 +5,8 @@
 #include "clpp/semantic.hpp"
 #include "clpp/stdlib.hpp"
 #include "core/compiler/analyze.hpp"
+#include "core/ide/initializers.hpp"
+#include "core/typechecker/solver.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -76,6 +78,10 @@ struct Member {
   if (!stmt.declared_type.empty()) {
     return stmt.declared_type;
   }
+  if (stmt.expr.kind == parser::Expr::Kind::Event) {
+    if (stmt.expr.runtime_op == 0) return stmt.expr.value;
+    if (stmt.expr.runtime_op == 1 || stmt.expr.runtime_op == 5 || stmt.expr.runtime_op == 9) return "connection";
+  }
   if (stmt.expr.kind == parser::Expr::Kind::String) {
     return "string";
   }
@@ -113,8 +119,7 @@ void walk_stmts(const std::vector<parser::Stmt>& statements, const std::uint32_t
     if (stmt.kind == parser::Stmt::Kind::VariableDecl || stmt.kind == parser::Stmt::Kind::ForIn ||
         stmt.kind == parser::Stmt::Kind::Signal || stmt.kind == parser::Stmt::Kind::Using) {
       const bool function = stmt.kind == parser::Stmt::Kind::Using;
-      const std::string detail = function ? "func" : stmt.kind == parser::Stmt::Kind::Signal ? "signal"
-                                 : display_type(stmt, symbols);
+      const std::string detail = function ? "func" : display_type(stmt, symbols);
       const std::uint32_t symbol_end_line = stmt.kind == parser::Stmt::Kind::ForIn ? next_line : end_line;
       const std::uint32_t symbol_end_column = stmt.kind == parser::Stmt::Kind::ForIn ? next_column : end_column;
       Symbol symbol{stmt.name, detail, function ? Kind::Function : Kind::Variable, stmt.name_location.line,
@@ -265,7 +270,7 @@ void add_unique(std::vector<Item>& items, Item item) {
   }
   if (ending != nullptr && (containing == nullptr || ending->type == TokenType::Identifier ||
                             ending->type == TokenType::Dot || ending->type == TokenType::At ||
-                            ending->type == TokenType::Scope)) {
+                            ending->type == TokenType::Scope || ending->type == TokenType::Colon)) {
     return ending;
   }
   return containing != nullptr ? containing : ending;
@@ -529,8 +534,14 @@ void add_unique(std::vector<Item>& items, Item item) {
 }
 
 void add_struct_members(const std::string& type, const std::string& prefix, const parser::Program& program,
-                        const std::string& viewer, std::vector<Item>& items) {
-  const std::vector<const parser::StructDecl*> chain = lineage(program, type);
+                        const std::string& viewer, std::vector<Item>& items, const parser::Function* scope = nullptr) {
+  const std::string concrete = typechecker::member_owner_type(program, type, scope).value_or(type);
+  const std::vector<const parser::StructDecl*> chain = lineage(program, concrete);
+  std::unordered_map<std::string, std::string> field_types;
+  if (!chain.empty()) {
+    for (const auto& field : typechecker::initializer_fields(program, concrete, scope))
+      field_types.emplace(field.name, field.type);
+  }
   for (std::size_t level = 0; level < chain.size(); ++level) {
     const parser::StructDecl& decl = *chain[level];
     for (const parser::Field& field : decl.fields) {
@@ -541,11 +552,14 @@ void add_struct_members(const std::string& type, const std::string& prefix, cons
       if (!matches_prefix(field.name, prefix)) {
         continue;
       }
-      Item item{field.name, field.type_name.empty() ? "auto" : field.type_name, Kind::Field};
+      const auto resolved = field_types.find(field.name);
+      const std::string field_type = resolved != field_types.end() ? resolved->second
+          : field.type_name.empty() ? "auto" : field.type_name;
+      Item item{field.name, field_type, Kind::Field};
       if (owner != chain.front()->name) {
         item.detail += "  (inherited from " + owner + ")";
       }
-      item.documentation = code_block((field.type_name.empty() ? "auto" : field.type_name) + " " + owner + "." + field.name);
+      item.documentation = code_block(field_type + " " + owner + "." + field.name);
       add_unique(items, std::move(item));
     }
     const std::string methods = decl.name + ".";
@@ -561,10 +575,21 @@ void add_struct_members(const std::string& type, const std::string& prefix, cons
         continue;
       }
       Item item{label, signature_text(function), Kind::Method};
+      if (concrete.find('<') != std::string::npos || !decl.type_params.empty()) {
+        parser::Expr member;
+        member.kind = parser::Expr::Kind::Member;
+        member.value = label;
+        member.left = std::make_unique<parser::Expr>();
+        member.left->kind = parser::Expr::Kind::Name;
+        member.left->value = "$completion_receiver";
+        const std::vector<typechecker::LocalType> locals{{"$completion_receiver", concrete, true}};
+        if (const auto signature = typechecker::expression_type(program, member, locals, scope))
+          item.detail = label + ": " + *signature;
+      }
+      item.documentation = code_block(item.detail);
       if (decl.name != chain.front()->name) {
         item.detail += "  (inherited from " + decl.name + ")";
       }
-      item.documentation = code_block(signature_text(function));
       item.insert_text = label + (params_text(function).empty() ? "()" : "($1)$0");
       item.snippet = !params_text(function).empty();
       add_unique(items, std::move(item));
@@ -572,13 +597,70 @@ void add_struct_members(const std::string& type, const std::string& prefix, cons
   }
 }
 
+void complete_event_members(const std::string& type, const std::string& prefix, const parser::Program& program,
+                            const bool scope_access, std::vector<Item>& items, const parser::Function* scope = nullptr) {
+  const auto resource = typechecker::resource_type(program, type, scope);
+  if (resource && resource->starts_with("signal<") && scope_access) {
+    const std::string payload = resource->substr(7, resource->size() - 8);
+    const auto parameters = typechecker::callback_parameters(program, "(" + payload + ")->void", scope);
+    if (parameters) {
+      std::string typed_parameters, fire_parameters, fire_arguments;
+      for (std::size_t index = 0; index < parameters->size(); ++index) {
+        const std::string separator = index == 0 ? "" : ", ";
+        const std::string name = "arg" + std::to_string(index + 1);
+        const std::string placeholder = "${" + std::to_string(index + 1) + ":" + name + "}";
+        typed_parameters += separator + (*parameters)[index] + " " + placeholder;
+        fire_parameters += separator + (*parameters)[index] + " " + name;
+        fire_arguments += separator + placeholder;
+      }
+      const auto offer = [&](const std::string& name, const std::string& detail, const std::string& insertion,
+                             const bool snippet, const std::string& documentation) {
+        if (!matches_prefix(name, prefix)) return;
+        Item item{name, detail, Kind::Method};
+        item.insert_text = insertion;
+        item.snippet = snippet;
+        item.documentation = code_block(detail) + "\n\n" + documentation;
+        add_unique(items, std::move(item));
+      };
+      for (const std::string name : {"Connect", "Once"}) {
+        offer(name, "connection " + name + "((" + payload + ") -> void callback)",
+              name + "(func(" + typed_parameters + ") -> void {\n\t$0\n})", true,
+              name == "Once" ? "Connects an explicitly typed callback for the next emission only."
+                             : "Connects an explicitly typed callback; returns a connection handle.");
+      }
+      offer("Fire", "void Fire(" + fire_parameters + ")", "Fire(" + fire_arguments + ")" +
+            (parameters->empty() ? "" : "$0"), !parameters->empty(), "Emits the signal's typed payload.");
+      offer("Clear", "void Clear()", "Clear()", false, "Disconnects this signal's managed subscriptions created with ~>Connect.");
+      const std::string result = parameters->empty() ? "void" : parameters->size() == 1 ? parameters->front()
+                                                                                     : "tuple<" + payload + ">";
+      offer("Wait", result + " Wait()", "Wait()", false,
+            "Waits for the next emission. Only valid inside an async function.");
+    }
+  } else if (resource && *resource == "connection") {
+    if (scope_access && matches_prefix("Disconnect", prefix)) {
+      Item item{"Disconnect", "void Disconnect()", Kind::Method};
+      item.insert_text = "Disconnect()";
+      item.documentation = code_block(item.detail) + "\n\nDisconnects this listener.";
+      add_unique(items, std::move(item));
+    }
+    if (matches_prefix("Connected", prefix)) {
+      Item item{"Connected", scope_access ? "bool Connected()" : "bool Connected", scope_access ? Kind::Method : Kind::Field};
+      item.insert_text = scope_access ? "Connected()" : "Connected";
+      item.documentation = code_block(item.detail) + "\n\nWhether this listener is still connected.";
+      add_unique(items, std::move(item));
+    }
+  }
+}
+
 void complete_members(const std::string& owner, const std::string& prefix, const AnalysisResult& analysis,
                       const std::vector<Symbol>& symbols, const std::vector<Token>& tokens, const std::uint32_t line,
-                      const std::uint32_t column, std::vector<Item>& items) {
+                      const std::uint32_t column, const bool scope_access, std::vector<Item>& items,
+                      const parser::Function* scope = nullptr) {
   const parser::Program& program = analysis.program;
   const std::string viewer = enclosing_struct(program, tokens, line, column);
   std::string type = owner == "@this" && !viewer.empty() ? viewer : type_of_name(owner, symbols, line, column);
   const std::string bare = bare_type(type);
+  complete_event_members(type, prefix, program, scope_access, items, scope);
   if (bare == "Vector3" || bare == "Vector2" || bare == "Vector4") {
     for (const char* field : {"x", "y", "z", "w"}) {
       if (bare == "Vector2" && (field[0] == 'z' || field[0] == 'w')) {
@@ -592,9 +674,9 @@ void complete_members(const std::string& owner, const std::string& prefix, const
       }
     }
   }
-  add_struct_members(type, prefix, program, viewer, items);
+  add_struct_members(type, prefix, program, viewer, items, scope);
   if (type != owner) {
-    add_struct_members(owner, prefix, program, viewer, items);
+    add_struct_members(owner, prefix, program, viewer, items, scope);
   }
   if (const parser::EnumDecl* decl = find_enum(program, owner)) {
     for (std::size_t index = 0; index < decl->variants.size(); ++index) {
@@ -698,6 +780,15 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
   const parser::Program& program = analysis.program;
   const std::vector<Token>& tokens = analysis.tokens;
   Info info;
+  const detail::InitializerIndex initializers(program, tokens);
+  std::unordered_map<std::size_t, std::vector<typechecker::InitializerField>> initializer_cache;
+  const auto initializer_fields = [&](const std::size_t index) -> const std::vector<typechecker::InitializerField>& {
+    if (const auto found = initializer_cache.find(index); found != initializer_cache.end()) return found->second;
+    const auto& context = initializers.contexts[index];
+    auto type = context.type;
+    module_types::annotation(type, program.resolved_types);
+    return initializer_cache.emplace(index, typechecker::initializer_fields(program, type, context.scope)).first->second;
+  };
   info.diagnostics = analysis.diagnostics;
   // One problem, one squiggle: drop a second diagnostic at the same position (for example
   // "type mismatch" right after "undefined name").
@@ -718,14 +809,51 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
 
   std::vector<Symbol> symbols;
   std::vector<std::string> self_fields;
+  // Imported declarations have coordinates in another file; declaration order
+  // is not a lexical scope boundary, especially for callbacks imported with methods.
+  std::vector<std::size_t> closing_brace(tokens.size(), tokens.size()), braces;
+  for (std::size_t index = 0; index < tokens.size(); ++index) {
+    if (tokens[index].type == TokenType::OpenBrace) braces.push_back(index);
+    else if (tokens[index].type == TokenType::CloseBrace && !braces.empty()) {
+      closing_brace[braces.back()] = index;
+      braces.pop_back();
+    }
+  }
+  const parser::Function* enclosing_scope = nullptr;
   for (std::size_t index = 0; index < program.functions.size(); ++index) {
     const parser::Function& function = program.functions[index];
     if (function.imported) continue;
     std::uint32_t end_line = 0xFFFFFFFF;
     std::uint32_t end_column = 0xFFFFFFFF;
-    if (index + 1 < program.functions.size()) {
-      end_line = program.functions[index + 1].name_location.line;
-      end_column = program.functions[index + 1].name_location.column;
+    auto start = std::lower_bound(tokens.begin(), tokens.end(), function.name_location,
+        [](const Token& token, const SourceLocation location) {
+          return before(token.location.line, token.location.column, location.line, location.column);
+        });
+    int parameters = 0;
+    bool has_body = false;
+    for (auto part = start; part != tokens.end(); ++part) {
+      if (part->type == TokenType::OpenParen) ++parameters;
+      else if (part->type == TokenType::CloseParen) --parameters;
+      else if (parameters == 0 && part->type == TokenType::Semicolon) {
+        end_line = part->location.line;
+        end_column = part->location.column + 1;
+        break;
+      }
+      else if (parameters == 0 && part->type == TokenType::OpenBrace) {
+        has_body = true;
+        const auto close = closing_brace[static_cast<std::size_t>(part - tokens.begin())];
+        if (close < tokens.size()) {
+          end_line = tokens[close].location.line;
+          end_column = tokens[close].location.column + 1;
+        }
+        break;
+      }
+    }
+    if (has_body && !before(line, column, function.name_location.line, function.name_location.column) &&
+        before(line, column, end_line, end_column) &&
+        (enclosing_scope == nullptr || before(enclosing_scope->name_location.line, enclosing_scope->name_location.column,
+                                              function.name_location.line, function.name_location.column))) {
+      enclosing_scope = &function;
     }
     const bool module_function = origin_of_function(analysis, function.name) != nullptr;
     if (function.name.find('.') == std::string::npos) {
@@ -789,6 +917,7 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
   bool members = false;
   bool self = false;
   bool link_module = false;
+  bool type_test_member = false;
   std::string owner;
   const auto previous_of = [&](const Token* token) { return token == nullptr ? nullptr : token_before(tokens, *token); };
   const Token* anchor = current;  // the token right before what is being typed
@@ -802,7 +931,22 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
     prefix = std::string(current->lexeme.substr(0, std::min<std::size_t>(offset, current->lexeme.size())));
     anchor = previous_of(current);
   }
-  if (anchor != nullptr && anchor->type == TokenType::Dot) {
+  if (anchor != nullptr && anchor->type == TokenType::Colon) {
+    const Token* receiver = previous_of(anchor);
+    const Token* before_receiver = previous_of(receiver);
+    const bool runtime_name = receiver != nullptr && receiver->type == TokenType::Identifier &&
+        ((before_receiver && (before_receiver->type == TokenType::Dot || before_receiver->type == TokenType::Scope ||
+                              before_receiver->type == TokenType::At)) ||
+         std::any_of(symbols.begin(), symbols.end(), [&](const Symbol& symbol) {
+           return symbol.name == receiver->lexeme && visible(symbol, line, column) &&
+               (symbol.kind == Kind::Variable || symbol.kind == Kind::Constant || symbol.kind == Kind::Function);
+         }));
+    type_test_member = receiver != nullptr &&
+        (runtime_name || receiver->type == TokenType::CloseParen ||
+         receiver->type == TokenType::CloseBracket || receiver->type == TokenType::IntLiteral ||
+         receiver->type == TokenType::FloatLiteral || receiver->type == TokenType::StringLiteral ||
+         receiver->type == TokenType::KwTrue || receiver->type == TokenType::KwFalse || receiver->type == TokenType::KwNull);
+  } else if (anchor != nullptr && anchor->type == TokenType::Dot) {
     const Token* qualifier = previous_of(anchor);
     // `link @clpp.` / `link @clpp.li`
     const Token* at = previous_of(qualifier);
@@ -878,6 +1022,80 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
       }
     }
   }
+  // Ask the checker for a complete receiver expression rather than treating the
+  // last field/call token as a variable name. Reuse the retained, bound AST.
+  if (anchor != nullptr && (anchor->type == TokenType::Scope || anchor->type == TokenType::Colon)) {
+    const Token* receiver = previous_of(anchor);
+    const Token* separator = previous_of(receiver);
+    const bool compound = receiver != nullptr &&
+        (receiver->type == TokenType::CloseParen || receiver->type == TokenType::CloseBracket ||
+         (separator != nullptr && separator->type == TokenType::Dot));
+    if (compound) {
+      const auto anchor_index = static_cast<std::size_t>(anchor - tokens.data());
+      const Token* target = anchor->type == TokenType::Scope
+          ? (anchor_index + 1 < tokens.size() ? &tokens[anchor_index + 1] : nullptr) : receiver;
+      if (anchor->type == TokenType::Colon && receiver->type == TokenType::CloseParen) {
+        const Token* walk = receiver;
+        int depth = 0;
+        while (walk != nullptr) {
+          if (walk->type == TokenType::CloseParen) ++depth;
+          else if (walk->type == TokenType::OpenParen && --depth == 0) break;
+          walk = previous_of(walk);
+        }
+        const Token* callee = previous_of(walk);
+        target = callee != nullptr && callee->type == TokenType::Identifier ? callee
+            : walk != nullptr && walk + 1 < receiver ? walk + 1 : nullptr;
+      }
+      if (anchor->type == TokenType::Colon && receiver->type == TokenType::CloseBracket) {
+        const Token* walk = receiver;
+        int depth = 0;
+        while (walk != nullptr) {
+          if (walk->type == TokenType::CloseBracket) ++depth;
+          else if (walk->type == TokenType::OpenBracket && --depth == 0) break;
+          walk = previous_of(walk);
+        }
+        target = walk;
+      }
+      const parser::Expr* selected = nullptr;
+      const auto expression = [&](const auto& visit, const parser::Expr& value) -> void {
+        if (target != nullptr && value.location.line == target->location.line &&
+            value.location.column == target->location.column) {
+          if (anchor->type == TokenType::Scope && value.kind == parser::Expr::Kind::Member && value.left)
+            selected = value.left.get();
+          else if (anchor->type == TokenType::Colon &&
+                   (value.kind == parser::Expr::Kind::Name || value.kind == parser::Expr::Kind::Member ||
+                    value.kind == parser::Expr::Kind::Call || value.kind == parser::Expr::Kind::Index)) selected = &value;
+        }
+        if (value.left) visit(visit, *value.left);
+        if (value.right) visit(visit, *value.right);
+        for (const auto& argument : value.args) visit(visit, argument);
+      };
+      const auto statements = [&](const auto& visit, const std::vector<parser::Stmt>& body) -> void {
+        for (const auto& statement : body) {
+          expression(expression, statement.expr);
+          expression(expression, statement.place);
+          visit(visit, statement.then_body); visit(visit, statement.else_body);
+          visit(visit, statement.init); visit(visit, statement.step);
+          for (const auto& arm : statement.arms) visit(visit, arm.body);
+        }
+      };
+      statements(statements, enclosing_scope ? enclosing_scope->body : program.statements);
+      if (selected != nullptr) {
+        std::unordered_map<std::string, const Symbol*> bindings;
+        for (const auto& symbol : symbols) {
+          if (symbol.kind != Kind::Variable || !visible(symbol, line, column)) continue;
+          auto [entry, inserted] = bindings.emplace(symbol.name, &symbol);
+          if (!inserted && before(entry->second->line, entry->second->column, symbol.line, symbol.column)) entry->second = &symbol;
+        }
+        std::vector<typechecker::LocalType> locals;
+        for (const auto& [name, symbol] : bindings) locals.push_back({name, symbol->detail, true});
+        if (const auto resolved = typechecker::expression_type(program, *selected, locals, enclosing_scope)) {
+          owner = *resolved;
+          if (anchor->type == TokenType::Scope) { members = true; self = false; }
+        }
+      }
+    }
+  }
   // `link "./fi|` — the host (LSP) lists files; the compiler only says where.
   if (current != nullptr && (current->type == TokenType::StringLiteral || current->type == TokenType::Invalid)) {
     const Token* keyword = previous_of(current);
@@ -892,7 +1110,48 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
     }
   }
 
-  if (link_module) {
+  const auto initializer_position = initializers.at(tokens, line, column);
+  if (initializer_position.context != detail::InitializerIndex::none) {
+    const auto& context = initializers.contexts[initializer_position.context];
+    const auto key = initializer_position.key;
+    std::string field_prefix;
+    if (key != detail::InitializerIndex::none)
+      field_prefix = std::string(tokens[key].lexeme.substr(0, column - tokens[key].location.column));
+    const auto viewer = enclosing_struct(program, tokens, line, column);
+    for (const auto& field : initializer_fields(initializer_position.context)) {
+      if ((field.is_private && viewer != field.owner) || !matches_prefix(field.name, field_prefix)) continue;
+      const auto used = context.used.find(field.name);
+      const bool editing = key != detail::InitializerIndex::none && tokens[key].lexeme == field.name &&
+          key + 1 < tokens.size() && tokens[key + 1].type == TokenType::Equal;
+      if (used != context.used.end() && used->second > (editing ? 1u : 0u)) continue;
+      Item item{field.name, field.type.empty() ? "auto" : field.type, Kind::Field};
+      item.insert_text = field.name;
+      item.documentation = code_block(item.detail + " " + field.owner + "." + field.name);
+      add_unique(info.completions, std::move(item));
+    }
+  } else if (type_test_member) {
+    // Offer native :: operations on the first colon too. Acceptance inserts the
+    // missing colon; is<Type> keeps its existing single-colon syntax.
+    const Token* receiver = previous_of(anchor);
+    if (receiver != nullptr && (!owner.empty() || receiver->type == TokenType::Identifier)) {
+      std::vector<Item> operations;
+      complete_event_members(owner.empty() ? type_of_name(std::string(receiver->lexeme), symbols, line, column) : owner,
+                             prefix, program, true, operations, enclosing_scope);
+      for (auto& operation : operations) {
+        operation.insert_text = ":" + operation.insert_text;
+        add_unique(info.completions, std::move(operation));
+      }
+    }
+    if (matches_prefix("is", prefix)) {
+      Item item{"is", "bool is<Type>", Kind::Method};
+      item.insert_text = "is<${1:Type}>$0";
+      item.snippet = true;
+      item.sort_text = "0";
+      item.documentation = code_block("value:is<Type>") +
+          "\n\nTests the runtime type once. A successful test narrows a local variable on the matching path. No call parentheses.";
+      add_unique(info.completions, std::move(item));
+    }
+  } else if (link_module) {
     const bool after_at = anchor != nullptr && anchor->type == TokenType::At;
     if (after_at) {
       add_unique(info.completions, Item{"clpp", "standard library", Kind::Module});
@@ -923,7 +1182,8 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
       }
     }
   } else if (members) {
-    complete_members(owner, prefix, analysis, symbols, tokens, line, column, info.completions);
+    complete_members(owner, prefix, analysis, symbols, tokens, line, column,
+                     anchor != nullptr && anchor->type == TokenType::Scope, info.completions, enclosing_scope);
   } else if (!info.link_path_completion) {
     for (const Symbol& symbol : symbols) {
       if (!visible(symbol, line, column) || !matches_prefix(symbol.name, prefix)) {
@@ -1028,6 +1288,29 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
     }
   }
   if (word != nullptr && word->type == TokenType::Identifier) {
+    const auto token_index = static_cast<std::size_t>(word - tokens.data());
+    const auto context = initializers.keys[token_index];
+    if (context != detail::InitializerIndex::none) {
+      const auto viewer = enclosing_struct(program, tokens, line, column);
+      for (const auto& field : initializer_fields(context)) {
+        if (field.name != word->lexeme || (field.is_private && viewer != field.owner)) continue;
+        const auto type = field.type.empty() ? "auto" : field.type;
+        info.has_hover = true;
+        info.hover.text = field.name + ": " + type;
+        info.hover_markdown = code_block(type + " " + field.owner + "." + field.name);
+        info.hover.location = field.location;
+        info.has_definition = field.location.line != 0;
+        info.definition = field.location;
+        info.definition_length = static_cast<std::uint32_t>(field.name.size());
+        if (const auto* module = origin_of_type(analysis, field.owner)) {
+          info.definition_path = module->path;
+          info.hover_markdown += "\n\nFrom `" + module->path + "`";
+        }
+        break;
+      }
+    }
+  }
+  if (word != nullptr && word->type == TokenType::Identifier && !info.has_hover) {
     const std::string name(word->lexeme);
     const Token* dot = previous_of(word);
     const Token* base = dot != nullptr && (dot->type == TokenType::Dot || dot->type == TokenType::Scope) ? previous_of(dot) : nullptr;
@@ -1366,6 +1649,7 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
   for (auto& item : info.completions) {
     display(item.detail);
     display(item.documentation);
+    display(item.insert_text);
   }
   for (auto& symbol : info.symbols) display(symbol.detail);
   return info;
@@ -1665,6 +1949,7 @@ std::vector<SemanticToken> semantic_tokens(const AnalysisResult& analysis) {
   const parser::Program& program = analysis.program;
   const std::vector<Token>& tokens = analysis.tokens;
   Highlighter highlighter(tokens);
+  const detail::InitializerIndex initializers(program, tokens);
   constexpr SourceLocation kForever{0xFFFFFFFF, 0xFFFFFFFF};
 
   // --- 1. declarations of this file -------------------------------------------------------
@@ -1778,6 +2063,17 @@ std::vector<SemanticToken> semantic_tokens(const AnalysisResult& analysis) {
     }
     const std::string name(token.lexeme);
     const Token* previous = index > 0 ? &tokens[index - 1] : nullptr;
+
+    if (initializers.keys[index] != detail::InitializerIndex::none) {
+      highlighter.paint(token, kSemanticProperty, 0);
+      continue;
+    }
+
+    if (name == "is" && previous && previous->type == TokenType::Colon &&
+        next && next->type == TokenType::Less) {
+      highlighter.paint(token, kSemanticMethod, 0);
+      continue;
+    }
 
     // `link @clpp.axiom`: the pieces of a module path
     if (in_link_path(tokens, index)) {
@@ -2030,7 +2326,8 @@ std::string format_source(const std::string_view source, const std::uint32_t tab
     const auto& base = lexed.tokens[index - 1];
     const bool named_type = base.type == TokenType::Identifier && (!base.lexeme.empty() &&
         (type_names.contains(base.lexeme) || std::isupper(static_cast<unsigned char>(base.lexeme.front())) != 0));
-    if (!named_type && base.type != TokenType::KwTemplate && base.type != TokenType::KwStaticCast) continue;
+    const bool type_test = base.lexeme == "is" && index >= 2 && lexed.tokens[index - 2].type == TokenType::Colon;
+    if (!named_type && !type_test && base.type != TokenType::KwTemplate && base.type != TokenType::KwStaticCast) continue;
     std::size_t depth = 1, end = index + 1;
     for (; end < lexed.tokens.size(); ++end) {
       const auto type = lexed.tokens[end].type;
@@ -2146,6 +2443,8 @@ std::string format_source(const std::string_view source, const std::uint32_t tab
         if (token.type == TokenType::OpenParen && original_gap && base > 0 && base < lexed.tokens.size() &&
             lexed.tokens[base - 1].type == TokenType::OpenParen) needs_space = true;
       }
+      if ((token.type == TokenType::Colon && token_index + 1 < lexed.tokens.size() && lexed.tokens[token_index + 1].lexeme == "is") ||
+          (previous == TokenType::Colon && token.lexeme == "is")) needs_space = false;
       if (token.type == TokenType::PlusPlus || token.type == TokenType::MinusMinus ||
           previous == TokenType::PlusPlus || previous == TokenType::MinusMinus) needs_space = false;
       if ((needs_space || original_call_gap) && !formatted.empty() && formatted.back() != ' ' && formatted.back() != '\t') {

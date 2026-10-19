@@ -195,6 +195,44 @@ with tempfile.TemporaryDirectory() as ws:
     check("return type hover shows the literal union definition",
           'def Outcome = "ongoing" | "team_a" | "team_b";' in value, value)
 
+    # Optional fields and direct guards must agree with command-line compilation.
+    edit('def Human { string name; optional<number> cpf; }\n'
+         'bool CreateBankAccount(Human target) { guard(target.cpf) else { return false; } return true; }\n'
+         'auto person = Human { name = "Kartz" }; post(CreateBankAccount(person)); post(!person.cpf);\n')
+    c.pos(uri, "textDocument/hover", 2, 6)  # response fences the preceding diagnostic publication
+    check("omitted optional field and optional guard have no editor diagnostics", not c.diags.get(uri), c.diags.get(uri))
+    edit('number Read(optional<number> value) { guard(value) else { return 0; } value = null; return value + 1; }\n')
+    c.pos(uri, "textDocument/hover", 0, 13)
+    check("editor retains errors after optional refinement is invalidated", bool(c.diags.get(uri)), c.diags.get(uri))
+
+    edit('def Human { string name; optional<number> cpf; }\n'
+         'any kartz = Human { name = "Kartz" };\n'
+         'if(kartz:is<Human> and kartz.cpf == null) { post("missing cpf"); }\n')
+    c.pos(uri, "textDocument/hover", 2, 10)
+    check("postfix is narrows the logical operand without editor errors", not c.diags.get(uri), c.diags.get(uri))
+    semantic = c.req("textDocument/semanticTokens/full", {"textDocument": {"uri": uri}}).get("result", {}).get("data", [])
+    legend = c.caps["semanticTokensProvider"]["legend"]["tokenTypes"]
+    roles = {}
+    row = column = 0
+    for index in range(0, len(semantic), 5):
+        delta_row, delta_column, length, role, modifiers = semantic[index:index + 5]
+        row += delta_row
+        column = delta_column if delta_row else column + delta_column
+        roles[(row, column, length)] = legend[role]
+    check("postfix is is highlighted as a method", roles.get((2, 9, 2)) == "method", roles)
+    formatted = c.req("textDocument/formatting", {"textDocument": {"uri": uri}, "options": {"tabSize": 2, "insertSpaces": True}})
+    edits = formatted.get("result") or []
+    check("formatting preserves compact postfix type-test syntax", bool(edits) and 'kartz:is<Human>' in edits[0].get("newText", ""), edits)
+
+    for suffix in (":", ":i", ":is"):
+        edit('def Human { optional<number> cpf; }\nauto kartz = Human {};\nkartz' + suffix + '\n')
+        response = c.pos(uri, "textDocument/completion", 2, len('kartz' + suffix)).get("result") or []
+        entries = response.get("items", []) if isinstance(response, dict) else response
+        intrinsic = next((item for item in entries if item.get("label") == "is"), {})
+        check("postfix method completion after kartz" + suffix,
+              intrinsic.get("kind") == 2 and intrinsic.get("insertTextFormat") == 2 and
+              intrinsic.get("insertText") == "is<${1:Type}>$0", intrinsic)
+
     # Document colors work without semantic compilation and exclude strings/comments.
     palette = "const auto PANEL = 0x141025;\nconst auto PORTRAIT = 0x2D1B4E;\nconst auto HP = 0xFF5A8A;\nconst auto MP = 0x5EC8FF;\n<< 0xFFFFFF\npost(\"0x123456\");\npost(\"😀\"); auto tint=0x80_FF0000;\nauto small=0xFF;\n"
     edit(palette)

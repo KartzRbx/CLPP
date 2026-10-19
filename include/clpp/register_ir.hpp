@@ -116,6 +116,7 @@ enum class RegOp : std::uint8_t {
   RawGlobal = 107,
   MakeBoundMethod = 108,
   Event = 109,
+  TypeTest = 110,
 };
 
 [[nodiscard]] inline std::uint32_t reg_abc(const RegOp op, const std::uint8_t a, const std::uint8_t b, const std::uint8_t c) {

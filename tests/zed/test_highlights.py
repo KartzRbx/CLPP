@@ -105,3 +105,12 @@ try:
         print('PASS compiler role:', name, category)
 finally:
     client.close()
+
+with tempfile.TemporaryDirectory() as directory:
+    probe = Path(directory) / 'type-test.clp'
+    probe.write_text('any kartz = 0; if(kartz:is<Human> and kartz.cpf == null) { post("missing cpf"); }', encoding='utf8')
+    parsed = subprocess.run([str(cli), 'parse', str(probe)], cwd=grammar, env=env, capture_output=True, text=True)
+    assert parsed.returncode == 0 and 'type_test_expression' in parsed.stdout, parsed.stdout + parsed.stderr
+    queried = subprocess.run([str(cli), 'query', str(grammar.parent / 'languages/clpp/highlights.scm'), str(probe)], cwd=grammar, env=env, capture_output=True, text=True)
+    assert queried.returncode == 0 and re.search(r'capture: .*function.*text: `:is`', queried.stdout), queried.stdout + queried.stderr
+    print('PASS postfix :is<Human> grammar and method highlight')

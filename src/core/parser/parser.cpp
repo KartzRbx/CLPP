@@ -692,9 +692,9 @@ std::optional<Stmt> Parser::parse_statement() {
     }
     return parse_initialized_name(declared_type);
   }
-  if (check(TokenType::At) || check(TokenType::KwJoin) || check(TokenType::KwAwait) || check(TokenType::KwSpawn) ||
+  if (check(TokenType::At) || check(TokenType::OpenParen) || check(TokenType::KwJoin) || check(TokenType::KwAwait) || check(TokenType::KwSpawn) ||
       (is_callable_name(peek().type) &&
-       (peek_at(1).type == TokenType::OpenBracket || peek_at(1).type == TokenType::OpenParen || peek_at(1).type == TokenType::Scope ||
+       (starts_generic_call(1) || peek_at(1).type == TokenType::OpenBracket || peek_at(1).type == TokenType::OpenParen || peek_at(1).type == TokenType::Scope ||
         (peek_at(1).type == TokenType::Dot && peek_at(2).type == TokenType::Identifier &&
          peek_at(3).type == TokenType::OpenParen)))) {
     std::optional<Expr> expr = parse_expression();
@@ -702,7 +702,8 @@ std::optional<Stmt> Parser::parse_statement() {
       synchronize();
       return std::nullopt;
     }
-    if (!consume(TokenType::Semicolon, "expected ';'")) {
+    const bool incomplete_member = check(TokenType::Colon);
+    if (!consume(TokenType::Semicolon, "expected ';'") && !incomplete_member && !expr->missing && expr->kind != Expr::Kind::Member) {
       synchronize();
       return std::nullopt;
     }
@@ -2891,7 +2892,7 @@ std::optional<Expr> Parser::parse_primary() {
     expr.location = token.location;
     expr.span = token.lexeme;
     advance();
-    return expr;
+    return finish_postfix(std::move(expr));
   }
 
   if (check(TokenType::KwParallel)) {
@@ -3338,12 +3339,23 @@ std::optional<Expr> Parser::parse_template() {
 
 std::optional<Expr> Parser::finish_postfix(Expr expr) {
   if (!expression_depth_valid(expr)) return std::nullopt;
-  while (check(TokenType::Dot) || check(TokenType::Scope) || check(TokenType::OpenBracket) || check(TokenType::PlusPlus) ||
+  while ((check(TokenType::Colon) && peek_at(1).type == TokenType::Identifier && peek_at(1).lexeme == "is") ||
+         check(TokenType::Dot) || check(TokenType::Scope) || check(TokenType::OpenBracket) || check(TokenType::PlusPlus) ||
          check(TokenType::MinusMinus) || check(TokenType::OpenParen) || starts_generic_call() ||
          (expr.kind == Expr::Kind::Member && starts_generic_value()) ||
          (check(TokenType::SignalConnect) && peek_at(1).type == TokenType::Identifier &&
           peek_at(1).lexeme == "Connect" && peek_at(2).type == TokenType::OpenParen)) {
     if (!expression_depth_valid(expr)) return std::nullopt;
+    if (check(TokenType::Colon)) {
+      const Token token = peek(); advance(); advance();
+      if (!consume(TokenType::Less, "expected '<' after :is")) return std::nullopt;
+      const auto target = parse_type_annotation();
+      if (target.empty() || !consume(TokenType::Greater, "expected '>' after tested type")) return std::nullopt;
+      Expr test; test.kind = Expr::Kind::TypeTest; test.value = target;
+      test.location = token.location; test.span = token.lexeme;
+      test.left = std::make_unique<Expr>(std::move(expr));
+      expr = std::move(test); continue;
+    }
     if (check(TokenType::SignalConnect)) {
       const auto mark = peek(); advance();
       if (!check(TokenType::Identifier) || peek().lexeme != "Connect") { error("expected Connect after ~>"); return std::nullopt; }

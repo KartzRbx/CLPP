@@ -71,8 +71,50 @@ struct Binding {
   Binding(std::string name_in, const Type type_in, bool global_in = false) : name(std::move(name_in)), type(type_in), declared(type_in), global(global_in) {}
 };
 
+bool optional_operand(const parser::Expr& expr, const Type& type, const std::vector<Binding>& bindings) {
+  if (type.kind == Type::Kind::Optional || type.kind == Type::Kind::Null) return true;
+  if (expr.kind != parser::Expr::Kind::Name) return false;
+  for (auto binding = bindings.rbegin(); binding != bindings.rend(); ++binding) {
+    if (binding->name == expr.value && (!expr.global || binding->global))
+      return binding->declared.kind == Type::Kind::Optional;
+  }
+  return false;
+}
+
+void optional_condition(const parser::Expr& expr, const Type& type, const std::vector<Binding>& bindings) {
+  if (!optional_operand(expr, type, bindings)) return;
+  // Lower a condition to !!value, with the inner negation testing null/false exactly once.
+  auto& condition = const_cast<parser::Expr&>(expr);
+  const auto location = condition.location;
+  const auto span = condition.span;
+  auto original = std::make_unique<parser::Expr>(std::move(condition));
+  parser::Expr negative;
+  negative.kind = parser::Expr::Kind::Not;
+  negative.runtime_op = 1;
+  negative.location = location;
+  negative.span = span;
+  negative.left = std::move(original);
+  condition = parser::Expr{};
+  condition.kind = parser::Expr::Kind::Not;
+  condition.location = location;
+  condition.span = span;
+  condition.left = std::make_unique<parser::Expr>(std::move(negative));
+}
+
+Type type_test_target(const parser::Expr& expr);
+
 void narrow_condition(const parser::Expr& condition, const bool truth, std::vector<Binding>& bindings) {
   if (condition.kind == parser::Expr::Kind::Not && condition.left != nullptr) {
+    if (condition.runtime_op == 1 && condition.left->kind == parser::Expr::Kind::Name) {
+      // !optional is true for null or false. Only its false branch proves presence.
+      if (!truth) for (auto binding = bindings.rbegin(); binding != bindings.rend(); ++binding) {
+        if (binding->name != condition.left->value || (condition.left->global && !binding->global)) continue;
+        if (binding->declared.kind == Type::Kind::Optional && binding->declared.parts.size() == 1)
+          binding->type = binding->declared.parts[0];
+        break;
+      }
+      return;
+    }
     narrow_condition(*condition.left, !truth, bindings);
     return;
   }
@@ -80,6 +122,25 @@ void narrow_condition(const parser::Expr& condition, const bool truth, std::vect
        (condition.kind == parser::Expr::Kind::Or && !truth)) && condition.left != nullptr && condition.right != nullptr) {
     narrow_condition(*condition.left, truth, bindings);
     narrow_condition(*condition.right, truth, bindings);
+    return;
+  }
+  if (condition.kind == parser::Expr::Kind::TypeTest && condition.left &&
+      condition.left->kind == parser::Expr::Kind::Name && truth) {
+    for (auto binding = bindings.rbegin(); binding != bindings.rend(); ++binding) {
+      if (binding->name != condition.left->value || (condition.left->global && !binding->global)) continue;
+      const Type target = type_test_target(condition);
+      if (target != kError) binding->type = target;
+      break;
+    }
+    return;
+  }
+  if (condition.kind == parser::Expr::Kind::Name && truth) {
+    for (auto binding = bindings.rbegin(); binding != bindings.rend(); ++binding) {
+      if (binding->name != condition.value || (condition.global && !binding->global)) continue;
+      if (binding->declared.kind == Type::Kind::Optional && binding->declared.parts.size() == 1)
+        binding->type = binding->declared.parts[0];
+      break;
+    }
     return;
   }
   if (condition.kind != parser::Expr::Kind::Eq && condition.kind != parser::Expr::Kind::NotEq) return;
@@ -929,6 +990,41 @@ void mismatch(const parser::Expr& expr, std::vector<Diagnostic>& diagnostics, co
   return true;
 }
 
+Type type_test_target(const parser::Expr& expr) {
+  return active_type_info ? named_type(expr.value, *active_type_info) : kError;
+}
+
+// Runtime tags identify nominal definitions; erased generic arguments cannot safely refine a value.
+bool runtime_type_tags(const Type& type, const std::vector<StructInfo>& structs, std::vector<std::uint16_t>& tags) {
+  switch (type.kind) {
+    case Type::Kind::Any: tags.push_back(0); return true;
+    case Type::Kind::Int: tags.push_back(1); return true;
+    case Type::Kind::Float: tags.push_back(2); return true;
+    case Type::Kind::Bool: tags.push_back(3); return true;
+    case Type::Kind::String: tags.push_back(4); return true;
+    case Type::Kind::Null: tags.push_back(5); return true;
+    case Type::Kind::Vector3: tags.push_back(6); return true;
+    case Type::Kind::Buffer: tags.push_back(7); return true;
+    case Type::Kind::Signal: return false;  // Payload signatures are erased at runtime.
+    case Type::Kind::Connection: tags.push_back(9); return true;
+    case Type::Kind::Optional:
+      tags.push_back(5);
+      return type.parts.size() == 1 && runtime_type_tags(type.parts[0], structs, tags);
+    case Type::Kind::Union:
+      for (const auto& part : type.parts) if (!runtime_type_tags(part, structs, tags)) return false;
+      return !type.parts.empty();
+    case Type::Kind::Struct:
+      if (!type.parts.empty() || type.index >= structs.size() || type.index >= 65520) return false;
+      for (std::size_t index = 0; index < structs.size() && index < 65520; ++index) {
+        const Type candidate{Type::Kind::Struct, static_cast<std::uint16_t>(index)};
+        if (index == type.index || base_view(candidate, type.index).kind != Type::Kind::Error)
+          tags.push_back(static_cast<std::uint16_t>(index + 16));
+      }
+      return true;
+    default: return false;
+  }
+}
+
 [[nodiscard]] Type check_expr(const parser::Expr& expr, const std::vector<Binding>& bindings,
                               const std::vector<Signature>& signatures, const std::vector<StructInfo>& structs,
                               std::vector<Diagnostic>& diagnostics);
@@ -1043,6 +1139,21 @@ void check_function_constraints(const parser::Expr& expr, const Signature& signa
         return kError;
       }
       return target;
+    }
+    case parser::Expr::Kind::TypeTest: {
+      if (expr.left) (void)check_expr(*expr.left, bindings, signatures, structs, diagnostics);
+      const Type target = named_type(expr.value, structs);
+      auto& tags = const_cast<parser::Expr&>(expr).targets;
+      tags.clear();
+      if (target == kError || target == kVoid) {
+        diagnostics.push_back(Diagnostic{expr.location, expr.span, "unknown or invalid type in :is test"});
+        return kError;
+      }
+      if (!runtime_type_tags(target, structs, tags)) {
+        diagnostics.push_back(Diagnostic{expr.location, expr.span, "type has no preserved runtime identity for :is test"});
+        return kError;
+      }
+      return kBool;
     }
     case parser::Expr::Kind::Cast: {
       const Type target = named_type(expr.value, structs);
@@ -1391,7 +1502,8 @@ void check_function_constraints(const parser::Expr& expr, const Signature& signa
     }
     case parser::Expr::Kind::Ternary: {
       if (expr.left != nullptr) {
-        (void)check_expr(*expr.left, bindings, signatures, structs, diagnostics);
+        const Type condition = check_expr(*expr.left, bindings, signatures, structs, diagnostics);
+        optional_condition(*expr.left, condition, bindings);
       }
       const Type then_type = expr.right == nullptr ? kAny : check_expr(*expr.right, bindings, signatures, structs, diagnostics);
       if (!expr.args.empty()) {
@@ -1462,7 +1574,9 @@ void check_function_constraints(const parser::Expr& expr, const Signature& signa
     }
     case parser::Expr::Kind::Not: {
       const Type inner = expr.left == nullptr ? kError : check_expr(*expr.left, bindings, signatures, structs, diagnostics);
-      if (inner != kBool && !is_numeric(inner)) {
+      const bool optional_test = expr.left && optional_operand(*expr.left, inner, bindings);
+      const_cast<parser::Expr&>(expr).runtime_op = optional_test ? 1 : 0;
+      if (!optional_test && inner != kBool && !is_numeric(inner)) {
         mismatch(expr, diagnostics);
         return kError;
       }
@@ -1471,10 +1585,13 @@ void check_function_constraints(const parser::Expr& expr, const Signature& signa
     case parser::Expr::Kind::And:
     case parser::Expr::Kind::Or: {
       const Type left = expr.left == nullptr ? kError : check_expr(*expr.left, bindings, signatures, structs, diagnostics);
+      if (expr.left != nullptr) optional_condition(*expr.left, left, bindings);
       auto right_bindings = bindings;
       if (expr.left != nullptr) narrow_condition(*expr.left, expr.kind == parser::Expr::Kind::And, right_bindings);
       const Type right = expr.right == nullptr ? kError : check_expr(*expr.right, right_bindings, signatures, structs, diagnostics);
-      if ((left != kBool && !is_numeric(left)) || (right != kBool && !is_numeric(right))) {
+      if (expr.right != nullptr) optional_condition(*expr.right, right, right_bindings);
+      if ((left != kBool && !is_numeric(left) && left.kind != Type::Kind::Optional && left != kNull) ||
+          (right != kBool && !is_numeric(right) && right.kind != Type::Kind::Optional && right != kNull)) {
         mismatch(expr, diagnostics);
         return kError;
       }
@@ -1666,7 +1783,8 @@ void check_condition(const parser::Expr& expr, const std::vector<Binding>& bindi
                      const std::vector<Signature>& signatures, const std::vector<StructInfo>& structs,
                      std::vector<Diagnostic>& diagnostics) {
   const Type type = check_expr(expr, bindings, signatures, structs, diagnostics);
-  if (type != kBool && !is_numeric(type) && type != kError && type != kNull) {
+  optional_condition(expr, type, bindings);
+  if (type != kBool && !is_numeric(type) && type != kError && type != kNull && type.kind != Type::Kind::Optional) {
     mismatch(expr, diagnostics);
   }
 }
@@ -2378,6 +2496,57 @@ std::optional<std::string> default_owner_type(const parser::Program& program, co
   const Type viewed = base_view(named_type(constructed, structs), static_cast<std::uint16_t>(found - structs.begin()));
   if (viewed == kError || !diagnostics.empty()) return std::nullopt;
   const auto result = source_type(viewed, program); return result.empty() ? std::nullopt : std::optional<std::string>{result};
+}
+
+std::vector<InitializerField> initializer_fields(const parser::Program& program, const std::string& constructed,
+                                                const parser::Function* scope) {
+  const ActiveTypesGuard restore;
+  active_program = &program;
+  active_mode = program.mode;
+  active_structs = &program.structs; active_enums = &program.enums;
+  active_aliases = &program.aliases; active_function_types = nullptr;
+  std::vector<Diagnostic> diagnostics;
+  const auto structs = build_data_types(program, diagnostics); active_type_info = &structs;
+  TypeScope caller;
+  if (scope) { caller = function_scope(*scope, structs, program); active_function_types = &caller; }
+  const Type data = named_type(constructed, structs);
+  if (data.kind != Type::Kind::Struct || data.index >= structs.size()) return {};
+  const auto& declaration = program.structs[data.index];
+  std::vector<InitializerField> result;
+  result.reserve(declaration.fields.size());
+  for (std::size_t index = 0; index < declaration.fields.size(); ++index) {
+    const auto& field = declaration.fields[index];
+    const auto owner = field.owner.empty() ? declaration.name : field.owner;
+    auto location = field.name_location;
+    for (const auto& original : program.structs) {
+      if (original.name != owner) continue;
+      for (const auto& candidate : original.fields)
+        if (candidate.name == field.name) { location = candidate.name_location; break; }
+      break;
+    }
+    const Type type = specialize_type(structs[data.index].fields[index], structs[data.index], data.parts);
+    result.push_back(InitializerField{field.name, source_type(type, program), owner, location, field.is_private});
+  }
+  return result;
+}
+
+std::vector<bool> implicit_null_fields(const parser::Program& program, const std::string& constructed,
+                                       const parser::Function* scope) {
+  const ActiveTypesGuard restore;
+  active_structs = &program.structs; active_enums = &program.enums;
+  active_aliases = &program.aliases; active_function_types = nullptr;
+  std::vector<Diagnostic> diagnostics;
+  const auto structs = build_data_types(program, diagnostics); active_type_info = &structs;
+  TypeScope caller;
+  if (scope) { caller = function_scope(*scope, structs, program); active_function_types = &caller; }
+  const Type data = named_type(constructed, structs);
+  if (!diagnostics.empty() || data.kind != Type::Kind::Struct || data.index >= structs.size()) return {};
+  std::vector<bool> result;
+  result.reserve(structs[data.index].fields.size());
+  for (const auto& field : structs[data.index].fields) {
+    result.push_back(specialize_type(field, structs[data.index], data.parts).kind == Type::Kind::Optional);
+  }
+  return result;
 }
 
 void Solver::check(const parser::Program& program, std::vector<Diagnostic>& diagnostics) {

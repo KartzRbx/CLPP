@@ -27,6 +27,7 @@ using Insn = compiler::bytecode::Instruction;
     case RegOp::ConvertFloat:
     case RegOp::ConvertOptionalFloat:
     case RegOp::Not:
+    case RegOp::TypeTest:
     case RegOp::Eq:
     case RegOp::NotEq:
     case RegOp::Less:
@@ -399,8 +400,9 @@ RegChunk lower_registers(const BytecodeChunk& chunk) {
           alias[static_cast<std::size_t>(sp - 1)] = -1;
         }
         break;
+      case compiler::Opcode::TypeTest:
       case compiler::Opcode::Eq:
-        emitted = push_abc(RegOp::Eq, sp - 2, resolve(sp - 2), resolve(sp - 1));
+        emitted = push_abc(insn.op == compiler::Opcode::TypeTest ? RegOp::TypeTest : RegOp::Eq, sp - 2, resolve(sp - 2), resolve(sp - 1));
         if (sp >= 2 && sp - 2 < 256) {
           alias[static_cast<std::size_t>(sp - 2)] = -1;
         }

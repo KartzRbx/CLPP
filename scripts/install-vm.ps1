@@ -1,5 +1,5 @@
 param(
-    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version = '0.11.0',
+    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version = '0.11.1',
     [string]$Prefix = (Join-Path $env:LOCALAPPDATA 'Programs/CLPP-VM'),
     [string]$ArchivePath,
     [string]$ChecksumsPath,

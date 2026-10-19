@@ -119,6 +119,7 @@ enum class Opcode : std::uint8_t {
   RawGlobal = 114,
   MakeBoundMethod = 115,
   Event = 116,
+  TypeTest = 117,
 };
 
 }  // namespace clpp::compiler

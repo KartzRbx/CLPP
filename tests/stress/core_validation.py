@@ -4,12 +4,28 @@ Not a security proof. Each case runs in a separate process so crashes and hangs
 are reported rather than aborting the rest of the matrix.
 """
 import argparse
+import xml.etree.ElementTree as ET
 import json
 import random
+import re
 import subprocess
 import tempfile
 import time
 from pathlib import Path
+
+
+def acceptable_result(result, expected, check_only=False):
+    # Sanitizers can exit with 1, exactly like an ordinary CL++ diagnostic.
+    # Never count a memory/undefined-behavior report as successful rejection.
+    if (check_only and 'runtime error:' in result.stderr) or re.search(
+            r'AddressSanitizer|UndefinedBehaviorSanitizer|LeakSanitizer|'
+            r'\.(?:c|cc|cpp|cxx|h|hpp|hxx|tcc|inc):\d+(?::\d+)?: runtime error:', result.stderr):
+        return False
+    if check_only:
+        return result.returncode == 0 or (result.returncode == 1 and bool(result.stderr.strip()))
+    if expected is not None:
+        return result.returncode == 0 and result.stdout == expected
+    return result.returncode == 1 and bool(result.stderr.strip())
 
 
 def cases():
@@ -108,6 +124,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('compiler', type=Path)
     parser.add_argument('--report', type=Path)
+    parser.add_argument('--junit', type=Path)
     parser.add_argument('--fuzz', type=int, default=0)
     parser.add_argument('--seed', type=int, default=20261013)
     args = parser.parse_args()
@@ -143,12 +160,7 @@ def main():
                 command = [str(compiler), '--check', str(source)] if check_only else [str(compiler), str(source)]
                 result = subprocess.run(command, capture_output=True,
                                         text=True, encoding='utf8', timeout=15)
-                # Normal diagnostic failure is distinct from an OS crash code.
-                if check_only:
-                    passed = result.returncode == 0 or (result.returncode == 1 and bool(result.stderr.strip()))
-                else:
-                    passed = (result.returncode == 0 and result.stdout == expected) if expected is not None else (
-                        result.returncode == 1 and bool(result.stderr.strip()))
+                passed = acceptable_result(result, expected, check_only)
                 item = dict(name=name, passed=passed, returncode=result.returncode,
                             stdout=result.stdout, stderr=result.stderr)
             except subprocess.TimeoutExpired:
@@ -161,6 +173,14 @@ def main():
     if args.report:
         args.report.write_text(json.dumps(results, indent=2), encoding='utf8')
     failed = [item for item in results if not item['passed']]
+    if args.junit:
+        suite = ET.Element('testsuite', name='core-adversarial-audit', tests=str(len(results)), failures=str(len(failed)))
+        for item in results:
+            case = ET.SubElement(suite, 'testcase', name=item['name'], time=str(item['elapsed_ms'] / 1000))
+            if not item['passed']:
+                ET.SubElement(case, 'failure', message=item.get('error', 'unexpected compiler result')).text = json.dumps(item)
+        args.junit.parent.mkdir(parents=True, exist_ok=True)
+        ET.ElementTree(suite).write(args.junit, encoding='utf-8', xml_declaration=True)
     print(f'{len(results)} cases; {len(failed)} failures')
     for item in failed:
         print(json.dumps(item, ensure_ascii=True))

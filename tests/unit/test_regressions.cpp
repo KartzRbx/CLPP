@@ -896,6 +896,136 @@ TEST_CASE("optional stores values and distinct null without wrapper constructors
   REQUIRE(result.output == "null\ntrue\nfalse\ntrue\n0\nnull\n12\nnull\nAda\n");
 }
 
+TEST_CASE("omitted optional def fields default to null across modules and generics", "[regression][optional-fields]") {
+  const Run result = run(
+      "link \"./Human.clp\" as H;\n"
+      "auto kartz = H.Human { name = \"Kartz\", age = 15 }; post(kartz.cpf == null);\n"
+      "auto supplied = H.Human { name = \"Ada\", age = 20, cpf = 100000 }; post(supplied.cpf);\n"
+      "def Maybe = optional<number>; def Local { Maybe first; optional<number> second = 7; }\n"
+      "auto local = Local {}; post(local.first == null); post(local.second);\n"
+      "def Box<T> { optional<T> value; } auto box = Box<string> {}; post(box.value == null);\n"
+      "def Slot<T> { T value; } auto slot = Slot<optional<number>> {}; post(slot.value == null);\n"
+      "def Base<T> { optional<T> inherited; } def Child<T> : Base<T> { string name; }\n"
+      "auto child = Child<number> { name = \"child\" }; post(child.inherited == null);\n",
+      {{"./Human.clp", "export def Human { string name; number age; optional<number> cpf; }"}});
+  INFO(result.error);
+  REQUIRE(result.compiled);
+  REQUIRE(result.ran);
+  CHECK(result.output == "true\n100000\ntrue\n7\ntrue\ntrue\ntrue\n");
+  for (const char* source : {
+      "def Human { string name; optional<number> cpf; } auto h = Human {};",
+      "def Slot<T> { T value; } auto slot = Slot<number> {};",
+      "def Item { any value; } auto item = Item {};",
+      "def Item { optional<number> value; } auto item = Item { value = \"bad\" };"}) {
+    INFO(source);
+    CHECK_FALSE(clpp::Compiler{}.compile(source).ok());
+  }
+}
+
+TEST_CASE("optional negation tests null and false while keeping zero present", "[regression][optional-fields]") {
+  const Run result = run(
+      "def Human { optional<number> cpf; } auto person = Human {}; post(!person.cpf);\n"
+      "person.cpf = 0; post(!person.cpf); person.cpf = 10; post(!person.cpf);\n"
+      "optional<bool> flag = null; post(!flag); flag = false; post(!flag); flag = true; post(!flag);\n"
+      "optional<string> text = \"\"; post(!text); optional<number> zero = 0;\n"
+      "if (zero != null) { post(!zero); }\n"
+      "number count = 0; optional<number> Read() { count += 1; return null; } post(!Read()); post(count);\n"
+      "template <typename T> bool Empty(optional<T> value) { return !value; }\n"
+      "post(Empty<number>(0)); post(Empty<bool>(false));\n"
+      "number Present(optional<number> value) { guard (value) else { return -1; } return value; }\n"
+      "post(Present(null)); post(Present(0)); post(!false); post(!true);\n");
+  INFO(result.error);
+  INFO(result.detail);
+  REQUIRE(result.compiled);
+  REQUIRE(result.ran);
+  CHECK(result.output == "true\nfalse\nfalse\ntrue\ntrue\nfalse\nfalse\nfalse\ntrue\n1\nfalse\ntrue\n-1\n0\ntrue\nfalse\n");
+}
+
+TEST_CASE("optional conditions agree across guards loops and short circuit expressions", "[regression][optional-fields]") {
+  const Run result = run(
+      "def Human { optional<number> cpf; }\n"
+      "bool Create(Human target) { guard (target.cpf) else { return false; } return true; }\n"
+      "post(Create(Human {})); post(Create(Human { cpf = 0 }));\n"
+      "optional<bool> flag = false; if (flag) { post(1); } else { post(2); }\n"
+      "optional<number> zero = 0; if (zero) { post(zero + 3); }\n"
+      "number Read(optional<number> value) { guard(value) else { return -1; } post(!value); return value; }\n"
+      "post(Read(0)); post(Read(null));\n"
+      "number calls = 0; optional<number> Next() { calls += 1; return 0; }\n"
+      "post(flag and Next()); post(zero or Next()); post(calls);\n"
+      "post(Next() and zero); post(calls);\n"
+      "optional<number> loop = 0; while(loop) { post(4); loop = null; }\n"
+      "optional<string> text = \"\"; if(text) { post(5); }\n"
+      "post(zero ? 6 : 7); post(flag ? 8 : 9);\n");
+  INFO(result.error);
+  INFO(result.detail);
+  REQUIRE(result.compiled);
+  REQUIRE(result.ran);
+  CHECK(result.output == "false\ntrue\n2\n3\nfalse\n0\n-1\nfalse\ntrue\n0\ntrue\n1\n4\n5\n6\n9\n");
+  for (const char* source : {
+      "number Read(optional<number> value) { if(value) { value = null; return value + 1; } return 0; }",
+      "number Read(optional<number> value) { if(!value) { return value + 1; } return 0; }",
+      "number Read(optional<number> value) { guard(value) else { return 0; } value = null; return value + 1; }"}) {
+    INFO(source);
+    CHECK_FALSE(clpp::Compiler{}.compile(source).ok());
+  }
+}
+
+TEST_CASE("postfix is tests imported nominal types and narrows short circuit operands", "[regression][type-test]") {
+  const Run result = run(
+      "link \"./Human.clp\" as H; any kartz = H.Human { name = \"Kartz\", age = 18 };\n"
+      "post(kartz:is<H.Human> and kartz.cpf == null);\n"
+      "any other = 0; post(other:is<H.Human> and other.cpf == null);\n"
+      "number Age(any value) { guard(value:is<H.Human>) else { return -1; } return value.age; }\n"
+      "post(Age(kartz)); post(Age(false));\n"
+      "def Robot { string name; number age; optional<number> cpf; }\n"
+      "any robot = Robot { name = \"Robot\", age = 18 }; post(robot:is<H.Human>);\n"
+      "def Child : H.Human { number rank = 1; } any child = Child { name = \"Child\", age = 9 };\n"
+      "post(child:is<H.Human>); post(child:is<Child>); post(kartz:is<Child>);\n"
+      "def Person = H.Human; post(kartz:is<Person>);\n",
+      {{"./Human.clp", "export def Human { string name; number age; optional<number> cpf; }"}});
+  INFO(result.error); INFO(result.detail);
+  REQUIRE(result.compiled); REQUIRE(result.ran);
+  CHECK(result.output == "true\nfalse\n18\n-1\nfalse\ntrue\ntrue\nfalse\ntrue\n");
+}
+
+TEST_CASE("postfix is distinguishes primitive types and evaluates its operand once", "[regression][type-test]") {
+  const std::string source =
+      "any value = 0; post(value:is<number>); post(value:is<float>); post(value:is<bool>);\n"
+      "any decimal = 0.0; post(decimal:is<float>); post(decimal:is<number>);\n"
+      "any flag = false; post(flag:is<bool>); post(flag:is<number>);\n"
+      "any text = \"\"; post(text:is<string>); post(text:is<number | string>);\n"
+      "any absent = null; post(absent:is<optional<number>>); post(absent:is<any>);\n"
+      "number calls = 0; any Read() { calls += 1; return 1; } post(Read():is<number>); post(calls);\n"
+      "def Mixed = number | string; number Code(Mixed item) { if(item:is<number>) { return item + 1; } return 0; }\n"
+      "post(Code(2)); post(Code(\"text\"));\n"
+      "post(false:is<bool>); post(null:is<optional<number>>); post(\"x\":is<string>); post(1:is<number>);\n";
+  const Run result = run(source);
+  INFO(result.error); INFO(result.detail);
+  REQUIRE(result.compiled); REQUIRE(result.ran);
+  CHECK(result.output == "true\nfalse\nfalse\ntrue\nfalse\ntrue\nfalse\ntrue\ntrue\ntrue\ntrue\ntrue\n1\n3\n0\ntrue\ntrue\ntrue\ntrue\n");
+  const auto compiled = clpp::Compiler{}.compile(source);
+  const auto restored = clpp::deserialize_clir(clpp::serialize_clir(compiled.chunk));
+  clpp::VirtualMachine vm; std::ostringstream output; vm.set_output(output); vm.load(restored);
+  REQUIRE(vm.run()); CHECK(output.str() == result.output);
+}
+
+TEST_CASE("postfix is rejects malformed unknown and erased type tests", "[regression][type-test]") {
+  for (const char* source : {
+      "any value = 1; post(value:is);", "any value = 1; post(value:is<>);",
+      "any value = 1; post(value:is<Missing>);", "any value = 1; post(value:is<void>);",
+      "any value = 1; post(value:is<number>());",
+      "def Box<T> { T value; } any value = Box<number> { value = 1 }; post(value:is<Box<number>>);",
+      "any value = 1; post(value:is<array<number>>);",
+      "signal<number> changed; post(changed:is<signal<number>>);",
+      "signal<> changed; post(changed:is<signal<>>);",
+      "enum class State { Ready } any value = State::Ready; post(value:is<State>);",
+      "number Read(optional<number> value) { if(value:is<number>) { value = null; return value + 1; } return 0; }",
+      "number Read(optional<number> value) { if(!value:is<number>) { return value + 1; } return 0; }"}) {
+    INFO(source);
+    CHECK_FALSE(clpp::Compiler{}.compile(source).ok());
+  }
+}
+
 TEST_CASE("optional rejects incompatible types and unsafe use before narrowing", "[regression][optional]") {
   for (const char* source : {
       "number value = null;", "optional<number> value = \"bad\";",

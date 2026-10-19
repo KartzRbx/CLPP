@@ -6,6 +6,7 @@ clpp-vm --lsp process: didOpen, bursts of didChange, then textDocument/completio
 
 import json
 import argparse
+import xml.etree.ElementTree as ET
 import queue
 import threading
 import statistics
@@ -351,8 +352,12 @@ def main():
     parser.add_argument('--dump', action='store_true')
     parser.add_argument('--category')
     parser.add_argument('--report', type=Path)
+    parser.add_argument('--junit', type=Path)
     parser.add_argument('--strict-latency', action='store_true')
+    parser.add_argument('--p99-budget-ms', type=float, help='fail if the 99th percentile exceeds this budget')
     args = parser.parse_args()
+    if args.p99_budget_ms is not None and not 0 < args.p99_budget_ms <= 5000:
+        parser.error('--p99-budget-ms must be in (0, 5000]')
     server_path = args.server
     if not server_path.exists():
         print(f"missing language server: {server_path}")
@@ -371,6 +376,7 @@ def main():
     latencies = []
     over_budget = 0
     latency_outliers = []
+    junit = ET.Element('testsuite', name='completion-property-matrix', tests=str(len(cases)))
     try:
         server.start()
         for item in cases:
@@ -387,6 +393,9 @@ def main():
                 latency_outliers.append(dict(id=item['test_id'], category=item['category'],
                     elapsed_ms=elapsed, budget_ms=item['max_allowed_latency_ms']))
             problem = evaluate(labels, item, elapsed)
+            case_result = ET.SubElement(junit, 'testcase', name=item['test_id'], classname=item['category'], time=str(elapsed / 1000))
+            if problem is not None or (args.strict_latency and elapsed > item['max_allowed_latency_ms']):
+                ET.SubElement(case_result, 'failure', message='completion contract failed' if problem else 'latency budget exceeded').text = json.dumps(problem or dict(elapsed_ms=elapsed))
             if problem is not None:
                 if len(failures) < 12:
                     failures.append(problem)
@@ -396,6 +405,8 @@ def main():
         server.close()
     print(f"ran {len(cases)} failures {len(failures)} slowest_ms {slowest:.2f}")
     ordered = sorted(latencies)
+    p99 = ordered[int((len(ordered)-1)*.99)]
+    performance_failed = args.p99_budget_ms is not None and p99 > args.p99_budget_ms
     print(f"latency_ms median={statistics.median(ordered):.2f} p95={ordered[int((len(ordered)-1)*.95)]:.2f} p99={ordered[int((len(ordered)-1)*.99)]:.2f} over_budget={over_budget}")
     for problem in failures:
         if "category" in problem:
@@ -405,7 +416,17 @@ def main():
             median_ms=statistics.median(ordered), p95_ms=ordered[int((len(ordered)-1)*.95)],
             p99_ms=ordered[int((len(ordered)-1)*.99)], maximum_ms=slowest,
             over_budget=over_budget, latency_outliers=latency_outliers), indent=2), encoding='utf8')
-    return int(bool(failures) or (args.strict_latency and over_budget > 0))
+    if args.junit:
+        if args.p99_budget_ms is not None:
+            gate = ET.SubElement(junit, 'testcase', name='completion p99 response budget', classname='performance')
+            ET.SubElement(gate, 'system-out').text = json.dumps(dict(p99_ms=p99, budget_ms=args.p99_budget_ms, maximum_ms=slowest, outliers=latency_outliers))
+            if performance_failed:
+                ET.SubElement(gate, 'failure', message='p99 response budget exceeded').text = str(p99)
+        junit.set('tests', str(len(junit.findall('testcase'))))
+        junit.set('failures', str(len(junit.findall('./testcase/failure'))))
+        args.junit.parent.mkdir(parents=True, exist_ok=True)
+        ET.ElementTree(junit).write(args.junit, encoding='utf-8', xml_declaration=True)
+    return int(bool(failures) or performance_failed or (args.strict_latency and over_budget > 0))
 
 
 if __name__ == "__main__":

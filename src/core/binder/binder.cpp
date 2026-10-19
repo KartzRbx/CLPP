@@ -132,6 +132,27 @@ void narrow_optional(const parser::Expr& condition, const bool truth, std::vecto
     narrow_optional(*condition.right, truth, locals);
     return;
   }
+  if (condition.kind == parser::Expr::Kind::TypeTest && condition.left &&
+      condition.left->kind == parser::Expr::Kind::Name && truth) {
+    for (auto local = locals.rbegin(); local != locals.rend(); ++local) {
+      if (local->name != condition.left->value || (condition.left->global && !local->global)) continue;
+      if (local->optional_origin.empty()) local->optional_origin = local->type_name;
+      local->type_name = condition.value;
+      break;
+    }
+    return;
+  }
+  if (condition.kind == parser::Expr::Kind::Name && truth) {
+    for (auto local = locals.rbegin(); local != locals.rend(); ++local) {
+      if (local->name != condition.value) continue;
+      if (local->type_name.starts_with("optional<") && local->type_name.back() == '>') {
+        local->optional_origin = local->type_name;
+        local->type_name = local->type_name.substr(9, local->type_name.size() - 10);
+      }
+      break;
+    }
+    return;
+  }
   if (condition.kind != parser::Expr::Kind::Eq && condition.kind != parser::Expr::Kind::NotEq) return;
   if (condition.left == nullptr || condition.right == nullptr) return;
   const parser::Expr* name = condition.left.get();
@@ -610,6 +631,10 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
       expr.left->location = expr.location; expr.left->span = expr.span;
     }
   }
+  if (expr.kind == parser::Expr::Kind::TypeTest) {
+    if (expr.left) bind_expr(*expr.left, locals, functions, structs, enums, diagnostics);
+    return;
+  }
   if (expr.kind == parser::Expr::Kind::Ascribe) {
     if (expr.left) bind_expr(*expr.left, locals, functions, structs, enums, diagnostics, expr.value);
     return;
@@ -1078,6 +1103,8 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
       {
         std::vector<parser::Expr> ordered(constructed->fields.size());
         std::vector<char> filled(constructed->fields.size(), 0);
+        std::vector<bool> optional_fields;
+        bool checked_optional_fields = false;
         bool ok = true;
         for (std::size_t index = 0; index < expr.args.size() && ok; ++index) {
           const std::string name = index < expr.arg_names.size() ? expr.arg_names[index] : std::string{};
@@ -1110,8 +1137,19 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
               ordered[field].default_scope = *owner;
             }
           } else {
-            diagnostics.push_back(Diagnostic{expr.location, expr.span, "missing required field: " + constructed->fields[field]});
-            ok = false;
+            if (!checked_optional_fields && active_program) {
+              optional_fields = typechecker::implicit_null_fields(*active_program, expr.value, active_function);
+              checked_optional_fields = true;
+            }
+            if (field < optional_fields.size() && optional_fields[field]) {
+              ordered[field].kind = parser::Expr::Kind::Number;
+              ordered[field].null_literal = true;
+              ordered[field].location = expr.location;
+              ordered[field].span = expr.span;
+            } else {
+              diagnostics.push_back(Diagnostic{expr.location, expr.span, "missing required field: " + constructed->fields[field]});
+              ok = false;
+            }
           }
         }
         if (ok) {
@@ -1439,6 +1477,7 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
 
 [[nodiscard]] std::string inferred_type(const parser::Expr& expr, const std::vector<Local>& locals,
                                         const std::vector<StructRef>& structs) {
+  if (expr.kind == parser::Expr::Kind::TypeTest) return "bool";
   if (expr.kind == parser::Expr::Kind::Ascribe) return expr.value;
   if (expr.kind == parser::Expr::Kind::Construct && !expr.value.empty()) {
     return expr.value;

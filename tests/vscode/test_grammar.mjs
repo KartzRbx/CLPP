@@ -42,10 +42,33 @@ try {
     ['return Read();', 'return'],
     ['auto worker = thread Work();', 'thread'],
     ['if (ready and Allowed()) {}', 'and'],
+    ['auto value = await worker::Run();', 'await'],
+    ['auto work = spawn worker::Run();', 'spawn'],
   ]) {
     const actual = role(scopes(code), word);
     assert.ok(actual.includes(word === 'thread' ? 'storage.modifier.clpp' : 'keyword.control.clpp'), `${word}: ${actual}`);
     assert.ok(!actual.includes('storage.type.clpp') && !actual.includes('entity.name.type.clpp'), code);
+    checks++;
+  }
+  for (const code of ['number Point::Sum() { return @this.X; }',
+                      'template<typename T> T Box<T>::Read() { return @this.Value; }']) {
+    const tokens = scopes(code);
+    const owner = code.includes('Point') ? 'Point' : 'Box';
+    const method = code.includes('Point') ? 'Sum' : 'Read';
+    assert.ok(role(tokens, owner).some(scope => scope.startsWith('entity.name.type.')), `${owner}: ${JSON.stringify(tokens)}`);
+    assert.ok(role(tokens, method).includes('entity.name.function.member.clpp'), method);
+    checks += 2;
+  }
+  for (const [code, word, expected] of [
+    ['abstract def Named { abstract string Name(); }', 'abstract', 'storage.modifier.clpp'],
+    ['final def Player : Storage, Named {}', 'final', 'storage.modifier.clpp'],
+    ['optional<number> cpf;', 'optional', 'support.type.primitive.clpp'],
+    ['signal<Human, string> joined;', 'signal', 'storage.modifier.clpp'],
+    ['guard (person.cpf) else { return; }', 'guard', 'keyword.control.clpp'],
+    ['if (value:is<Human>) {}', 'is', 'entity.name.function.member.clpp'],
+    ['number Point::Sum() { return @this.X; }', 'return', 'keyword.control.clpp'],
+  ]) {
+    assert.ok(role(scopes(code), word).includes(expected), `${word}: ${role(scopes(code), word)}`);
     checks++;
   }
   console.log(`PASS ${checks} real TextMate/Oniguruma generic and comment classifications`);

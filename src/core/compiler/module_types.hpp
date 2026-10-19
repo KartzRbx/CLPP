@@ -96,7 +96,7 @@ inline void annotation(std::string& text, const Map& types) {
 }
 
 inline void expression(parser::Expr& expr, const Map& types, const std::vector<std::string>& locals = {}) {
-  if (expr.kind == parser::Expr::Kind::Ascribe && lexical_annotations) annotation(expr.value, types);
+  if ((expr.kind == parser::Expr::Kind::Ascribe || expr.kind == parser::Expr::Kind::TypeTest) && lexical_annotations) annotation(expr.value, types);
   if (lexical_globals && expr.kind == parser::Expr::Kind::Call && !expr.left) {
     auto dot = expr.value.find('.');
     if (dot == std::string::npos) dot = expr.value.find("::");
@@ -108,7 +108,7 @@ inline void expression(parser::Expr& expr, const Map& types, const std::vector<s
       }
     }
   }
-  if (((expr.kind == parser::Expr::Kind::Call && expr.left == nullptr && expr.value.find("::") == std::string::npos) || expr.kind == parser::Expr::Kind::Construct || expr.kind == parser::Expr::Kind::Cast ||
+  if (((expr.kind == parser::Expr::Kind::Call && expr.left == nullptr && expr.value.find("::") == std::string::npos) || expr.kind == parser::Expr::Kind::Construct || expr.kind == parser::Expr::Kind::Cast || expr.kind == parser::Expr::Kind::TypeTest ||
        (expr.kind == parser::Expr::Kind::Event && expr.runtime_op == 0)) &&
       std::find(locals.begin(), locals.end(), expr.value) == locals.end()) {
     annotation(expr.value, types);

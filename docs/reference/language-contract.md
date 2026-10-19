@@ -198,6 +198,8 @@ owner parameters through inherited fields/methods. See [definitions](def.md) and
 [inheritance](../guide/07-structs-and-inheritance.md).
 Executable: `examples/language/05_objects.clp`, `examples/automation.clp`.
 
+The postfix type test is `value:is<Type>` (no call parentheses). It returns bool, evaluates the operand once, and refines a local on a proven matching path, including short-circuit `and` and exiting guards. Nominal inheritance and imported type names retain their identity. Targets whose identity is erased at runtime are diagnosed. See [runtime type tests](../guide/08-enums-variants-option-result.md#runtime-type-tests).
+
 ## 7. Aliases, enums, optionals and generics
 
 `def Name = Type;` aliases a type. `def Outcome = "ongoing" | "team_a" | "team_b";`
@@ -226,6 +228,8 @@ See [advanced types](../guide/08-enums-variants-option-result.md) and
 [functions](../guide/06-functions.md) for inference and bounds in detail.
 Executable: `examples/language/06_types_callbacks.clp`,
 `examples/capabilities/02_generic_pipeline.clp`.
+
+Optional fields omitted from an initializer use `null` when no explicit field default exists. Optional conditions and optional negation treat only `null` and boolean `false` as falsy; zero and empty strings are present. This rule applies to `if`, `guard`, loops, ternary conditions and short-circuit logical operands. Non-optional numeric conditions keep their existing behavior.
 
 ## 8. Functions and closures
 

@@ -15,6 +15,18 @@ struct LocalType {
   bool global{false};
 };
 
+struct InitializerField {
+  std::string name;
+  std::string type;
+  std::string owner;
+  SourceLocation location{};
+  bool is_private{false};
+};
+
+// Field ownership and concrete types share the checker's alias/generic resolution.
+[[nodiscard]] std::vector<InitializerField> initializer_fields(
+    const parser::Program& program, const std::string& constructed, const parser::Function* scope = nullptr);
+
 // Resolve a single expected callback signature without guessing dynamic or ambiguous types.
 [[nodiscard]] std::optional<std::string> array_initializer_type(
     const parser::Program& program, const std::string& expected, const parser::Function* scope);
@@ -47,6 +59,10 @@ struct LocalType {
 
 [[nodiscard]] std::optional<std::string> default_owner_type(const parser::Program& program,
     const std::string& constructed, const std::string& owner, const parser::Function* scope);
+
+// Optional fields after alias, generic and inherited-field substitution.
+[[nodiscard]] std::vector<bool> implicit_null_fields(const parser::Program& program,
+    const std::string& constructed, const parser::Function* scope);
 
 class Solver {
  public:

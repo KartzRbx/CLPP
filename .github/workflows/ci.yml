@@ -84,7 +84,11 @@ jobs:
           path: build/release-assets/*
 
       - name: Adversarial compiler inputs
-        run: python tests/stress/core_validation.py build/${{ matrix.preset }}/src/clpp-vm${{ runner.os == 'Windows' && '.exe' || '' }} --fuzz 250 --report build/${{ matrix.preset }}/core-audit.json
+        run: python tests/stress/core_validation.py build/${{ matrix.preset }}/src/clpp-vm${{ runner.os == 'Windows' && '.exe' || '' }} --fuzz 250 --report build/${{ matrix.preset }}/core-audit.json --junit build/${{ matrix.preset }}/core-audit.xml
+
+      - name: Completion recovery and response-time matrix
+        if: matrix.preset == 'release' && runner.os == 'Linux'
+        run: python tests/stress/intellisense_fuzz.py build/release/src/clpp-vm --p99-budget-ms 50 --report build/release/completion-audit.json --junit build/release/completion-audit.xml
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -92,6 +96,8 @@ jobs:
           name: core-validation-${{ matrix.preset }}-${{ runner.os }}
           path: |
             build/${{ matrix.preset }}/core-audit.json
+            build/${{ matrix.preset }}/core-audit.xml
+            build/${{ matrix.preset }}/completion-audit.*
             build/${{ matrix.preset }}/Testing/Temporary/LastTest.log
 
   windows-sanitizers:
@@ -129,13 +135,14 @@ jobs:
       - name: Test
         run: ctest --test-dir build/windows-sanitizers --output-on-failure
       - name: Mutated compiler inputs
-        run: python tests/stress/core_validation.py build/windows-sanitizers/src/clpp-vm.exe --fuzz 250 --report build/windows-sanitizers/core-audit.json
+        run: python tests/stress/core_validation.py build/windows-sanitizers/src/clpp-vm.exe --fuzz 250 --report build/windows-sanitizers/core-audit.json --junit build/windows-sanitizers/core-audit.xml
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: windows-sanitizers-report
           path: |
             build/windows-sanitizers/core-audit.json
+            build/windows-sanitizers/core-audit.xml
             build/windows-sanitizers/Testing/Temporary/LastTest.log
 
   windows-package:
@@ -184,5 +191,25 @@ jobs:
         shell: pwsh
         run: |
           $archive = (Get-ChildItem -LiteralPath package-artifacts -Filter '*.vsix' -Recurse | Select-Object -First 1).FullName
+          $compiler = (Get-ChildItem -LiteralPath package-artifacts -Filter 'clpp-vm.exe' -Recurse | Select-Object -First 1).FullName
           if (-not $archive) { throw 'VSIX artifact missing' }
-          python tests/vscode/test_package.py $archive
+          if (-not $compiler) { throw 'Runtime executable missing' }
+          python tests/vscode/test_package.py $archive --compiler $compiler
+          if ($LASTEXITCODE) { throw 'Bundled runtime validation failed' }
+      - name: Verify installation upgrade and packaged language server
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $compiler = (Get-ChildItem -LiteralPath package-artifacts -Filter 'clpp-vm.exe' -Recurse | Select-Object -First 1).FullName
+          gh release download v0.11.0 --repo KartzRbx/CLPP --pattern clpp-vm-0.11.0-windows-x64.zip --pattern SHA256SUMS --dir build/previous-release
+          if ($LASTEXITCODE) { throw 'Previous release download failed' }
+          python tests/distribution/test_windows_installer.py $compiler --previous-archive build/previous-release/clpp-vm-0.11.0-windows-x64.zip --previous-checksums build/previous-release/SHA256SUMS
+          if ($LASTEXITCODE) { throw 'Installer lifecycle or cross-version upgrade failed' }
+          python tests/lsp/test_editor_audit.py $compiler --large --junit build/packaged-editor.xml
+          if ($LASTEXITCODE) { throw 'Packaged language server validation failed' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-package-validation
+          path: build/packaged-editor.xml

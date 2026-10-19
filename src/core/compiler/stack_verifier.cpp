@@ -129,6 +129,7 @@ StackCheck verify_stack(const BytecodeChunk& chunk, const compiler::bytecode::De
       case compiler::Opcode::Div:
       case compiler::Opcode::Mod:
       case compiler::Opcode::Concat:
+      case compiler::Opcode::TypeTest:
       case compiler::Opcode::Eq:
       case compiler::Opcode::NotEq:
       case compiler::Opcode::Less:

@@ -43,3 +43,6 @@
 (type_parameters ["<" ">"] @punctuation.bracket)
 (template_clause ["<" ">"] @punctuation.bracket)
 
+
+(type_test_operator) @function
+(type_test_expression ["<" ">"] @punctuation.bracket)

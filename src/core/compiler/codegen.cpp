@@ -142,6 +142,7 @@ void emit_u16(BytecodeChunk& chunk, const std::uint16_t value) {
     case parser::Expr::Kind::Ternary:
     case parser::Expr::Kind::Update:
     case parser::Expr::Kind::Cast:
+    case parser::Expr::Kind::TypeTest:
     case parser::Expr::Kind::Ascribe:
     case parser::Expr::Kind::Closure:
     case parser::Expr::Kind::Invoke:
@@ -188,6 +189,17 @@ void emit_u16(BytecodeChunk& chunk, const std::uint16_t value) {
   }
   if (expr.kind == parser::Expr::Kind::Ascribe) {
     return expr.left && emit_expr(*expr.left, chunk, diagnostics);
+  }
+  if (expr.kind == parser::Expr::Kind::TypeTest) {
+    if (!expr.left || !emit_expr(*expr.left, chunk, diagnostics)) return false;
+    std::string descriptor;
+    for (const auto tag : expr.targets) {
+      descriptor.push_back(static_cast<char>(tag & 255));
+      descriptor.push_back(static_cast<char>(tag >> 8));
+    }
+    if (!emit_const(chunk, Value::string_of(std::move(descriptor)), diagnostics)) return false;
+    emit_op(chunk, compiler::Opcode::TypeTest);
+    return true;
   }
   if (expr.kind == parser::Expr::Kind::Cast) {
     if (!expr.left || !emit_expr(*expr.left, chunk, diagnostics)) return false;
@@ -600,7 +612,22 @@ void emit_u16(BytecodeChunk& chunk, const std::uint16_t value) {
       diagnostics.push_back(Diagnostic{{}, {}, "invalid expression"});
       return false;
     }
-    emit_op(chunk, compiler::Opcode::Not);
+    if (expr.runtime_op == 1) {
+      // Evaluate once; null and the boolean false are absent/falsy, but zero is present.
+      emit_op(chunk, compiler::Opcode::Dup);
+      if (!emit_const(chunk, Value::null_of(), diagnostics)) return false;
+      emit_op(chunk, compiler::Opcode::Eq);
+      const auto present_jump = emit_jump(chunk, compiler::Opcode::JumpIfFalse);
+      emit_op(chunk, compiler::Opcode::Pop);
+      if (!emit_const(chunk, Value::boolean_of(true), diagnostics)) return false;
+      const auto end_jump = emit_jump(chunk, compiler::Opcode::Jump);
+      if (!patch_jump(chunk, present_jump, diagnostics)) return false;
+      if (!emit_const(chunk, Value::boolean_of(false), diagnostics)) return false;
+      emit_op(chunk, compiler::Opcode::Eq);
+      if (!patch_jump(chunk, end_jump, diagnostics)) return false;
+    } else {
+      emit_op(chunk, compiler::Opcode::Not);
+    }
     return true;
   }
   if (expr.kind == parser::Expr::Kind::And || expr.kind == parser::Expr::Kind::Or) {

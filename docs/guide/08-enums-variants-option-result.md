@@ -71,6 +71,60 @@ PrintScore(42);
 
 The failing branch exits. After the guard, the checker knows the value is present. Here the absent score prints nothing, while the present score prints 42.
 
+## Optional conditions and omitted fields
+
+An omitted `optional<T>` field defaults to `null` unless the field declares an explicit default. Required fields still need a value or a declared default. This also applies to imported definitions, aliases, inherited fields and generic specializations.
+
+For optional values, conditions and `!` test **null and boolean false**. Zero, an empty string and an empty collection are present values. `if`, `guard`, loops, ternary conditions and the operands of `and`/`or` use this same rule. Short-circuit operators evaluate only the operands they need; each operand is evaluated once. Existing non-optional numeric conditions retain their numeric behavior.
+
+```clp
+def Human {
+  string name;
+  optional<number> cpf;
+}
+bool CreateBankAccount(Human target) {
+  guard (target.cpf) else { return false; }
+  return true;
+}
+post(CreateBankAccount(Human { name = "Kartz" }));
+post(CreateBankAccount(Human { name = "Kartz", cpf = 0 }));
+optional<bool> enabled = false;
+post(!enabled);
+optional<number> zero = 0;
+post(!zero);
+```
+
+```output
+false
+true
+true
+false
+```
+
+Use `value != null` when `false` is a valid value you want to keep. A successful optional condition narrows a local variable to its payload type; the failure branch can still contain either `null` or `false`. Assigning to a refined variable invalidates its refinement. Repeated object field reads are not automatically refined across mutations: store the field in a local variable before using its payload.
+
+## Runtime type tests
+
+Use `value:is<Type>` without parentheses after the type. Completion after `value:` or `value:i` offers the `is<Type>` method with the type selected for editing. The result is a boolean and the value is evaluated once. Combine conditions with `and`:
+
+```clp
+def Human { string name; optional<number> cpf; }
+any kartz = Human { name = "Kartz" };
+if (kartz:is<Human> and kartz.cpf == null) {
+  post("missing cpf");
+}
+post(kartz:is<number>);
+```
+
+```output
+missing cpf
+false
+```
+
+A successful test narrows a local variable in the matching branch, in the right operand of `and`, or after an exiting `guard`. Negating a test also allows refinement in the corresponding `else`/`or` branch. Assignments invalidate refinement. Imported types such as `H.Human`, aliases and nominal inheritance are supported: a child is also its base, but an unrelated definition with identical fields is not the same type.
+
+Runtime checks distinguish `number` (integer), `float`, `bool`, `string`, vectors, buffers, connections and nominal non-generic definitions. `any`, optional versions and unions of supported types are accepted. Erased types, including enum identity, literal types, generic specializations, signal signatures and typed collections, produce a diagnostic rather than an unsound refinement. Native values whose producers do not attach a nominal tag cannot be identified as a data definition through `any`. This syntax does not perform conversion; use an explicit cast for conversion.
+
 ## Unions and literal unions
 
 ```clp

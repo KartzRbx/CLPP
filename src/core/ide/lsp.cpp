@@ -53,6 +53,7 @@ using json = nlohmann::json;
 
 constexpr int kParseError = -32700;
 constexpr int kInvalidRequest = -32600;
+constexpr int kInvalidParams = -32602;
 constexpr int kMethodNotFound = -32601;
 constexpr int kInternalError = -32603;
 constexpr int kServerNotInitialized = -32002;
@@ -180,6 +181,8 @@ class Server {
       }
       try {
         dispatch(method, id, params);
+      } catch (const json::exception&) {
+        if (!id.is_null()) send_error(id, kInvalidParams, "invalid parameters for " + method);
       } catch (const std::exception& error) {
         if (!id.is_null()) {
           send_error(id, kInternalError, error.what());
@@ -374,6 +377,58 @@ class Server {
 
   // --- diagnostics ---------------------------------------------------------------------------
 
+  bool safe_rename(const Document& doc, const AnalysisResult& original, const SemanticSnapshot& snapshot,
+                   std::vector<SemanticSymbol> matches, const std::string& name) {
+    if (matches.empty()) return true;
+    std::sort(matches.begin(), matches.end(), [](const auto& left, const auto& right) {
+      return std::pair{left.location.line, left.location.column} < std::pair{right.location.line, right.location.column};
+    });
+    std::vector<std::size_t> lines{0};
+    for (std::size_t index = 0; index < doc.text.size(); ++index)
+      if (doc.text[index] == '\n') lines.push_back(index + 1);
+    std::string changed = doc.text;
+    // Byte positions belong to the original text; apply the last edit first.
+    for (auto iter = matches.rbegin(); iter != matches.rend(); ++iter) {
+      if (iter->location.line == 0 || iter->location.line > lines.size()) return false;
+      const auto offset = lines[iter->location.line - 1] + iter->location.column - 1;
+      if (changed.compare(offset, iter->name.size(), iter->name) != 0) return false;
+      changed.replace(offset, iter->name.size(), name);
+    }
+    const auto candidate = analyze_program(changed, loader_for(doc.uri));
+    if (candidate.diagnostics.size() > original.diagnostics.size()) return false;
+    const auto next = build_snapshot(candidate);
+    if (next.symbols.size() != snapshot.symbols.size()) return false;
+    using Position = std::pair<std::uint32_t, std::uint32_t>;
+    std::map<Position, const SemanticSymbol*> symbols;
+    for (const auto& symbol : next.symbols) symbols.emplace(Position{symbol.location.line, symbol.location.column}, &symbol);
+    std::map<std::uint32_t, std::vector<std::pair<std::uint32_t, std::int64_t>>> shifts;
+    for (const auto& match : matches) {
+      auto& row = shifts[match.location.line];
+      const auto previous = row.empty() ? 0 : row.back().second;
+      row.emplace_back(match.location.column + static_cast<std::uint32_t>(match.name.size()),
+                       previous + static_cast<std::int64_t>(name.size()) - static_cast<std::int64_t>(match.name.size()));
+    }
+    // A rename must preserve every binding, including unrelated uses that the new
+    // name could capture. Checking only the renamed references misses that case.
+    for (const auto& before : snapshot.symbols) {
+      std::int64_t shift = 0;
+      if (const auto found = shifts.find(before.location.line); found != shifts.end()) {
+        const auto& row = found->second;
+        auto iter = std::upper_bound(row.begin(), row.end(), before.location.column,
+            [](const auto column, const auto& entry) { return column < entry.first; });
+        if (iter != row.begin()) shift = std::prev(iter)->second;
+      }
+      const auto column = static_cast<std::uint32_t>(static_cast<std::int64_t>(before.location.column) + shift);
+      const auto found = symbols.find(Position{before.location.line, column});
+      if (found == symbols.end()) return false;
+      const auto& after = *found->second;
+      const bool renamed = before.id == matches.front().id && before.global == matches.front().global;
+      if (after.id != before.id || after.global != before.global || after.declaration != before.declaration ||
+          after.name != (renamed ? name : before.name)) return false;
+    }
+    return true;
+  }
+
   const AnalysisResult& analysis_for(const Document& doc) {
     const auto key = key_of(uri_to_path(doc.uri));
     auto found = m_analysis_cache.find(key);
@@ -483,29 +538,37 @@ class Server {
       if (doc == nullptr) {
         return;
       }
+      const auto& identifier = params.at("textDocument");
+      const int next_version = identifier.value("version", doc->version);
+      if (identifier.contains("version") && next_version <= doc->version) return;
+      // Apply a batch transactionally: a malformed later range must not leave
+      // the live buffer partially edited, with the old analysis still cached.
+      std::string edited = doc->text;
       for (const json& change : params.at("contentChanges")) {
         if (!change.contains("range")) {
-          doc->text = change.at("text").get<std::string>();
+          edited = change.at("text").get<std::string>();
           continue;
         }
         // Incremental edit (in case a client sends one).
-        const auto [start_line, start_column] = to_compiler(doc->text, change.at("range").at("start"));
-        const auto [end_line, end_column] = to_compiler(doc->text, change.at("range").at("end"));
+        const auto [start_line, start_column] = to_compiler(edited, change.at("range").at("start"));
+        const auto [end_line, end_column] = to_compiler(edited, change.at("range").at("end"));
         const auto offset = [&](const std::uint32_t line, const std::uint32_t column) {
           std::size_t index = 0;
           std::uint32_t current = 1;
-          while (index < doc->text.size() && current < line) {
-            if (doc->text[index++] == '\n') {
+          while (index < edited.size() && current < line) {
+            if (edited[index++] == '\n') {
               ++current;
             }
           }
-          return std::min(doc->text.size(), index + column - 1);
+          return std::min(edited.size(), index + column - 1);
         };
         const std::size_t from = offset(start_line, start_column);
         const std::size_t to = offset(end_line, end_column);
-        doc->text.replace(from, to - from, change.at("text").get<std::string>());
+        if (from > to) return;
+        edited.replace(from, to - from, change.at("text").get<std::string>());
       }
-      doc->version = params.at("textDocument").value("version", doc->version);
+      doc->text = std::move(edited);
+      doc->version = next_version;
       m_analysis_cache.clear();
       publish_all();
       return;
@@ -560,7 +623,7 @@ class Server {
          {{"positionEncoding", "utf-16"},
           {"textDocumentSync", {{"openClose", true}, {"change", 1}, {"save", {{"includeText", false}}}}},
           {"completionProvider",
-           {{"triggerCharacters", json::array({".", "@", "\"", "/", ":"})}, {"resolveProvider", false}}},
+           {{"triggerCharacters", json::array({".", "@", "\"", "/", ":", "{", ","})}, {"resolveProvider", false}}},
           {"signatureHelpProvider", {{"triggerCharacters", json::array({"(", ","})}, {"retriggerCharacters", json::array({","})}}},
           {"hoverProvider", true},
           {"definitionProvider", true},
@@ -696,6 +759,20 @@ class Server {
         method == "textDocument/prepareRename" || method == "textDocument/documentHighlight") {
       const SemanticSnapshot snapshot = build_snapshot(analysis);
       const std::vector<SemanticSymbol> matches = references_at(snapshot, line, column);
+      std::string new_name;
+      if (method == "textDocument/rename") {
+        new_name = params.at("newName").get<std::string>();
+        const auto lexical = Lexer(new_name).tokenize();
+        if (!lexical.diagnostics.empty() || lexical.tokens.size() != 2 ||
+            lexical.tokens.front().type != TokenType::Identifier || lexical.tokens.front().lexeme != new_name) {
+          send_error(id, kInvalidParams, "newName must be a single non-reserved CL++ identifier");
+          return;
+        }
+        if (!safe_rename(doc, analysis, snapshot, matches, new_name)) {
+          send_error(id, kInvalidParams, "rename would conflict with another declaration or change a binding");
+          return;
+        }
+      }
       if (method == "textDocument/prepareRename") {
         if (matches.empty()) {
           reply(id, nullptr);
@@ -717,12 +794,14 @@ class Server {
       json edits = json::array();
       json highlights = json::array();
       for (const SemanticSymbol& symbol : matches) {
+        if (method == "textDocument/references" && symbol.declaration &&
+            !params.value("context", json::object()).value("includeDeclaration", false)) continue;
         const json where = range(text, symbol.location.line, symbol.location.column,
                                  static_cast<std::uint32_t>(symbol.name.size()));
         locations.push_back(json{{"uri", doc.uri}, {"range", where}});
         highlights.push_back(json{{"range", where}, {"kind", symbol.declaration ? 3 : 2}});
         if (method == "textDocument/rename") {
-          edits.push_back(json{{"range", where}, {"newText", params.at("newName").get<std::string>()}});
+          edits.push_back(json{{"range", where}, {"newText", new_name}});
         }
       }
       if (method == "textDocument/rename") {

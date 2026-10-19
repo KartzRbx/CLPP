@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -14,7 +15,11 @@ ROOT = Path(__file__).resolve().parents[2]
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('compiler', type=Path)
+    parser.add_argument('--previous-archive', type=Path)
+    parser.add_argument('--previous-checksums', type=Path)
     args = parser.parse_args()
+    if bool(args.previous_archive) != bool(args.previous_checksums):
+        parser.error('previous archive and checksums must be provided together')
     shell = shutil.which('pwsh') or shutil.which('powershell')
     assert shell, 'PowerShell required on Windows'
     with tempfile.TemporaryDirectory(prefix='clpp-installer-contract-') as temporary:
@@ -56,10 +61,22 @@ def main():
         assert foreign.read_text(encoding='utf8') == 'user-owned installation notes'
         foreign.unlink()
         print('PASS unowned filename collision rejected without overwriting data')
+        if args.previous_archive:
+            with zipfile.ZipFile(args.previous_archive) as previous:
+                metadata = json.loads(previous.read('release.json'))
+                assert metadata['product'] == 'CLPP-VM' and metadata['platform'] == 'windows-x64'
+                previous_hash = hashlib.sha256(previous.read('bin/clpp-vm.exe')).hexdigest()
+            run('-Version', metadata['version'], '-ArchivePath', str(args.previous_archive.resolve()),
+                '-ChecksumsPath', str(args.previous_checksums.resolve()))
+            assert hashlib.sha256((prefix / 'bin/clpp-vm.exe').read_bytes()).hexdigest() == previous_hash
         run(*options)
         binary = prefix / 'bin/clpp-vm.exe'
         original = hashlib.sha256(binary.read_bytes()).hexdigest()
         assert original == hashlib.sha256(args.compiler.read_bytes()).hexdigest()
+        if args.previous_archive:
+            assert json.loads((prefix / '.clpp-vm-install.json').read_text(encoding='utf8'))['version'] == version
+            assert user_file.read_text(encoding='utf8') == 'post("keep me");'
+            print('PASS previous public release upgraded to candidate without losing user files')
         run(*options)
         assert hashlib.sha256(binary.read_bytes()).hexdigest() == original
         print('PASS install and same-version upgrade')
