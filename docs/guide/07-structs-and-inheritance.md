@@ -104,6 +104,8 @@ true
 
 An alias names an existing type expression without creating a new nominal identity. An alias of a data definition retains that definition's identity and can be used both in annotations and named construction, including imported definitions and concrete generic types. A literal union limits accepted values to the listed literals. Function aliases describe callback arguments and their result. See [alternatives](08-enums-variants-option-result.md) and [functions](06-functions.md).
 
+**Candidate 0.11.2 (not yet published):** construction directly through a data alias is fixed in this candidate. The published 0.11.0 runtime can use the alias in a variable annotation, but still requires the original data type for construction.
+
 ```clp file=Wallet.clp
 export def Account {
   number Amount = 0;

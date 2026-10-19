@@ -1,6 +1,6 @@
 # Language and compiler status
 
-The primary language specification on this site follows the author's handwritten Combat example and corrected language handbook. Named initializers use `Field = value` without a leading dot; object access still uses `object.Field`. The table below records the implemented and tested contracts. Remaining native, proposed and host-specific examples are marked separately. Platform, sanitizer and distribution checks passed for candidate 0.11.1 on 2026-10-18; publication remains pending. See [release status](release-status.md) for the tested source and platforms. Native physical-device coverage remains separate.
+The primary language specification on this site follows the author's handwritten Combat example and corrected language handbook. Named initializers use `Field = value` without a leading dot; object access still uses `object.Field`. The table below records the implemented and tested contracts. Remaining native, proposed and host-specific examples are marked separately. Platform, sanitizer and distribution checks passed for candidate 0.11.2 on 2026-10-19; publication remains pending. See [release status](release-status.md) for the tested source and platforms. Native physical-device coverage remains separate.
 
 Source blocks marked `clp target` define specification examples. The marker is not displayed as an automatic warning on each example. These blocks remain excluded from executable example tests until their complete behavior is verified; they are never counted as passing compiler tests.
 

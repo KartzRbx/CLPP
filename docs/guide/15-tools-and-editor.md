@@ -33,7 +33,7 @@ The CL++ VS Code extension provides syntax highlighting, diagnostics while typin
 
 The extension uses `clpp-vm --lsp`, so its analysis is based on the same compiler as a command-line build. On Windows x64, the VSIX includes `clpp-vm.exe`. The `clpp.serverPath` setting can point to another executable.
 
-**Candidate editor update (0.11.1, not yet published):** Member completion includes accessible inherited fields and methods, and named
+**Candidate editor update (0.11.2, not yet published):** Member completion includes accessible inherited fields and methods, and named
 initializers offer inherited fields without suggesting private fields or methods.
 An explicitly typed callback parameter has the same members as an ordinary
 variable of that type. Generic object members show their concrete types, such as
