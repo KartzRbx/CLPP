@@ -2019,7 +2019,19 @@ std::vector<SemanticToken> semantic_tokens(const AnalysisResult& analysis) {
     type_names.emplace(decl.name, kSemanticEnum);
   }
   for (const parser::TypeAlias& alias : program.aliases) {
-    type_names.emplace(alias.name, kSemanticType);
+    std::string spelling = alias.name;
+    parser::Function scope;
+    scope.type_params = alias.type_params;
+    if (!alias.type_params.empty()) {
+      spelling += '<';
+      for (std::size_t parameter = 0; parameter < alias.type_params.size(); ++parameter) {
+        if (parameter != 0) spelling += ',';
+        spelling += alias.type_params[parameter];
+      }
+      spelling += '>';
+    }
+    const bool data = typechecker::data_initializer_type(program, spelling, &scope).has_value();
+    type_names.emplace(alias.name, data ? kSemanticStruct : kSemanticType);
   }
   for (const std::string_view generic : {"array", "dictionary", "optional", "tuple"}) {
     type_names.emplace(std::string(generic), kSemanticType);
@@ -2138,7 +2150,8 @@ std::vector<SemanticToken> semantic_tokens(const AnalysisResult& analysis) {
       continue;
     }
     if (const auto type = type_names.find(name); type != type_names.end()) {
-      highlighter.paint(token, type->second, library_type(name) ? kSemanticDefaultLibrary : 0);
+      const auto declaration = previous && previous->type == TokenType::KwDef ? kSemanticDeclaration : 0;
+      highlighter.paint(token, type->second, declaration | (library_type(name) ? kSemanticDefaultLibrary : 0));
       continue;
     }
     if (type_params.count(name) != 0) {

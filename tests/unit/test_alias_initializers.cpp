@@ -78,3 +78,28 @@ TEST_CASE("imported data aliases retain initializer and method completion", "[al
     }));
   }
 }
+
+TEST_CASE("data aliases retain definition highlighting in erroneous and generic source", "[alias-initializer][ide][highlight]") {
+  const clpp::ModuleLoader loader = [](std::string_view) -> std::optional<std::string> {
+    return "export def Account { number Amount = 0; }";
+  };
+  for (const std::string value : {"7", "\"invalid\""}) {
+    const std::string source = "link \"./Wallet.clp\" as Wallet;\ndef _Wallet = Wallet.Account;\n"
+        "_Wallet account = _Wallet { Amount = " + value + " };\n";
+    const auto tokens = clpp::ide::semantic_tokens(source, loader);
+    for (const auto [line, column] : {std::pair{2u, 5u}, std::pair{3u, 1u}, std::pair{3u, 19u}}) {
+      const auto found = std::find_if(tokens.begin(), tokens.end(), [&](const auto& token) {
+        return token.line == line && token.column == column;
+      });
+      INFO(value); INFO(line); INFO(column);
+      REQUIRE(found != tokens.end());
+      CHECK(found->token_type == clpp::ide::kSemanticStruct);
+      if (line == 2) CHECK((found->modifiers & clpp::ide::kSemanticDeclaration) != 0);
+    }
+  }
+  const std::string source = "def Box<T> { T Value; }\ndef _Box<T> = Box<T>;\n_Box<number> box = _Box<number> { Value = 1 };";
+  const auto tokens = clpp::ide::semantic_tokens(source);
+  CHECK(std::any_of(tokens.begin(), tokens.end(), [](const auto& token) {
+    return token.line == 2 && token.column == 5 && token.token_type == clpp::ide::kSemanticStruct;
+  }));
+}

@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import json
+import re
 import os
 from pathlib import Path
 import subprocess
@@ -30,6 +31,7 @@ def main():
         assert 'Niels Lohmann' in (package / 'THIRD_PARTY_NOTICES.txt').read_text(encoding='utf8'), 'dependency notices missing'
         grammar = package / 'syntaxes/clpp.tmLanguage.json'
         rules = json.loads(grammar.read_text(encoding='utf8'))['repository']
+        assert re.fullmatch(rules['type-name']['match'], '_Wallet'), 'underscore-prefixed type fallback missing'
         assert rules['comment-line']['begin'] == r'<<(?!\[)'
         assert rules['comment-block']['begin'] == r'<<\['
         assert rules['comment-block']['end'] == r'\]>>'
