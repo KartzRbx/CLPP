@@ -32,6 +32,7 @@ def main():
                   'export def Player : Base { string name = "Kartz"; '
                   'signal<number> Joined = signal<number>(); }\n'
                   'export def Box<T> { T value; T Echo(T input) { return input; } }\n'
+                  'export def TextBox : Box<string> {}\n'
                   'export enum class Color { Red, Green }\n')
         (root/'Model.clp').write_text(module, encoding='utf8')
         program = root/'main.clp'
@@ -156,6 +157,11 @@ def main():
             run('completion generic member method signature',lambda: complete(
                 'link "./Model.clp" as M;\nM.Box<number> box = M.Box<number> { value = 4 };\nbox.@@',
                 ['value','Echo'],details={'Echo':'number'}))
+            run('completion inherited generic member types',lambda: complete(
+                'link "./Model.clp" as M;\nM.TextBox box = M.TextBox { value = "text" };\nbox.@@',
+                ['value','Echo'],details={'value':'string','Echo':'string'}))
+            run('completion indexed signal first colon acceptance',lambda: complete(
+                'signal<number> event;\narray<signal<number>> events = { event };\nevents[0]:@@;',methods,accept=True))
         finally:
             client.close()
     if args.junit:

@@ -575,7 +575,7 @@ void add_struct_members(const std::string& type, const std::string& prefix, cons
         continue;
       }
       Item item{label, signature_text(function), Kind::Method};
-      if (concrete.find('<') != std::string::npos) {
+      if (concrete.find('<') != std::string::npos || !decl.type_params.empty()) {
         parser::Expr member;
         member.kind = parser::Expr::Kind::Member;
         member.value = label;
@@ -1046,6 +1046,16 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
         target = callee != nullptr && callee->type == TokenType::Identifier ? callee
             : walk != nullptr && walk + 1 < receiver ? walk + 1 : nullptr;
       }
+      if (anchor->type == TokenType::Colon && receiver->type == TokenType::CloseBracket) {
+        const Token* walk = receiver;
+        int depth = 0;
+        while (walk != nullptr) {
+          if (walk->type == TokenType::CloseBracket) ++depth;
+          else if (walk->type == TokenType::OpenBracket && --depth == 0) break;
+          walk = previous_of(walk);
+        }
+        target = walk;
+      }
       const parser::Expr* selected = nullptr;
       const auto expression = [&](const auto& visit, const parser::Expr& value) -> void {
         if (target != nullptr && value.location.line == target->location.line &&
@@ -1054,7 +1064,7 @@ Info build_info_for(const AnalysisResult& analysis, const std::string_view sourc
             selected = value.left.get();
           else if (anchor->type == TokenType::Colon &&
                    (value.kind == parser::Expr::Kind::Name || value.kind == parser::Expr::Kind::Member ||
-                    value.kind == parser::Expr::Kind::Call)) selected = &value;
+                    value.kind == parser::Expr::Kind::Call || value.kind == parser::Expr::Kind::Index)) selected = &value;
         }
         if (value.left) visit(visit, *value.left);
         if (value.right) visit(visit, *value.right);
