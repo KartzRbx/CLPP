@@ -1,6 +1,6 @@
 id = "clpp"
 name = "CL++"
-version = "0.1.0"
+version = "0.11.2"
 schema_version = 1
 authors = ["KartzRbx"]
 description = "CL++ syntax and compiler-powered completion, diagnostics, hover, navigation, rename and formatting."

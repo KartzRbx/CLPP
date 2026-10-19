@@ -883,6 +883,10 @@ void bind_expr(parser::Expr& expr, const std::vector<Local>& locals, const std::
       expr.kind = parser::Expr::Kind::Invoke; expr.left = std::move(callee);
       bind_expr(expr, locals, functions, structs, enums, diagnostics); return;
     }
+    if (expr.named_initializer && find_struct(structs, bare_type(expr.value)) == nullptr && active_program) {
+      if (const auto data = typechecker::data_initializer_type(*active_program, expr.value, active_function))
+        expr.value = *data;
+    }
     if (expr.named_initializer && find_struct(structs, bare_type(expr.value)) == nullptr) {
       diagnostics.push_back(Diagnostic{expr.location, expr.span, "named initializer requires a data type"});
       return;

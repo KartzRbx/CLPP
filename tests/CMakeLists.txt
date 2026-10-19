@@ -25,6 +25,7 @@ add_test(NAME "LLVM toolchain normalizes native path separators"
 add_executable(clpp_unit_tests
   unit/test_lexer.cpp
   unit/test_parser.cpp
+  unit/test_alias_initializers.cpp
   unit/test_vm.cpp
   unit/test_ide.cpp
   unit/test_regressions.cpp

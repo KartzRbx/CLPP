@@ -102,7 +102,27 @@ post(healthy(Player { Name = "Ada" }, 3));
 true
 ```
 
-An alias names an existing type expression. A literal union limits accepted values to the listed literals. Function aliases describe callback arguments and their result. Aliases are structural; a definition with a body is nominal. See [alternatives](08-enums-variants-option-result.md) and [functions](06-functions.md).
+An alias names an existing type expression without creating a new nominal identity. An alias of a data definition retains that definition's identity and can be used both in annotations and named construction, including imported definitions and concrete generic types. A literal union limits accepted values to the listed literals. Function aliases describe callback arguments and their result. See [alternatives](08-enums-variants-option-result.md) and [functions](06-functions.md).
+
+```clp file=Wallet.clp
+export def Account {
+  number Amount = 0;
+  number Grant(number amount) { @this.Amount += amount; return @this.Amount; }
+}
+```
+
+```clp
+link "./Wallet.clp" as Wallet;
+def _Wallet = Wallet.Account;
+_Wallet account = _Wallet {};
+post(account.Grant(500));
+```
+
+```output
+500
+```
+
+`_Wallet` and `Wallet.Account` are two names for the same type. To create a distinct data type, define another `def` with a body; a type alias does not copy or recreate its definition.
 
 ## Generic data definitions
 

@@ -23,6 +23,10 @@ struct InitializerField {
   bool is_private{false};
 };
 
+// Resolve transparent aliases for construction without unwrapping optional/member views.
+[[nodiscard]] std::optional<std::string> data_initializer_type(
+    const parser::Program& program, const std::string& spelling, const parser::Function* scope = nullptr);
+
 // Field ownership and concrete types share the checker's alias/generic resolution.
 [[nodiscard]] std::vector<InitializerField> initializer_fields(
     const parser::Program& program, const std::string& constructed, const parser::Function* scope = nullptr);

@@ -2455,6 +2455,20 @@ std::optional<std::string> member_owner_type(const parser::Program& program, con
   return result.empty() ? std::nullopt : std::optional<std::string>{result};
 }
 
+std::optional<std::string> data_initializer_type(const parser::Program& program, const std::string& spelling,
+                                                const parser::Function* scope) {
+  const ActiveTypesGuard restore;
+  active_structs = &program.structs; active_enums = &program.enums;
+  active_aliases = &program.aliases; active_function_types = nullptr;
+  std::vector<Diagnostic> diagnostics;
+  const auto structs = build_data_types(program, diagnostics); active_type_info = &structs;
+  TypeScope context;
+  if (scope) { context = function_scope(*scope, structs, program); active_function_types = &context; }
+  const Type type = named_type(spelling, structs);
+  if (!diagnostics.empty() || type.kind != Type::Kind::Struct) return std::nullopt;
+  return source_type(type, program);
+}
+
 std::optional<std::string> resource_type(const parser::Program& program, const std::string& spelling,
                                        const parser::Function* scope) {
   const ActiveTypesGuard restore;
